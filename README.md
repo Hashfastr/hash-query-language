@@ -34,3 +34,11 @@ Here it's extremely simple to thrunt from behavior relating to that nasty user '
 Another thing this improves on, and I'm unsure how things like LAW handle this, but in Splunk queries are processed in steps. That is `syslog-* | where ... | join ... | project ...` requires each step to full execute before the next. It would be nice to stream the data, that is process other parts of the pipeline while the previous steps are being processed.
 
 Anyways that's the idea. It's gonna be written in python for right now since JSON is dead stupid using python. But python doesn't have real concurrency, and is comparatively slow, so maybe a C family rewrite? golang? rust :vomit:?
+
+## Setup
+```
+# you need java
+source ./setup-antlr4.sh
+
+
+```

@@ -1,0 +1,3 @@
+[submodule "Kusto-Query-Language"]
+	path = Kusto-Query-Language
+	url = git@github.com:microsoft/Kusto-Query-Language.git
