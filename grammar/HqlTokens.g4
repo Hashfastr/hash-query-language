@@ -1,4 +1,4 @@
-lexer grammar KqlTokens;
+lexer grammar HqlTokens;
 
 fragment EscapeSequence:
     '\\' (
@@ -450,6 +450,7 @@ fragment TwelveHexDigits:
 
 IDENTIFIER:
       ('$' | '_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9')*
+    | ('$' | '_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9' | '*' | '-')*
     | ('0'..'9')+ ('_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9')*
     ;
 
