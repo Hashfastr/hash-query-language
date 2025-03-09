@@ -1,12 +1,32 @@
 from Operator import Operator
+import json
+
+class Query():
+    def __init__(self):
+        self.statements = []
+
+    def to_dict(self):
+        {}
+
+    def __str__(self):
+        j = {
+            "statements": [x.to_dict() for x in self.statements]
+        }
+        
+        return json.dumps(j, indent=2)
 
 class Statement():
     def __init__(self, name:str=""):
         # if empty it's the prime statement
         self.name = name
         self.operations = []
-        self.index = ""
-        
-    def add_operation(self, operator:Operator):
-        self.operations.append(operator)
-        
+    
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'operations': [x.to_dict() for x in self.operations]
+        }
+    
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=2)
+    
