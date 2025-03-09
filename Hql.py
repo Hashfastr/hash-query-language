@@ -1,7 +1,7 @@
 from antlr4 import *
 from grammar.HqlLexer import HqlLexer
 from grammar.HqlParser import HqlParser
-from HqlListener import HqlListener
+from HqlVisitor import Visitor
 import sys
 
 def get_token_name(type:int) -> str:
@@ -27,11 +27,10 @@ def main():
     
     tree = parse_file(sys.argv[1])
 
-    walker = ParseTreeWalker()
-    listener = HqlListener()
+    visitor = Visitor()
+    result = visitor.visit(tree)
     
-    listener.statements = {}
-    walker.walk(listener, tree)
+    print(result)
 
 if __name__ == "__main__":
     main()

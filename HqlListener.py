@@ -6,13 +6,20 @@ import Operator
 import Expression
 from Query import Statement
 
-import json
+class Registers():
+    def __init__(self):
+        # List of statements by name
+        self.statements = {}
+        
+        # if the current statement is a let statement
+        # allows us to know that we need 
+        self.curstatement = Statement()
+        
 
 class HqlListener(HqlListener):
     def __init__(self):
         super().__init__()
-        self.statements = {}
-        self.letstatement = 0
+        self.registers = Registers()
     
     # Enter a parse tree produced by HqlParser#top.
     def enterTop(self, ctx:HqlParser.TopContext):
@@ -29,12 +36,12 @@ class HqlListener(HqlListener):
 
     # Exit a parse tree produced by HqlParser#query.
     def exitQuery(self, ctx:HqlParser.QueryContext):
-        self.statements[''] = self.statement
+        self.registers.statements[''] = self.statement
 
 
     # Enter a parse tree produced by HqlParser#statement.
     def enterStatement(self, ctx:HqlParser.StatementContext):
-        self.statement = Statement()
+        self.registers.curstatement = Statement()
 
     # Exit a parse tree produced by HqlParser#statement.
     def exitStatement(self, ctx:HqlParser.StatementContext):
@@ -52,7 +59,7 @@ class HqlListener(HqlListener):
 
     # Enter a parse tree produced by HqlParser#letStatement.
     def enterLetStatement(self, ctx:HqlParser.LetStatementContext):
-        self.letstatement = 1
+        self.registers.letstatement = 1
 
     # Exit a parse tree produced by HqlParser#letStatement.
     def exitLetStatement(self, ctx:HqlParser.LetStatementContext):
@@ -373,7 +380,7 @@ class HqlListener(HqlListener):
 
     # Exit a parse tree produced by HqlParser#pipedOperator.
     def exitPipedOperator(self, ctx:HqlParser.PipedOperatorContext):
-        self.statement.add_operation(self.operator)
+        self.registers.curstatement.add_operation(self.operator)
 
 
     # Enter a parse tree produced by HqlParser#pipeSubExpression.
