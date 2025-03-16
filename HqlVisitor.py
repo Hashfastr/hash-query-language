@@ -1,5 +1,6 @@
 from grammar.HqlParser import HqlParser
 from grammar.HqlVisitor import HqlVisitor
+from antlr4.tree.Tree import TerminalNodeImpl
 
 import Operator
 import Expression
@@ -54,23 +55,41 @@ class Visitor(HqlVisitor):
         else:
             scope = ""
             
-        return Expression.scopedNameReference(name, scope)
-    
-    def visitAfterPipeOperator(self, ctx: HqlParser.AfterPipeOperatorContext):
-        operator = Operator.Pipe()
-        return operator
-        
-        expression = self.visit(ctx.getChild(0))
-        operator.expressions.append(expression)
-        
-        return operator
+        return Expression.ScopedNameReference(name, scope)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
-        return []
+        operator = Operator.Where()
+        
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            
+            if type(child) == TerminalNodeImpl:
+                continue
+            
+            index = child.getRuleIndex()
+            
+            if HqlParser.ruleNames[index] == "namedExpression":
+                operator.expressions.append(self.visit(ctx.getChild(i)))
+        
+        return operator
     
-    def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):
+    def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):       
         expression = Expression.Equality()
-        #expression.
+        
+        expression.expressions.append(self.visit(ctx.getChild(0)))
+        expression.type = self.visit(ctx.getChild(1))
+        expression.expressions.append(self.visit(ctx.getChild(2)))
+            
+        return expression
+    
+    def visitRelationalExpression(self, ctx: HqlParser.RelationalExpressionContext):
+        return self.visit(ctx.getChild(0))
     
     def visitIdentifierName(self, ctx: HqlParser.IdentifierNameContext):
         return ctx.getText()
+    
+    def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
+        return Expression.StringLiteral(ctx.getText())
+
+    def visitTerminal(self, node):
+        return node.getText()

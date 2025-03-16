@@ -2,7 +2,7 @@ import json
 
 def getExpressionByName(name:str):
     if name == "nameReferenceWithDataScope":
-        return scopedNameReference()
+        return ScopedNameReference()
 
 class Expression():
     def __init__(self):
@@ -12,14 +12,25 @@ class Expression():
         return {}
     
     def __str__(self):
-        return json.dumps(self.__repr__(), indent=2)
+        return json.dumps(self.to_dict(), indent=2)
+    
+    def __repr__(self) -> str:
+        return self.__str__()
 
 class Equality(Expression):
-    def __init__(self):
+    def __init__(self, type:str=""):
         super().__init__()
-        
+        self.type = type
+        self.expressions = []
+    
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'lh': self.expressions[0].to_dict(),
+            'rh': self.expressions[1].to_dict()
+        }
 
-class scopedNameReference(Expression):
+class ScopedNameReference(Expression):
     def __init__(self, name:str, scope:str=""):
         super().__init__()
         self.name = name
@@ -31,7 +42,19 @@ class scopedNameReference(Expression):
             'scope': self.scope
         }
     
-class stringLiteral(Expression):
+class StringLiteral(Expression):
+    def __init__(self, value:str):
+        super().__init__()
+        self.value = value.strip('"')
+        self.type = 'stringliteral'
+    
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'value': self.value
+        }
+    
+class RelationalExpression(Expression):
     def __init__(self):
         super().__init__()
-        pass
+        self.type = 'pipe'
