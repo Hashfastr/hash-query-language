@@ -44,7 +44,15 @@ source ./setup-antlr4.sh
 antlr4 -Dlanguage=Python3 -visitor ./grammar/Hql.g4
 ```
 
-## Generating graphs using grun
+## Running
+Currently only prints out a json representation of the parsed language.
+
+```
+python3 hql.py ./tests/simple.txt
+```
+
+## Debug
+### Generating graphs using grun
 Where previously we compiled antlr to python, we need to compile it to java for grun.
 Make sure you already setup antlr4 using the setup script as seen in the previous section.
 
