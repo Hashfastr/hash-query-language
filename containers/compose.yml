@@ -1,0 +1,17 @@
+services:
+  index:
+    container_name: index
+    image: hql-index:latest
+    restart: always
+    volumes:
+      - ./index-conf.json:/opt/hql/conf.json:z,ro
+    userns: auto
+    group-add:
+      - keep-groups
+    cap_add:
+      - NET_RAW
+    networks:
+      - hub
+networks:
+  hub:
+    driver: bridge
