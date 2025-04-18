@@ -1,6 +1,5 @@
 FROM alpine:3.21.3
 
-RUN apk update
 RUN apk add python3 py3-pip bash
 
 RUN mkdir -p /opt/hql
