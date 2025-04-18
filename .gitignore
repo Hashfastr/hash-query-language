@@ -174,5 +174,3 @@ cython_debug/
 .trash
 
 *.jar
-
-antlr4
