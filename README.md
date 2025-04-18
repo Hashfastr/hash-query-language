@@ -62,7 +62,7 @@ cd grammar
 antlr4 -Dlanguage=Java -visitor Hql.g4
 javac -cp ../antlr4/antlr-*-complete.jar Hql*.java
 
-# runs until you kill / Ctrl-C it
+# runs until you kill / Ctrl-C / close the window
 grun Hql top ../tests/simple.txt -gui
 
 # Clean up via
