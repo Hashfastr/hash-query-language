@@ -9,7 +9,7 @@ class Operator():
     def to_dict(self):
         return {
             'type': self.type,
-            'expressions':[x.to_dict() for x in self.expressions]
+            'expressions': [x.to_dict() for x in self.expressions]
         }
     
     def __str__(self):
@@ -33,4 +33,16 @@ class Where(Operator):
     def __init__(self):
         super().__init__()
         self.type = 'where'
-        self.parameters = []    
+        self.parameters = []
+    
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'parameters': self.parameters,
+            'expressions': [x.to_dict() for x in self.expressions]
+        }
+
+class Project(Operator):
+    def __init__(self):
+        super().__init__()
+        self.type = 'project'

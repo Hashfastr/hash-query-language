@@ -63,6 +63,7 @@ class Visitor(HqlVisitor):
         for i in range(ctx.getChildCount()):
             child = ctx.getChild(i)
             
+            # Skip operator names, commas, etc
             if type(child) == TerminalNodeImpl:
                 continue
             
@@ -72,6 +73,24 @@ class Visitor(HqlVisitor):
                 operator.expressions.append(self.visit(ctx.getChild(i)))
         
         return operator
+
+    def visitProjectOperator(self, ctx: HqlParser.ProjectOperatorContext):
+        operator = Operator.Project()
+        
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            
+            # Skip operator names, commas, etc
+            if type(child) == TerminalNodeImpl:
+                continue
+
+            index = child.getRuleIndex()
+            
+            if HqlParser.ruleNames[index] == "namedExpression":
+                operator.expressions.append(self.visit(ctx.getChild(i)))
+
+        return operator
+            
     
     def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):       
         expression = Expression.Equality()
