@@ -1,4 +1,5 @@
 from elasticsearch import Elasticsearch
+import logging
 import json
 
 # Get our config file
@@ -22,10 +23,16 @@ SCROLL_SIZE = conf.get('SCROLL_SIZE', 10000)
 # Request timeout in seconds
 TIMEOUT = conf.get('TIMEOUT', 10)
 
+# Debug?
+DEBUG = conf.get('DEBUG', False)
+
 # Get the query
 QUERY = conf.get('QUERY', { 'match_all': {} })
 # Get the Index
 INDEX = conf.get('INDEX', '*')
+
+if DEBUG:
+    logging.getLogger().setLevel(DEBUG)
 
 # Make a scrolling query to Elasticsearch
 # Default safety limit is 100000 queries to be returned
@@ -37,6 +44,8 @@ def make_query(index:str, query:dict, limit:int=100000):
         request_timeout=TIMEOUT,
         retry_on_timeout=True
     )
+    
+    logging.debug("Starting initial query")
 
     res = client.search(
         index=index,
@@ -46,13 +55,19 @@ def make_query(index:str, query:dict, limit:int=100000):
     )
     sid = res['_scroll_id']
     
+    logging.debug("Start scrolling")
+    
     # Will scroll through until we reach our limit, or no more results.
     # Enables the take operator
     remainder = limit
     result_count = 0
     results = []
     while result_count < limit:
+        logging.debug(f"Scroll {result_count} < {limit}")
+        
         if len(res['hits']['hits']) == 0:
+            logging.debug(f"No more results to evaluate")
+            logging.debug(f"Timed out? {res['timed_out']}")
             break
         
         # Ensure that we only add the number of remaining rows
@@ -65,6 +80,8 @@ def make_query(index:str, query:dict, limit:int=100000):
             scroll_id=sid,
             scroll=SCROLL_TIME,
         )
+        
+    logging.debug(f"Total results: {result_count}")
 
     return results
 
@@ -72,7 +89,7 @@ def make_query(index:str, query:dict, limit:int=100000):
 def main():
     results = make_query(INDEX, QUERY)
     
-    print(f"Done! Got {len(results)} results.")
+    logging.info(f"Done! Got {len(results)} results.")
     
 if __name__ == "__main__":
     main()
