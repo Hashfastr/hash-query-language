@@ -1,0 +1,78 @@
+from elasticsearch import Elasticsearch
+import json
+
+# Get our config file
+with open('./conf.json', mode='r') as f:
+    conf = json.loads(f.read())
+
+# Host, or hosts, to use for the query.
+# Should be in array format
+ELASTIC_HOSTS = conf.get('ELASTIC_HOSTS', ['http://localhost:9200'])
+# Elastic user to use
+ELASTIC_USER = conf.get('ELASTIC_USER', 'elastic')
+# Elastic user password to use
+ELASTIC_PASS = conf.get('ELASTIC_PASS', 'changeme')
+# SSL Validation
+VALIDATE_CERTS = conf.get('VALIDATE_CERTS', 'true')
+# How long should the scroll session be kept alive?
+SCROLL_TIME = conf.get('SCROLL_TIME', '1m')
+# How many rows should we scroll per scroll?
+# Max is 10000
+SCROLL_SIZE = conf.get('SCROLL_SIZE', 10000)
+# Request timeout in seconds
+TIMEOUT = conf.get('TIMEOUT', 10)
+
+# Get the query
+QUERY = conf.get('QUERY', { 'match_all': {} })
+# Get the Index
+INDEX = conf.get('INDEX', '*')
+
+# Make a scrolling query to Elasticsearch
+# Default safety limit is 100000 queries to be returned
+def make_query(index:str, query:dict, limit:int=100000):
+    client = Elasticsearch(
+        ELASTIC_HOSTS,
+        basic_auth=(ELASTIC_USER, ELASTIC_PASS),
+        verify_certs=VALIDATE_CERTS,
+        request_timeout=TIMEOUT,
+        retry_on_timeout=True
+    )
+
+    res = client.search(
+        index=index,
+        size=SCROLL_SIZE,
+        scroll=SCROLL_TIME,
+        query=query,
+    )
+    sid = res['_scroll_id']
+    
+    # Will scroll through until we reach our limit, or no more results.
+    # Enables the take operator
+    remainder = limit
+    result_count = 0
+    results = []
+    while result_count < limit:
+        if len(res['hits']['hits']) == 0:
+            break
+        
+        # Ensure that we only add the number of remaining rows
+        results += res['hits']['hits'][:remainder]
+        result_count += len(res['hits']['hits'][:remainder])
+        
+        remainder = limit - result_count
+        
+        res = client.scroll(
+            scroll_id=sid,
+            scroll=SCROLL_TIME,
+        )
+
+    return results
+
+
+def main():
+    results = make_query(INDEX, QUERY)
+    
+    print(f"Done! Got {len(results)} results.")
+    
+if __name__ == "__main__":
+    main()

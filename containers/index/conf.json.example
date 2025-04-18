@@ -1,0 +1,14 @@
+{
+    "ELASTIC_HOSTS": [
+        "http://127.0.0.1:9200"
+    ],
+    "ELASTIC_USER": "elastic",
+    "ELASTIC_PASS": "password",
+    "VALIDATE_CERTS": false,
+    "SCROLL_TIME": "1m",
+    "SCROLL_SIZE": 10000,
+    "INDEX": "*",
+    "QUERY": {
+        "match_all": {}
+    }
+}
