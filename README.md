@@ -40,5 +40,23 @@ Anyways that's the idea. It's gonna be written in python for right now since JSO
 # you need java
 source ./setup-antlr4.sh
 
+# Generates the python files needed
+antlr4 -Dlanguage=Python3 -visitor ./grammar/Hql.g4
+```
 
+## Generating graphs using grun
+Where previously we compiled antlr to python, we need to compile it to java for grun.
+Make sure you already setup antlr4 using the setup script as seen in the previous section.
+
+```
+# this generates *a lot* of java and class files
+cd grammar
+antlr4 -Dlanguage=Java -visitor Hql.g4
+javac -cp ../antlr4/antlr-*-complete.jar Hql*.java
+
+# runs until you kill / Ctrl-C it
+grun Hql top ../tests/simple.txt -gui
+
+# Clean up via
+rm *.java *.class
 ```
