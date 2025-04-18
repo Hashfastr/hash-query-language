@@ -48,7 +48,7 @@ antlr4 -Dlanguage=Python3 -visitor ./grammar/Hql.g4
 Currently only prints out a json representation of the parsed language.
 
 ```
-python3 hql.py ./tests/simple.txt
+python3 Hql.py --show ./tests/simple.txt
 ```
 
 ## Debug
