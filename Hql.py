@@ -91,8 +91,10 @@ def main():
     with open(rule_file, mode="r") as f:
         ruleset = json.loads(f.read())
     
-    compiler = Compiler(result)
+    compiler = Compiler('./conf.json', result.to_dict())
     compiler.compile(ruleset=ruleset)
+    
+    print(compiler)
 
 if __name__ == "__main__":
     main()

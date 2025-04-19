@@ -6,14 +6,12 @@ class Query():
         self.statements = []
 
     def to_dict(self):
-        {}
-
-    def __str__(self):
-        j = {
+        return {
             "statements": [x.to_dict() for x in self.statements]
         }
-        
-        return json.dumps(j, indent=2)
+
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=2)
 
 class Statement():
     def __init__(self, name:str=""):

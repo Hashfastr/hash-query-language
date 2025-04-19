@@ -1,9 +1,23 @@
 import logging
 import json
+import Guid
 
 class Container():
     def __init__(self):
-        pass
+        self.type = ''
+        self.guid = Guid.gen_guid()
+        
+    def get_type(self):
+        return self.type
+    
+    def to_dict(self):
+        return {}
+    
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=2)
+    
+    def __repr__(self):
+        return self.__str__()
     
 class IndexContainer(Container):
     def __init__(self, conf_file:str, pattern:str):
@@ -19,6 +33,8 @@ class IndexContainer(Container):
         
     def to_dict(self):
         out = {
+            'TYPE': self.type,
+            'GUID': self.guid,
             'ELASTIC_HOSTS': self.conf.get('ELASTIC_HOSTS', ['http://localhost:9200']),
             'ELASTIC_USER': self.conf.get('ELASTIC_USER', 'elastic'),
             'ELASTIC_PASS': self.conf.get('ELASTIC_PASS', 'changeme'),
@@ -30,11 +46,15 @@ class IndexContainer(Container):
             'QUERY': {}
         }
         
-        out['QUERY']['must'] = self.posfilters
-        out['QUERY']['must_not'] = self.negfilters
+        out['QUERY']['bool'] = {}
+        
+        if self.posfilters != []:
+            out['QUERY']['bool']['must'] = self.posfilters
+            
+        if self.negfilters != []:
+            out['QUERY']['bool']['must_not'] = self.negfilters
         
         return out
-
 
     def add_filter(self, expression:dict):
         filter = None
@@ -43,31 +63,31 @@ class IndexContainer(Container):
         if expression['type'] == '==':
             filter = {
                 'term': {
-                    expression['lh'] : expression['rh']
+                    expression['lh']['name'] : expression['rh']['value']
                 }
             }
         elif expression['type'] == '<':
             filter = {
                 'range': {
-                    expression['lh'] : { 'lt': expression['rh'] }
+                    expression['lh']['name'] : { 'lt': expression['rh']['value'] }
                 }
             }
         elif expression['type'] == '<=':
             filter = {
                 'range': {
-                    expression['lh'] : { 'lte': expression['rh'] }
+                    expression['lh']['name'] : { 'lte': expression['rh']['value'] }
                 }
             }
         elif expression['type'] == '>':
             filter = {
                 'range': {
-                    expression['lh'] : { 'gt': expression['rh'] }
+                    expression['lh']['name'] : { 'gt': expression['rh']['value'] }
                 }
             }
         elif expression['type'] == '>=':
             filter = {
                 'range': {
-                    expression['lh'] : { 'gte': expression['rh'] }
+                    expression['lh']['name'] : { 'gte': expression['rh']['value'] }
                 }
             }
             
@@ -79,7 +99,7 @@ class IndexContainer(Container):
         if expression['type'] == '!=':
             filter = {
                 'term': {
-                    expression['lh'] : expression['rh']
+                    expression['lh']['name'] : expression['rh']['value']
                 }
             }
             
