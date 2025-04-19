@@ -3,6 +3,7 @@ import json
 import Container
 import Guid
 import os
+import stat
 import oyaml
 
 class Compiler():
@@ -141,4 +142,7 @@ class Compiler():
                 filename = f"{curdir}/{container['type']}-{container['guid']}.json"
                 with open(filename, 'w+') as f:
                     f.write(json.dumps(container, indent=2))
-                os.chmod(filename, 644)
+                os.chmod(
+                    filename,
+                    stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+                )
