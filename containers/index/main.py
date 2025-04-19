@@ -63,7 +63,7 @@ def make_query(index:str, query:dict, limit:int=100000):
     result_count = 0
     results = []
     while result_count < limit:
-        logging.debug(f"Scroll {result_count} < {limit}")
+        logging.debug(f"Scroll {result_count} < {limit} max")
         
         if len(res['hits']['hits']) == 0:
             logging.debug(f"No more results to evaluate")
@@ -80,8 +80,6 @@ def make_query(index:str, query:dict, limit:int=100000):
             scroll_id=sid,
             scroll=SCROLL_TIME,
         )
-        
-    logging.debug(f"Total results: {result_count}")
 
     return results
 
