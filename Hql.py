@@ -3,8 +3,10 @@ from grammar.HqlLexer import HqlLexer
 from grammar.HqlParser import HqlParser
 from HqlVisitor import Visitor
 import sys
+import json
 import logging
 import argparse
+from Compiler import Compiler
 
 def config_logging(level:str):
     logging.basicConfig()
@@ -37,6 +39,7 @@ def parse_file(filename:str) -> CommonTokenStream:
     except Exception as e:
         logging.error(f"Failed to open file {filename}")
         logging.error(str(e))
+        raise e
     
     tree = parser.query()
     
@@ -44,10 +47,11 @@ def parse_file(filename:str) -> CommonTokenStream:
 
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0])
-    parser.add_argument('-s', '--show', help='Show the json of the parsed data and exit', action='store_true')
-    parser.add_argument('-f', '--file', help="File to compile")
+    parser.add_argument('-asm', '--asm-show', help='Show the json of the parsed data and exit', action='store_true')
+    parser.add_argument('-f', '--file', help="File to compile", required=True)
     parser.add_argument('-v', '--verbose', help="Set verbosity to debug", action='store_true')
     parser.add_argument('-l' '--logging-level', help="Verbosity level 1-5, where 5 is debug, 1 is critical, default is 3, warning.", type=int)
+    parser.add_argument('-r', '--rule-set', help="The ruleset used for compiling, defaults to ./rules.json")
     
     args = parser.parse_args()
     
@@ -56,17 +60,39 @@ def main():
     elif args.verbose:
         config_logging(5)
         
-    tree = parse_file(args.file)
+    if args.rule_set == None:
+        rule_file = "./rules.json"
+    else:
+        rule_file = args.rule_set
+    
+    #######################
+    ## Generate Assembly ##
+    #######################
+    
+    try:
+        tree = parse_file(args.file)
+    except:
+        return -1
 
     visitor = Visitor()
     result = visitor.visit(tree)
-
-    if args.show:
+    
+    if args.asm_show:
         # Use print to give a raw output
         print(result)
         return
     else:
         logging.debug(result)
+        
+    ######################
+    ## Compile Assembly ##
+    ######################
+    
+    with open(rule_file, mode="r") as f:
+        ruleset = json.loads(f.read())
+    
+    compiler = Compiler(result)
+    compiler.compile(ruleset=ruleset)
 
 if __name__ == "__main__":
     main()
