@@ -1,0 +1,23 @@
+{
+    "operations": {
+        "index": {
+            "type": "data-source",
+            "blocking": true
+        },
+        "where": {
+            "type": "filter",
+            "blocking": false
+        },
+        "project": {
+            "blocking": false
+        }
+    },
+    "types": {
+        "data-source": {
+
+        },
+        "filter": {
+            "dsl_compat": true
+        }
+    }
+}
