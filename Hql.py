@@ -93,8 +93,9 @@ def main():
     
     compiler = Compiler('./conf.json', result.to_dict())
     compiler.compile(ruleset=ruleset)
+    compiler.gen_compose()
     
-    print(compiler)
+    print(json.dumps(compiler.get_compose(), indent=2))
 
 if __name__ == "__main__":
     main()

@@ -20,21 +20,18 @@ class Container():
         return self.__str__()
     
 class IndexContainer(Container):
-    def __init__(self, conf_file:str, pattern:str):
+    def __init__(self, conf:str, pattern:str):
         super().__init__()
         self.type = 'index'
         self.pattern = pattern
         self.posfilters = []
         self.negfilters = []
-        
-        # load the template file
-        with open(conf_file, mode='r') as f:
-            self.conf = json.loads(f.read())
+        self.conf = conf
         
     def to_dict(self):
         out = {
-            'TYPE': self.type,
-            'GUID': self.guid,
+            'type': self.type,
+            'guid': self.guid,
             'ELASTIC_HOSTS': self.conf.get('ELASTIC_HOSTS', ['http://localhost:9200']),
             'ELASTIC_USER': self.conf.get('ELASTIC_USER', 'elastic'),
             'ELASTIC_PASS': self.conf.get('ELASTIC_PASS', 'changeme'),
