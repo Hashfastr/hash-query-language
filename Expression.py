@@ -36,6 +36,27 @@ class Equality(Expression):
                 print(expression)
             raise Exception("Failure to dict an equality")
 
+class BetweenEquality(Expression):
+    def __init__(self):
+        super().__init__()
+        self.expressions = []
+        self.type = 'between'
+    
+    def to_dict(self):
+        try:
+            return {
+                'type': self.type,
+                'lh': self.expressions[0].to_dict(),
+                'rh': {
+                    'start': self.expressions[1].to_dict(),
+                    'end': self.expressions[2].to_dict()
+                }
+            }
+        except:
+            for expression in self.expressions:
+                print(expression)
+            raise Exception("Failure to dict a between")
+
 class ScopedNameReference(Expression):
     def __init__(self, name:str, scope:str=""):
         super().__init__()
@@ -51,8 +72,11 @@ class ScopedNameReference(Expression):
 class StringLiteral(Expression):
     def __init__(self, value:str):
         super().__init__()
-        self.value = value.strip('"')
+        self.value = value.strip('"').strip("'")
         self.type = 'stringliteral'
+        
+    def get_name(self):
+        return self.value
     
     def to_dict(self):
         return {

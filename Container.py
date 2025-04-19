@@ -87,6 +87,15 @@ class IndexContainer(Container):
                     expression['lh']['name'] : { 'gte': expression['rh']['value'] }
                 }
             }
+        elif expression['type'] == 'between':
+            filter = {
+                'range': {
+                    expression['lh']['name'] : {
+                        'gte': expression['rh']['start']['value'],
+                        'lte': expression['rh']['end']['value']
+                    }
+                }
+            }
             
         if filter:
             self.posfilters.append(filter)
