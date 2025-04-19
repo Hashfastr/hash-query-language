@@ -1,4 +1,5 @@
 import json
+import logging
 
 def getExpressionByName(name:str):
     if name == "nameReferenceWithDataScope":
@@ -24,11 +25,16 @@ class Equality(Expression):
         self.expressions = []
     
     def to_dict(self):
-        return {
-            'type': self.type,
-            'lh': self.expressions[0].to_dict(),
-            'rh': self.expressions[1].to_dict()
-        }
+        try:
+            return {
+                'type': self.type,
+                'lh': self.expressions[0].to_dict(),
+                'rh': self.expressions[1].to_dict()
+            }
+        except:
+            for expression in self.expressions:
+                print(expression)
+            raise Exception("Failure to dict an equality")
 
 class ScopedNameReference(Expression):
     def __init__(self, name:str, scope:str=""):
@@ -53,7 +59,19 @@ class StringLiteral(Expression):
             'type': self.type,
             'value': self.value
         }
-    
+        
+class Integer(Expression):
+    def __init__(self, value:str):
+        super().__init__()
+        self.value = int(value)
+        self.type = 'integer'
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'value': self.value
+        }
+        
 class RelationalExpression(Expression):
     def __init__(self):
         super().__init__()

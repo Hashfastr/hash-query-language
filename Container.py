@@ -104,5 +104,5 @@ class IndexContainer(Container):
             self.negfilters.append(filter)
             return
         else:
-            raise f"Invalid filter type {expression['type']}"            
+            raise Exception(f"Invalid filter type {expression['type']}")
     

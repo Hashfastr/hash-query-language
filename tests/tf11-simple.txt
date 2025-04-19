@@ -1,0 +1,3 @@
+so-beats-2022.10.*
+| where event.code == 1
+| where host.name == "asarea.vxnwua.net"
