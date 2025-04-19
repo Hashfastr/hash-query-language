@@ -1,11 +1,11 @@
 {
     "ELASTIC_HOSTS": [
-        "http://10.13.110.2:9200"
+        "http://127.0.0.1:9200"
     ],
-    "ELASTIC_USER": "tracerfire",
-    "ELASTIC_PASS": "f0r3ns1c",
+    "ELASTIC_USER": "elastic",
+    "ELASTIC_PASS": "example",
     "VALIDATE_CERTS": false,
-    "SCROLL_TIME": "10m",
+    "SCROLL_TIME": "1m",
     "SCROLL_SIZE": 10000,
     "TIMEOUT": 10,
     "DEBUG": true,
@@ -13,5 +13,6 @@
         "index": "hql-index:latest"
     },
     "RESTART_POLICY": "always",
-    "MNT_FLAGS": "z,ro"
+    "MNT_FLAGS": "z,ro",
+    "OUTPUT_DIR": "./out"
 }

@@ -81,6 +81,8 @@ def make_query(index:str, query:dict, limit:int=100000):
             scroll=SCROLL_TIME,
         )
 
+    client.clear_scroll(scroll_id=sid)
+
     return results
 
 
