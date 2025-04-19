@@ -24,7 +24,7 @@ def config_logging(level:str):
     else:
         logging.error(f"Invalid verbosity level {level}")
         logging.error(f"Default is WARNING (3), but I'm exiting...")
-        raise(f'Invalid verbosity {level}')
+        raise Exception(f'Invalid verbosity {level}')
 
 def get_token_name(type:int) -> str:
     return HqlLexer.symbolicNames[type]
@@ -94,8 +94,7 @@ def main():
     compiler = Compiler('./conf.json', result.to_dict())
     compiler.compile(ruleset=ruleset)
     compiler.gen_compose()
-    
-    print(json.dumps(compiler.get_compose(), indent=2))
+    compiler.write_to_disk()    
 
 if __name__ == "__main__":
     main()

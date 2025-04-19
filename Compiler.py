@@ -2,6 +2,8 @@ import logging
 import json
 import Container
 import Guid
+import os
+import oyaml
 
 class Compiler():
     def __init__(self, conf_file:str, top:dict):
@@ -17,8 +19,11 @@ class Compiler():
     def to_dict(self):
         return self.statements
     
-    def get_compose(self):
-        return self.composes
+    def get_compose(self, guid:str) -> dict:
+        for compose in self.composes:
+            if compose['guid'] == guid:
+                return compose
+        raise Exception(f'Attempt to reference non-existant compose {guid}')
         
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -112,3 +117,28 @@ class Compiler():
         }
         
         return yaml
+    
+    def write_to_disk(self):
+        top = self.conf.get('OUTPUT_DIR', './out')
+        
+        try:
+            os.mkdir(top)
+        except:
+            logging.debug(f'Dir {top} already exists')
+        
+        for statement in self.statements:
+            curdir = f"{top}/{statement['guid']}"
+            
+            try:
+                os.mkdir(curdir)
+            except:
+                raise Exception('Statement already exists')
+            
+            with open(f'{curdir}/compose.yml', 'w+') as f:
+                oyaml.dump(self.get_compose(statement['guid']), f)
+                
+            for container in statement['containers']:
+                filename = f"{curdir}/{container['type']}-{container['guid']}.json"
+                with open(filename, 'w+') as f:
+                    f.write(json.dumps(container, indent=2))
+                os.chmod(filename, 644)
