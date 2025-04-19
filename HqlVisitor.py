@@ -109,7 +109,7 @@ class Visitor(HqlVisitor):
     
     def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
         return Expression.StringLiteral(ctx.getText())
-    
+
     def visitLongLiteralExpression(self, ctx: HqlParser.LongLiteralExpressionContext):
         return Expression.Integer(ctx.getText())
 
