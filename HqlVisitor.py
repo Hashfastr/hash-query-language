@@ -50,6 +50,9 @@ class Visitor(HqlVisitor):
     def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
         name = self.visit(ctx.getChild(0))
         
+        if not isinstance(name, str):
+            name = name.get_name()
+        
         if ctx.getChildCount() == 2:
             scope = self.visit(ctx.getChild(1))
         else:
@@ -100,6 +103,20 @@ class Visitor(HqlVisitor):
         expression.expressions.append(self.visit(ctx.getChild(2)))
             
         return expression
+
+    def visitBetweenEqualityExpression(self, ctx: HqlParser.BetweenEqualityExpressionContext):
+        expression = Expression.BetweenEquality()
+        
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            
+            # Skip operator names, commas, etc
+            if type(child) == TerminalNodeImpl:
+                continue
+                        
+            expression.expressions.append(self.visit(child))
+            
+        return expression
     
     def visitRelationalExpression(self, ctx: HqlParser.RelationalExpressionContext):
         return self.visit(ctx.getChild(0))
@@ -112,6 +129,9 @@ class Visitor(HqlVisitor):
 
     def visitLongLiteralExpression(self, ctx: HqlParser.LongLiteralExpressionContext):
         return Expression.Integer(ctx.getText())
+
+    def visitEscapedName(self, ctx: HqlParser.EscapedNameContext):
+        return self.visit(ctx.getChild(1))        
 
     def visitTerminal(self, node):
         return node.getText()
