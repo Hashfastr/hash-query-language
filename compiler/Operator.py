@@ -1,4 +1,4 @@
-import Expression
+from compiler.Expression import Expression
 import json
 
 class Operator():
