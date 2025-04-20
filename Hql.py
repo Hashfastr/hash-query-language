@@ -1,12 +1,12 @@
 from antlr4 import *
-from grammar.HqlLexer import HqlLexer
-from grammar.HqlParser import HqlParser
-from HqlVisitor import Visitor
+from compiler.grammar.HqlLexer import HqlLexer
+from compiler.grammar.HqlParser import HqlParser
+from compiler.grammar.HqlVisitor import HqlVisitor
 import sys
 import json
 import logging
 import argparse
-from Compiler import Compiler
+from compiler.Compiler import Compiler
 
 def config_logging(level:str):
     logging.basicConfig()
@@ -74,8 +74,13 @@ def main():
     except:
         return -1
 
-    visitor = Visitor()
+    visitor = HqlVisitor()
     result = visitor.visit(tree)
+    
+    if result == None:
+        logging.error("Compiler error!")
+        logging.error("Parser returned None instead of valid assembly")
+        return -1
     
     if args.asm_show:
         # Use print to give a raw output
@@ -88,11 +93,11 @@ def main():
     ## Compile Assembly ##
     ######################
     
-    with open(rule_file, mode="r") as f:
-        ruleset = json.loads(f.read())
+    # with open(rule_file, mode="r") as f:
+    #     ruleset = json.loads(f.read())
     
     compiler = Compiler('./conf.json', result.to_dict())
-    compiler.compile(ruleset=ruleset)
+    compiler.compile()
     compiler.gen_compose()
     compiler.write_to_disk()    
 

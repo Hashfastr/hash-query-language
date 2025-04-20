@@ -1,4 +1,3 @@
-from Operator import Operator
 import json
 
 class Query():
