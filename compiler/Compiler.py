@@ -1,10 +1,8 @@
+import compiler.Container as Container
+import compiler.Guid as Guid
+import json, oyaml
+import os, stat
 import logging
-import json
-import Container
-import Guid
-import os
-import stat
-import oyaml
 
 class Compiler():
     def __init__(self, conf_file:str, top:dict):
@@ -32,7 +30,7 @@ class Compiler():
     def is_blocking(self, type:str) -> bool:
         return self.ruleset['operations'][type]['blocking']
     
-    def compile(self, ruleset:dict):
+    def compile(self, ruleset:dict={}):
         self.ruleset = ruleset
         
         # compile the containers for each statement

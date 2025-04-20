@@ -1,5 +1,5 @@
-import json
 import logging
+import json
 
 def getExpressionByName(name:str):
     if name == "nameReferenceWithDataScope":

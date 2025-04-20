@@ -2,9 +2,9 @@ from grammar.HqlParser import HqlParser
 from grammar.HqlVisitor import HqlVisitor
 from antlr4.tree.Tree import TerminalNodeImpl
 
-import Operator
-import Expression
-from Query import Query, Statement
+from compiler.Operator import Operator
+from compiler.Expression import Expression
+from compiler.Query import Query, Statement
 
 class Visitor(HqlVisitor):
     def __init__(self):

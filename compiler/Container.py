@@ -1,6 +1,5 @@
-import logging
+import compiler.Guid as Guid
 import json
-import Guid
 
 class Container():
     def __init__(self):
