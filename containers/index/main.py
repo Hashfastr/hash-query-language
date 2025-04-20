@@ -32,7 +32,9 @@ QUERY = conf.get('QUERY', { 'match_all': {} })
 INDEX = conf.get('INDEX', '*')
 
 if DEBUG:
-    logging.getLogger().setLevel(DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
+else:
+    logging.getLogger().setLevel(logging.INFO)
 
 # Make a scrolling query to Elasticsearch
 # Default safety limit is 100000 queries to be returned
