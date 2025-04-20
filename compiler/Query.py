@@ -32,7 +32,7 @@ class Query():
 # The results of a particular statement can be used in another, hence the name.
 # The root statement has the name of "".
 # In the example put above the Query class, there are two statements
-# "AttackerIPs" and ""
+# "AttackerIPs" and "".
 class Statement():
     def __init__(self, name:str=""):
         # if empty it's the prime statement
