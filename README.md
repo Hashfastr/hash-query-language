@@ -35,15 +35,6 @@ Another thing this improves on, and I'm unsure how things like LAW handle this, 
 
 Anyways that's the idea. It's gonna be written in python for right now since JSON is dead stupid using python. But python doesn't have real concurrency, and is comparatively slow, so maybe a C family rewrite? golang? rust :vomit:?
 
-## Setup
-```
-# you need java
-source ./setup-antlr4.sh
-
-# Generates the python files needed
-antlr4 -Dlanguage=Python3 -visitor ./grammar/Hql.g4
-```
-
 ## Running
 Still a bit a manual process to run, doesn't return data anywhere.
 
@@ -70,22 +61,4 @@ Then running will execute the query:
 ```
 cd ./out/b8d1fad3
 podman compose up
-```
-
-## Debug
-### Generating graphs using grun
-Where previously we compiled antlr to python, we need to compile it to java for grun.
-Make sure you already setup antlr4 using the setup script as seen in the previous section.
-
-```
-# this generates *a lot* of java and class files
-cd grammar
-antlr4 -Dlanguage=Java -visitor Hql.g4
-javac -cp ../antlr4/antlr-*-complete.jar Hql*.java
-
-# runs until you kill / Ctrl-C / close the window
-grun Hql top ../tests/simple.txt -gui
-
-# Clean up via
-rm *.java *.class
 ```

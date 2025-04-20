@@ -37,3 +37,21 @@ VERSION="4.13.2"
 ```
 
 Then recompile.
+
+## Debug
+### Generating graphs using grun
+Where previously we compiled antlr to python, we need to compile it to java for grun.
+Make sure you already setup antlr4 using the setup script as seen in the previous section.
+
+```
+# this generates *a lot* of java and class files
+cd grammar
+antlr4 -Dlanguage=Java -visitor Hql.g4
+javac -cp ../antlr4/antlr-*-complete.jar Hql*.java
+
+# runs until you kill / Ctrl-C / close the window
+grun Hql top ../tests/simple.txt -gui
+
+# Clean up via
+rm *.java *.class
+```
