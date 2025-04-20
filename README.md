@@ -7,6 +7,23 @@ See my manifesto [here](docs/MANIFESTO.md)
 
 ## Running
 Still a bit a manual process to run, doesn't return data anywhere.
+You need to make a copy of `conf.json.example` to `conf.json` and configure it with your Elasticsearch instance.
+This is tested with Elasticsearch 7.17, haven't tried opensearch yet.
+It needs to support DSL.
+
+You also need a container system, this was developed for and in Rocky 9.5 with podman.
+It should work for others as well.
+
+Build the containers
+
+```
+cd containers
+./build.sh
+```
+
+If you use docker then just replace podman with docker.
+
+Then rip it.
 
 ```
 python3 Hql.py -f ./tests/tf11-simple.txt
