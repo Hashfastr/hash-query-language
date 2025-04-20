@@ -4,6 +4,10 @@ import json, oyaml
 import os, stat
 import logging
 
+# THE compiler which turns the assembly into containers and container configs.
+# Builds networks and containers using GUIDs and linking them on who to talk to.
+# At the end writes out the compose file, along with the configs for each container.
+# In the compose each container is configured to reference their own configs.
 class Compiler():
     def __init__(self, conf_file:str, top:dict):
         self.top = top
@@ -71,6 +75,7 @@ class Compiler():
         for statement in self.statements:
             top_guid = statement['guid']
             
+            # Add guid, not valid compose but ignores it
             compose = {
                 'guid': top_guid,
                 'services': {
@@ -117,7 +122,9 @@ class Compiler():
         
         return yaml
     
+    # Write compiled results to disk
     def write_to_disk(self):
+        # make the out dir if it doesn't already exist
         top = self.conf.get('OUTPUT_DIR', './out')
         
         try:
@@ -133,13 +140,18 @@ class Compiler():
             except:
                 raise Exception('Statement already exists')
             
+            # Dump out the compose file
             with open(f'{curdir}/compose.yml', 'w+') as f:
                 oyaml.dump(self.get_compose(statement['guid']), f)
-                
+            
+            # Write out each container config
             for container in statement['containers']:
                 filename = f"{curdir}/{container['type']}-{container['guid']}.json"
                 with open(filename, 'w+') as f:
                     f.write(json.dumps(container, indent=2))
+                    
+                # Make the config file 644 so that the non-root user
+                # in the container can read it.
                 os.chmod(
                     filename,
                     stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
