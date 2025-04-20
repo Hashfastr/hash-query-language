@@ -1,3 +1,6 @@
 *.class
 *.java
 .antlr
+*.interp
+*.tokens
+HqlListener.py
