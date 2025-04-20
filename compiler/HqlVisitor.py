@@ -1,9 +1,9 @@
-from grammar.HqlParser import HqlParser
-from grammar.HqlVisitor import HqlVisitor
+from compiler.grammar.HqlParser import HqlParser
+from compiler.grammar.HqlVisitor import HqlVisitor
 from antlr4.tree.Tree import TerminalNodeImpl
 
-from compiler.Operator import Operator
-from compiler.Expression import Expression
+import compiler.Operator as Operator
+import compiler.Expression as Expression
 from compiler.Query import Query, Statement
 
 class Visitor(HqlVisitor):

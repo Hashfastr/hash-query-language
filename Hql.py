@@ -1,7 +1,7 @@
 from antlr4 import *
 from compiler.grammar.HqlLexer import HqlLexer
 from compiler.grammar.HqlParser import HqlParser
-from compiler.grammar.HqlVisitor import HqlVisitor
+from compiler.HqlVisitor import Visitor
 import sys
 import json
 import logging
@@ -74,7 +74,7 @@ def main():
     except:
         return -1
 
-    visitor = HqlVisitor()
+    visitor = Visitor()
     result = visitor.visit(tree)
     
     if result == None:
