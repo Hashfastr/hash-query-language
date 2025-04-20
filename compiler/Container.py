@@ -1,6 +1,10 @@
 import compiler.Guid as Guid
 import json
 
+# A container, pretty straight forward
+# always starts with a guid and a type
+# Containers operate on the concept of a template container than ingests a config
+# telling it how to operate, where to accept data, etc.
 class Container():
     def __init__(self):
         self.type = ''
@@ -17,7 +21,9 @@ class Container():
     
     def __repr__(self):
         return self.__str__()
-    
+
+# Index container, does the initial elastic query.
+# Handles adding filters and compiling them into a DSL query to Elasticsearch.
 class IndexContainer(Container):
     def __init__(self, conf:str, pattern:str):
         super().__init__()
