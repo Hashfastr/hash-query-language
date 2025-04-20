@@ -6,6 +6,8 @@ import compiler.Operator as Operator
 import compiler.Expression as Expression
 from compiler.Query import Query, Statement
 
+# Overrides the HqlVisitor templates
+# If not defined here, each node only returns its children.
 class Visitor(HqlVisitor):
     def __init__(self):
         pass
@@ -93,8 +95,8 @@ class Visitor(HqlVisitor):
                 operator.expressions.append(self.visit(ctx.getChild(i)))
 
         return operator
-            
     
+    # Collects left and right hand expressions along with the type of equality.
     def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):       
         expression = Expression.Equality()
         
@@ -133,5 +135,6 @@ class Visitor(HqlVisitor):
     def visitEscapedName(self, ctx: HqlParser.EscapedNameContext):
         return self.visit(ctx.getChild(1))        
 
+    # These are nothing but plaintext strings.
     def visitTerminal(self, node):
         return node.getText()
