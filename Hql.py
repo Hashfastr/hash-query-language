@@ -80,6 +80,7 @@ def main():
     if result == None:
         logging.error("Compiler error!")
         logging.error("Parser returned None instead of valid assembly")
+        logging.error("Import error?")
         return -1
     
     if args.asm_show:
