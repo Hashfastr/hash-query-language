@@ -7,6 +7,9 @@ import json
 import logging
 import argparse
 from compiler.Compiler import Compiler
+import containers.Containers as Containers
+import shutil
+import cProfile, pstats
 
 def config_logging(level:str):
     logging.basicConfig()
@@ -52,19 +55,26 @@ def main():
     parser.add_argument('-v', '--verbose', help="Set verbosity to debug", action='store_true')
     parser.add_argument('-l' '--logging-level', help="Verbosity level 1-5, where 5 is debug, 1 is critical, default is 3, warning.", type=int)
     parser.add_argument('-r', '--rule-set', help="The ruleset used for compiling, defaults to ./rules.json")
+    parser.add_argument('-nc', '--no-clean', help="Should Hql not clean up container files after execution?", action='store_true')
+    parser.add_argument('-p', '--profile', help="Profile the performance of Hql", action='store_true')
     
     args = parser.parse_args()
+    
+    if args.profile:
+        profiler = cProfile.Profile()
+        profiler.enable()
     
     if args.l__logging_level:
         config_logging(args.l__logging_level)
     elif args.verbose:
         config_logging(5)
-        
+    
+    # unused for now
     if args.rule_set == None:
         rule_file = "./rules.json"
     else:
         rule_file = args.rule_set
-    
+
     #######################
     ## Generate Assembly ##
     #######################
@@ -96,11 +106,33 @@ def main():
     
     # with open(rule_file, mode="r") as f:
     #     ruleset = json.loads(f.read())
-    
+        
     compiler = Compiler('./conf.json', result.to_dict())
     compiler.compile()
     compiler.gen_compose()
-    compiler.write_to_disk()    
+    compiler.write_to_disk()
+    
+    ####################
+    ## Run Containers ##
+    ####################
+        
+    res = Containers.compose_up(compiler.working_dir())
+    
+    print(res.stdout.decode())
+    print(res.stderr.decode())
+    
+    if not args.no_clean:
+        shutil.rmtree(compiler.working_dir())
+    
+    if args.profile:
+        profiler.disable()
+        
+        with open('./profile.txt', mode='w+') as f:
+            stats = pstats.Stats(profiler, stream=f)
+            stats.sort_stats('time')
+            stats.print_stats()
+            
+        print("Performance metrics outputted to profile.txt")
 
 if __name__ == "__main__":
     main()
