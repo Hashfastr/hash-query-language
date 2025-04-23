@@ -23,6 +23,14 @@ cd containers
 
 If you use docker then just replace podman with docker.
 
+Install deps
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip3 install -r requirements.txt
+```
+
 Then rip it.
 
 ```

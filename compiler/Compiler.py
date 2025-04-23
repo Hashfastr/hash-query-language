@@ -132,6 +132,7 @@ class Compiler():
         except:
             logging.debug(f'Dir {top} already exists')
         
+        # double nested for, the sin
         for statement in self.statements:
             curdir = f"{top}/{statement['guid']}"
             
