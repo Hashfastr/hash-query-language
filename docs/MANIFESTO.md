@@ -45,4 +45,4 @@ It would be nice to stream the data, that is process other parts of the pipeline
 
 Anyways that's the idea.
 It's gonna be written in python for right now since JSON is dead stupid using python.
-But python doesn't have real concurrency, and is comparatively slow, so maybe a C family rewrite? golang? rust :vomit:?
+But python doesn't have real concurrency, and is comparatively slow, so maybe a mixed language situation?
