@@ -34,7 +34,7 @@ INDEX = conf.get('INDEX', '*')
 if DEBUG:
     logging.getLogger().setLevel(logging.DEBUG)
 else:
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.CRITICAL)
 
 # Make a scrolling query to Elasticsearch
 # Default safety limit is 100000 queries to be returned
@@ -90,6 +90,8 @@ def make_query(index:str, query:dict, limit:int=100000):
 
 def main():
     results = make_query(INDEX, QUERY)
+    
+    print(results)
     
     logging.info(f"Done! Got {len(results)} results.")
     

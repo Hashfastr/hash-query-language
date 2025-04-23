@@ -12,15 +12,21 @@ class Compiler():
     def __init__(self, conf_file:str, top:dict):
         self.top = top
         self.conf_file = conf_file
+        self.query_guid = Guid.gen_guid()
         self.statements = []
         self.composes = []
         
         # load conf file
         with open(self.conf_file, mode='r') as f:
             self.conf = json.loads(f.read())
+            
+        self.out_dir = self.conf.get('OUTPUT_DIR', './out')
         
     def to_dict(self):
         return self.statements
+
+    def working_dir(self):
+        return self.out_dir + os.sep + self.query_guid
     
     def get_compose(self, guid:str) -> dict:
         for compose in self.composes:
@@ -125,29 +131,26 @@ class Compiler():
     # Write compiled results to disk
     def write_to_disk(self):
         # make the out dir if it doesn't already exist
-        top = self.conf.get('OUTPUT_DIR', './out')
-        
         try:
-            os.mkdir(top)
+            os.mkdir(self.out_dir)
         except:
-            logging.debug(f'Dir {top} already exists')
+            logging.debug(f'Dir {self.out_dir} already exists')
         
-        # double nested for, the sin
+        wd = self.working_dir()
+
+        try:
+            os.mkdir(wd)
+        except:
+            raise Exception('Query already exists')
+        
         for statement in self.statements:
-            curdir = f"{top}/{statement['guid']}"
-            
-            try:
-                os.mkdir(curdir)
-            except:
-                raise Exception('Statement already exists')
-            
             # Dump out the compose file
-            with open(f'{curdir}/compose.yml', 'w+') as f:
+            with open(f'{wd}/compose.yml', 'w+') as f:
                 oyaml.dump(self.get_compose(statement['guid']), f)
             
             # Write out each container config
             for container in statement['containers']:
-                filename = f"{curdir}/{container['type']}-{container['guid']}.json"
+                filename = f"{wd}/{container['type']}-{container['guid']}.json"
                 with open(filename, 'w+') as f:
                     f.write(json.dumps(container, indent=2))
                     
