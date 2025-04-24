@@ -7,7 +7,7 @@ import json
 import logging
 import argparse
 from compiler.Compiler import Compiler
-import containers.Containers as Containers
+from containers.Compose import Compose
 import shutil
 import cProfile, pstats
 
@@ -57,6 +57,7 @@ def main():
     parser.add_argument('-r', '--rule-set', help="The ruleset used for compiling, defaults to ./rules.json")
     parser.add_argument('-nc', '--no-clean', help="Should Hql not clean up container files after execution?", action='store_true')
     parser.add_argument('-p', '--profile', help="Profile the performance of Hql", action='store_true')
+    parser.add_argument('-co', '--compose-override', help="Override the compose binary found in the path")
     
     args = parser.parse_args()
     
@@ -79,6 +80,8 @@ def main():
     ## Generate Assembly ##
     #######################
     
+    logging.debug('Parsing...')
+    
     try:
         tree = parse_file(args.file)
     except:
@@ -100,26 +103,34 @@ def main():
     else:
         logging.debug(result)
         
+    logging.debug('Done.')
+        
     ######################
     ## Compile Assembly ##
     ######################
     
     # with open(rule_file, mode="r") as f:
     #     ruleset = json.loads(f.read())
-        
+    
+    logging.debug("Compiling...")
+    
     compiler = Compiler('./conf.json', result.to_dict())
     compiler.compile()
     compiler.gen_compose()
     compiler.write_to_disk()
     
+    logging.debug("Done.")
+    
     ####################
     ## Run Containers ##
     ####################
-        
-    res = Containers.compose_up(compiler.working_dir())
+
+    compose = Compose(compiler.working_dir(), compose_override=args.compose_override)
     
-    print(res.stdout.decode())
-    print(res.stderr.decode())
+    res = compose.up()
+    print(res.stdout)
+    
+    compose.down()
     
     if not args.no_clean:
         shutil.rmtree(compiler.working_dir())
@@ -133,6 +144,6 @@ def main():
             stats.print_stats()
             
         print("Performance metrics outputted to profile.txt")
-
+        
 if __name__ == "__main__":
     main()

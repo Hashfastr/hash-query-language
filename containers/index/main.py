@@ -1,6 +1,7 @@
 from elasticsearch import Elasticsearch
 import logging
 import json
+import time
 
 # Get our config file
 with open('./conf.json', mode='r') as f:
@@ -89,7 +90,12 @@ def make_query(index:str, query:dict, limit:int=100000):
 
 
 def main():
+    start = time.perf_counter()
+    
     results = make_query(INDEX, QUERY)
+    
+    end = time.perf_counter()
+    print(f'Query took {end - start} seconds')
     
     print(results)
     
