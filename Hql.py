@@ -10,6 +10,7 @@ from compiler.Compiler import Compiler
 from containers.Compose import Compose
 import shutil
 import cProfile, pstats
+import time
 
 def config_logging(level:str):
     logging.basicConfig()
@@ -33,6 +34,8 @@ def get_token_name(type:int) -> str:
     return HqlLexer.symbolicNames[type]
 
 def parse_file(filename:str) -> CommonTokenStream:
+    start = time.perf_counter()
+    
     try:
         with open(filename, 'r') as f:
             input_text = f.read()
@@ -45,6 +48,9 @@ def parse_file(filename:str) -> CommonTokenStream:
         raise e
     
     tree = parser.query()
+    
+    end = time.perf_counter()
+    logging.debug(f'Parsing took {end - start}s')
     
     return tree
 
