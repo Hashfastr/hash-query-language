@@ -16,38 +16,67 @@ class Compiler():
         self.statements = []
         self.compose = {}
         
+        self.runtimes = [
+            'podman',
+            'docker',
+        ]
+        
         # load conf file
         with open(self.conf_file, mode='r') as f:
             self.conf = json.loads(f.read())
             
         self.out_dir = self.conf.get('OUTPUT_DIR', './out')
         
+        self.ext_mnt_flags = 'z'
+        self.conf_mnt_flags = 'ro'
+        
+        self.mnt_flags = [self.conf_mnt_flags, self.ext_mnt_flags]
+        
+        if 'container_runtime' in self.conf:
+            self.runtime = self.conf['container_runtime']            
+        else:
+            self.runtime = self.get_exec()
+        
+        
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=2)
+        
     def to_dict(self):
         return self.statements
 
     def working_dir(self):
         return self.out_dir + os.sep + self.query_guid
-
-    #def output_service(self):
-    #    return self.composes[]
-        
-    def __str__(self):
-        return json.dumps(self.to_dict(), indent=2)
     
+    # Not used yet, will probably make sense eventually
     def is_blocking(self, type:str) -> bool:
         return self.ruleset['operations'][type]['blocking']
     
-    def compile(self, ruleset:dict={}):
-        self.ruleset = ruleset
+    def get_exec(self):
+        path = os.environ.get('PATH', '')
         
+        if path == '':
+            raise Exception("Empty shell $PATH detected!")
+        
+        for directory in path.split(':'):
+            for runtime in self.runtimes:
+                full = directory + os.sep + runtime
+                if os.path.isfile(full):
+                    return full
+                
+        raise Exception('No runtime available on the system!')
+    
+    # Go through each statement in the query and compile it
+    def compile(self):        
         # compile the containers for each statement
         for statement in self.top['statements']:
             compiled = {
-                'guid': Guid.gen_guid()
+                # generate the statement guid
+                'guid': Guid.gen_guid(),
             }
             
+            # Compile the containers for the statement
             compiled['containers'] = self.compile_statement(statement)
-                        
+            
             self.statements.append(compiled)
                                 
     def compile_statement(self, statement:dict):
@@ -70,56 +99,57 @@ class Compiler():
                     for exp in operation['expressions']:
                         containers[-1].add_filter(exp)       
                                 
-        return [ x.to_dict() for x in containers ]
+        return containers
+
+    def network_create(self, guid:str):
+        return 
     
-    def gen_compose(self):
-        self.compose = {
-            'guid': self.query_guid,
-            'services': {
-                
-            },
-            'networks': {}
+    def gen_mnt_flags(self):
+        if len(self.mnt_flags) == 0:
+            return ""
+        else:
+            return f":{','.join(self.mnt_flags)}"
+    
+    def gen_commands(self):
+        cmds = {
+            'capture': [],
+            'entry': [],
+            'exit': []
         }
+        flags = self.gen_mnt_flags()
         
         for statement in self.statements:
-            statement_guid = statement['guid']
+            guid = statement['guid']
             
-            self.compose['networks'][f'net-{statement_guid}'] = {
-                'driver': 'bridge'
-            }
+            network = f"{guid}-net"
+            net_cmd = [
+                self.runtime,
+                'network',
+                'create',
+                network
+            ]
+            cmds['entry'].append(net_cmd)
             
             for container in statement['containers']:
-                con_type = container['type']
-                guid = container['guid']
+                cmds['entry'].append(container.gen_entry_cmd(self.runtime, network, flags))
+                cmds['exit'].append(container.gen_exit_cmd(self.runtime, flags))
+                capture = container.con_name
                 
-                self.compose['services'][f'{con_type}-{guid}'] = self.gen_yaml(container)
-                self.compose['services'][f'{con_type}-{guid}']['networks'] = [
-                    f'net-{statement_guid}'
-                ]
-
-    # Generate the yaml for a particular container/service
-    def gen_yaml(self, container):
-        con_type = container['type']
-        guid = container['guid']
-        mnt_flags = self.conf['MNT_FLAGS']
-        
-        yaml = {
-            'container_name': f'{con_type}-{guid}',
-            'image': self.conf['IMAGES'][con_type],
-            'restart': self.conf['RESTART_POLICY'],
-            'volumes': [
-                f'./{con_type}-{guid}.json:/opt/hql/conf.json:{mnt_flags}'
-            ],
-            'userns': 'auto',
-            'group-add': [
-                'keep-groups'
-            ],
-            'cap_add': [
-                'NET_RAW'
+            net_cmd = [
+                self.runtime,
+                'network',
+                'rm',
+                network
             ]
-        }
-        
-        return yaml
+            cmds['exit'].append(net_cmd)
+            
+            cmds['capture'] = [
+                self.runtime,
+                'wait',
+                capture
+            ]
+            
+        self.cmds = cmds                
     
     # Write compiled results to disk
     def write_to_disk(self):
@@ -136,16 +166,12 @@ class Compiler():
         except:
             raise Exception('Query already exists')
         
-        # Dump out the compose file
-        with open(f'{wd}/compose.yml', 'w+') as f:
-            oyaml.dump(self.compose, f)
-        
         for statement in self.statements:
             # Write out each container config
             for container in statement['containers']:
-                filename = f"{wd}/{container['type']}-{container['guid']}.json"
+                filename = f"{wd}/{container.con_name}.json"
                 with open(filename, 'w+') as f:
-                    f.write(json.dumps(container, indent=2))
+                    f.write(json.dumps(container.to_dict(), indent=2))
                     
                 # Make the config file 644 so that the non-root user
                 # in the container can read it.

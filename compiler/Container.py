@@ -21,6 +21,29 @@ class Container():
     
     def __repr__(self):
         return self.__str__()
+        
+    def gen_entry_cmd(self, runtime:str, network:str, flags:str):
+        self.con_name = f"{self.type}-{self.guid}"
+                
+        cmd = [
+            runtime,
+            'run',
+            '-v',
+            f'./{self.con_name}.json:/opt/hql/conf.json{flags}',
+            '--name',
+            self.con_name,
+            '--network',
+            network,
+            '-d',
+            f"hql-{self.type}:latest"
+        ]
+
+        return cmd
+        
+    def gen_exit_cmd(self, runtime:str, flags:str):        
+        cmd = [runtime, 'rm', self.con_name]
+        return cmd
+        
 
 # Index container, does the initial elastic query.
 # Handles adding filters and compiling them into a DSL query to Elasticsearch.
