@@ -14,7 +14,7 @@ class Compiler():
         self.conf_file = conf_file
         self.query_guid = Guid.gen_guid()
         self.statements = []
-        self.composes = []
+        self.compose = {}
         
         # load conf file
         with open(self.conf_file, mode='r') as f:
@@ -27,12 +27,9 @@ class Compiler():
 
     def working_dir(self):
         return self.out_dir + os.sep + self.query_guid
-    
-    def get_compose(self, guid:str) -> dict:
-        for compose in self.composes:
-            if compose['guid'] == guid:
-                return compose
-        raise Exception(f'Attempt to reference non-existant compose {guid}')
+
+    #def output_service(self):
+    #    return self.composes[]
         
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -76,35 +73,31 @@ class Compiler():
         return [ x.to_dict() for x in containers ]
     
     def gen_compose(self):
-        self.composes = []
+        self.compose = {
+            'guid': self.query_guid,
+            'services': {
+                
+            },
+            'networks': {}
+        }
         
         for statement in self.statements:
-            top_guid = statement['guid']
+            statement_guid = statement['guid']
             
-            # Add guid, not valid compose but ignores it
-            compose = {
-                'guid': top_guid,
-                'services': {
-                    
-                },
-                'networks': {
-                    f'net-{top_guid}': {
-                        'driver': 'bridge'
-                    }
-                }
+            self.compose['networks'][f'net-{statement_guid}'] = {
+                'driver': 'bridge'
             }
             
             for container in statement['containers']:
                 con_type = container['type']
                 guid = container['guid']
                 
-                compose['services'][f'{con_type}-{guid}'] = self.gen_yaml(container)
-                compose['services'][f'{con_type}-{guid}']['networks'] = [
-                    f'net-{top_guid}'
+                self.compose['services'][f'{con_type}-{guid}'] = self.gen_yaml(container)
+                self.compose['services'][f'{con_type}-{guid}']['networks'] = [
+                    f'net-{statement_guid}'
                 ]
-        
-            self.composes.append(compose)
-        
+
+    # Generate the yaml for a particular container/service
     def gen_yaml(self, container):
         con_type = container['type']
         guid = container['guid']
@@ -143,11 +136,11 @@ class Compiler():
         except:
             raise Exception('Query already exists')
         
+        # Dump out the compose file
+        with open(f'{wd}/compose.yml', 'w+') as f:
+            oyaml.dump(self.compose, f)
+        
         for statement in self.statements:
-            # Dump out the compose file
-            with open(f'{wd}/compose.yml', 'w+') as f:
-                oyaml.dump(self.get_compose(statement['guid']), f)
-            
             # Write out each container config
             for container in statement['containers']:
                 filename = f"{wd}/{container['type']}-{container['guid']}.json"

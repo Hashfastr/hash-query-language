@@ -8,4 +8,4 @@ run() {
     echo "Exiting"
 }
 
-time run
+run
