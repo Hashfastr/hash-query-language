@@ -129,6 +129,8 @@ def main():
     ## Run Containers ##
     ####################
     
+    start = time.perf_counter()
+    
     logging.debug('Running entry commands')
     
     for cmd in compiler.cmds['entry']:
@@ -158,6 +160,13 @@ def main():
             capture_output=True
         )
         
+    end = time.perf_counter()
+    logging.debug(f'Container execution took {end - start}s')
+
+    #######################
+    ## Cleanup artifacts ##
+    #######################
+
     logging.debug('Cleaning files')
 
     if not args.no_clean:
