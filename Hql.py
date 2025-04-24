@@ -106,8 +106,6 @@ def main():
         # Use print to give a raw output
         print(result)
         return
-    else:
-        logging.debug(result)
         
     logging.debug('Done.')
         
