@@ -114,7 +114,8 @@ class Compiler():
         cmds = {
             'capture': [],
             'entry': [],
-            'exit': []
+            'exit': [],
+            'kill': []
         }
         flags = self.gen_mnt_flags()
         
@@ -132,7 +133,8 @@ class Compiler():
             
             for container in statement['containers']:
                 cmds['entry'].append(container.gen_entry_cmd(self.runtime, network, flags))
-                cmds['exit'].append(container.gen_exit_cmd(self.runtime, flags))
+                cmds['exit'].append(container.gen_exit_cmd(self.runtime))
+                cmds['kill'].append(container.gen_exit_cmd(self.runtime))
                 capture = container.con_name
                 
             net_cmd = [
@@ -143,9 +145,15 @@ class Compiler():
             ]
             cmds['exit'].append(net_cmd)
             
-            cmds['capture'] = [
+            cmds['wait'] = [
                 self.runtime,
                 'wait',
+                capture
+            ]
+            
+            cmds['capture'] = [
+                self.runtime,
+                'logs',
                 capture
             ]
             
