@@ -15,4 +15,4 @@ USER hql
 
 RUN chmod +x /opt/hql/entry.sh && ls -lh /opt/hql/entry.sh
 
-ENTRYPOINT [ "/bin/bash", "/opt/hql/entry.sh" ]
+ENTRYPOINT [ "/opt/hql/entry.sh" ]
