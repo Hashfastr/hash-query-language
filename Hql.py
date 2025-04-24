@@ -7,10 +7,10 @@ import json
 import logging
 import argparse
 from compiler.Compiler import Compiler
-from containers.Compose import Compose
 import shutil
 import cProfile, pstats
 import time
+import subprocess
 
 def config_logging(level:str):
     logging.basicConfig()
@@ -120,22 +120,46 @@ def main():
     
     compiler = Compiler('./conf.json', result.to_dict())
     compiler.compile()
-    compiler.gen_compose()
+    compiler.gen_commands()
     compiler.write_to_disk()
-    
+        
     logging.debug("Done.")
     
     ####################
     ## Run Containers ##
     ####################
+    
+    logging.debug('Running entry commands')
+    
+    for cmd in compiler.cmds['entry']:
+        subprocess.run(
+            cmd,
+            cwd=compiler.working_dir(),
+            check=True,
+            capture_output=True
+        )
+    
+    logging.debug('Capturing')
+    
+    subprocess.run(
+        compiler.cmds['capture'],
+        cwd=compiler.working_dir(),
+        check=True,
+        capture_output=True
+    )
+    
+    logging.debug('Running exit commands')
+    
+    for cmd in compiler.cmds['exit']:
+        subprocess.run(
+            cmd,
+            cwd=compiler.working_dir(),
+            check=True,
+            capture_output=True
+        )
+        
+    logging.debug('Cleaning files')
 
-    compose = Compose(compiler.working_dir(), compose_override=args.compose_override)
-    
-    res = compose.up()
-    print(res.stdout)
-    
-    compose.down()
-    
     if not args.no_clean:
         shutil.rmtree(compiler.working_dir())
     
