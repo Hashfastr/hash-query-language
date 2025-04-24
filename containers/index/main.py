@@ -73,8 +73,8 @@ def make_query(index:str, query:dict, limit:int=100000):
             logging.debug(f"Timed out? {res['timed_out']}")
             break
         
-        # Ensure that we only add the number of remaining rows
-        results += res['hits']['hits'][:remainder]
+        # Ensure that we only print the number of remaining rows
+        [print(json.dumps(x)) for x in res['hits']['hits'][:remainder]]
         result_count += len(res['hits']['hits'][:remainder])
         
         remainder = limit - result_count
@@ -92,14 +92,10 @@ def make_query(index:str, query:dict, limit:int=100000):
 def main():
     start = time.perf_counter()
     
-    results = make_query(INDEX, QUERY)
+    make_query(INDEX, QUERY)
     
     end = time.perf_counter()
-    print(f'Query took {end - start} seconds')
-    
-    print(results)
-    
-    logging.info(f"Done! Got {len(results)} results.")
+    logging.debug(f'Query took {end - start} seconds')
     
 if __name__ == "__main__":
     main()

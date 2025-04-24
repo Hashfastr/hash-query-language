@@ -40,8 +40,12 @@ class Container():
 
         return cmd
         
-    def gen_exit_cmd(self, runtime:str, flags:str):        
+    def gen_exit_cmd(self, runtime:str):        
         cmd = [runtime, 'rm', self.con_name]
+        return cmd
+
+    def gen_kill_cmd(self, runtime:str):        
+        cmd = [runtime, 'kill', self.con_name]
         return cmd
         
 

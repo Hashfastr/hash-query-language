@@ -131,34 +131,55 @@ def main():
     
     start = time.perf_counter()
     
-    logging.debug('Running entry commands')
-    
-    for cmd in compiler.cmds['entry']:
+    try:
+        logging.debug('Running entry commands')
+        
+        for cmd in compiler.cmds['entry']:
+            subprocess.run(
+                cmd,
+                cwd=compiler.working_dir(),
+                check=True,
+                capture_output=True
+            )
+            
+        logging.debug('Waiting')
+        
         subprocess.run(
-            cmd,
+            compiler.cmds['wait'],
             cwd=compiler.working_dir(),
             check=True,
             capture_output=True
         )
-    
-    logging.debug('Capturing')
-    
-    subprocess.run(
-        compiler.cmds['capture'],
-        cwd=compiler.working_dir(),
-        check=True,
-        capture_output=True
-    )
-    
-    logging.debug('Running exit commands')
-    
-    for cmd in compiler.cmds['exit']:
+        
+        logging.debug('Capturing')
+        
         subprocess.run(
-            cmd,
+            compiler.cmds['capture'],
             cwd=compiler.working_dir(),
-            check=True,
-            capture_output=True
+            check=True
         )
+        
+        logging.debug('Running exit commands')
+        
+        for cmd in compiler.cmds['exit']:
+            subprocess.run(
+                cmd,
+                cwd=compiler.working_dir(),
+                check=True,
+                capture_output=True
+            )
+
+    # Handle interrupts
+    except KeyboardInterrupt:
+        logging.info("Interrupted, cleaning up containers")
+        
+        for cmd in compiler.cmds['kill']:
+            subprocess.run(
+                cmd,
+                cwd=compiler.working_dir(),
+                check=True,
+                capture_output=True
+            )
         
     end = time.perf_counter()
     logging.debug(f'Container execution took {end - start}s')
