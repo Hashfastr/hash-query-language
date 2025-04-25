@@ -1,12 +1,12 @@
 from antlr4 import *
-from compiler.grammar.HqlLexer import HqlLexer
-from compiler.grammar.HqlParser import HqlParser
-from compiler.HqlVisitor import Visitor
+from HqlCompiler.grammar.HqlLexer import HqlLexer
+from HqlCompiler.grammar.HqlParser import HqlParser
+from HqlCompiler.HqlVisitor import Visitor
 import sys
 import json
 import logging
 import argparse
-from compiler.Compiler import Compiler
+from HqlCompiler import Compiler
 import shutil
 import cProfile, pstats
 import time
