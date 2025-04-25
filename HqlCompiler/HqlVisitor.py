@@ -1,10 +1,10 @@
-from compiler.grammar.HqlParser import HqlParser
-from compiler.grammar.HqlVisitor import HqlVisitor
+from HqlCompiler.grammar.HqlParser import HqlParser
+from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from antlr4.tree.Tree import TerminalNodeImpl
 
-import compiler.Operator as Operator
-import compiler.Expression as Expression
-from compiler.Query import Query, Statement
+import HqlCompiler.Operators as Operator
+import HqlCompiler.Expression as Expression
+from HqlCompiler.Query import Query, Statement
 
 # Overrides the HqlVisitor templates
 # If not defined here, each node only returns its children.
