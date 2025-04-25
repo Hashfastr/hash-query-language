@@ -1,5 +1,6 @@
 from elasticsearch import Elasticsearch
 import logging
+import socket
 import json
 import time
 
@@ -36,6 +37,12 @@ if DEBUG:
     logging.getLogger().setLevel(logging.DEBUG)
 else:
     logging.getLogger().setLevel(logging.CRITICAL)
+
+def make_json(data:list):
+    return {
+        'origin': socket.gethostname(),
+        'rows': [x['_source'] for x in data]
+    }
 
 # Make a scrolling query to Elasticsearch
 # Default safety limit is 100000 queries to be returned
@@ -74,10 +81,12 @@ def make_query(index:str, query:dict, limit:int=100000):
             break
         
         # Ensure that we only print the number of remaining rows
-        [print(json.dumps(x)) for x in res['hits']['hits'][:remainder]]
-        result_count += len(res['hits']['hits'][:remainder])
+        data = res['hits']['hits'][:remainder]
+        result_count += len(data)
         
         remainder = limit - result_count
+        
+        print(json.dumps(make_json(data)))
         
         res = client.scroll(
             scroll_id=sid,

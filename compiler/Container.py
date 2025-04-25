@@ -32,6 +32,8 @@ class Container():
             f'./{self.con_name}.json:/opt/hql/conf.json{flags}',
             '--name',
             self.con_name,
+            '--hostname',
+            self.con_name,
             '--network',
             network,
             '-d',
