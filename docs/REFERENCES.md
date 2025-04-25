@@ -26,3 +26,6 @@ https://www.elastic.co/blog/esql-lookup-join-elasticsearch
 > The lookup index could be assets, threat intel data like known-bad IPs, order info, employee or customer info — there are infinite possibilities.
 
 So, not really, just left outer, and it's not a true join, seems a little hodge podged.
+
+## Polar
+https://docs.pola.rs/api/python/stable/reference/sql/python_api.html#querying
