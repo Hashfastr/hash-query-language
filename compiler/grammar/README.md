@@ -47,7 +47,7 @@ Make sure you already setup antlr4 using the setup script as seen in the previou
 # this generates *a lot* of java and class files
 cd grammar
 antlr4 -Dlanguage=Java -visitor Hql.g4
-javac -cp ../antlr4/antlr-*-complete.jar Hql*.java
+javac -cp ./antlr4/antlr-*-complete.jar Hql*.java
 
 # runs until you kill / Ctrl-C / close the window
 grun Hql top ../tests/simple.txt -gui
