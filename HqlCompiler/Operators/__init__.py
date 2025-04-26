@@ -1,10 +1,11 @@
 __all__ = [
     "Index",
     "Where",
-    "Project"
+    "Project",
+    "Operator"
 ]
 
-from .Operator import Operator
-from .Index import Index
 from .Where import Where
 from .Project import Project
+from . import Index
+from .Operator import Operator

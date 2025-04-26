@@ -1,5 +1,5 @@
-from HqlCompiler.Operators.Operator import Operator
-from HqlCompiler.Expression import Expression
+from .Operator import Operator
+from ..Expression import Expression
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.
@@ -12,6 +12,12 @@ from HqlCompiler.Expression import Expression
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 class Project(Operator):
-    def __init__(self):
+    def __init__(self, fields:list=[]):
         super().__init__()
         self.type = 'project'
+    
+    def gen_filter(self):
+        pass
+    
+    def process(self, data):
+        pass

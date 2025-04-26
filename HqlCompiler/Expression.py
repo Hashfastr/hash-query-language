@@ -13,6 +13,7 @@ import json
 # compilation.
 class Expression():
     def __init__(self):
+        self.type = self.__class__.__name__
         pass
     
     def to_dict(self):
@@ -56,7 +57,6 @@ class BetweenEquality(Expression):
     def __init__(self):
         super().__init__()
         self.expressions = []
-        self.type = 'between'
     
     def to_dict(self):
         try:
@@ -94,7 +94,6 @@ class StringLiteral(Expression):
     def __init__(self, value:str):
         super().__init__()
         self.value = value.strip('"').strip("'")
-        self.type = 'stringliteral'
         
     def get_name(self):
         return self.value
@@ -113,10 +112,48 @@ class Integer(Expression):
     def __init__(self, value:str):
         super().__init__()
         self.value = int(value)
-        self.type = 'integer'
         
     def to_dict(self):
         return {
             'type': self.type,
             'value': self.value
+        }
+
+class Function(Expression):
+    def __init__(self, name:str, args:list=[]):
+        super().__init__()
+        self.name = name
+        self.args = args
+    
+    def __str__(self):
+        print(super().__str__())
+        return super().__str__()
+    
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'name': self.name,
+            'args': [x.to_dict() for x in self.args]
+        }
+
+class PathExpression(Expression):
+    def __init__(self, path:list=[]):
+        super().__init__()
+        self.path = path
+                
+    def to_dict(self):
+        return {
+            'type': 'pathexpression',
+            'path': [x.to_dict() for x in self.path]
+        }
+        
+class PathReference(Expression):
+    def __init__(self, ref):
+        super().__init__()
+        self.ref = ref
+
+    def to_dict(self):
+        return {
+            'type': 'pathref',
+            'ref': self.ref
         }

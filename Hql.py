@@ -2,15 +2,12 @@ from antlr4 import *
 from HqlCompiler.grammar.HqlLexer import HqlLexer
 from HqlCompiler.grammar.HqlParser import HqlParser
 from HqlCompiler.HqlVisitor import Visitor
-import sys
-import json
-import logging
-import argparse
+from HqlCompiler.Exceptions import *
 from HqlCompiler import Compiler
-import shutil
-import cProfile, pstats
-import time
-import subprocess
+
+import logging
+import argparse, sys, os
+import cProfile, pstats, time
 
 def config_logging(level:str):
     logging.basicConfig()
@@ -64,6 +61,7 @@ def main():
     parser.add_argument('-nc', '--no-clean', help="Should Hql not clean up container files after execution?", action='store_true')
     parser.add_argument('-p', '--profile', help="Profile the performance of Hql", action='store_true')
     parser.add_argument('-co', '--compose-override', help="Override the compose binary found in the path")
+    parser.add_argument('-c', '--config', help="Location of the config file")
     
     args = parser.parse_args()
     
@@ -81,6 +79,11 @@ def main():
         rule_file = "./rules.json"
     else:
         rule_file = args.rule_set
+        
+    if args.config == None:
+        conf_file = "./conf.json"
+    else:
+        conf_file = args.config
 
     #######################
     ## Generate Assembly ##
@@ -93,8 +96,12 @@ def main():
     except:
         return -1
 
-    visitor = Visitor()
-    result = visitor.visit(tree)
+    try:
+        visitor = Visitor(conf_file)
+        result = visitor.visit(tree)
+    except ConfigException as e:
+        logging.error(e)
+        return -1
     
     if result == None:
         logging.error("Compiler error!")
@@ -118,80 +125,22 @@ def main():
     
     logging.debug("Compiling...")
     
-    compiler = Compiler('./conf.json', result.to_dict())
+    compiler = Compiler('./conf.json', result)
     compiler.compile()
-    compiler.gen_commands()
-    compiler.write_to_disk()
-        
+    
     logging.debug("Done.")
     
-    ####################
-    ## Run Containers ##
-    ####################
-    
-    start = time.perf_counter()
-    
-    try:
-        logging.debug('Running entry commands')
-        
-        for cmd in compiler.cmds['entry']:
-            subprocess.run(
-                cmd,
-                cwd=compiler.working_dir(),
-                check=True,
-                capture_output=True
-            )
-            
-        logging.debug('Waiting')
-        
-        subprocess.run(
-            compiler.cmds['wait'],
-            cwd=compiler.working_dir(),
-            check=True,
-            capture_output=True
-        )
-        
-        logging.debug('Capturing')
-        
-        subprocess.run(
-            compiler.cmds['capture'],
-            cwd=compiler.working_dir(),
-            check=True
-        )
-        
-        logging.debug('Running exit commands')
-        
-        for cmd in compiler.cmds['exit']:
-            subprocess.run(
-                cmd,
-                cwd=compiler.working_dir(),
-                check=True,
-                capture_output=True
-            )
+    #############
+    ## Queries ##
+    #############
 
-    # Handle interrupts
-    except KeyboardInterrupt:
-        logging.info("Interrupted, cleaning up containers")
-        
-        for cmd in compiler.cmds['kill']:
-            subprocess.run(
-                cmd,
-                cwd=compiler.working_dir(),
-                check=True,
-                capture_output=True
-            )
-        
-    end = time.perf_counter()
-    logging.debug(f'Container execution took {end - start}s')
+
 
     #######################
     ## Cleanup artifacts ##
     #######################
 
     logging.debug('Cleaning files')
-
-    if not args.no_clean:
-        shutil.rmtree(compiler.working_dir())
     
     if args.profile:
         profiler.disable()
