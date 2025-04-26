@@ -1,5 +1,5 @@
-from HqlCompiler.Operators.Operator import Operator
-from HqlCompiler.Expression import Expression
+from .Operator import Operator
+from ..Expression import Expression
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.

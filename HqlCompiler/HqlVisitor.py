@@ -1,15 +1,21 @@
-from HqlCompiler.grammar.HqlParser import HqlParser
-from HqlCompiler.grammar.HqlVisitor import HqlVisitor
+from .grammar.HqlParser import HqlParser
+from .grammar.HqlVisitor import HqlVisitor
 from antlr4.tree.Tree import TerminalNodeImpl
 
-import HqlCompiler.Operators as Operator
-import HqlCompiler.Expression as Expression
-from HqlCompiler.Query import Query, Statement
+from . import Expression
+from .Exceptions import *
+
+from . import Operators
+from .Operators import Index
+from .Query import Query, Statement
+
+from .Config import Config
 
 # Overrides the HqlVisitor templates
 # If not defined here, each node only returns its children.
 class Visitor(HqlVisitor):
-    def __init__(self):
+    def __init__(self, conf_file:str):
+        self.conf = Config(conf_file)
         pass
     
     def visitQuery(self, ctx: HqlParser.QueryContext):
@@ -40,10 +46,42 @@ class Visitor(HqlVisitor):
     
     def visitBeforePipeExpression(self, ctx: HqlParser.BeforePipeExpressionContext):
         expression = self.visit(ctx.getChild(0))
+         
+        return Index.Index(expression)
+    
+    def visitFunctionCallOrPathPathExpression(self, ctx: HqlParser.FunctionCallOrPathPathExpressionContext):
+        path = []
         
-        index = Operator.Index(expression)
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
         
-        return index
+            # Skip operator names, commas, etc
+            if type(child) == TerminalNodeImpl:
+                continue
+            
+            # path.append(self.visit(child))
+            item = self.visit(child)
+            if not issubclass(type(item), Expression.Expression):
+                item = Expression.PathReference(item)
+                
+            path.append(item)
+            
+        return Expression.PathExpression(path)
+        
+    def visitNamedFunctionCallExpression(self, ctx: HqlParser.NamedFunctionCallExpressionContext):
+        name = self.visit(ctx.getChild(0))
+        args = []
+        
+        for i in range(1, ctx.getChildCount()):
+            child = ctx.getChild(i)
+        
+            # Skip operator names, commas, etc
+            if type(child) == TerminalNodeImpl:
+                continue
+            
+            args.append(self.visit(child))
+    
+        return Expression.Function(name, args)
     
     def visitPrimaryExpression(self, ctx: HqlParser.PrimaryExpressionContext):
         expression = self.visit(ctx.getChild(0))
@@ -51,7 +89,9 @@ class Visitor(HqlVisitor):
         
     def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
         name = self.visit(ctx.getChild(0))
-        
+       
+        # Check if we have a string literal
+        # if so get it's text 
         if not isinstance(name, str):
             name = name.get_name()
         
@@ -63,7 +103,7 @@ class Visitor(HqlVisitor):
         return Expression.ScopedNameReference(name, scope)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
-        operator = Operator.Where()
+        operator = Operators.Where()
         
         for i in range(ctx.getChildCount()):
             child = ctx.getChild(i)
@@ -80,7 +120,7 @@ class Visitor(HqlVisitor):
         return operator
 
     def visitProjectOperator(self, ctx: HqlParser.ProjectOperatorContext):
-        operator = Operator.Project()
+        operator = Operators.Project()
         
         for i in range(ctx.getChildCount()):
             child = ctx.getChild(i)
