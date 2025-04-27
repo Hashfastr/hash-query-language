@@ -76,15 +76,17 @@ class BetweenEquality(Expression):
 # A scoped name reference.
 # Simply a name for now, scopes are not implemented yet.
 class ScopedNameReference(Expression):
-    def __init__(self, name:str, scope:str=""):
+    def __init__(self, name:str, escaped:bool=False, scope:str=""):
         super().__init__()
         self.name = name
+        self.escaped = escaped
         self.scope = scope
         
     def to_dict(self):
         return {
             'name': self.name,
-            'scope': self.scope
+            'scope': self.scope,
+            'escaped': self.escaped
         }
 
 # A string literal
@@ -94,15 +96,22 @@ class StringLiteral(Expression):
     def __init__(self, value:str):
         super().__init__()
         self.value = value.strip('"').strip("'")
-        
-    def get_name(self):
-        return self.value
     
     def to_dict(self):
         return {
             'type': self.type,
             'value': self.value
         }
+        
+class EscapedName(StringLiteral):
+    def __init__(self, value:str):
+        super().__init__(value)
+        self.escaped = True
+        
+    def to_dict(self):
+        dict = super().to_dict()
+        dict['escaped'] = self.escaped
+        return dict
 
 # Integer
 # An integer
@@ -143,7 +152,7 @@ class PathExpression(Expression):
                 
     def to_dict(self):
         return {
-            'type': 'pathexpression',
+            'type': self.type,
             'path': [x.to_dict() for x in self.path]
         }
         
@@ -154,6 +163,6 @@ class PathReference(Expression):
 
     def to_dict(self):
         return {
-            'type': 'pathref',
+            'type': self.type,
             'ref': self.ref
         }

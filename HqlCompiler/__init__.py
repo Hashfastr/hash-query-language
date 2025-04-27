@@ -33,15 +33,33 @@ class Compiler():
     def is_blocking(self, type:str) -> bool:
         return self.ruleset['operations'][type]['blocking']
 
+    def run(self):
+        results = {}
+        for i in self.compiled:
+            results = i.execute(results)
+            
+        return results
+            
+
     def compile(self):        
         compiled = []
         statement = self.query.statements[0]
         
         for op in statement.operations:
-            if op.type == 'index':
+            if op.type == 'Index':
                 compiled.append(self.resolve_index(op))
                 
-        print(len(compiled))
+            if op.type == 'Where':
+                if compiled[-1].can_integrate(op.type):
+                    compiled[-1].add_op(op)
+                    
+            if op.type == "Project":
+                if compiled[-1].can_integrate(op.type):
+                    compiled[-1].add_op(op)
+                    
+                compiled.append(op)
+                    
+        self.compiled = compiled
 
     def resolve_index(self, op):
         expr = op.expressions[0]
@@ -59,6 +77,6 @@ class Compiler():
         else:
             raise CompilerException(f"Invalid index reference type {expr.type}")
         
-        indexer = get_indexer(conf)
+        indexer = get_indexer(conf)(expr, conf)
         
         return indexer

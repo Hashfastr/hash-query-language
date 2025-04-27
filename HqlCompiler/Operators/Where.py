@@ -9,7 +9,6 @@ from ..Expression import Expression
 class Where(Operator):
     def __init__(self):
         super().__init__()
-        self.type = 'where'
         self.parameters = []
     
     def to_dict(self):
