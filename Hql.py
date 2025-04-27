@@ -11,7 +11,10 @@ import argparse, sys, os
 import cProfile, pstats, time
 
 def config_logging(level:str):
-    logging.basicConfig()
+    logging.basicConfig(
+        stream=sys.stderr,
+        format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     
     if level == 5:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -48,7 +51,7 @@ def parse_file(filename:str) -> CommonTokenStream:
     tree = parser.query()
     
     end = time.perf_counter()
-    logging.debug(f'Parsing took {end - start}s')
+    logging.debug(f'Parsing took {end - start}')
     
     return tree
 
@@ -125,28 +128,33 @@ def main():
     #     ruleset = json.loads(f.read())
     
     logging.debug("Compiling...")
+    start = time.perf_counter()
     
     compiler = Compiler('./conf.json', result)
     compiler.compile()
     
+    end = time.perf_counter()
     logging.debug("Done.")
+    
+    logging.debug(f"Compiling took {end - start}")
     
     #############
     ## Queries ##
     #############
 
     logging.debug("Running")
+    start = time.perf_counter()
     
     results = compiler.run()
     print(json.dumps(results.to_dicts()))
-    
+   
+    end = time.perf_counter() 
     logging.debug("Ran")
+    logging.debug(f"Computation took {end - start}")
 
-    #######################
-    ## Cleanup artifacts ##
-    #######################
-
-    logging.debug('Cleaning files')
+    #####################
+    ## Profiling stuff ##
+    #####################
     
     if args.profile:
         profiler.disable()
