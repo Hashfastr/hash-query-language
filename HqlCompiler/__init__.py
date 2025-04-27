@@ -7,12 +7,13 @@ __all__ = [
     "Compiler"
 ]
 
-import json
+import time
 from .Config import Config
 from .Query import *
 from .Functions import *
 from .Operators.Index import Index as Index
 from .Operators.Index import get_indexer
+import logging
 
 class CompilerException(Exception): ...
 
@@ -35,8 +36,16 @@ class Compiler():
 
     def run(self):
         results = {}
+        seti = 0
         for i in self.compiled:
+            start = time.perf_counter()
+            
             results = i.execute(results)
+            
+            end = time.perf_counter()
+            logging.debug(f"{self.op_sets[seti]} - {end - start}")
+            
+            seti += 1
             
         return results
             
@@ -45,20 +54,26 @@ class Compiler():
         compiled = []
         statement = self.query.statements[0]
         
+        self.op_sets = []
+        
         for op in statement.operations:
             if op.type == 'Index':
                 compiled.append(self.resolve_index(op))
+                self.op_sets.append([op.type])
                 
             if op.type == 'Where':
                 if compiled[-1].can_integrate(op.type):
                     compiled[-1].add_op(op)
+                    self.op_sets[-1].append(op.type)
                     
             if op.type == "Project":
                 if compiled[-1].can_integrate(op.type):
                     compiled[-1].add_op(op)
+                    self.op_sets[-1].append(op.type)
                     
                 compiled.append(op)
-                    
+                self.op_sets.append([op.type])
+
         self.compiled = compiled
 
     def resolve_index(self, op):

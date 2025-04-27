@@ -180,11 +180,11 @@ class Elasticsearch():
             result_count += len(df)
             
             remainder = LIMIT - result_count
-                        
+            
             res = client.scroll(
                 scroll_id=sid,
                 scroll=SCROLL_TIME,
-            )
+            )                
 
         client.clear_scroll(scroll_id=sid)
 
