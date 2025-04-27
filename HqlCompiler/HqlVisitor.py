@@ -89,18 +89,21 @@ class Visitor(HqlVisitor):
         
     def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
         name = self.visit(ctx.getChild(0))
+        escaped = False
        
-        # Check if we have a string literal
-        # if so get it's text 
-        if not isinstance(name, str):
-            name = name.get_name()
+        # Either we have a literal or an escaped name
+        if isinstance(name, Expression.EscapedName):
+            name = name.value
+            escaped = True
+        elif not isinstance(name, str):
+            name = name.value
         
         if ctx.getChildCount() == 2:
             scope = self.visit(ctx.getChild(1))
         else:
             scope = ""
             
-        return Expression.ScopedNameReference(name, scope)
+        return Expression.ScopedNameReference(name, escaped, scope)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
         operator = Operators.Where()
@@ -173,7 +176,8 @@ class Visitor(HqlVisitor):
         return Expression.Integer(ctx.getText())
 
     def visitEscapedName(self, ctx: HqlParser.EscapedNameContext):
-        return self.visit(ctx.getChild(1))        
+        name = self.visit(ctx.getChild(1))
+        return Expression.EscapedName(name.value)
 
     # These are nothing but plaintext strings.
     def visitTerminal(self, node):

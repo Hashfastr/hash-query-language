@@ -5,6 +5,7 @@ from HqlCompiler.HqlVisitor import Visitor
 from HqlCompiler.Exceptions import *
 from HqlCompiler import Compiler
 
+import json
 import logging
 import argparse, sys, os
 import cProfile, pstats, time
@@ -134,7 +135,12 @@ def main():
     ## Queries ##
     #############
 
-
+    logging.debug("Running")
+    
+    results = compiler.run()
+    print(json.dumps(results.to_dicts()))
+    
+    logging.debug("Ran")
 
     #######################
     ## Cleanup artifacts ##

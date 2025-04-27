@@ -18,7 +18,7 @@ import json
 # value of another statement.
 class Operator():
     def __init__(self):
-        self.type = ''
+        self.type = self.__class__.__name__
         self.expressions = []
     
     def to_dict(self):

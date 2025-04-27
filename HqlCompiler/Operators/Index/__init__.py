@@ -15,5 +15,5 @@ def get_indexer(conf:dict):
 class Index(Operator):
     def __init__(self, expression:Expression):
         super().__init__()
-        self.type = 'index'
+        self.type = 'Index'
         self.expressions = [expression]
