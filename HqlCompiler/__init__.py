@@ -35,7 +35,7 @@ class Compiler():
         return self.ruleset['operations'][type]['blocking']
 
     def run(self):
-        results = {}
+        results = None
         seti = 0
         for i in self.compiled:
             start = time.perf_counter()
