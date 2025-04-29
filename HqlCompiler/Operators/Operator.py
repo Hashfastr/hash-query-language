@@ -22,6 +22,7 @@ class Operator():
         self.type = self.__class__.__name__
         self.expressions = []
         self.compatible = []
+        self.non_conseq = []
     
     def to_dict(self):
         return {
@@ -41,3 +42,6 @@ class Operator():
 
     def can_integrate(self, type:str):
         return type in self.compatible
+    
+    def non_consequential(self, type:str):
+        return type in self.non_conseq

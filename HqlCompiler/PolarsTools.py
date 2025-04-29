@@ -12,6 +12,9 @@ class PolarsTools():
     def merge(dataframes:list[pl.DataFrame]):
         columns = {}
         for i in dataframes:
+            if len(i.columns) == 0:
+                continue
+           
             name = i.columns[0]
             
             if name not in columns:
@@ -36,6 +39,9 @@ class PolarsTools():
             return pl.DataFrame({fields[index-1]: data.to_struct()})
         
         split = fields[index]
+    
+        if split not in data:
+            return pl.DataFrame({})
 
         new = data.select(split)
         

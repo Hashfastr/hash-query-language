@@ -40,6 +40,8 @@ class Compiler():
         for i in self.compiled:
             start = time.perf_counter()
             
+            logging.debug(f'Executing opset {self.op_sets[seti]}')
+            
             results = i.execute(results)
             
             end = time.perf_counter()
@@ -49,26 +51,36 @@ class Compiler():
             
         return results
             
-
     def compile(self):        
-        compiled = []
+        self.compiled = []
         statement = self.query.statements[0]
         
         self.op_sets = []
         
         for op in statement.operations:
             if op.type == 'Index':
-                compiled.append(self.resolve_index(op))
+                self.compiled.append(self.resolve_index(op))
                 self.op_sets.append([op.type])
             else:
-                if compiled[-1].can_integrate(op.type):
-                    compiled[-1].add_op(op)
-                    self.op_sets[-1].append(op.type)
-                else: 
-                    compiled.append(op)
-                    self.op_sets.append([op.type])
-
-        self.compiled = compiled
+                # This is an attempt at optimizing cases where a take can be placed higher
+                i = -1
+                while i >= -len(self.compiled):
+                    nonconseq = self.compiled[i].non_consequential(op.type)
+                    integrate = self.compiled[i].can_integrate(op.type)
+                    
+                    if nonconseq and not integrate:
+                        logging.debug(f'Can optimize {op.type} passing {self.compiled[i].type}')
+                        i -= 1
+                    if integrate:
+                        logging.debug(f'Integrating {op.type} into {self.compiled[i].type}')
+                        self.compiled[i].add_op(op)
+                        self.op_sets[i].append(op.type)
+                        break
+                    elif not nonconseq and not integrate:
+                        logging.debug(f'As high as we can go for type {op.type}')
+                        self.compiled.append(op)
+                        self.op_sets.append([op.type])
+                        break
 
     def resolve_index(self, op):
         expr = op.expressions[0]

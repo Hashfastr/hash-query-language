@@ -17,6 +17,9 @@ from ..Results import Results
 class Project(Operator):
     def __init__(self):
         super().__init__()
+        self.non_conseq = [
+            'Take'
+        ]
     
     def gen_fields(self):
         fields = []

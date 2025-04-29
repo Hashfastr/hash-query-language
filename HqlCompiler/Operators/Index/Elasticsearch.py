@@ -8,8 +8,10 @@ import json
 
 # Index in a database to grab data from, extremely simple.
 @regsiter_index('Elasticsearch')
-class Elasticsearch():
+class Elasticsearch(Operator):
     def __init__(self, expression:Expression, config:dict):
+        super().__init__()
+        
         self.type = 'Index'
         self.config = config
         
