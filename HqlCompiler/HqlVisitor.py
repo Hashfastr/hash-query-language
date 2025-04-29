@@ -158,6 +158,21 @@ class Visitor(HqlVisitor):
             
         return expression
 
+    # Collects left and right hand expressions along with the type of equality.
+    def visitListEqualityExpression(self, ctx: HqlParser.ListEqualityExpressionContext):       
+        expression = Expression.ListEquality()
+        
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            
+            # Skip operator names, commas, etc
+            if type(child) == TerminalNodeImpl:
+                continue
+                        
+            expression.expressions.append(self.visit(child))
+            
+        return expression
+
     def visitBetweenEqualityExpression(self, ctx: HqlParser.BetweenEqualityExpressionContext):
         expression = Expression.BetweenEquality()
         

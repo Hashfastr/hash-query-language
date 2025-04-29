@@ -14,7 +14,7 @@ import json
 class Expression():
     def __init__(self):
         self.type = self.__class__.__name__
-        pass
+        self.expressions = []
     
     def to_dict(self):
         return {}
@@ -31,14 +31,39 @@ class Equality(Expression):
     def __init__(self, type:str=""):
         super().__init__()
         self.type = type
-        self.expressions = []
+    
+    def to_dict(self):
+        try:
+            {
+                'type': self.type,
+                'lh': self.expressions[0].to_dict(),
+                'rh': self.expressions[1].to_dict()
+            }
+        except:
+            for expression in self.expressions:
+                print(expression)
+            raise Exception("Failure to dict an equality")
+
+# List equality
+# Essenitally a filter stating that a field should have any value in a tuple.
+# 
+# | where event.code in (10, 11, 13, 3)
+#
+# is semantically identical to
+#
+# | where event.code == 10 or event.code == 11 or event.code == 13 or event.code == 3
+#
+# But is much easier to write and read
+class ListEquality(Expression):
+    def __init__(self):
+        super().__init__()
     
     def to_dict(self):
         try:
             return {
                 'type': self.type,
                 'lh': self.expressions[0].to_dict(),
-                'rh': self.expressions[1].to_dict()
+                'rh': [x.to_dict() for x in self.expressions[1:]]
             }
         except:
             for expression in self.expressions:
@@ -56,7 +81,6 @@ class Equality(Expression):
 class BetweenEquality(Expression):
     def __init__(self):
         super().__init__()
-        self.expressions = []
     
     def to_dict(self):
         try:

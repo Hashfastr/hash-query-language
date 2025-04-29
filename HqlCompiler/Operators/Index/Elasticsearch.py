@@ -111,6 +111,21 @@ class Elasticsearch():
                     }
                 }
             }
+        elif expr['type'] == 'ListEquality':
+            kvs = []
+            for i in expr['rh']:
+                kv = {
+                    'match': {
+                        expr['lh']['name']: i['value']
+                    }
+                }
+                kvs.append(kv)
+            
+            filter = {
+                'bool': {
+                    'should': kvs
+                }
+            }
             
         if filter:
             self.posfilters.append(filter)
@@ -164,7 +179,7 @@ class Elasticsearch():
         body = {
             'query': self.get_filter()
         }
-
+        
         res = client.search(
             index=self.pattern,
             size=SCROLL_MAX,

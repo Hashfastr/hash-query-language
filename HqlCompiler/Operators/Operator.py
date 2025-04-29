@@ -21,6 +21,7 @@ class Operator():
     def __init__(self):
         self.type = self.__class__.__name__
         self.expressions = []
+        self.compatible = []
     
     def to_dict(self):
         return {
@@ -37,3 +38,6 @@ class Operator():
     # default execution passthrough unless implemented
     def execute(self, data:Results):
         return data
+
+    def can_integrate(self, type:str):
+        return type in self.compatible
