@@ -197,9 +197,7 @@ class Elasticsearch(Operator):
         remainder = self.limit
         result_count = 0
         results = pl.DataFrame()
-        while result_count < self.limit:
-            logging.debug(f"Scroll {result_count} < {self.limit} max")
-            
+        while result_count < self.limit:            
             if len(res['hits']['hits']) == 0:
                 logging.debug(f"No more results to evaluate")
                 logging.debug(f"Timed out? {res['timed_out']}")
@@ -216,6 +214,12 @@ class Elasticsearch(Operator):
             result_count += len(df)
             
             remainder = self.limit - result_count
+            
+            if result_count >= self.limit:
+                logging.debug('Quota reached')
+                break
+            
+            logging.debug(f"Scroll {result_count} < {self.limit} max")
             
             res = client.scroll(
                 scroll_id=sid,
