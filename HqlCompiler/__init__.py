@@ -60,19 +60,13 @@ class Compiler():
             if op.type == 'Index':
                 compiled.append(self.resolve_index(op))
                 self.op_sets.append([op.type])
-                
-            if op.type == 'Where':
+            else:
                 if compiled[-1].can_integrate(op.type):
                     compiled[-1].add_op(op)
                     self.op_sets[-1].append(op.type)
-                    
-            if op.type == "Project":
-                if compiled[-1].can_integrate(op.type):
-                    compiled[-1].add_op(op)
-                    self.op_sets[-1].append(op.type)
-                    
-                compiled.append(op)
-                self.op_sets.append([op.type])
+                else: 
+                    compiled.append(op)
+                    self.op_sets.append([op.type])
 
         self.compiled = compiled
 

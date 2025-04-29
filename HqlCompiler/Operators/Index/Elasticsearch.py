@@ -22,8 +22,18 @@ class Elasticsearch():
         self.negfilters = []
         
         self.compatible = [
-            'Where'
+            'Where',
+            'Take'
         ]
+        
+        # Set to the config default to avoid DoS
+        # Can be changed by the take operator for example.
+        self.limit = self.config.get('LIMIT', 100000)
+        
+        # Default scroll max, cannot be higher than 10k
+        # Higher values are generally better, each request has some time to it
+        # 10000 is faster than 10x1000
+        self.scroll_max = self.config.get('SCROLL_MAX', 10000)
         
     def can_integrate(self, type:str):
         return type in self.compatible
@@ -31,6 +41,10 @@ class Elasticsearch():
     def add_op(self, op:Operator):
         if op.type == 'Where':
             self.add_filter(op.expressions[0])
+        
+        # should only have on expression
+        if op.type == 'Take':
+            self.add_limit(op.expressions[0].value)
 
     def execute(self, data:pl.DataFrame):
         return self.make_query()
@@ -48,6 +62,9 @@ class Elasticsearch():
             filter['bool']['must_not'] = self.negfilters
                     
         return filter
+    
+    def add_limit(self, limit:int):
+        self.limit = limit
 
     def add_filter(self, expression:Expression):
         filter = None
@@ -125,13 +142,11 @@ class Elasticsearch():
         VALIDATE_CERTS = self.config.get('VALIDATE_CERTS', 'true')
         # How long should the scroll session be kept alive?
         SCROLL_TIME = self.config.get('SCROLL_TIME', '1m')
-        # How many rows should we scroll per scroll?
-        # Max is 10000
-        SCROLL_SIZE = self.config.get('SCROLL_SIZE', 10000)
+        # Query results limit per scroll
+        # If the total limit is less than this number, it is set to the query limit.
+        SCROLL_MAX = self.scroll_max if self.limit >= self.scroll_max else self.limit
         # Request timeout in seconds
         TIMEOUT = self.config.get('TIMEOUT', 10)
-        # The max amount querying from elastic
-        LIMIT = self.config.get('LIMIT', 100000)
 
         # Debug?
         DEBUG = self.config.get('DEBUG', False)
@@ -141,16 +156,20 @@ class Elasticsearch():
             basic_auth=(ELASTIC_USER, ELASTIC_PASS),
             verify_certs=VALIDATE_CERTS,
             request_timeout=TIMEOUT,
-            retry_on_timeout=True
+            retry_on_timeout=True,
         )
         
         logging.debug("Starting initial query")
 
+        body = {
+            'query': self.get_filter()
+        }
+
         res = client.search(
             index=self.pattern,
-            size=SCROLL_SIZE,
+            size=SCROLL_MAX,
             scroll=SCROLL_TIME,
-            query=self.get_filter(),
+            body=body
         )
         sid = res['_scroll_id']
         
@@ -158,11 +177,11 @@ class Elasticsearch():
         
         # Will scroll through until we reach our limit, or no more results.
         # Enables the take operator
-        remainder = LIMIT
+        remainder = self.limit
         result_count = 0
-        results = None
-        while result_count < LIMIT:
-            logging.debug(f"Scroll {result_count} < {LIMIT} max")
+        results = pl.DataFrame()
+        while result_count < self.limit:
+            logging.debug(f"Scroll {result_count} < {self.limit} max")
             
             if len(res['hits']['hits']) == 0:
                 logging.debug(f"No more results to evaluate")
@@ -173,13 +192,13 @@ class Elasticsearch():
             df = pl.from_dicts(res['hits']['hits'][:remainder]).unnest('_source')
 
             # print(json.dumps(data, indent=2))
-            if results == None:
+            if results.is_empty():
                 results = df
             else:
                 pl.concat([results, df])
             result_count += len(df)
             
-            remainder = LIMIT - result_count
+            remainder = self.limit - result_count
             
             res = client.scroll(
                 scroll_id=sid,

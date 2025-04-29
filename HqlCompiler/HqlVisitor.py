@@ -138,6 +138,15 @@ class Visitor(HqlVisitor):
                 operator.expressions.append(self.visit(ctx.getChild(i)))
 
         return operator
+
+    def visitTakeOperator(self, ctx: HqlParser.TakeOperatorContext):
+        operator = Operators.Take()
+        
+        expression = self.visit(ctx.getChild(1))
+        
+        operator.expressions.append(expression)
+        
+        return operator
     
     # Collects left and right hand expressions along with the type of equality.
     def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):       

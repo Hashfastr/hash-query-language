@@ -5,7 +5,9 @@ __all__ = [
     "Operator"
 ]
 
+from .Operator import Operator
+
+from . import Index
 from .Where import Where
 from .Project import Project
-from . import Index
-from .Operator import Operator
+from .Take import Take
