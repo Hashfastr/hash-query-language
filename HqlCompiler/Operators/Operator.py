@@ -1,4 +1,5 @@
 import json
+from ..Results import Results
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
@@ -32,3 +33,7 @@ class Operator():
     
     def __repr__(self):
         return self.__str__()
+
+    # default execution passthrough unless implemented
+    def execute(self, data:Results):
+        return data

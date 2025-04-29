@@ -1,7 +1,4 @@
 from .Operator import Operator
-from ..Expression import Expression
-import polars as pl
-from ..PolarsTools import PolarsTools as pltools
 from ..Results import Results
 
 # Take, limits the number of results given an integer
