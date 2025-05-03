@@ -1,0 +1,1 @@
+database("tf11-elastic").index("so-beats-2022.10.*")

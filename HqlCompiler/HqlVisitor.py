@@ -46,7 +46,7 @@ class Visitor(HqlVisitor):
     
     def visitBeforePipeExpression(self, ctx: HqlParser.BeforePipeExpressionContext):
         expression = self.visit(ctx.getChild(0))
-         
+                         
         return Index.Index(expression)
     
     def visitFunctionCallOrPathPathExpression(self, ctx: HqlParser.FunctionCallOrPathPathExpressionContext):
@@ -58,15 +58,24 @@ class Visitor(HqlVisitor):
             # Skip operator names, commas, etc
             if type(child) == TerminalNodeImpl:
                 continue
-            
-            # path.append(self.visit(child))
-            item = self.visit(child)
-            if not issubclass(type(item), Expression.Expression):
-                item = Expression.PathReference(item)
+
+            path.append(self.visit(child))
                 
-            path.append(item)
-            
         return Expression.PathExpression(path)
+    
+    def visitDotCompositeFunctionCallExpression(self, ctx: HqlParser.DotCompositeFunctionCallExpressionContext):
+        expression = Expression.DotCompositeFunctionCall()
+
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+        
+            # Skip operator names, commas, etc
+            if type(child) == TerminalNodeImpl:
+                continue
+
+            expression.expressions.append(self.visit(child))
+                
+        return expression
         
     def visitNamedFunctionCallExpression(self, ctx: HqlParser.NamedFunctionCallExpressionContext):
         name = self.visit(ctx.getChild(0))
@@ -86,6 +95,9 @@ class Visitor(HqlVisitor):
     def visitPrimaryExpression(self, ctx: HqlParser.PrimaryExpressionContext):
         expression = self.visit(ctx.getChild(0))
         return expression
+
+    def visitIdentifierOrKeywordOrEscapedName(self, ctx: HqlParser.IdentifierOrKeywordOrEscapedNameContext):
+        return Expression.Keyword(self.visit(ctx.getChild(0)))
         
     def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
         name = self.visit(ctx.getChild(0))
@@ -121,6 +133,40 @@ class Visitor(HqlVisitor):
                 operator.expressions.append(self.visit(ctx.getChild(i)))
         
         return operator
+    
+    def visitLogicalAndOperation(self, ctx: HqlParser.LogicalAndOperationContext):
+        return self.visit(ctx.getChild(1))
+    
+    def visitLogicalOrOperation(self, ctx: HqlParser.LogicalOrOperationContext):
+        return self.visit(ctx.getChild(1))
+    
+    def visitParenthesizedExpression(self, ctx: HqlParser.ParenthesizedExpressionContext):
+        return self.visit(ctx.getChild(1))
+    
+    def visitLogicalAndExpression(self, ctx: HqlParser.LogicalAndExpressionContext):
+        
+        if ctx.getChildCount() == 1:
+            # Handle the base case, the lexer will do this thing where
+            # it just uses this expression token as a prototype
+            return self.visit(ctx.getChild(0))
+        elif type(ctx.getChild(0)) == TerminalNodeImpl:
+            return self.visit(ctx.getChild(1))
+        else:
+            expression = Expression.BinaryLogic('and')
+            expression.expressions.append(self.visit(ctx.getChild(0)))
+            expression.expressions.append(self.visit(ctx.getChild(1)))
+            return expression
+    
+    def visitLogicalOrExpression(self, ctx: HqlParser.LogicalOrExpressionContext):
+        if ctx.getChildCount() == 1:
+            # Handle the base case, the lexer will do this thing where
+            # it just uses this expression token as a prototype
+            return self.visit(ctx.getChild(0))
+        else:
+            expression = Expression.BinaryLogic('or')
+            expression.expressions.append(self.visit(ctx.getChild(0)))
+            expression.expressions.append(self.visit(ctx.getChild(1)))
+            return expression
 
     def visitProjectOperator(self, ctx: HqlParser.ProjectOperatorContext):
         operator = Operators.Project()

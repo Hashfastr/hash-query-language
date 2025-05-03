@@ -1,5 +1,6 @@
 import json
 from ..Results import Results
+import logging
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
