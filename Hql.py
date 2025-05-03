@@ -1,13 +1,10 @@
-from antlr4 import *
-from HqlCompiler.grammar.HqlLexer import HqlLexer
-from HqlCompiler.grammar.HqlParser import HqlParser
-from HqlCompiler.HqlVisitor import Visitor
+from HqlCompiler.HqlParser import Parser
 from HqlCompiler.Exceptions import *
 from HqlCompiler import Compiler
 
 import json
 import logging
-import argparse, sys, os
+import argparse, sys
 import cProfile, pstats, time
 
 def config_logging(level:str):
@@ -30,30 +27,6 @@ def config_logging(level:str):
         logging.error(f"Invalid verbosity level {level}")
         logging.error(f"Default is WARNING (3), but I'm exiting...")
         raise Exception(f'Invalid verbosity {level}')
-
-def get_token_name(type:int) -> str:
-    return HqlLexer.symbolicNames[type]
-
-def parse_file(filename:str) -> CommonTokenStream:
-    start = time.perf_counter()
-    
-    try:
-        with open(filename, 'r') as f:
-            input_text = f.read()
-            lexer = HqlLexer(InputStream(input_text))
-            token_stream = CommonTokenStream(lexer)
-            parser = HqlParser(token_stream)
-    except Exception as e:
-        logging.error(f"Failed to open file {filename}")
-        logging.error(str(e))
-        raise e
-    
-    tree = parser.query()
-    
-    end = time.perf_counter()
-    logging.debug(f'Parsing took {end - start}')
-    
-    return tree
 
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0])
@@ -95,27 +68,12 @@ def main():
     
     logging.debug('Parsing...')
     
-    try:
-        tree = parse_file(args.file)
-    except:
-        return -1
-
-    try:
-        visitor = Visitor(conf_file)
-        result = visitor.visit(tree)
-    except ConfigException as e:
-        logging.error(e)
-        return -1
-    
-    if result == None:
-        logging.error("Compiler error!")
-        logging.error("Parser returned None instead of valid assembly")
-        logging.error("Import error?")
-        return -1
+    parser = Parser(args.file)
+    parser.assemble()
     
     if args.asm_show:
         # Use print to give a raw output
-        print(result)
+        print(parser.assembly)
         return
         
     logging.debug('Done.')
@@ -130,7 +88,7 @@ def main():
     logging.debug("Compiling...")
     start = time.perf_counter()
     
-    compiler = Compiler('./conf.json', result)
+    compiler = Compiler('./conf.json', parser.assembly)
     compiler.compile()
     
     end = time.perf_counter()

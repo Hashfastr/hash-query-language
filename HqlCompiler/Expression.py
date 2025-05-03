@@ -30,12 +30,13 @@ class Expression():
 class Equality(Expression):
     def __init__(self, type:str=""):
         super().__init__()
-        self.type = type
+        self.eqtype = type
     
     def to_dict(self):
         try:
             {
                 'type': self.type,
+                'eqtype': self.eqtype,
                 'lh': self.expressions[0].to_dict(),
                 'rh': self.expressions[1].to_dict()
             }
@@ -137,6 +138,17 @@ class EscapedName(StringLiteral):
         dict['escaped'] = self.escaped
         return dict
 
+class Keyword(Expression):
+    def __init__(self, name):
+        super().__init__()
+        self.value = name
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'name': self.name
+        }
+
 # Integer
 # An integer
 # Z
@@ -159,7 +171,6 @@ class Function(Expression):
         self.args = args
     
     def __str__(self):
-        print(super().__str__())
         return super().__str__()
     
     def to_dict(self):
@@ -175,10 +186,14 @@ class PathExpression(Expression):
         self.path = path
                 
     def to_dict(self):
-        return {
-            'type': self.type,
-            'path': [x.to_dict() for x in self.path]
-        }
+        try:
+            return {
+                'type': self.type,
+                'path': [x.to_dict() for x in self.path]
+            }
+        except Exception as e:
+            logging.debug(self.path)
+            logging.debug(e)
         
 class PathReference(Expression):
     def __init__(self, ref):
@@ -190,3 +205,43 @@ class PathReference(Expression):
             'type': self.type,
             'ref': self.ref
         }
+
+class DotCompositeFunctionCall(Expression):
+    def __init__(self):
+        super().__init__()
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'funcs': [x.to_dict() for x in self.expressions]
+        }
+    
+class BinaryLogic(Expression):
+    def __init__(self, type=""):
+        super().__init__()
+        self.bitype = type
+        
+    def to_dict(self):
+        try:
+            out = {
+                'type': self.type,
+                'bitype': self.bitype,
+                'expressions': []
+            }
+            
+            for i in self.expressions:
+                if issubclass(type(i), Expression):
+                    out['expressions'].append(i.to_dict())
+                else:
+                    out['expressions'].append(i)
+                    
+            return out
+        except IndexError as e:
+            logging.critical(self.bitype)
+            logging.critical(f'{len(self.expressions)} expressions found')
+            logging.critical(e)
+        except Exception as e:
+            logging.debug(f'{self.type} {self.bitype}')
+            for i in self.expressions:
+                logging.debug(i)
+            logging.critical(e)
