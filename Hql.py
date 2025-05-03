@@ -10,7 +10,7 @@ import cProfile, pstats, time
 def config_logging(level:str):
     logging.basicConfig(
         stream=sys.stderr,
-        format="%(asctime)s - %(levelname)s - %(message)s"
+        format="%(levelname)s - %(filename)s:%(lineno)d - %(message)s"
     )
     
     if level == 5:

@@ -98,20 +98,18 @@ class BetweenEquality(Expression):
                 print(expression)
             raise Exception("Failure to dict a between")
 
-# A scoped name reference.
-# Simply a name for now, scopes are not implemented yet.
-class ScopedNameReference(Expression):
-    def __init__(self, name:str, escaped:bool=False, scope:str=""):
+# A named reference, can be scoped
+# Scopes are not implemented yet.
+class NamedReference(Expression):
+    def __init__(self, name:Expression, scope:str=""):
         super().__init__()
         self.name = name
-        self.escaped = escaped
         self.scope = scope
         
     def to_dict(self):
         return {
-            'name': self.name,
+            'name': self.name.to_dict(),
             'scope': self.scope,
-            'escaped': self.escaped
         }
 
 # A string literal
@@ -139,14 +137,14 @@ class EscapedName(StringLiteral):
         return dict
 
 class Keyword(Expression):
-    def __init__(self, name):
+    def __init__(self, name:str):
         super().__init__()
         self.value = name
         
     def to_dict(self):
         return {
             'type': self.type,
-            'name': self.name
+            'name': self.value
         }
 
 # Integer
@@ -165,22 +163,19 @@ class Integer(Expression):
         }
 
 class Function(Expression):
-    def __init__(self, name:str, args:list=[]):
+    def __init__(self, name:Expression, args:list=[]):
         super().__init__()
         self.name = name
         self.args = args
     
-    def __str__(self):
-        return super().__str__()
-    
-    def to_dict(self):
+    def to_dict(self):        
         return {
             'type': self.type,
-            'name': self.name,
+            'name': self.name.to_dict(),
             'args': [x.to_dict() for x in self.args]
         }
 
-class PathExpression(Expression):
+class Path(Expression):
     def __init__(self, path:list=[]):
         super().__init__()
         self.path = path
@@ -194,17 +189,6 @@ class PathExpression(Expression):
         except Exception as e:
             logging.debug(self.path)
             logging.debug(e)
-        
-class PathReference(Expression):
-    def __init__(self, ref):
-        super().__init__()
-        self.ref = ref
-
-    def to_dict(self):
-        return {
-            'type': self.type,
-            'ref': self.ref
-        }
 
 class DotCompositeFunctionCall(Expression):
     def __init__(self):

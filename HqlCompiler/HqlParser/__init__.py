@@ -9,6 +9,7 @@ from HqlCompiler.Operators import Operator
 from HqlCompiler.Operators.Index import Index
 
 from .BaseExpressions import BaseExpressions
+from .Functions import Functions
 
 import time
 import logging
@@ -50,7 +51,7 @@ class Parser():
 
 # Overrides the HqlVisitor templates
 # If not defined here, each node only returns its children.
-class Visitor(BaseExpressions, HqlVisitor):
+class Visitor(BaseExpressions, Functions, HqlVisitor):
     def __init__(self):
         pass
     
