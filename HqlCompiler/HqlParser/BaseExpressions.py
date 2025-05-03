@@ -13,8 +13,7 @@ class BaseExpressions(HqlVisitor):
     def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
         name = self.visit(ctx.Name)
         # scope unimplemented
-        escaped = isinstance(name, Expression.EscapedName)
-        expr = Expression.ScopedNameReference(name.value, escaped=escaped)
+        expr = Expression.NamedReference(name)
         return expr
     
     def visitEscapedName(self, ctx: HqlParser.EscapedNameContext):
@@ -33,3 +32,9 @@ class BaseExpressions(HqlVisitor):
             break
             
         return Expression.StringLiteral(text)
+    
+    def visitSimpleNameReference(self, ctx: HqlParser.SimpleNameReferenceContext):
+        return Expression.NamedReference(self.visit(ctx.Name))
+    
+    def visitKeywordName(self, ctx: HqlParser.KeywordNameContext):
+        return Expression.Keyword(ctx.Token.text)
