@@ -224,34 +224,19 @@ class Path(Expression):
             logging.debug(e)
     
 class BinaryLogic(Expression):
-    def __init__(self, type=""):
+    def __init__(self, left:Expression, right:list[Expression], type:str):
         super().__init__()
-        self.bitype = type
+        self.bitype = type.lower()
+        self.left = left
+        self.right = right
         
     def to_dict(self):
-        try:
-            out = {
-                'type': self.type,
-                'bitype': self.bitype,
-                'expressions': []
-            }
-            
-            for i in self.expressions:
-                if issubclass(type(i), Expression):
-                    out['expressions'].append(i.to_dict())
-                else:
-                    out['expressions'].append(i)
-                    
-            return out
-        except IndexError as e:
-            logging.critical(self.bitype)
-            logging.critical(f'{len(self.expressions)} expressions found')
-            logging.critical(e)
-        except Exception as e:
-            logging.debug(f'{self.type} {self.bitype}')
-            for i in self.expressions:
-                logging.debug(i)
-            logging.critical(e)
+        return {
+            'type': self.type,
+            'bitype': self.bitype,
+            'left': self.left.to_dict(),
+            'right': [x.to_dict() for x in self.right]
+        }
             
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
