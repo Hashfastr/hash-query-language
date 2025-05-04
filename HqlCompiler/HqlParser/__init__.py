@@ -4,9 +4,8 @@ from HqlCompiler.grammar.HqlLexer import HqlLexer
 from HqlCompiler.grammar.HqlParser import HqlParser
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 
-from HqlCompiler.Query import Query, Statement
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Operators.Index import Index
+from HqlCompiler.Query import *
+import HqlCompiler.Expression as Expression
 
 from .BaseExpressions import BaseExpressions
 from .Functions import Functions
@@ -67,41 +66,25 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
                 
         return query
     
-    def visitStatement(self, ctx: HqlParser.StatementContext):
-        statement = Statement()
+    def visitQueryStatement(self, ctx: HqlParser.QueryStatementContext):
+        expr = self.visit(ctx.Expression)
         
-        # might want to change this as we get more complex
-        statement.operations = self.visit(ctx.getChild(0))
+        if not expr:
+            raise ParseException(
+                'Query statement given None',
+                ctx.start.line,
+                ctx.start.column 
+            )
         
-        if statement.operations == None:
-            raise SemanticException(
-                'Statement has no operations, given None',
-                ctx.start.line,
-                ctx.start.column
-            )
-
-        if not isinstance(statement.operations, list):
-            logging.error(type(statement.operations))
-            raise SemanticException(
-                'Statement given a non-list of operations',
-                ctx.start.line,
-                ctx.start.column
-            )
-            
-        if not isinstance(statement.operations[0], Operator):
-            logging.error([type(x) for x in statement.operations])
-            raise SemanticException(
-                'Statement given list of non-Operators',
-                ctx.start.line,
-                ctx.start.column
-            )
+        statement = QueryStatement(expr)
         
         return statement
 
-    # def visitPipeExpression(self, ctx: HqlParser.PipeExpressionContext):
-    #     operators = [Index(self.visit(ctx.Expression))]
+    def visitPipeExpression(self, ctx: HqlParser.PipeExpressionContext):
+        prepipe = self.visit(ctx.Expression)
         
-    #     for i in ctx.PipedOperators:
-    #         operators.append(self.visit(i))
+        pipes = []
+        for i in ctx.PipedOperators:
+            pipes.append(self.visit(i))
         
-    #     return operators
+        return Expression.PipeExpression(prepipe=prepipe, pipes=pipes)

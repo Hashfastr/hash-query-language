@@ -26,25 +26,21 @@ class Query():
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
 
-# See above comments for the Query class for explaination on statements
-# in relation to a query.
-# Each statement is itself a chain of processing, that is, it is self contained.
-# The results of a particular statement can be used in another, hence the name.
-# The root statement has the name of "".
-# In the example put above the Query class, there are two statements
-# "AttackerIPs" and "".
+# Generic for a statement, see children as this can be very diverse
 class Statement():
-    def __init__(self, name:str=""):
-        # if empty it's the prime statement
-        self.name = name
-        self.operations = []
+    def __init__(self, root=None):
+        self.type = self.__class__.__name__
+        self.root = root
     
     def to_dict(self):
         return {
-            'name': self.name,
-            'operations': [x.to_dict() for x in self.operations]
+            'type': self.type,
+            'root': self.root.to_dict()
         }
     
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
-    
+
+class QueryStatement(Statement):
+    def __init__(self, root=None):
+        super().__init__(root)
