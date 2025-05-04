@@ -6,6 +6,8 @@ import HqlCompiler.Expression as Expression
 
 from HqlCompiler.Exceptions import *
 
+import logging
+
 class BaseExpressions(HqlVisitor):
     def __init__(self):
         pass
@@ -34,7 +36,16 @@ class BaseExpressions(HqlVisitor):
         return Expression.StringLiteral(text)
     
     def visitSimpleNameReference(self, ctx: HqlParser.SimpleNameReferenceContext):
-        return Expression.NamedReference(self.visit(ctx.Name))
+        name = self.visit(ctx.Name)
+                
+        if name == None:
+            logging.error('None given to NamedReference, unimplemented feature?')
+            raise ParseException()
+        
+        return Expression.NamedReference(name)
     
     def visitKeywordName(self, ctx: HqlParser.KeywordNameContext):
-        return Expression.Keyword(ctx.Token.text)
+        return Expression.Identifier(ctx.Token.text, keyword=True)
+    
+    def visitIdentifierName(self, ctx: HqlParser.IdentifierNameContext):
+        return Expression.Identifier(ctx.Token.text)

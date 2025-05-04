@@ -13,3 +13,7 @@ class FunctionException(Exception):
 class ArgumentException(FunctionException):
     def __init__(self, message:str="Function argument error has occurred"):
         super().__init__(message)
+
+class ParseException(Exception):
+    def __init__(self, message:str="Parsing error has occured") -> None:
+        super().__init__(message)

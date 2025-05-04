@@ -34,8 +34,16 @@ class Functions(HqlVisitor):
     
     def visitNamedFunctionCallExpression(self, ctx: HqlParser.NamedFunctionCallExpressionContext):
         expr = Expression.Function(self.visit(ctx.Name))
-
+        
         for i in ctx.Arguments:
             expr.args.append(self.visit(i))
         
         return expr
+    
+    def visitDotCompositeFunctionCallExpression(self, ctx: HqlParser.DotCompositeFunctionCallExpressionContext):
+        funcs = [self.visit(ctx.Call)]
+                
+        for i in ctx.Operations:
+            funcs.append(self.visit(i))
+        
+        return Expression.DotCompositeFunction(funcs)

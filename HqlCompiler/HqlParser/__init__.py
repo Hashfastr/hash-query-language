@@ -68,6 +68,7 @@ class Visitor(BaseExpressions, Functions, HqlVisitor):
     def visitStatement(self, ctx: HqlParser.StatementContext):
         statement = Statement()
         
+        # might want to change this as we get more complex
         statement.operations = self.visit(ctx.getChild(0))
         
         if statement.operations == None:
