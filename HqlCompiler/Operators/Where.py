@@ -1,5 +1,6 @@
 from .Operator import Operator
 from ..Expression import Expression
+from HqlCompiler.Exceptions import *
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.
@@ -7,13 +8,17 @@ from ..Expression import Expression
 # but they can exist.
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
 class Where(Operator):
-    def __init__(self):
+    def __init__(self, predicate:Expression, params:list=None):
         super().__init__()
-        self.parameters = []
-    
-    def to_dict(self):
+        if predicate == None:
+            raise ParseException('Where instanciated with None type predicate')
+        
+        self.parameters = params if params else []
+        self.predicate = predicate
+            
+    def to_dict(self):        
         return {
             'type': self.type,
-            'parameters': self.parameters,
-            'expressions': [x.to_dict() for x in self.expressions]
+            'parameters': [x.to_dict() for x in self.parameters],
+            'expression': self.predicate.to_dict()
         }

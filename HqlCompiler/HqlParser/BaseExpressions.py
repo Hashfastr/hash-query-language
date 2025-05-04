@@ -1,6 +1,5 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
-from antlr4.tree.Tree import TerminalNodeImpl
 
 import HqlCompiler.Expression as Expression
 
@@ -49,3 +48,9 @@ class BaseExpressions(HqlVisitor):
     
     def visitIdentifierName(self, ctx: HqlParser.IdentifierNameContext):
         return Expression.Identifier(ctx.Token.text)
+
+    def visitLongLiteralExpression(self, ctx: HqlParser.LongLiteralExpressionContext):
+        return Expression.Integer(ctx.Token.text)
+    
+    def visitBooleanLiteralExpression(self, ctx: HqlParser.BooleanLiteralExpressionContext):
+        return Expression.Bool(ctx.Token.text)

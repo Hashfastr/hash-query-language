@@ -28,17 +28,19 @@ class Expression():
 # Expression expressing anything with ==, >, <, <=, >=, !=, etc
 # has a left and right hand expression along with it's type.
 class Equality(Expression):
-    def __init__(self, type:str=""):
+    def __init__(self, type:str, lh:Expression, rh:Expression):
         super().__init__()
         self.eqtype = type
+        self.lh = lh
+        self.rh = rh
     
     def to_dict(self):
         try:
-            {
+            return {
                 'type': self.type,
                 'eqtype': self.eqtype,
-                'lh': self.expressions[0].to_dict(),
-                'rh': self.expressions[1].to_dict()
+                'lh': self.lh.to_dict(),
+                'rh': self.rh.to_dict()
             }
         except:
             for expression in self.expressions:
@@ -168,6 +170,17 @@ class Integer(Expression):
             'value': self.value
         }
 
+class Bool(Expression):
+    def __init__(self, value:str):
+        super().__init__()
+        self.value = value.lower() == 'true'
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'value': self.value
+        }
+
 class Function(Expression):
     def __init__(self, name:Expression, args:list=None):
         super().__init__()
@@ -236,3 +249,15 @@ class BinaryLogic(Expression):
             for i in self.expressions:
                 logging.debug(i)
             logging.critical(e)
+            
+class OpParameter(Expression):
+    def __init__(self, name:str, value:Expression):
+        super().__init__()
+        self.name = name
+        self.value = value
+        
+    def to_dict(self):        
+        return {
+            'name': self.name,
+            'value': self.value.to_dict()
+        }
