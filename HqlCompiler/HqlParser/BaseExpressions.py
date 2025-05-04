@@ -13,6 +13,11 @@ class BaseExpressions(HqlVisitor):
     
     def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
         name = self.visit(ctx.Name)
+        
+        if isinstance(name, Expression.NamedReference):
+            #name.scope = self.visit(ctx.Scope)
+            return name
+        
         # scope unimplemented
         expr = Expression.NamedReference(name)
         return expr
@@ -40,6 +45,9 @@ class BaseExpressions(HqlVisitor):
         if name == None:
             logging.error('None given to NamedReference, unimplemented feature?')
             raise ParseException()
+        
+        if isinstance(name, Expression.NamedReference):
+            return name
         
         return Expression.NamedReference(name)
     
