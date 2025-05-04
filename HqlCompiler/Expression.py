@@ -136,14 +136,20 @@ class EscapedName(StringLiteral):
         dict['escaped'] = self.escaped
         return dict
 
-class Keyword(Expression):
-    def __init__(self, name:str):
+# An identifier is like a variable that is not unique across everything
+# A keyword is unique across the compiler
+# database('test').index('test')
+# Here database is unique while index is not, multiple things can have a index child
+class Identifier(Expression):
+    def __init__(self, name:str, keyword:bool=False):
         super().__init__()
         self.value = name
+        self.keyword = keyword
         
     def to_dict(self):
         return {
             'type': self.type,
+            'keyword': self.keyword,
             'name': self.value
         }
 
@@ -163,22 +169,33 @@ class Integer(Expression):
         }
 
 class Function(Expression):
-    def __init__(self, name:Expression, args:list=[]):
+    def __init__(self, name:Expression, args:list=None):
         super().__init__()
         self.name = name
-        self.args = args
+        self.args = args if args else []
     
-    def to_dict(self):        
+    def to_dict(self):
         return {
             'type': self.type,
             'name': self.name.to_dict(),
             'args': [x.to_dict() for x in self.args]
         }
+        
+class DotCompositeFunction(Expression):
+    def __init__(self, funcs:list[Function]):
+        super().__init__()
+        self.funcs = funcs
+    
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'funcs': [x.to_dict() for x in self.funcs]
+        } 
 
 class Path(Expression):
-    def __init__(self, path:list=[]):
+    def __init__(self, path:list=None):
         super().__init__()
-        self.path = path
+        self.path = path if path else []
                 
     def to_dict(self):
         try:
@@ -189,16 +206,6 @@ class Path(Expression):
         except Exception as e:
             logging.debug(self.path)
             logging.debug(e)
-
-class DotCompositeFunctionCall(Expression):
-    def __init__(self):
-        super().__init__()
-        
-    def to_dict(self):
-        return {
-            'type': self.type,
-            'funcs': [x.to_dict() for x in self.expressions]
-        }
     
 class BinaryLogic(Expression):
     def __init__(self, type=""):
