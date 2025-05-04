@@ -82,22 +82,25 @@ class ListEquality(Expression):
 # Here lh is the '@timestamp' escaped string literal, and the right hand has
 # the start and end values for the time range.
 class BetweenEquality(Expression):
-    def __init__(self):
+    def __init__(self, lh:Expression, start:Expression, end:Expression, negate:str="BETWEEN"):
         super().__init__()
+        self.lh = lh
+        self.start = start
+        self.end = end
+        self.negate = True if negate == "NOT_BETWEEN" else False
     
     def to_dict(self):
         try:
             return {
                 'type': self.type,
-                'lh': self.expressions[0].to_dict(),
+                'negate': self.negate,
+                'lh': self.lh.to_dict(),
                 'rh': {
-                    'start': self.expressions[1].to_dict(),
-                    'end': self.expressions[2].to_dict()
+                    'start': self.start.to_dict(),
+                    'end': self.end.to_dict()
                 }
             }
         except:
-            for expression in self.expressions:
-                print(expression)
             raise Exception("Failure to dict a between")
 
 # A named reference, can be scoped
