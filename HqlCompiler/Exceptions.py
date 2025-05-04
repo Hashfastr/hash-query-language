@@ -15,5 +15,5 @@ class ArgumentException(FunctionException):
         super().__init__(message)
 
 class ParseException(Exception):
-    def __init__(self, message:str="Parsing error has occured") -> None:
-        super().__init__(message)
+    def __init__(self, message, line:int, charpos:int):
+        super().__init__(f'{message}: line {line}:{charpos}')

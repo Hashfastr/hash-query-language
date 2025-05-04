@@ -1,20 +1,14 @@
 import logging
 import json
+from HqlCompiler.Operators import Operator
 
-# An expression proto
-# An expression is the data to be handled in a given operator
-# 
-# | where a == 'b'
-# 
-# Here the 'where' operator has a single expression, Equality.
-# Equality comprises of two expressions and it's type.
-# Here the two expressions are a ScopedNameReference and a StringLiteral
-# This allows for nested expressions that are resolved and built at the end of
-# compilation.
+# An expression is any grouping of other expressions
+# Typically children of an operation, an expression can also contain operators itself
+# Such as a subsearch, which is an expression, and contains operators
+# All other expressions are children of this one
 class Expression():
     def __init__(self):
         self.type = self.__class__.__name__
-        self.expressions = []
     
     def to_dict(self):
         return {}
@@ -24,6 +18,19 @@ class Expression():
     
     def __repr__(self) -> str:
         return self.__str__()
+    
+class PipeExpression(Expression):
+    def __init__(self, prepipe:Expression=None, pipes:list[Operator]=None):
+        super().__init__()
+        self.prepipe = prepipe
+        self.pipes = pipes if pipes else []
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'prepipe': self.prepipe.to_dict(),
+            'pipes': [x.to_dict() for x in self.pipes]
+        }
 
 # Expression expressing anything with ==, >, <, <=, >=, !=, etc
 # has a left and right hand expression along with it's type.
@@ -35,17 +42,12 @@ class Equality(Expression):
         self.rh = rh
     
     def to_dict(self):
-        try:
-            return {
-                'type': self.type,
-                'eqtype': self.eqtype,
-                'lh': self.lh.to_dict(),
-                'rh': self.rh.to_dict()
-            }
-        except:
-            for expression in self.expressions:
-                print(expression)
-            raise Exception("Failure to dict an equality")
+        return {
+            'type': self.type,
+            'eqtype': self.eqtype,
+            'lh': self.lh.to_dict(),
+            'rh': self.rh.to_dict()
+        }
 
 # List equality
 # Essenitally a filter stating that a field should have any value in a tuple.
@@ -58,20 +60,18 @@ class Equality(Expression):
 #
 # But is much easier to write and read
 class ListEquality(Expression):
-    def __init__(self):
+    def __init__(self, lh:Expression, rh:list[Expression]):
         super().__init__()
+        self.lh = lh
+        self.rh = rh
     
     def to_dict(self):
-        try:
-            return {
-                'type': self.type,
-                'lh': self.expressions[0].to_dict(),
-                'rh': [x.to_dict() for x in self.expressions[1:]]
-            }
-        except:
-            for expression in self.expressions:
-                print(expression)
-            raise Exception("Failure to dict an equality")
+        return {
+            'type': self.type,
+            'lh': self.lh.to_dict(),
+            'rh': [x.to_dict() for x in self.rh]
+        }
+
 
 # Data range functionality
 # Left hand side is the expression to evaluate in being between two values.
@@ -90,18 +90,15 @@ class BetweenEquality(Expression):
         self.negate = True if negate == "NOT_BETWEEN" else False
     
     def to_dict(self):
-        try:
-            return {
-                'type': self.type,
-                'negate': self.negate,
-                'lh': self.lh.to_dict(),
-                'rh': {
-                    'start': self.start.to_dict(),
-                    'end': self.end.to_dict()
-                }
+        return {
+            'type': self.type,
+            'negate': self.negate,
+            'lh': self.lh.to_dict(),
+            'rh': {
+                'start': self.start.to_dict(),
+                'end': self.end.to_dict()
             }
-        except:
-            raise Exception("Failure to dict a between")
+        }
 
 # A named reference, can be scoped
 # Scopes are not implemented yet.
