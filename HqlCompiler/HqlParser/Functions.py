@@ -1,6 +1,5 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
-from antlr4.tree.Tree import TerminalNodeImpl
 
 import HqlCompiler.Expression as Expression
 
