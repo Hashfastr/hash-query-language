@@ -29,3 +29,48 @@ class Logic(HqlVisitor):
         )
         
         return expr
+    
+    def visitLogicalOrExpression(self, ctx: HqlParser.LogicalOrExpressionContext):
+        left = self.visit(ctx.Left)
+        right = []
+        
+        for i in ctx.Operations:
+            right.append(self.visit(i))
+                        
+        if len(right) == 0:
+            return left
+        
+        expr = Expression.BinaryLogic(
+            left,
+            right,
+            'or'
+        )
+        
+        return expr
+    
+    def visitLogicalOrOperation(self, ctx: HqlParser.LogicalOrOperationContext):
+        return self.visit(ctx.Right)
+
+    def visitLogicalAndExpression(self, ctx: HqlParser.LogicalAndExpressionContext):
+        left = self.visit(ctx.Left)
+        right = []
+        
+        for i in ctx.Operations:
+            right.append(self.visit(i))
+                        
+        if len(right) == 0:
+            return left
+        
+        expr = Expression.BinaryLogic(
+            left,
+            right,
+            'and'
+        )
+        
+        return expr
+    
+    def visitLogicalAndOperation(self, ctx: HqlParser.LogicalAndOperationContext):
+        return self.visit(ctx.Right)        
+
+    def visitParenthesizedExpression(self, ctx: HqlParser.ParenthesizedExpressionContext):
+        return self.visit(ctx.Expression)

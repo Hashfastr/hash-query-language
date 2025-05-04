@@ -98,10 +98,10 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
         
         return statement
 
-    def visitPipeExpression(self, ctx: HqlParser.PipeExpressionContext):
-        operators = [Index(self.visit(ctx.Expression))]
+    # def visitPipeExpression(self, ctx: HqlParser.PipeExpressionContext):
+    #     operators = [Index(self.visit(ctx.Expression))]
         
-        for i in ctx.PipedOperators:
-            operators.append(self.visit(i))
+    #     for i in ctx.PipedOperators:
+    #         operators.append(self.visit(i))
         
-        return operators
+    #     return operators
