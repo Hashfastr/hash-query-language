@@ -32,7 +32,7 @@ class Functions(HqlVisitor):
         return path
     
     def visitNamedFunctionCallExpression(self, ctx: HqlParser.NamedFunctionCallExpressionContext):
-        expr = Expression.Function(self.visit(ctx.Name))
+        expr = Expression.FuncExpr(self.visit(ctx.Name))
         
         for i in ctx.Arguments:
             expr.args.append(self.visit(i))
