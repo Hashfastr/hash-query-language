@@ -1,12 +1,12 @@
 from HqlCompiler.Expression import Expression
+from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Registry import *
 from HqlCompiler.Functions import Function
 from elasticsearch import Elasticsearch as ES
 import polars as pl
 import logging
-
-class Database(): ...
+from .__proto__ import Database
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Elasticsearch')
@@ -18,8 +18,7 @@ class Elasticsearch(Database):
 
         self.config = config
                 
-        self.posfilters = []
-        self.negfilters = []
+        self.filters = []
         
         self.compatible = [
             'Where',
@@ -36,12 +35,12 @@ class Elasticsearch(Database):
         self.scroll_max = self.config.get('SCROLL_MAX', 10000)
 
     def exec_func_chain(self, chain:list[Function]):
-        for i in chain:
-            self.exec_func(i)
+        return self.exec_func(chain[0])
 
     def exec_func(self, func:Function):
         if func.name in ("index"):
             self.pattern = func.args[0].value
+            return self
         else:
             raise CompilerException(f"Unimplemented subfunction to DB type {self.dbtype}")
     
@@ -50,11 +49,11 @@ class Elasticsearch(Database):
     
     def add_op(self, op:Operator):
         if op.type == 'Where':
-            self.add_filter(op.expressions[0])
+            self.add_filter(op.expr)
         
         # should only have on expression
         if op.type == 'Take':
-            self.add_limit(op.expressions[0].value)
+            self.add_limit(op.expr.value)
 
     def execute(self, data:pl.DataFrame):
         return self.make_query()
@@ -64,31 +63,75 @@ class Elasticsearch(Database):
             'bool': {
             }
         }
-        
-        if self.posfilters != []:
-            filter['bool']['must'] = self.posfilters
-
-        if self.negfilters != []:
-            filter['bool']['must_not'] = self.negfilters
                     
         return filter
     
     def add_limit(self, limit:int):
         self.limit = limit
+        
+    def add_filter(self, expr:Expression):
+        self.filters.append(self.gen_filter(expr))
 
-    def add_filter(self, expression:Expression):
+    def gen_filter(self, expr:Expression):
         filter = None
-        
-        expr = expression.to_dict()
-        
-        # Positive filters
-        if expr['type'] == '==':
+
+        if expr.type == "BinaryLogic":
+            op = 'must' if expr.bitype == 'and' else 'should'
             filter = {
-                'term': {
-                    expr['lh']['name'] : expr['rh']['value']
+                'bool': {
+                    op: [
+                        self.gen_filter(expr.lh)
+                    ] + [self.gen_filter(x) for x in expr.rh]
                 }
             }
-        elif expr['type'] == '<':
+        elif expr.type == 'Equality':
+            if not hasattr(expr.lh, 'get_name'):
+                raise CompilerException('Equality left-hand is not a named reference')
+                
+            if not hasattr(expr.rh, 'get_value'):
+                raise CompilerException('Equality right-hand is not a basic value')
+            
+            if expr.eqtype == '==':
+                filter = {
+                    'term': {
+                        expr.lh.get_name() : expr.rh.get_value()
+                    }
+                }
+            elif expr.eqtype in ('<>', '!='):
+                filter = {
+                    'bool': {
+                        'must_not': [
+                            {
+                                expr.lh.get_name() : expr.rh.get_value()
+                            }
+                        ]
+                    }
+                }
+        elif expr.type == "BetweenEquality":
+            if not hasattr(expr.lh, 'get_name'):
+                raise CompilerException('BetweenEquality left-hand is not a named reference')
+            
+            if not hasattr(expr.start, 'get_value'):
+                raise CompilerException('BetweenEquality right-hand start is not a basic value')
+            
+            if not hasattr(expr.end, 'get_value'):
+                raise CompilerException('BetweenEquality right-hand end is not a basic value')
+            
+            filter = {
+                'range': {
+                    expr.lh.get_name() : {
+                        'gte': expr.start.get_value(),
+                        'lte': expr.end.get_value()
+                    }
+                }
+            }
+
+        if not filter:
+            raise CompilerException(f"Invalid filter type {expr['type']}")
+            
+        return filter
+
+        if expr['type'] == '<':
             filter = {
                 'range': {
                     expr['lh']['name'] : { 'lt': expr['rh']['value'] }
@@ -112,15 +155,6 @@ class Elasticsearch(Database):
                     expr['lh']['name'] : { 'gte': expr['rh']['value'] }
                 }
             }
-        elif expr['type'] == 'BetweenEquality':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : {
-                        'gte': expr['rh']['start']['value'],
-                        'lte': expr['rh']['end']['value']
-                    }
-                }
-            }
         elif expr['type'] == 'ListEquality':
             kvs = []
             for i in expr['rh']:
@@ -136,10 +170,6 @@ class Elasticsearch(Database):
                     'should': kvs
                 }
             }
-            
-        if filter:
-            self.posfilters.append(filter)
-            return
         
         # Negative filters
         if expr['type'] == '!=':
@@ -149,11 +179,10 @@ class Elasticsearch(Database):
                 }
             }
             
-        if filter:
-            self.negfilters.append(filter)
-            return
-        else:
-            raise Exception(f"Invalid filter type {expr['type']}")
+        if not filter:
+            raise CompilerException(f"Invalid filter type {expr['type']}")
+            
+        return filter
     
     def make_query(self) -> dict:
         # Host, or hosts, to use for the query.

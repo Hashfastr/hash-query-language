@@ -74,17 +74,14 @@ class Compiler():
         
         statement = self.query.statements[0]
         
-        
         if statement.type == "QueryStatement":
             logging.debug('Handling QueryStatement')
             
             root = statement.root
             prepipe = self.compile_prepipe(root.prepipe)
             self.compiled.append(prepipe)
-            
-            return 
-        
-            for op in statement.pipes:
+             
+            for op in root.pipes:
                 # This is an attempt at optimizing cases where a take can be placed higher
                 i = -1
                 while i >= -len(self.compiled):
@@ -104,23 +101,3 @@ class Compiler():
                         self.compiled.append(op)
                         self.op_sets.append([op.type])
                         break
-
-    def resolve_index(self, op):
-        expr = op.expressions[0]
-        
-        if expr.type == 'PathExpression':
-            path = expr.path
-            if path[0].type == 'Function':
-                if path[0].name == 'database':
-                    db = Functions.get_func('database')(path[0].args)
-                    conf = db.eval(self.conf)['results'][0]
-                else:
-                    raise CompilerException(f"Invalid function for index {path[0].name}")
-            else:
-                raise CompilerException(f"Invalid index reference type {path[0].type}")
-        else:
-            raise CompilerException(f"Invalid index reference type {expr.type}")
-        
-        indexer = get_indexer(conf)(expr, conf)
-        
-        return indexer

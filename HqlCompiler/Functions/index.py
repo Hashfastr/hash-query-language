@@ -1,7 +1,7 @@
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Registry import register_func
 import logging
-from .proto import Function
+from .__proto__ import Function
 
 # This is a meta function resolved while parsing
 @register_func('index')

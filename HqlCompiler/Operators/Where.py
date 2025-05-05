@@ -8,17 +8,17 @@ from HqlCompiler.Exceptions import *
 # but they can exist.
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
 class Where(Operator):
-    def __init__(self, predicate:Expression, params:list=None):
+    def __init__(self, expr:Expression, params:list=None):
         super().__init__()
-        if predicate == None:
+        if expr == None:
             raise ParseException('Where instanciated with None type predicate')
         
         self.parameters = params if params else []
-        self.predicate = predicate
+        self.expr = expr
             
     def to_dict(self):        
         return {
             'type': self.type,
             'parameters': [x.to_dict() for x in self.parameters],
-            'expression': self.predicate.to_dict()
+            'expression': self.expr.to_dict()
         }

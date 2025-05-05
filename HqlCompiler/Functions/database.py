@@ -2,7 +2,7 @@ from HqlCompiler.Config import Config
 import logging
 from HqlCompiler.Registry import register_func, get_database
 from HqlCompiler.Exceptions import *
-from .proto import Function
+from .__proto__ import Function
 
 # This is a meta function resolved while parsing
 @register_func('database')
