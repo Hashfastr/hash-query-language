@@ -8,11 +8,12 @@ __all__ = [
 ]
 
 import time
-from .Config import Config
-from .Query import *
-from .Functions import *
-from .Operators.Index import Index as Index
-from .Operators.Index import get_indexer
+from HqlCompiler.Config import Config
+from HqlCompiler.Query import *
+from HqlCompiler.Functions import *
+from HqlCompiler.Operators.Database import Database as Database
+from HqlCompiler.Operators.Database import get_database
+import HqlCompiler.Expression as Expression
 import logging
 
 class CompilerException(Exception): ...
@@ -50,18 +51,40 @@ class Compiler():
             seti += 1
             
         return results
+
+    def compile_prepipe(self, prepipe:Expression.Expression):
+        if prepipe.type == "DotCompositeFunction":
+            topfunc = prepipe.funcs[0]
             
+            if topfunc.name != "database":
+                dbfunc = topfunc.resolve()
+                dbfunc.config = self.conf
+            else:
+                raise CompilerException(f"Invalid QueryStatement prepipe function {topfunc.name}")
+           
+            chain = [x.resolve() for x in prepipe.funcs[1:]]
+            
+            db = dbfunc.eval().exec_func_chain(chain)
+            
+            return db
+ 
     def compile(self):        
         self.compiled = []
-        statement = self.query.statements[0]
-        
         self.op_sets = []
         
-        for op in statement.operations:
-            if op.type == 'Index':
-                self.compiled.append(self.resolve_index(op))
-                self.op_sets.append([op.type])
-            else:
+        statement = self.query.statements[0]
+        
+        
+        if statement.type == "QueryStatement":
+            logging.debug('Handling QueryStatement')
+            
+            root = statement.root
+            prepipe = self.compile_prepipe(root.prepipe)
+            self.compiled.append(prepipe)
+            
+            return 
+        
+            for op in statement.pipes:
                 # This is an attempt at optimizing cases where a take can be placed higher
                 i = -1
                 while i >= -len(self.compiled):

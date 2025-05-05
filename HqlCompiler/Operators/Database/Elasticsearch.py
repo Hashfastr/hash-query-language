@@ -1,24 +1,22 @@
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Registry import *
+from HqlCompiler.Functions import Function
 from elasticsearch import Elasticsearch as ES
 import polars as pl
 import logging
-import json
+
+class Database(): ...
 
 # Index in a database to grab data from, extremely simple.
-@regsiter_index('Elasticsearch')
-class Elasticsearch(Operator):
-    def __init__(self, expression:Expression, config:dict):
+@register_database('Elasticsearch')
+class Elasticsearch(Database):
+    def __init__(self, config:dict):
         super().__init__()
         
-        self.type = 'Index'
+        self.pattern = "*"
+
         self.config = config
-        
-        if expression.type == "PathExpression":
-            self.pattern = '.'.join([x.ref for x in expression.path[1:]])
-        else:
-            raise Exception("Invalid Elasticsearch init expression")
                 
         self.posfilters = []
         self.negfilters = []
@@ -36,7 +34,17 @@ class Elasticsearch(Operator):
         # Higher values are generally better, each request has some time to it
         # 10000 is faster than 10x1000
         self.scroll_max = self.config.get('SCROLL_MAX', 10000)
-        
+
+    def exec_func_chain(self, chain:list[Function]):
+        for i in chain:
+            self.exec_func(i)
+
+    def exec_func(self, func:Function):
+        if func.name in ("index"):
+            self.pattern = func.args[0].value
+        else:
+            raise CompilerException(f"Unimplemented subfunction to DB type {self.dbtype}")
+    
     def can_integrate(self, type:str):
         return type in self.compatible
     

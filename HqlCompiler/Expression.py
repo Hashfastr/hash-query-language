@@ -1,6 +1,6 @@
 import logging
 import json
-from HqlCompiler.Operators import Operator
+from .Operators import Operator
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -108,6 +108,9 @@ class NamedReference(Expression):
         self.name = name
         self.scope = scope
         
+    def get_name(self):
+        return self.name.name
+        
     def to_dict(self):
         return {
             'name': self.name.to_dict(),
@@ -145,14 +148,14 @@ class EscapedName(StringLiteral):
 class Identifier(Expression):
     def __init__(self, name:str, keyword:bool=False):
         super().__init__()
-        self.value = name
+        self.name = name
         self.keyword = keyword
         
     def to_dict(self):
         return {
             'type': self.type,
             'keyword': self.keyword,
-            'name': self.value
+            'name': self.name
         }
 
 # Integer
@@ -181,11 +184,14 @@ class Bool(Expression):
             'value': self.value
         }
 
-class Function(Expression):
+class FuncExpr(Expression):
     def __init__(self, name:Expression, args:list=None):
         super().__init__()
         self.name = name
         self.args = args if args else []
+
+    def get_name(self):
+        return self.name.get_name()
     
     def to_dict(self):
         return {
@@ -194,8 +200,16 @@ class Function(Expression):
             'args': [x.to_dict() for x in self.args]
         }
         
+    def resolve(self):
+        from HqlCompiler.Registry import get_func
+        
+        func = get_func(self.get_name())
+        logging.debug(f'Resolved func {func}')
+
+        return func(self.args)
+        
 class DotCompositeFunction(Expression):
-    def __init__(self, funcs:list[Function]):
+    def __init__(self, funcs:list[FuncExpr]):
         super().__init__()
         self.funcs = funcs
     

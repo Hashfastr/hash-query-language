@@ -1,5 +1,5 @@
 __all__ = [
-    "Index",
+    "Database",
     "Where",
     "Project",
     "Operator"
@@ -7,7 +7,7 @@ __all__ = [
 
 from .Operator import Operator
 
-from . import Index
+from . import Database
 from .Where import Where
 from .Project import Project
 from .Take import Take

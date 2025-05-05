@@ -39,6 +39,7 @@ def main():
     parser.add_argument('-p', '--profile', help="Profile the performance of Hql", action='store_true')
     parser.add_argument('-co', '--compose-override', help="Override the compose binary found in the path")
     parser.add_argument('-c', '--config', help="Location of the config file")
+    parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
     
     args = parser.parse_args()
     
@@ -88,13 +89,16 @@ def main():
     logging.debug("Compiling...")
     start = time.perf_counter()
     
-    compiler = Compiler('./conf.json', parser.assembly)
+    compiler = Compiler(conf_file, parser.assembly)
     compiler.compile()
     
     end = time.perf_counter()
     logging.debug("Done.")
     
     logging.debug(f"Compiling took {end - start}")
+   
+    if args.no_exec:
+        return
     
     #############
     ## Queries ##
