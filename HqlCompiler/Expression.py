@@ -13,6 +13,12 @@ class Expression():
     def to_dict(self):
         return {}
     
+    def get_name(self):
+        return self.name
+    
+    def get_value(self):
+        return self.value
+    
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
     
@@ -113,6 +119,7 @@ class NamedReference(Expression):
         
     def to_dict(self):
         return {
+            'type': self.type,
             'name': self.name.to_dict(),
             'scope': self.scope,
         }
@@ -132,8 +139,9 @@ class StringLiteral(Expression):
         }
         
 class EscapedName(StringLiteral):
-    def __init__(self, value:str):
-        super().__init__(value)
+    def __init__(self, name:str):
+        super().__init__(name)
+        self.name = name
         self.escaped = True
         
     def to_dict(self):
@@ -166,7 +174,7 @@ class Integer(Expression):
     def __init__(self, value:str):
         super().__init__()
         self.value = int(value)
-        
+    
     def to_dict(self):
         return {
             'type': self.type,
@@ -235,20 +243,20 @@ class Path(Expression):
             logging.debug(e)
     
 class BinaryLogic(Expression):
-    def __init__(self, left:Expression, right:list[Expression], type:str):
+    def __init__(self, lh:Expression, rh:list[Expression], type:str):
         super().__init__()
         self.bitype = type.lower()
-        self.left = left
-        self.right = right
+        self.lh = lh
+        self.rh = rh
         
     def to_dict(self):
         return {
             'type': self.type,
             'bitype': self.bitype,
-            'left': self.left.to_dict(),
-            'right': [x.to_dict() for x in self.right]
+            'lh': self.lh.to_dict(),
+            'rh': [x.to_dict() for x in self.rh]
         }
-            
+
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
         super().__init__()

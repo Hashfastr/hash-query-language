@@ -26,3 +26,6 @@ class Operators(HqlVisitor):
             params.append(self.visit(i))
             
         return Ops.Where(predicate, params)
+
+    def visitTakeOperator(self, ctx: HqlParser.TakeOperatorContext):
+        return Ops.Take(self.visit(ctx.Expression))

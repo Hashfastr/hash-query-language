@@ -1,5 +1,7 @@
 from .Operator import Operator
 from ..Results import Results
+from HqlCompiler.Expression import Expression
+from HqlCompiler.Exceptions import *
 
 # Take, limits the number of results given an integer
 # Ensures that only integers are given, if not then errors
@@ -7,11 +9,15 @@ from ..Results import Results
 #
 # https://learn.microsoft.com/en-us/kusto/query/take-operator?view=microsoft-fabric
 class Take(Operator):
-    def __init__(self):
+    def __init__(self, expr:Expression):
         super().__init__()
+        self.expr = expr
         
     def execute(self, data:Results):
-        limit = self.expressions[0].value
+        if self.expr.type != 'Integer':
+            raise CompilerException(f'Invalid type {self.expr.type} given to take operator')
+        
+        limit = self.expr.value
         orig_type = type(limit)
         
         if not isinstance(limit, int):

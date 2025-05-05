@@ -21,14 +21,14 @@ import logging
 class Operator():
     def __init__(self):
         self.type = self.__class__.__name__
-        self.expressions = []
+        self.expr = None
         self.compatible = []
         self.non_conseq = []
     
     def to_dict(self):
         return {
             'type': self.type,
-            'expressions': [x.to_dict() for x in self.expressions]
+            'expression': self.expr.to_dict()
         }
     
     def __str__(self):
