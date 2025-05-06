@@ -68,7 +68,8 @@ def main():
     #######################
     
     logging.debug('Parsing...')
-    
+    start = time.perf_counter()
+
     parser = Parser(args.file)
     parser.assemble()
     
@@ -78,6 +79,9 @@ def main():
         return
         
     logging.debug('Done.')
+    
+    end = time.perf_counter()
+    logging.debug(f'Parsing took {end - start}')
         
     ######################
     ## Compile Assembly ##
@@ -113,6 +117,8 @@ def main():
     end = time.perf_counter() 
     logging.debug("Ran")
     logging.debug(f"Computation took {end - start}")
+    
+    logging.debug(f'Got {len(results)} results from query')
 
     #####################
     ## Profiling stuff ##

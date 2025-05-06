@@ -80,6 +80,7 @@ class Compiler():
             root = statement.root
             prepipe = self.compile_prepipe(root.prepipe)
             self.compiled.append(prepipe)
+            self.op_sets.append([prepipe.type])
              
             for op in root.pipes:
                 # This is an attempt at optimizing cases where a take can be placed higher
