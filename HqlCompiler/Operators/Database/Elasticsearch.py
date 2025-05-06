@@ -1,10 +1,13 @@
-from HqlCompiler.Expression import Expression
+import HqlCompiler.Expression as Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Registry import *
 from HqlCompiler.Functions import Function
+
 from elasticsearch import Elasticsearch as ES
 import polars as pl
+
+import json
 import logging
 from .__proto__ import Database
 
@@ -17,7 +20,9 @@ class Elasticsearch(Database):
         self.pattern = "*"
 
         self.config = config
-                
+
+        # The database filter always starts as an and
+        self.filter_expr = Expression.BinaryLogic(None, [], 'and')
         self.filters = []
         
         self.compatible = [
@@ -57,34 +62,49 @@ class Elasticsearch(Database):
 
     def execute(self, data:pl.DataFrame):
         return self.make_query()
-
-    def get_filter(self):
-        filter = {
-            'bool': {
-            }
-        }
-                    
-        return filter
     
     def add_limit(self, limit:int):
         self.limit = limit
-        
+    
+    # When executed it assumes another where op, implying 'and' with other filters
     def add_filter(self, expr:Expression):
-        self.filters.append(self.gen_filter(expr))
+        if not self.filter_expr.lh:
+            logging.debug(f'Create initial filter for {self.dbtype}')
+            self.filter_expr.lh = expr
+            return
+        
+        logging.debug(f'Joining where filter into {self.dbtype}')
+        if self.filter_expr.type == 'BinaryLogic' and self.filter_expr.bitype == 'and':
+            self.filter_expr.rh.append(expr)
+        else:
+            self.filter_expr = Expression.BinaryLogic(self.filter_expr, expr, 'and')
 
     def gen_filter(self, expr:Expression):
         filter = None
 
         if expr.type == "BinaryLogic":
             op = 'must' if expr.bitype == 'and' else 'should'
-            filter = {
+            
+            # base empty filter case
+            if not expr.lh:
+                return {
+                    'match_all': {}
+                }
+            
+            return {
                 'bool': {
                     op: [
                         self.gen_filter(expr.lh)
                     ] + [self.gen_filter(x) for x in expr.rh]
                 }
             }
-        elif expr.type == 'Equality':
+        
+        if expr.type == 'Equality':
+            # Need to check for these because of elastic limitations
+            # Might implement these at a high level at sometime
+            # Or translate to equvalent logic
+            # (field1=2 and field2=3) == (field3=4 or field4=5)
+            # (field1=2 and field2=3) and (field3=4 or field4=5)
             if not hasattr(expr.lh, 'get_name'):
                 raise CompilerException('Equality left-hand is not a named reference')
                 
@@ -92,22 +112,23 @@ class Elasticsearch(Database):
                 raise CompilerException('Equality right-hand is not a basic value')
             
             if expr.eqtype == '==':
-                filter = {
+                return {
                     'term': {
                         expr.lh.get_name() : expr.rh.get_value()
                     }
                 }
-            elif expr.eqtype in ('<>', '!='):
-                filter = {
+                
+            if expr.eqtype in ('<>', '!='):
+                return {
                     'bool': {
-                        'must_not': [
-                            {
-                                expr.lh.get_name() : expr.rh.get_value()
-                            }
-                        ]
+                        'must_not': {
+                            'term': {expr.lh.get_name() : expr.rh.get_value()}
+                        }
                     }
                 }
-        elif expr.type == "BetweenEquality":
+        
+        if expr.type == "BetweenEquality":
+            # Don't think this can ever be something non-basic
             if not hasattr(expr.lh, 'get_name'):
                 raise CompilerException('BetweenEquality left-hand is not a named reference')
             
@@ -117,7 +138,7 @@ class Elasticsearch(Database):
             if not hasattr(expr.end, 'get_value'):
                 raise CompilerException('BetweenEquality right-hand end is not a basic value')
             
-            filter = {
+            return {
                 'range': {
                     expr.lh.get_name() : {
                         'gte': expr.start.get_value(),
@@ -216,8 +237,11 @@ class Elasticsearch(Database):
         logging.debug("Starting initial query")
 
         body = {
-            'query': self.get_filter()
+            'query': self.gen_filter(self.filter_expr)
         }
+        
+        logging.debug(f"{self.dbtype} query, using the following DSL:")
+        logging.debug(json.dumps(body))
         
         res = client.search(
             index=self.pattern,

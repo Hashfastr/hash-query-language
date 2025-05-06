@@ -20,8 +20,6 @@ class Parser():
         self.tree = self.parse_file(filename)
     
     def parse_file(self, filename:str) -> CommonTokenStream:
-        start = time.perf_counter()
-        
         try:
             with open(filename, 'r') as f:
                 text = f.read()
@@ -33,9 +31,6 @@ class Parser():
         lexer = HqlLexer(InputStream(text))
         token_stream = CommonTokenStream(lexer)
         parser = HqlParser(token_stream)
-        
-        end = time.perf_counter()
-        logging.debug(f'Parsing took {end - start}')
         
         return parser.query()
 

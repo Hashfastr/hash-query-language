@@ -231,6 +231,9 @@ class Path(Expression):
     def __init__(self, path:list=None):
         super().__init__()
         self.path = path if path else []
+
+    def get_name(self):
+        return '.'.join([x.get_name() for x in self.path])
                 
     def to_dict(self):
         try:
