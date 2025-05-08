@@ -50,6 +50,21 @@ class BaseExpressions(HqlVisitor):
             return name
         
         return Expression.NamedReference(name)
+
+    def visitNamedExpression(self, ctx: HqlParser.NamedExpressionContext):
+        if not ctx.Name:
+            return self.visit(ctx.Expression)
+                
+        name = self.visit(ctx.Name)
+        value = self.visit(ctx.Expression)
+                
+        return Expression.NamedExpression(name, value)
+    
+    def visitNamedExpressionNameClause(self, ctx: HqlParser.NamedExpressionNameClauseContext):
+        if ctx.Name:
+            return self.visit(ctx.Name)
+        else:
+            return self.visit(ctx.NameList)
     
     def visitKeywordName(self, ctx: HqlParser.KeywordNameContext):
         return Expression.Identifier(ctx.Token.text, keyword=True)

@@ -15,19 +15,20 @@ from ..Results import Results
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 class Project(Operator):
-    def __init__(self):
+    def __init__(self, exprs:list[Expression]):
         super().__init__()
+        self.exprs = exprs
         self.non_conseq = [
             'Take'
         ]
     
     def gen_fields(self):
         fields = []
-        for i in self.expressions:
-            if i.escaped:
-                fields.append([i.name])
+        for i in self.exprs:
+            if i.is_escaped():
+                fields.append([i.get_name()])
             else:
-                fields.append(i.name.split('.'))
+                fields.append(i.get_name().split('.'))
         return fields
         
     def execute(self, data:Results):

@@ -32,3 +32,17 @@ class Operators(HqlVisitor):
 
     def visitCountOperator(self, ctx: HqlParser.CountOperatorContext):
         return Ops.Count()
+    
+    def visitProjectOperator(self, ctx: HqlParser.ProjectOperatorContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        return Ops.Project(exprs)
+
+    def visitExtendOperator(self, ctx: HqlParser.ExtendOperatorContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+            
+        return Ops.Extend(exprs)

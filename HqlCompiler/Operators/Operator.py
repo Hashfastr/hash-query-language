@@ -22,14 +22,21 @@ class Operator():
     def __init__(self):
         self.type = self.__class__.__name__
         self.expr = None
+        self.exprs = None
         self.compatible = []
         self.non_conseq = []
     
     def to_dict(self):
-        return {
-            'type': self.type,
-            'expression': self.expr.to_dict()
-        }
+        if self.expr:
+            return {
+                'type': self.type,
+                'expression': self.expr.to_dict()
+            }
+        else:
+            return {
+                'type': self.type,
+                'expressions': [x.to_dict() for x in self.exprs]
+            }
     
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
