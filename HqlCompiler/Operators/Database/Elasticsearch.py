@@ -3,6 +3,7 @@ from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Registry import *
 from HqlCompiler.Functions import Function
+from HqlCompiler.PolarsTools import PolarsTools
 
 from elasticsearch import Elasticsearch as ES
 import polars as pl
@@ -208,11 +209,11 @@ class Elasticsearch(Database):
     def make_query(self) -> dict:
         # Host, or hosts, to use for the query.
         # Should be in array format
-        ELASTIC_HOSTS = self.config.get('ELASTIC_HOSTS', ['http://localhost:9200'])
+        HOSTS = self.config.get('HOSTS', ['http://localhost:9200'])
         # Elastic user to use
-        ELASTIC_USER = self.config.get('ELASTIC_USER', 'elastic')
+        USER = self.config.get('USER', 'elastic')
         # Elastic user password to use
-        ELASTIC_PASS = self.config.get('ELASTIC_PASS', 'changeme')
+        PASS = self.config.get('PASS', 'changeme')
         # SSL Validation
         VALIDATE_CERTS = self.config.get('VALIDATE_CERTS', 'true')
         # How long should the scroll session be kept alive?
@@ -227,8 +228,8 @@ class Elasticsearch(Database):
         DEBUG = self.config.get('DEBUG', False)
         
         client = ES(
-            ELASTIC_HOSTS,
-            basic_auth=(ELASTIC_USER, ELASTIC_PASS),
+            HOSTS,
+            basic_auth=(USER, PASS),
             verify_certs=VALIDATE_CERTS,
             request_timeout=TIMEOUT,
             retry_on_timeout=True,
@@ -271,7 +272,7 @@ class Elasticsearch(Database):
             if results.is_empty():
                 results = df
             else:
-                pl.concat([results, df])
+                results = pl.concat([results, df], how='diagonal_relaxed')
             result_count += len(df)
             
             remainder = self.limit - result_count
