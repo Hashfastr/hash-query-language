@@ -29,3 +29,6 @@ class Operators(HqlVisitor):
 
     def visitTakeOperator(self, ctx: HqlParser.TakeOperatorContext):
         return Ops.Take(self.visit(ctx.Expression))
+
+    def visitCountOperator(self, ctx: HqlParser.CountOperatorContext):
+        return Ops.Count()
