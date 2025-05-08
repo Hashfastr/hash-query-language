@@ -53,20 +53,46 @@ class Compiler():
         return results
 
     def compile_prepipe(self, prepipe:Expression.Expression):
+        logging.debug(f'Compiling prepipe type {prepipe.type}')
+        
+        funcs = None
+        db = None
+        
         if prepipe.type == "DotCompositeFunction":
-            topfunc = prepipe.funcs[0]
+            funcs = prepipe.funcs
+            
+        if prepipe.type == "Path":
+            if len(prepipe.path) > 2:
+                raise CompilerException(f'Too many paths for a database reference {len(prepipe.path)}')
+                
+            if prepipe.path[0].type == "DotCompositeFunction":
+                funcs = prepipe.path[0].funcs
+            else:
+                name = Expression.NamedReference('database')
+                args = [prepipe.path[0]]
+                funcs = [Expression.FuncExpr(name, args)]
+            
+            name = Expression.NamedReference('index')
+            args = [prepipe.path[1]]
+            funcs.append(Expression.FuncExpr(name, args))
+        
+        if funcs:
+            topfunc = funcs[0]
             
             if topfunc.name != "database":
                 dbfunc = topfunc.resolve()
                 dbfunc.config = self.conf
             else:
                 raise CompilerException(f"Invalid QueryStatement prepipe function {topfunc.name}")
-           
-            chain = [x.resolve() for x in prepipe.funcs[1:]]
+
+        if len(funcs) > 1:
+            chain = [x.resolve() for x in funcs[1:]]
             
             db = dbfunc.eval().exec_func_chain(chain)
+        else:
+            db = dbfunc.eval()
             
-            return db
+        return db
  
     def compile(self):        
         self.compiled = []

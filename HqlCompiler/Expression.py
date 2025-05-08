@@ -115,7 +115,10 @@ class NamedReference(Expression):
         self.scope = scope
         
     def get_name(self):
-        return self.name.name
+        if hasattr(self.name, 'name'):
+            return self.name.name
+        else:
+            return self.name
         
     def to_dict(self):
         return {
