@@ -4,7 +4,8 @@ __all__ = [
     "Project",
     "Operator",
     "Take",
-    "Count"
+    "Count",
+    "Extend"
 ]
 
 from .Operator import Operator
@@ -14,3 +15,4 @@ from .Where import Where
 from .Project import Project
 from .Take import Take
 from .Count import Count
+from .Extend import Extend

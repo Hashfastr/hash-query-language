@@ -9,6 +9,7 @@ from .Operators import Operator
 class Expression():
     def __init__(self):
         self.type = self.__class__.__name__
+        self.escaped = False
     
     def to_dict(self):
         return {}
@@ -18,6 +19,9 @@ class Expression():
     
     def get_value(self):
         return self.value
+    
+    def is_escaped(self):
+        return self.escaped
     
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -272,5 +276,17 @@ class OpParameter(Expression):
     def to_dict(self):        
         return {
             'name': self.name,
+            'value': self.value.to_dict()
+        }
+
+class NamedExpression(Expression):
+    def __init__(self, name:Expression, value:Expression):
+        super().__init__()
+        self.name = name
+        self.value = value
+        
+    def to_dict(self):        
+        return {
+            'name': self.name.to_dict(),
             'value': self.value.to_dict()
         }
