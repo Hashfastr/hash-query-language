@@ -2,7 +2,9 @@ __all__ = [
     "Database",
     "Where",
     "Project",
-    "Operator"
+    "Operator",
+    "Take",
+    "Count"
 ]
 
 from .Operator import Operator
@@ -11,3 +13,4 @@ from . import Database
 from .Where import Where
 from .Project import Project
 from .Take import Take
+from .Count import Count

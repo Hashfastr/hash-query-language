@@ -7,7 +7,7 @@ from HqlCompiler.Exceptions import *
 # Ensures that only integers are given, if not then errors
 # The implementation algorithm is just grab the first n rows.
 #
-# https://learn.microsoft.com/en-us/kusto/query/take-operator?view=microsoft-fabric
+# https://learn.microsoft.com/en-us/kusto/query/take-operator
 class Take(Operator):
     def __init__(self, expr:Expression):
         super().__init__()
