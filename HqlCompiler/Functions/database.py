@@ -9,13 +9,17 @@ from .__proto__ import Function
 class database(Function):
     def __init__(self, args:list):
         super().__init__(args)
-        self.expected = 1
         self.config = None
-                
-        if len(self.args) != self.expected:
-            logging.error(f'{self.name} call has an invalid number of arguments')
-            logging.error(f'Got {len(args)}, expected {self.expected}')
-            raise ArgumentException(f'Function argument exception')
+        
+        # later feature to use, maybe
+        self.disallowed = (
+            'HOSTS',
+            'HOST',
+            'USER',
+            'PASS',
+            'VALIDATE_CERTS',
+            'TYPE'
+        )
 
         if self.args[0].type != 'StringLiteral':
             raise ArgumentException(f'Bad database argument datatype {args[0].type}')
@@ -25,5 +29,16 @@ class database(Function):
             raise CompilerException('Database function not given config')
         
         dbconf = self.config.get_database(self.args[0].value)
+        
+        # This will probably have some unintended consequences
+        # Enable when ready
+        # Enables dynamic conf changes to a dbconfig
+        # for i in self.args[1:]:
+        #     arg = i.get_value().split('=')
+            
+        #     if arg[0] in disallowed:
+        #         raise CompilerException(f'Invalid variable set in database call {arg[0]}')
+            
+        #     dbconf[arg[0]] = arg[1]
                 
         return get_database(dbconf['TYPE'])(dbconf)
