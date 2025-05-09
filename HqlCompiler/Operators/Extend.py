@@ -17,9 +17,25 @@ class Extend(Operator):
         super().__init__()
         self.exprs = exprs
 
-    def extend(self, data:pl.DataFrame, src:list[str], dest:list[str]):
+    def extend(self, data:pl.DataFrame, lh:Expression, rh:Expression):
+        if rh.type == 'Path':
+            src = [x.get_name() for x in rh.path]
+        elif rh.type in ('Identifier'):
+            src = [rh.get_name()]
+        else:
+            raise CompilerException(f'Unhandled Right-Hand expression type for extend: {rh.type}')
+
+        if lh.type == 'Path':
+            dest = [x.get_name() for x in lh.path]
+        elif lh.type in ('Identifier'):
+            dest = [lh.get_name()]
+        else:
+            raise CompilerException(f'Unhandled Left-Hand expression type for extend: {lh.type}')
+        
         src_data = PolarsTools.get_element_series(data, src)
         # Can do whatever with src_data here
+        
+        
         dest_data = PolarsTools.build_element(dest, src_data)
         return dest_data
             
@@ -29,16 +45,9 @@ class Extend(Operator):
             if i.type != "NamedExpression":
                 raise CompilerException(f'Extend operator given invalid expression {i.type}')
             
-            if i.name.type == 'Path':
-                dest = [x.get_name() for x in i.name.path]
-            else:
-                dest = [i.name.get_name()]
-            
-            if i.value.type == 'Path':
-                src = [x.get_name() for x in i.value.path]
-            else:
-                raise CompilerException(f'Unhandled NamedExpression value type {i.value.type}')
+            lh = i.name
+            rh = i.value
                 
-            new.append(self.extend(data, src, dest))
+            new.append(self.extend(data, lh, rh))
         
         return pl.concat(new, how='horizontal')
