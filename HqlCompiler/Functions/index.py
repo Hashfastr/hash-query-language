@@ -7,13 +7,7 @@ from .__proto__ import Function
 @register_func('index')
 class index(Function):
     def __init__(self, args:list):
-        super().__init__(args)
-        self.expected = 1
-        
-        if len(self.args) != self.expected:
-            logging.error(f'{self.name} call has an invalid number of arguments')
-            logging.error(f'Got {len(args)}, expected {self.expected}')
-            raise ArgumentException(f'Function argument exception')
+        super().__init__(args, 1, 1)
 
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):
             raise ArgumentException(f'Bad database argument datatype {args[0].type}')

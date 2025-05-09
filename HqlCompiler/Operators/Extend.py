@@ -3,6 +3,7 @@ from ..Results import Results
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.Functions import Function
 import polars as pl
 
 # Creates a field with a value in the extend
@@ -22,6 +23,8 @@ class Extend(Operator):
             src = [x.get_name() for x in rh.path]
         elif rh.type in ('Identifier'):
             src = [rh.get_name()]
+        elif rh.type == "DotCompositeFunction":
+            src = rh.resolve_func_chain()
         else:
             raise CompilerException(f'Unhandled Right-Hand expression type for extend: {rh.type}')
 
@@ -32,9 +35,10 @@ class Extend(Operator):
         else:
             raise CompilerException(f'Unhandled Left-Hand expression type for extend: {lh.type}')
         
-        src_data = PolarsTools.get_element_series(data, src)
-        # Can do whatever with src_data here
-        
+        if issubclass(type(src), Function):
+            src_data = src.eval(data)
+        else:
+            src_data = PolarsTools.get_element_series(data, src)        
         
         dest_data = PolarsTools.build_element(dest, src_data)
         return dest_data
