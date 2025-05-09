@@ -241,6 +241,9 @@ class Path(Expression):
 
     def get_name(self):
         return '.'.join([x.get_name() for x in self.path])
+    
+    def get_value(self):
+        return self.get_name()
                 
     def to_dict(self):
         try:
@@ -287,6 +290,7 @@ class NamedExpression(Expression):
         
     def to_dict(self):        
         return {
+            'type': self.type,
             'name': self.name.to_dict(),
             'value': self.value.to_dict()
         }

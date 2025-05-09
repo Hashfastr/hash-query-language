@@ -34,6 +34,8 @@ class PolarsTools():
             
         return pl.concat(mergable, how="horizontal")
 
+    # Fields is a list of the given path names.
+    # host.name -> ['host', 'name']
     def get_element(data:pl.DataFrame, fields:list[str], index:int=0):
         if index == len(fields):
             return pl.DataFrame({fields[index-1]: data.to_struct()})
@@ -59,3 +61,28 @@ class PolarsTools():
             return rec_data
         else:
             return pl.DataFrame({fields[index-1]: rec_data.to_struct()})
+        
+    def get_element_series(data:pl.DataFrame, fields:list[str], index:int=0):
+        split = fields[index]
+        
+        if split not in data:
+            raise Exception(f"Invalid field referenced {'.'.join(fields)}")
+        
+        new = data.select(split)
+        
+        if len(fields) == 1:
+            return new.to_series()
+        
+        if isinstance(new[split].dtype, pl.Struct):
+            new = new.unnest(split)
+        else:
+            return new.to_series()
+        
+        return PolarsTools.get_element_series(new, fields, index + 1)
+    
+    def build_element(name:list[str], data):
+        if len(name) == 1:
+            return pl.DataFrame({name[0]: data})
+        
+        new = PolarsTools.build_element(name[1:], data)
+        return pl.DataFrame({name[0]: new.to_struct()})
