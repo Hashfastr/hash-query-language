@@ -8,7 +8,7 @@ from .__proto__ import Function
 @register_func('database')
 class database(Function):
     def __init__(self, args:list):
-        super().__init__(args)
+        super().__init__(args, 1, 1)
         self.config = None
         
         # later feature to use, maybe

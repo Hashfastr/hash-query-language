@@ -85,10 +85,11 @@ class Compiler():
             else:
                 raise CompilerException(f"Invalid QueryStatement prepipe function {topfunc.name}")
 
+        funcs = [topfunc]
+
         if len(funcs) > 1:
             chain = [x.resolve() for x in funcs[1:]]
-            
-            db = dbfunc.eval().exec_func_chain(chain)
+            db = dbfunc.eval_chain(chain=chain)
         else:
             db = dbfunc.eval()
             

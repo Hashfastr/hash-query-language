@@ -40,10 +40,15 @@ class Elasticsearch(Database):
         # 10000 is faster than 10x1000
         self.scroll_max = self.config.get('SCROLL_MAX', 10000)
 
-    def exec_func_chain(self, chain:list[Function]):
-        return self.exec_func(chain[0])
+    def eval_chain(self, data:Expression=None, chain:list[Function]=None):
+        out = self
+        
+        for i in chain:
+            out = self.eval(i)
+            
+        return out
 
-    def exec_func(self, func:Function):
+    def eval(self, func:Function):
         if func.name in ("index"):
             self.pattern = func.args[0].value
             return self

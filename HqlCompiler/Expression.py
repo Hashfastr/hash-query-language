@@ -227,6 +227,15 @@ class DotCompositeFunction(Expression):
     def __init__(self, funcs:list[FuncExpr]):
         super().__init__()
         self.funcs = funcs
+
+    def resolve_func_chain(self):
+        func = self.funcs[0].resolve()
+        
+        if len(self.funcs) > 1:
+            for i in self.funcs[1:]:
+                func.chain.append(i.resolve())
+        
+        return func
     
     def to_dict(self):
         return {
