@@ -1,4 +1,4 @@
-from HqlCompiler.Config import Config
+import HqlCompiler.Config as Config
 import logging
 from HqlCompiler.Registry import register_func, get_database
 from HqlCompiler.Exceptions import *
@@ -9,7 +9,6 @@ from .__proto__ import Function
 class database(Function):
     def __init__(self, args:list):
         super().__init__(args, 1, 1)
-        self.config = None
         
         # later feature to use, maybe
         self.disallowed = (
@@ -24,11 +23,8 @@ class database(Function):
         if self.args[0].type != 'StringLiteral':
             raise ArgumentException(f'Bad database argument datatype {args[0].type}')
         
-    def eval(self):
-        if not self.config:
-            raise CompilerException('Database function not given config')
-        
-        dbconf = self.config.get_database(self.args[0].value)
+    def eval(self, *data):
+        dbconf = Config.HqlConfig.get_database(self.args[0].get_value())
         
         # This will probably have some unintended consequences
         # Enable when ready

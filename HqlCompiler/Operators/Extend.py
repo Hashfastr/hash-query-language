@@ -5,6 +5,7 @@ from HqlCompiler.Exceptions import *
 from HqlCompiler.PolarsTools import PolarsTools
 from HqlCompiler.Functions import Function
 import polars as pl
+from HqlCompiler.Registry import register_op
 
 # Creates a field with a value in the extend
 #
@@ -13,6 +14,7 @@ import polars as pl
 # | extend Duration = EndTime - StartTime
 #
 # https://learn.microsoft.com/en-us/kusto/query/extend-operator
+@register_op('Extend')
 class Extend(Operator):
     def __init__(self, exprs:list[Expression]):
         super().__init__()
@@ -20,7 +22,7 @@ class Extend(Operator):
 
     def extend(self, data:pl.DataFrame, lh:Expression, rh:Expression):
         if rh.type == 'Path':
-            src = [x.get_name() for x in rh.path]
+            src = rh.get_fields()
         elif rh.type in ('Identifier'):
             src = [rh.get_name()]
         elif rh.type == "DotCompositeFunction":
@@ -29,7 +31,7 @@ class Extend(Operator):
             raise CompilerException(f'Unhandled Right-Hand expression type for extend: {rh.type}')
 
         if lh.type == 'Path':
-            dest = [x.get_name() for x in lh.path]
+            dest = lh.get_fields()
         elif lh.type in ('Identifier'):
             dest = [lh.get_name()]
         else:

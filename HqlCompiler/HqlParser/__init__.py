@@ -11,6 +11,7 @@ from .BaseExpressions import BaseExpressions
 from .Functions import Functions
 from .Operators import Operators
 from .Logic import Logic
+import HqlCompiler.Operators as Ops
 
 import time
 import logging
@@ -76,7 +77,7 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
         return statement
 
     def visitPipeExpression(self, ctx: HqlParser.PipeExpressionContext):
-        prepipe = self.visit(ctx.Expression)
+        prepipe = Ops.PrePipe(self.visit(ctx.Expression))
         
         pipes = []
         for i in ctx.PipedOperators:

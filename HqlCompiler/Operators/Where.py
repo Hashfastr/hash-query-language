@@ -1,12 +1,14 @@
 from .Operator import Operator
 from ..Expression import Expression
 from HqlCompiler.Exceptions import *
+from HqlCompiler.Registry import register_op
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.
 # Can also take a number of parameters, although I'm not sure what they are
 # but they can exist.
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
+@register_op('Where')
 class Where(Operator):
     def __init__(self, expr:Expression, params:list=None):
         super().__init__()

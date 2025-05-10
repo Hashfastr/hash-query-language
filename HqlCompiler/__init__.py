@@ -8,7 +8,7 @@ __all__ = [
 ]
 
 import time
-from HqlCompiler.Config import Config
+import HqlCompiler.Config as Config
 from HqlCompiler.Query import *
 from HqlCompiler.Functions import *
 from HqlCompiler.Operators.Database import Database as Database
@@ -25,10 +25,9 @@ class CompilerException(Exception): ...
 class Compiler():
     def __init__(self, conf_file:str, query:Query):
         self.query = query
-        self.conf_file = conf_file
+                
+        Config.HqlConfig = Config.Config(conf_file)
         
-        self.conf = Config(conf_file)
-            
         self.stages = []
     
     # Not used yet, will probably make sense eventually
@@ -51,49 +50,6 @@ class Compiler():
             seti += 1
             
         return results
-
-    def compile_prepipe(self, prepipe:Expression.Expression):
-        logging.debug(f'Compiling prepipe type {prepipe.type}')
-        
-        funcs = None
-        db = None
-        
-        if prepipe.type == "DotCompositeFunction":
-            funcs = prepipe.funcs
-            
-        if prepipe.type == "Path":
-            if len(prepipe.path) > 2:
-                raise CompilerException(f'Too many paths for a database reference {len(prepipe.path)}')
-                
-            if prepipe.path[0].type == "DotCompositeFunction":
-                funcs = prepipe.path[0].funcs
-            else:
-                name = Expression.NamedReference('database')
-                args = [prepipe.path[0]]
-                funcs = [Expression.FuncExpr(name, args)]
-            
-            name = Expression.NamedReference('index')
-            args = [prepipe.path[1]]
-            funcs.append(Expression.FuncExpr(name, args))
-        
-        if funcs:
-            topfunc = funcs[0]
-            
-            if topfunc.name != "database":
-                dbfunc = topfunc.resolve()
-                dbfunc.config = self.conf
-            else:
-                raise CompilerException(f"Invalid QueryStatement prepipe function {topfunc.name}")
-
-        funcs = [topfunc]
-
-        if len(funcs) > 1:
-            chain = [x.resolve() for x in funcs[1:]]
-            db = dbfunc.eval_chain(chain=chain)
-        else:
-            db = dbfunc.eval()
-            
-        return db
  
     def compile(self):        
         self.compiled = []
@@ -103,12 +59,19 @@ class Compiler():
         
         if statement.type == "QueryStatement":
             logging.debug('Handling QueryStatement')
-            
+
             root = statement.root
-            prepipe = self.compile_prepipe(root.prepipe)
+            
+            if root.type == "PrePipe":
+                prepipe = root.execute(None)
+                self.compiled.append(prepipe)
+                self.op_sets.append([prepipe.type])
+                return
+            
+            prepipe = root.prepipe.execute(None)
             self.compiled.append(prepipe)
-            self.op_sets.append([prepipe.type])
-             
+            self.op_sets.append([prepipe.type]) 
+                         
             for op in root.pipes:
                 # This is an attempt at optimizing cases where a take can be placed higher
                 i = -1

@@ -6,8 +6,6 @@ import HqlCompiler.Operators as Ops
 
 from HqlCompiler.Exceptions import *
 
-import logging
-
 class Operators(HqlVisitor):
     def __init__(self):
         pass
