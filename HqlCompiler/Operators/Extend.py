@@ -22,7 +22,7 @@ class Extend(Operator):
 
     def extend(self, data:pl.DataFrame, lh:Expression, rh:Expression):
         if rh.type == 'Path':
-            src = rh.get_fields()
+            src = rh.eval_path()
         elif rh.type in ('Identifier'):
             src = [rh.get_name()]
         elif rh.type == "DotCompositeFunction":
@@ -38,7 +38,8 @@ class Extend(Operator):
             raise CompilerException(f'Unhandled Left-Hand expression type for extend: {lh.type}')
         
         if issubclass(type(src), Function):
-            src_data = src.eval(data)
+            # Strip away any structs around the data, just want the series
+            src_data = PolarsTools.get_element_series(src.eval(data))
         else:
             src_data = PolarsTools.get_element_series(data, src)        
         

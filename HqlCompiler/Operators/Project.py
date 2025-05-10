@@ -36,9 +36,10 @@ class Project(Operator):
                 fields = i.eval_path()
                 df = pltools.get_element(data, fields)
 
-            # if i.type == "DotCompositeFunction":
-            #     funcs = i.resolve_func_chain()
-            
+            if i.type == "DotCompositeFunction":
+                funcs = i.resolve_func_chain()
+                df = funcs.eval_chain(data)
+                
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
                 
