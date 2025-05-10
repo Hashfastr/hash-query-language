@@ -62,15 +62,18 @@ class PolarsTools():
         else:
             return pl.DataFrame({fields[index-1]: rec_data.to_struct()})
         
-    def get_element_series(data:pl.DataFrame, fields:list[str], index:int=0):
-        split = fields[index]
+    def get_element_series(data:pl.DataFrame, fields:list[str]=None, index:int=0):
+        if not fields:
+            split = data.columns[0]
+        else:
+            split = fields[index]
         
         if split not in data:
             raise Exception(f"Invalid field referenced {'.'.join(fields)}")
         
         new = data.select(split)
         
-        if len(fields) == 1:
+        if fields and len(fields) == 1:
             return new.to_series()
         
         if isinstance(new[split].dtype, pl.Struct):

@@ -35,7 +35,7 @@ class Function():
         return pl.DataFrame()
         
     def eval_chain(self, *data):
-        out = self.eval(data)
+        out = self.eval(*data)
                 
         for i in self.chain:
             if out.has_method(i.name):
