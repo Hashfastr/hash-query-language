@@ -40,20 +40,14 @@ class Elasticsearch(Database):
         # 10000 is faster than 10x1000
         self.scroll_max = self.config.get('SCROLL_MAX', 10000)
 
-    def eval_chain(self, data:Expression=None, chain:list[Function]=None):
-        out = self
+        self.methods = [
+            'index'
+        ]
         
-        for i in chain:
-            out = self.eval(i)
-            
-        return out
-
-    def eval(self, func:Function):
-        if func.name in ("index"):
-            self.pattern = func.args[0].value
-            return self
-        else:
-            raise CompilerException(f"Unimplemented subfunction to DB type {self.dbtype}")
+    def get_variable(self, name: str):
+        self.pattern = name
+        
+        return self
     
     def can_integrate(self, type:str):
         return type in self.compatible
@@ -71,6 +65,9 @@ class Elasticsearch(Database):
     
     def add_limit(self, limit:int):
         self.limit = limit
+
+    def add_index(self, pattern:str):
+        self.pattern = pattern
     
     # When executed it assumes another where op, implying 'and' with other filters
     def add_filter(self, expr:Expression):
@@ -248,6 +245,8 @@ class Elasticsearch(Database):
         
         logging.debug(f"{self.dbtype} query, using the following DSL:")
         logging.debug(json.dumps(body))
+        logging.debug(f'Index pattern: {self.pattern}')
+        logging.debug(f'Limit: {self.limit}')
         
         res = client.search(
             index=self.pattern,

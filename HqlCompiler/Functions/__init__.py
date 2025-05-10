@@ -1,5 +1,3 @@
-import json
-from ..Registry import get_func
 import importlib, pkgutil
 from HqlCompiler.Exceptions import *
 from .__proto__ import Function

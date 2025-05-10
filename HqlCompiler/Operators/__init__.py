@@ -5,7 +5,8 @@ __all__ = [
     "Operator",
     "Take",
     "Count",
-    "Extend"
+    "Extend",
+    "PrePipe"
 ]
 
 from .Operator import Operator
@@ -16,3 +17,4 @@ from .Project import Project
 from .Take import Take
 from .Count import Count
 from .Extend import Extend
+from .PrePipe import PrePipe

@@ -208,6 +208,16 @@ class FuncExpr(Expression):
     def get_name(self):
         return self.name.get_name()
     
+    # def get_full_statement(self):
+    #     args = []
+    #     for i in self.args:
+    #         if hasattr(i, 'get_name'):
+    #             args.append(i.get_name())
+    #         else:
+    #             args.append(i.get_value())
+        
+    #     return self.name + f"({', '.join(args)})"
+    
     def to_dict(self):
         return {
             'type': self.type,
@@ -253,6 +263,19 @@ class Path(Expression):
     
     def get_value(self):
         return self.get_name()
+
+    def eval_path(self):
+        if not (self.path and self.path[0].type == "DotCompositeFunction"):
+            return [x.get_name() for x in self.path]
+        
+        out = None
+        for i in self.path:
+            if i.type == "DotCompositeFunction":
+                out = i.resolve_func_chain().eval()
+            else:
+                out = out.get_variable(i.get_name())
+                
+        return out
                 
     def to_dict(self):
         try:

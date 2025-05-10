@@ -28,19 +28,19 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, data:pl.DataFrame=None):
+    def eval(self, *data):
         if len(self.chain) != 0:
             return self.eval_chain(data)
         
-        return pl.DataFrame({"results": []})
+        return pl.DataFrame()
         
-    def eval_chain(self, data:pl.DataFrame=None, next:list=None):
-        if not next:
-            next = self.chain
+    def eval_chain(self, *data):
+        out = self.eval(data)
+                
+        for i in self.chain:
+            if out.has_method(i.name):
+                out = i.eval(out)
+            else:
+                raise CompilerException(f'{out.name} has no method {i.name}')
         
-        out = self.eval()
-        
-        if len(next) == 1:
-            return next[0].exec_func(out)
-        else:
-            return cur.exec_func_chain(next)
+        return out

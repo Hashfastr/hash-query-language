@@ -27,3 +27,17 @@ def get_func(name):
         return func_registry[name]
     else:
         raise CompilerException(f"Unknown function {name} referenced")
+    
+op_registry = {}
+
+def register_op(name):
+    def decorator(cls):
+        op_registry[name] = cls
+        return cls
+    return decorator
+
+def get_op(name):
+    if name in op_registry:
+        return op_registry[name]
+    else:
+        raise CompilerException(f"Unknown operator {name} referenced")

@@ -1,6 +1,7 @@
 import json
 from ..Results import Results
 import logging
+from HqlCompiler.Registry import register_op
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
@@ -18,6 +19,7 @@ import logging
 # In the case of index, it is nameless, so I used an unused name.
 # Additionally, the top operator doesn't have to be an index, could be the saved
 # value of another statement.
+@register_op('Operator')
 class Operator():
     def __init__(self):
         self.type = self.__class__.__name__
@@ -25,6 +27,8 @@ class Operator():
         self.exprs = None
         self.compatible = []
         self.non_conseq = []
+        self.methods = []
+        self.variables = []
     
     def to_dict(self):
         if self.expr:
@@ -32,10 +36,15 @@ class Operator():
                 'type': self.type,
                 'expression': self.expr.to_dict()
             }
-        else:
+        if self.exprs:
             return {
                 'type': self.type,
                 'expressions': [x.to_dict() for x in self.exprs]
+            }
+        else:
+            return {
+                'type': self.type,
+                'expression': None
             }
     
     def __str__(self):
@@ -53,3 +62,9 @@ class Operator():
     
     def non_consequential(self, type:str):
         return type in self.non_conseq
+    
+    def has_method(self, name:str):
+        return name in self.methods
+
+    def get_variable(self, name:str):
+        return self.variables[name]
