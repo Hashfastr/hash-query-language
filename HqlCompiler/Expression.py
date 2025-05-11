@@ -1,6 +1,12 @@
 import logging
 import json
 from .Operators import Operator
+import polars as pl
+from HqlCompiler.Exceptions import *
+from HqlCompiler.Operators.Database import Database
+from HqlCompiler.Context import Context
+from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.Functions import Function
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -10,15 +16,17 @@ class Expression():
     def __init__(self):
         self.type = self.__class__.__name__
         self.escaped = False
+        self.name = []
     
     def to_dict(self):
         return {}
     
-    def get_name(self):
+    # List of strings, mainly showing a path for nested names
+    def get_name(self) -> list[str]:
         return self.name
     
-    def get_value(self):
-        return self.value
+    def eval(self, ctx:Context, **kwargs):
+        return None
     
     def is_escaped(self):
         return self.escaped
@@ -34,6 +42,8 @@ class PipeExpression(Expression):
         super().__init__()
         self.prepipe = prepipe
         self.pipes = pipes if pipes else []
+        self.compiled = []
+        self.op_sets = []
         
     def to_dict(self):
         return {
@@ -41,6 +51,37 @@ class PipeExpression(Expression):
             'prepipe': self.prepipe.to_dict(),
             'pipes': [x.to_dict() for x in self.pipes]
         }
+    
+    # Compiles a pipe expression into a set of optimized Operators
+    # Or alternatively into logic, e.g. (a and b)
+    def eval(self, ctx:Context, **kwargs):        
+        prepipe = self.prepipe.eval(ctx.data)
+        self.compiled.append(prepipe)
+        self.op_sets.append([prepipe.type])
+        
+        # can add more tabular prepipe types here
+        if not issubclass(type(prepipe), (Database)) and self.pipes != []:
+            raise CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
+        
+        for op in self.pipes:
+            i = -1
+            while i >= -len(self.compiled):
+                nonconseq = self.compiled[i].non_consequential(op.type)
+                integrate = self.compiled[i].can_integrate(op.type)
+                    
+                if nonconseq and not integrate:
+                    logging.debug(f'Can optimize {op.type} passing {self.compiled[i].type}')
+                    i -= 1
+                if integrate:
+                    logging.debug(f'Integrating {op.type} into {self.compiled[i].type}')
+                    self.compiled[i].add_op(op)
+                    self.op_sets[i].append(op.type)
+                    break
+                elif not nonconseq and not integrate:
+                    logging.debug(f'As high as we can go for type {op.type}')
+                    self.compiled.append(op)
+                    self.op_sets.append([op.type])
+                    break
 
 # Expression expressing anything with ==, >, <, <=, >=, !=, etc
 # has a left and right hand expression along with it's type.
@@ -58,6 +99,10 @@ class Equality(Expression):
             'lh': self.lh.to_dict(),
             'rh': self.rh.to_dict()
         }
+    
+    # # Generates a polars filter
+    # def eval(self, **kwargs):
+    #     lh = 
 
 # List equality
 # Essenitally a filter stating that a field should have any value in a tuple.
@@ -130,6 +175,26 @@ class NamedReference(Expression):
             'name': self.name.to_dict(),
             'scope': self.scope,
         }
+    
+    def eval(self, ctx:Context, **kwargs):
+        name_str = self.name.eval(ctx, as_str=True)
+        
+        if kwargs.get('as_str', False):
+            return name_str
+        
+        if kwargs.get('list', False):
+            return [name_str]
+        
+        receiver = kwargs.get('receiver', None)
+        if receiver is not None:
+            if type(receiver) == pl.DataFrame:
+                return PolarsTools.get_element(ctx.data, [name_str])
+            elif issubclass(type(receiver), Database):
+                return receiver.get_variable(name_str)
+            else:
+                raise CompilerException(f'{type(receiver)} cannot have child named references!')
+        
+        return PolarsTools.get_element(ctx.data, [name_str])
 
 # A string literal
 # literally a string
@@ -145,16 +210,39 @@ class StringLiteral(Expression):
             'value': self.value
         }
         
+    def eval(self, ctx:Context, **kwargs):
+        return self.value
+        
 class EscapedName(StringLiteral):
     def __init__(self, name:str):
         super().__init__(name)
-        self.name = name
+        self.name = self.value
         self.escaped = True
         
     def to_dict(self):
         dict = super().to_dict()
         dict['escaped'] = self.escaped
         return dict
+    
+    def eval(self, ctx:Context, **kwargs):
+        name_str = self.name
+        
+        if kwargs.get('as_str', False):
+            return name_str
+        
+        if kwargs.get('list', False):
+            return [name_str]
+        
+        receiver = kwargs.get('receiver', None)
+        if receiver:
+            if type(receiver) == pl.DataFrame:
+                return PolarsTools.get_element_value(ctx.data, [name_str])
+            elif issubclass(type(receiver), Database):
+                return receiver.get_variable(name_str)
+            else:
+                raise CompilerException(f'{type(receiver)} cannot have child named references!')
+            
+        return PolarsTools.get_element_value(ctx.data, [name_str])
 
 # An identifier is like a variable that is not unique across everything
 # A keyword is unique across the compiler
@@ -172,6 +260,24 @@ class Identifier(Expression):
             'keyword': self.keyword,
             'name': self.name
         }
+    
+    def eval(self, ctx:Context, **kwargs):
+        if kwargs.get('as_str', False):
+            return self.name
+        
+        if kwargs.get('list', False):
+            return [self.name]
+        
+        receiver = kwargs.get('receiver', None)
+        if receiver is not None:
+            if type(receiver) == pl.DataFrame:
+                return PolarsTools.get_element_value(ctx.data, [self.name])
+            elif issubclass(type(receiver), Database):
+                return receiver.get_variable(self.name)
+            else:
+                raise CompilerException(f'{type(receiver)} cannot have child named references!')
+            
+        return PolarsTools.get_element(ctx.data, [self.name])
 
 # Integer
 # An integer
@@ -187,6 +293,9 @@ class Integer(Expression):
             'type': self.type,
             'value': self.value
         }
+        
+    def eval(self, ctx:Context, **kwargs):
+        return self.value
 
 class Bool(Expression):
     def __init__(self, value:str):
@@ -198,15 +307,15 @@ class Bool(Expression):
             'type': self.type,
             'value': self.value
         }
+        
+    def eval(self, ctx:Context, **kwargs):
+        return self.value
 
 class FuncExpr(Expression):
     def __init__(self, name:Expression, args:list=None):
         super().__init__()
         self.name = name
         self.args = args if args else []
-
-    def get_name(self):
-        return self.name.get_name()
     
     # def get_full_statement(self):
     #     args = []
@@ -224,11 +333,10 @@ class FuncExpr(Expression):
             'name': self.name.to_dict(),
             'args': [x.to_dict() for x in self.args]
         }
-        
-    def resolve(self):
-        from HqlCompiler.Registry import get_func
-        
-        func = get_func(self.get_name())
+    
+    # Evals to function objects
+    def eval(self, ctx:Context, **kwargs):        
+        func = ctx.get_func(self.name.eval(ctx, as_str=True))
         logging.debug(f'Resolved func {func}')
 
         return func(self.args)
@@ -237,46 +345,36 @@ class DotCompositeFunction(Expression):
     def __init__(self, funcs:list[FuncExpr]):
         super().__init__()
         self.funcs = funcs
-
-    def resolve_func_chain(self):
-        func = self.funcs[0].resolve()
-        
-        if len(self.funcs) > 1:
-            for i in self.funcs[1:]:
-                func.chain.append(i.resolve())
-        
-        return func
     
     def to_dict(self):
         return {
             'type': self.type,
             'funcs': [x.to_dict() for x in self.funcs]
-        } 
+        }
+
+    # Evals to the function objects that can be executed
+    def eval(self, ctx:Context, **kwargs):
+        receiver = kwargs.get('receiver', None)
+        no_exec = kwargs.get('no_exec', False)
+        
+        func_list = []
+        for i in self.funcs:
+            func = i.eval(ctx)
+            func_list.append(func)
+            
+            if not no_exec:
+                receiver = func.eval(ctx, receiver)
+        
+        if no_exec:
+            return func_list
+        else:
+            return receiver
 
 class Path(Expression):
     def __init__(self, path:list=None):
         super().__init__()
         self.path = path if path else []
-
-    def get_name(self):
-        return '.'.join([x.get_name() for x in self.path])
-    
-    def get_value(self):
-        return self.get_name()
-
-    def eval_path(self):
-        if not (self.path and self.path[0].type == "DotCompositeFunction"):
-            return [x.get_name() for x in self.path]
-        
-        out = None
-        for i in self.path:
-            if i.type == "DotCompositeFunction":
-                out = i.resolve_func_chain().eval()
-            else:
-                out = out.get_variable(i.get_name())
-                
-        return out
-                
+      
     def to_dict(self):
         try:
             return {
@@ -286,6 +384,22 @@ class Path(Expression):
         except Exception as e:
             logging.debug(self.path)
             logging.debug(e)
+
+    def eval(self, ctx:Context, **kwargs):
+        if kwargs.get('list', False):
+            return [x.eval(ctx, as_str=True) for x in self.path]
+        
+        as_str = kwargs.get('as_str', False)
+        
+        receiver = None
+        for i in self.path:
+            print(receiver)
+            if i.type == "DotCompositeFunction":
+                receiver = i.eval(ctx, receiver=receiver, as_str=as_str)
+            else:
+                receiver = i.eval(ctx, receiver=receiver, as_str=as_str)
+        
+        return receiver
     
 class BinaryLogic(Expression):
     def __init__(self, lh:Expression, rh:list[Expression], type:str):
@@ -301,6 +415,9 @@ class BinaryLogic(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
+        
+    # def eval(self, ctx:Context, **kwargs):
+        
 
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
@@ -326,3 +443,8 @@ class NamedExpression(Expression):
             'name': self.name.to_dict(),
             'value': self.value.to_dict()
         }
+        
+    def eval(self, ctx:Context, **kwargs):
+        data = self.value.eval(ctx)
+        name = self.name.eval(ctx, list=True)
+        return PolarsTools.build_element(name, data)

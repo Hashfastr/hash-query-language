@@ -3,7 +3,7 @@ from ..Results import Results
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
 import polars as pl
-from HqlCompiler.Registry import register_op
+from HqlCompiler.Context import register_op
 
 # Count simply returns the number of rows given by a record set.
 #
@@ -14,7 +14,7 @@ class Count(Operator):
         super().__init__()
         self.expr = expr
         
-    def execute(self, data:Results):
+    def eval(self, data:Results):
         count = [{'Count': len(data)}]
 
         return pl.from_dicts(count)

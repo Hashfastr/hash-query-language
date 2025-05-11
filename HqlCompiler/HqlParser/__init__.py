@@ -82,8 +82,5 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
         pipes = []
         for i in ctx.PipedOperators:
             pipes.append(self.visit(i))
-
-        if pipes == []:
-            return prepipe
         
         return Expression.PipeExpression(prepipe=prepipe, pipes=pipes)

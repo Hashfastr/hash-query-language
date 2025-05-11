@@ -3,7 +3,7 @@ from ..Expression import Expression
 import polars as pl
 from ..PolarsTools import PolarsTools as pltools
 from ..Results import Results
-from HqlCompiler.Registry import register_op
+from HqlCompiler.Context import register_op
 from HqlCompiler.Exceptions import *
 
 # Project my beloved
@@ -25,7 +25,7 @@ class Project(Operator):
             'Take'
         ]
         
-    def execute(self, data:Results):
+    def eval(self, data:Results):
         data_sets = []
         for i in self.exprs:
             if i.type == "NamedReference":

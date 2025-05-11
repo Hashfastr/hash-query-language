@@ -1,6 +1,7 @@
 import json
 from HqlCompiler.Exceptions import *
 import polars as pl
+from HqlCompiler.Context import Context
 
 class Function():
     def __init__(self, args:list, min:int, max:int):
@@ -8,7 +9,6 @@ class Function():
         self.args = args
         self.min = min
         self.max = max
-        self.chain = []
         
         if len(args) < min:
             raise ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
@@ -28,19 +28,5 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, *data):
-        if len(self.chain) != 0:
-            return self.eval_chain(data)
-        
+    def eval(self, ctx:Context, **kwargs):
         return pl.DataFrame()
-        
-    def eval_chain(self, *data):
-        out = self.eval(*data)
-                
-        for i in self.chain:
-            if out.has_method(i.name):
-                out = i.eval(out)
-            else:
-                raise CompilerException(f'{out.name} has no method {i.name}')
-        
-        return out

@@ -2,7 +2,7 @@ from .Operator import Operator
 from ..Results import Results
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
-from HqlCompiler.Registry import register_op
+from HqlCompiler.Context import register_op
 
 # Take, limits the number of results given an integer
 # Ensures that only integers are given, if not then errors
@@ -15,7 +15,7 @@ class Take(Operator):
         super().__init__()
         self.expr = expr
         
-    def execute(self, data:Results):
+    def eval(self, data:Results):
         if self.expr.type != 'Integer':
             raise CompilerException(f'Invalid type {self.expr.type} given to take operator')
         

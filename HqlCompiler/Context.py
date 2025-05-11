@@ -1,4 +1,7 @@
 from HqlCompiler.Exceptions import *
+from HqlCompiler.Config import Config
+import polars as pl
+import copy
 
 database_registry = {}
 
@@ -41,3 +44,29 @@ def get_op(name):
         return op_registry[name]
     else:
         raise CompilerException(f"Unknown operator {name} referenced")
+
+# Essentially a scoped context
+class Context():
+    def __init__(self, data:pl.DataFrame) -> None:
+        self.dbs = copy.copy(database_registry)
+        self.ops = copy.copy(op_registry)
+        self.funcs = copy.copy(func_registry)
+        self.data = data
+
+    def get_db(self, name:str):
+        if name in self.dbs:
+            return self.dbs[name]
+        else:
+            raise CompilerException(f"Unknown database {name} referenced")
+
+    def get_func(self, name:str):
+        if name in self.funcs:
+            return self.funcs[name]
+        else:
+            raise CompilerException(f"Unknown function {name} referenced")
+
+    def get_op(self, name:str):
+        if name in self.ops:
+            return self.ops[name]
+        else:
+            raise CompilerException(f"Unknown operator {name} referenced")

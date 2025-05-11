@@ -5,7 +5,7 @@ from HqlCompiler.Exceptions import *
 from HqlCompiler.PolarsTools import PolarsTools
 from HqlCompiler.Functions import Function
 import polars as pl
-from HqlCompiler.Registry import register_op
+from HqlCompiler.Context import register_op, Context
 
 # Creates a field with a value in the extend
 #
@@ -22,39 +22,43 @@ class Extend(Operator):
 
     def extend(self, data:pl.DataFrame, lh:Expression, rh:Expression):
         if rh.type == 'Path':
-            src = rh.eval_path()
+            src = rh.eval(self.ctx, list=True)
         elif rh.type in ('Identifier'):
-            src = [rh.get_name()]
+            src = [rh.eval(self.ctx, as_str=True)]
         elif rh.type == "DotCompositeFunction":
-            src = rh.resolve_func_chain()
+            src = rh.eval(self.ctx, no_exec=True)
         else:
             raise CompilerException(f'Unhandled Right-Hand expression type for extend: {rh.type}')
 
         if lh.type == 'Path':
-            dest = lh.get_fields()
+            dest = lh.eval(self.ctx, list=True)
         elif lh.type in ('Identifier'):
-            dest = [lh.get_name()]
+            dest = [lh.eval(self.ctx, as_str=True)]
         else:
             raise CompilerException(f'Unhandled Left-Hand expression type for extend: {lh.type}')
         
-        if issubclass(type(src), Function):
-            # Strip away any structs around the data, just want the series
-            src_data = PolarsTools.get_element_series(src.eval(data))
+        if isinstance(src, list) and issubclass(type(src[0]), Function):
+            receiver = None
+            for i in src:
+                receiver = i.eval(self.ctx)
+            
+            src_data = PolarsTools.get_element_value(receiver)
         else:
-            src_data = PolarsTools.get_element_series(data, src)        
+            src_data = PolarsTools.get_element_value(data, src)
         
         dest_data = PolarsTools.build_element(dest, src_data)
         return dest_data
             
-    def execute(self, data:Results):
-        new = [data]
+    def eval(self, ctx:Context, **kwargs):
+        self.ctx = ctx
+        new = [ctx.data]
         for i in self.exprs:
             if i.type != "NamedExpression":
                 raise CompilerException(f'Extend operator given invalid expression {i.type}')
             
             lh = i.name
             rh = i.value
-                
-            new.append(self.extend(data, lh, rh))
+            
+            new.append(self.extend(ctx.data, lh, rh))
         
         return pl.concat(new, how='horizontal')

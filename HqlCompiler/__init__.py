@@ -14,6 +14,7 @@ from HqlCompiler.Functions import *
 from HqlCompiler.Operators.Database import Database as Database
 from HqlCompiler.Operators.Database import get_database
 import HqlCompiler.Expression as Expression
+from HqlCompiler.Context import Context
 import logging
 
 class CompilerException(Exception): ...
@@ -35,25 +36,28 @@ class Compiler():
         return self.ruleset['operations'][type]['blocking']
 
     def run(self):
-        results = None
         seti = 0
+        ctx = Context(None)
+        
         for i in self.compiled:
             start = time.perf_counter()
             
             logging.debug(f'Executing opset {self.op_sets[seti]}')
             
-            results = i.execute(results)
-            
+            data = i.eval(ctx)
+            ctx.data = data
+                        
             end = time.perf_counter()
             logging.debug(f"{self.op_sets[seti]} - {end - start}")
             
             seti += 1
             
-        return results
+        return ctx.data
  
     def compile(self):        
         self.compiled = []
         self.op_sets = []
+        ctx = Context(None)
         
         statement = self.query.statements[0]
         
@@ -63,16 +67,17 @@ class Compiler():
             root = statement.root
             
             if root.type == "PrePipe":
-                prepipe = root.execute(None)
-                self.compiled.append(prepipe)
-                self.op_sets.append([prepipe.type])
-                return
-            
-            prepipe = root.prepipe.execute(None)
-            self.compiled.append(prepipe)
-            self.op_sets.append([prepipe.type]) 
+                prepipe = root
+                pipes = []
+            else:
+                prepipe = root.prepipe
+                pipes = root.pipes
+                
+            op = prepipe.eval(ctx, tabular=True)
+            self.compiled.append(op)
+            self.op_sets.append([op.type])
                          
-            for op in root.pipes:
+            for op in pipes:
                 # This is an attempt at optimizing cases where a take can be placed higher
                 i = -1
                 while i >= -len(self.compiled):

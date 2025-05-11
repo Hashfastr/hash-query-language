@@ -1,4 +1,4 @@
-from HqlCompiler.Registry import *
+from HqlCompiler.Context import *
 from HqlCompiler.Exceptions import *
 import importlib,pkgutil
 from .__proto__ import Database

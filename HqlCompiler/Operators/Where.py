@@ -1,7 +1,7 @@
 from .Operator import Operator
 from ..Expression import Expression
 from HqlCompiler.Exceptions import *
-from HqlCompiler.Registry import register_op
+from HqlCompiler.Context import register_op
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.

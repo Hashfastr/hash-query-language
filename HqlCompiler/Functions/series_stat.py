@@ -1,5 +1,5 @@
 from HqlCompiler.Exceptions import *
-from HqlCompiler.Registry import register_func
+from HqlCompiler.Context import register_func, Context
 import logging
 from typing import Tuple
 from .__proto__ import Function
@@ -13,19 +13,12 @@ class series_stats(Function):
     def __init__(self, args:list):
         super().__init__(args, 1, 2)
         self.ignore_nonfinite = False
-        
-        narg = self.args[0]
-        if narg.type == "Path":
-            self.series_name = [x.get_name() for x in narg.path]
-        elif narg.type == "NamedReference":
-            self.series_name = [narg.get_name()]
-        else:
-            raise CompilerException(f'Invalid argument type {narg.type} given to {self.name}')
+        self.series_name = args[0]
 
         if len(self.args) > 1:
             if self.args[1].type != "Bool":
                 raise ArgumentException(f'{self.name} expected argument type Bool, got {self.args[1].type} for nonfinite')
-            self.ignore_nonfinite = self.args[1].get_value()
+            self.ignore_nonfinite = self.args[1].eval()
             
     def cal_min(self, s:pl.Series) -> Tuple[int, int]:
         min = s.min()
@@ -57,9 +50,10 @@ class series_stats(Function):
     
     def cal_vari(self, s:pl.Series) -> float:
         return s.var()
-        
-    def eval(self, *args):
-        s = PolarsTools.get_element_series(args[0], self.series_name)
+    
+    def eval(self, ctx:Context, **kwargs):
+        s = self.series_name.eval(ctx)
+        name = self.series_name.get_name()
         
         min, min_idx = self.cal_min(s)
         max, max_idx = self.cal_max(s)
@@ -67,7 +61,7 @@ class series_stats(Function):
         stdev = self.cal_stdev(s)
         vari = self.cal_vari(s)
        
-        prefix = f"series_stats_{'_'.join(self.series_name)}"
+        prefix = f"series_stats_{'_'.join(name)}"
         
         df = pl.DataFrame(
             {

@@ -1,9 +1,10 @@
 import HqlCompiler.Expression as Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
-from HqlCompiler.Registry import *
+from HqlCompiler.Context import *
 from HqlCompiler.Functions import Function
 from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.Context import Context
 
 from elasticsearch import Elasticsearch as ES
 import polars as pl
@@ -43,6 +44,8 @@ class Elasticsearch(Database):
         self.methods = [
             'index'
         ]
+    
+        self.ctx = None
         
     def get_variable(self, name: str):
         self.pattern = name
@@ -60,7 +63,8 @@ class Elasticsearch(Database):
         if op.type == 'Take':
             self.add_limit(op.expr.value)
 
-    def execute(self, data:pl.DataFrame):
+    def eval(self, ctx:Context, **kwargs):
+        self.ctx = ctx
         return self.make_query()
     
     def add_limit(self, limit:int):
@@ -108,16 +112,18 @@ class Elasticsearch(Database):
             # Or translate to equvalent logic
             # (field1=2 and field2=3) == (field3=4 or field4=5)
             # (field1=2 and field2=3) and (field3=4 or field4=5)
-            if not hasattr(expr.lh, 'get_name'):
-                raise CompilerException('Equality left-hand is not a named reference')
+                        
+            if expr.lh.type == 'Path':
+                lh = '.'.join(expr.lh.eval(self.ctx, list=True))
+            else:
+                lh = expr.lh.eval(self.ctx, as_str=True)
                 
-            if not hasattr(expr.rh, 'get_value'):
-                raise CompilerException('Equality right-hand is not a basic value')
+            rh = expr.rh.eval(self.ctx, as_str=True)
             
             if expr.eqtype == '==':
                 return {
                     'term': {
-                        expr.lh.get_name() : expr.rh.get_value()
+                        lh : rh
                     }
                 }
                 
@@ -125,27 +131,21 @@ class Elasticsearch(Database):
                 return {
                     'bool': {
                         'must_not': {
-                            'term': {expr.lh.get_name() : expr.rh.get_value()}
+                            'term': {lh : rh}
                         }
                     }
                 }
         
         if expr.type == "BetweenEquality":
-            # Don't think this can ever be something non-basic
-            if not hasattr(expr.lh, 'get_name'):
-                raise CompilerException('BetweenEquality left-hand is not a named reference')
-            
-            if not hasattr(expr.start, 'get_value'):
-                raise CompilerException('BetweenEquality right-hand start is not a basic value')
-            
-            if not hasattr(expr.end, 'get_value'):
-                raise CompilerException('BetweenEquality right-hand end is not a basic value')
+            lh = expr.lh.eval(self.ctx, as_str=True)
+            start = expr.start.eval(self.ctx, as_str=True)
+            end = expr.end.eval(self.ctx, as_str=True)
             
             return {
                 'range': {
-                    expr.lh.get_name() : {
-                        'gte': expr.start.get_value(),
-                        'lte': expr.end.get_value()
+                    lh : {
+                        'gte': start,
+                        'lte': end
                     }
                 }
             }
