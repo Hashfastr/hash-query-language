@@ -53,7 +53,10 @@ class series_stats(Function):
     
     def eval(self, ctx:Context, **kwargs):
         s = self.series_name.eval(ctx)
-        name = self.series_name.get_name()
+        name = self.series_name.eval(ctx, as_str=True, list=True)
+        
+        if not isinstance(name, list):
+            name = [name]
         
         min, min_idx = self.cal_min(s)
         max, max_idx = self.cal_max(s)

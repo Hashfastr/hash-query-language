@@ -188,13 +188,13 @@ class NamedReference(Expression):
         receiver = kwargs.get('receiver', None)
         if receiver is not None:
             if type(receiver) == pl.DataFrame:
-                return PolarsTools.get_element(ctx.data, [name_str])
+                return PolarsTools.get_element_value(ctx.data, [name_str])
             elif issubclass(type(receiver), Database):
                 return receiver.get_variable(name_str)
             else:
                 raise CompilerException(f'{type(receiver)} cannot have child named references!')
         
-        return PolarsTools.get_element(ctx.data, [name_str])
+        return PolarsTools.get_element_value(ctx.data, [name_str])
 
 # A string literal
 # literally a string
@@ -267,11 +267,12 @@ class Identifier(Expression):
         
         if kwargs.get('list', False):
             return [self.name]
-        
+                
         receiver = kwargs.get('receiver', None)
+        
         if receiver is not None:
-            if type(receiver) == pl.DataFrame:
-                return PolarsTools.get_element_value(ctx.data, [self.name])
+            if isinstance(receiver, pl.DataFrame):
+                return PolarsTools.get_element_value(receiver, [self.name])
             elif issubclass(type(receiver), Database):
                 return receiver.get_variable(self.name)
             else:
@@ -363,7 +364,7 @@ class DotCompositeFunction(Expression):
             func_list.append(func)
             
             if not no_exec:
-                receiver = func.eval(ctx, receiver)
+                receiver = func.eval(ctx, receiver=receiver)
         
         if no_exec:
             return func_list
@@ -393,7 +394,6 @@ class Path(Expression):
         
         receiver = None
         for i in self.path:
-            print(receiver)
             if i.type == "DotCompositeFunction":
                 receiver = i.eval(ctx, receiver=receiver, as_str=as_str)
             else:
@@ -445,6 +445,8 @@ class NamedExpression(Expression):
         }
         
     def eval(self, ctx:Context, **kwargs):
+        receiver = kwargs.get('receiver', None)
+            
         data = self.value.eval(ctx)
         name = self.name.eval(ctx, list=True)
         return PolarsTools.build_element(name, data)

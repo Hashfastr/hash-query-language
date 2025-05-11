@@ -1,9 +1,9 @@
 from .Operator import Operator
 from ..Expression import Expression
 import polars as pl
-from ..PolarsTools import PolarsTools as pltools
+from ..PolarsTools import PolarsTools
 from ..Results import Results
-from HqlCompiler.Context import register_op
+from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *
 
 # Project my beloved
@@ -25,26 +25,25 @@ class Project(Operator):
             'Take'
         ]
         
-    def eval(self, data:Results):
+    def eval(self, ctx:Context, **kwargs):
         data_sets = []
         for i in self.exprs:
-            if i.type == "NamedReference":
-                fields = [i.get_name()]
-                df = pltools.get_element(data, fields)
+            if i.type in ("NamedReference", "Identifier", "EscapedName"):
+                fields = [i.eval(ctx, as_str=True)]
+                df = PolarsTools.get_element(ctx.data, fields)
             
             elif i.type == "Path":
-                fields = i.eval_path()
-                df = pltools.get_element(data, fields)
+                fields = i.eval(ctx, path=True)
+                df = PolarsTools.get_element(ctx.data, fields)
 
             elif i.type == "DotCompositeFunction":
-                funcs = i.resolve_func_chain()
-                df = funcs.eval_chain(data)
+                df = i.eval(ctx)
                 
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
                 
             data_sets.append(df)
             
-        new = pltools.merge(data_sets)
+        new = PolarsTools.merge(data_sets)
         
         return new

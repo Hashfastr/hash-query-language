@@ -17,5 +17,10 @@ class toint(Function):
                 
     def eval(self, ctx:Context, **kwargs):
         series = self.src.eval(ctx)
-        df = PolarsTools.build_element(self.series_name, series.cast(pl.Int32))
+        
+        series_name = self.src.eval(ctx, as_str=True, list=True)
+        if not isinstance(series_name, list):
+            series_name = [series_name]
+        
+        df = PolarsTools.build_element(series_name, series.cast(pl.Int32))
         return df

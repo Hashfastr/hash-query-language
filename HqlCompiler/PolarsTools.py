@@ -67,10 +67,9 @@ class PolarsTools():
             split = data.columns[0]
         else:
             split = fields[index]
-                
+
         if split not in data:
             if index == 0:
-                print(type(data))
                 raise Exception(f"Invalid field referenced {split}")
             else:
                 raise Exception(f"Invalid field {split} in path {'.'.join(fields[:index])}")
@@ -78,6 +77,9 @@ class PolarsTools():
         new = data.select(split)
         
         if fields and len(fields) == 1:
+            if new[split].dtype == pl.Struct:
+                return pl.DataFrame(new.unnest(split))
+            
             return new.to_series()
         
         if isinstance(new[split].dtype, pl.Struct):
