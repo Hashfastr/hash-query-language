@@ -1,7 +1,7 @@
 import json
 from ..Results import Results
 import logging
-from HqlCompiler.Context import register_op
+from HqlCompiler.Context import register_op, Context
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
@@ -54,8 +54,8 @@ class Operator():
         return self.__str__()
 
     # default execution passthrough unless implemented
-    def eval(self, data:Results):
-        return data
+    def eval(self, ctx:Context, **kwargs):
+        return ctx.data
 
     def can_integrate(self, type:str):
         return type in self.compatible
