@@ -150,8 +150,15 @@ class Elasticsearch(Database):
                 }
             }
 
+        if expr.type == "PipeExpression":
+            return {
+                'bool': {
+                    'must': [self.gen_filter(expr.prepipe.expr)]
+                }
+            }
+            
         if not filter:
-            raise CompilerException(f"Invalid filter type {expr['type']}")
+            raise CompilerException(f"Invalid filter type {expr.type}")
             
         return filter
 
