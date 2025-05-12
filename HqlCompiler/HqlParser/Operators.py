@@ -44,3 +44,13 @@ class Operators(HqlVisitor):
             exprs.append(self.visit(i))
             
         return Ops.Extend(exprs)
+
+    def visitRangeExpression(self, ctx: HqlParser.RangeExpressionContext):
+        rangeexpr = Ops.Range(
+            self.visit(ctx.Expression),
+            self.visit(ctx.FromExpression),
+            self.visit(ctx.ToExpression),
+            self.visit(ctx.StepExpression)
+        )
+        
+        return rangeexpr

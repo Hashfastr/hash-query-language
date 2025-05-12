@@ -29,6 +29,7 @@ class Operator():
         self.non_conseq = []
         self.methods = []
         self.variables = []
+        self.tabular = False
     
     def to_dict(self):
         if self.expr:

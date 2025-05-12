@@ -68,6 +68,9 @@ class PrePipe(Operator):
         tabular = kwargs.get('tabular', False)
         receiver = None
         
+        if issubclass(type(self.expr), Operator) and self.expr.tabular:
+            return self.expr
+        
         if tabular:
             funcs = self.resolve_tabular_path(ctx, self.expr)
             for i in funcs:
