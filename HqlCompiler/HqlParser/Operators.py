@@ -54,3 +54,11 @@ class Operators(HqlVisitor):
         )
         
         return rangeexpr
+
+    def visitTopOperator(self, ctx: HqlParser.TopOperatorContext):
+        expr = Ops.Top(
+            self.visit(ctx.Expression),
+            self.visit(ctx.ByExpression)
+        )
+        
+        return expr

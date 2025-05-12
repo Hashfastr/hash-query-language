@@ -450,3 +450,24 @@ class NamedExpression(Expression):
         data = self.value.eval(ctx)
         name = self.name.eval(ctx, list=True)
         return PolarsTools.build_element(name, data)
+    
+class OrderedExpression(Expression):
+    def __init__(self, name:Expression=None, order:str='desc', nulls:str=''):
+        super().__init__()
+        self.name = name
+        self.order = order
+        
+        if nulls == '':
+            if order == 'asc':
+                self.nulls = 'first'
+            if order == 'desc':
+                self.nulls = 'last'
+        else:
+            self.nulls = nulls
+        
+    def to_dict(self):
+        return {
+            'name': self.name.to_dict(),
+            'order': self.order,
+            'nulls': self.nulls
+        }

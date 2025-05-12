@@ -7,7 +7,8 @@ __all__ = [
     "Count",
     "Extend",
     "PrePipe",
-    "Range"
+    "Range",
+    "Top"
 ]
 
 from .Operator import Operator
@@ -20,3 +21,4 @@ from .Count import Count
 from .Extend import Extend
 from .PrePipe import PrePipe
 from .Range import Range
+from .Top import Top

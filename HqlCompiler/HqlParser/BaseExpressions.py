@@ -77,3 +77,21 @@ class BaseExpressions(HqlVisitor):
     
     def visitBooleanLiteralExpression(self, ctx: HqlParser.BooleanLiteralExpressionContext):
         return Expression.Bool(ctx.Token.text)
+
+    def visitOrderedExpression(self, ctx: HqlParser.OrderedExpressionContext):
+        expr = self.visit(ctx.Ordering)
+        expr.name = self.visit(ctx.Expression)
+        return expr
+    
+    def visitSortOrdering(self, ctx: HqlParser.SortOrderingContext):
+        order = 'desc'
+        nulls = 'last'
+        
+        if ctx.OrderKind:
+            order = ctx.OrderKind.text
+        
+        if ctx.NullsKind:
+            nulls = ctx.NullsKind.text
+        
+        expr = Expression.OrderedExpression(order=order, nulls=nulls)
+        return expr
