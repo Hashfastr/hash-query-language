@@ -14,7 +14,7 @@ Here, the below is possible:
 let ElasticZeek = database("tf11-elastic").index("so-network-2022.10")
 | where event.module == "zeek"
 | extend IPAddress = source.ip;
-database("sentinel").macro('SigninLogs')
+database("sentinel").table('SigninLogs')
 | where Username == "iamcompromised"
 | project IPAddress
 | join type=inner ElasticZeek on IPAddress
