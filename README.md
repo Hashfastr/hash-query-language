@@ -3,7 +3,7 @@ Hash Query Language (Hql) is a query language designed to implement a single fea
 Is this accomplished by using the grammar of [Kusto Query Language](https://github.com/microsoft/Kusto-Query-Language) (KQL), a query language by Microsoft made for Azure Data Explorer, the basis for Log Analytics Workspace.
 Hql seeks to provide an identical feature set for use with any backend database, enabling the use of alternative database backends such as Elasticsearch or PostgreSQL.
 
-The inspiration of Hql comes from the frustration of using Graylog with my personal homelab after setting it up at DEATHCON 2024, see [the original rant idea here](docs/MANIFESTO.md).
+The inspiration of Hql comes from the frustration of using Graylog with my personal homelab after setting it up at [DEATHCON](https://deathcon.io) 2024, see [the original rant idea here](docs/MANIFESTO.md).
 The implementation differs from Kusto in that it supports and embraces nosql datasets, instead of a proprietary backend structured SQL-like database.
 
 Additionaly features unsupported by Kusto include joining datasets across different database types.
