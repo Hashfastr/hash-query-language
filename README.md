@@ -1,59 +1,76 @@
-# Hash Query Language (HQL)
-Hash query language is essentially a re-implementation of [Kusto Query Language](https://github.com/microsoft/Kusto-Query-Language), Microsoft's answer to `SPL`.
-This language however is exclusive to Azure solutions such as Azure Data Explorer, Log Analytics Workspaces and by extension Sentinel.
-This project is an attempt at bringing this rich language to use with free alternative, such as Elasticsearch and Opensearch.
+# Hash Query Language (Hql)
+Hash Query Language (Hql) is a query language designed to implement a single feature set across all database backends.
+Is this accomplished by using the grammar of [Kusto Query Language](https://github.com/microsoft/Kusto-Query-Language) (KQL), a query language by Microsoft made for Azure Data Explorer, the basis for Log Analytics Workspace.
+Hql seeks to provide an identical feature set for use with any backend database, enabling the use of alternative database backends such as Elasticsearch or PostgreSQL.
 
-See my manifesto [here](docs/MANIFESTO.md)
+The inspiration of Hql comes from the frustration of using Graylog with my personal homelab after setting it up at DEATHCON 2024, see [the original rant idea here](docs/MANIFESTO.md).
+The implementation differs from Kusto in that it supports and embraces nosql datasets, instead of a proprietary backend structured SQL-like database.
+
+Additionaly features unsupported by Kusto include joining datasets across different database types.
+In Kusto you can join or query across databases or clusters, however only their's.
+Here, the below is possible:
+
+```
+let ElasticZeek = database("tf11-elastic").index("so-network-2022.10")
+| where event.module == "zeek"
+| extend IPAddress = source.ip;
+database("sentinel").macro('SigninLogs')
+| where Username == "iamcompromised"
+| project IPAddress
+| join type=inner ElasticZeek on IPAddress
+| summarize count() by destination.ip, destination.port, source.ip, source.port
+```
+
+In the above we found an attacker IOC in Azure, aka o365, and were able to instantly pivot to the zeek logs we have in Elasticsearch.
+This is possibly the most extreme case of using the features provided.
+A more common usecase could be enhancing Elasticsearch to support anything other than basic filtering.
+
+Where a given backend does not support a given feature, such as analytic functions, it gets implemented by Hql.
+Below, lines 1-3 are able to be collapsed into a single query to elastic.
+It's results are returned and ingested into a [polars](https://docs.pola.rs/) DataFrame, which then the follow operations are done:
+
+1. extend
+    - A new column Hostname in the DataFrame is created with the contents of winlog.computer_name
+    - Column event.code is cast to INT64 and assigned to column EventID.
+2. project
+    - The column EventID is fed into series_stats generating a dict with keys for each stat value.
+    - Since this function is provided as the single expression, with no assigned name, it gets expanded as the new output DataFrame.
+
+```
+1 database("tf11-elastic").index("so-beats-2022.10.*")
+2 | where ['@timestamp'] between ("2022-10-21T15:45:00.000Z" .. "2022-10-21T15:55:00.000Z")
+3 | where winlog.computer_name == "asarea.vxnwua.net"
+4 | extend Hostname = winlog.computer_name, EventID = toint(event.code)
+5 | project series_stats(EventID)
+```
+
+Resulting in:
+
+```
+[{"series_stats_EventID_min": 1, "series_stats_EventID_min_idx": 105, "series_stats_EventID_max": 16394, "series_stats_EventID_max_idx": 225, "series_stats_EventID_avg": 1709.3838936669272, "series_stats_EventID_stdev": 2257.263833183075, "series_stats_EventID_variance": 5095240.012596348}]
+```
+
+## Implemented features
+See the implemented features [here](docs/features/README.md).
+I'll put these into issues at some point.
 
 ## Running
-Still a bit a manual process to run, doesn't return data anywhere.
-You need to make a copy of `conf.json.example` to `conf.json` and configure it with your Elasticsearch instance.
-This is tested with Elasticsearch 7.17, haven't tried opensearch yet.
-It needs to support DSL.
+To run you need:
 
-You also need a container system, this was developed for and in Rocky 9.5 with podman.
-It should work for others as well.
-
-Build the containers
+- An Elasticsearch instance (I'm using 7.17)
+- Python (I'm using 3.9.21)
 
 ```
-cd containers
-./build.sh
-```
+# copy and configure Hql
+cp conf.json.example conf.json
 
-If you use docker then just replace podman with docker.
-
-Install deps
-
-```
 python3 -m venv .venv
 source .venv/bin/activate
 pip3 install -r requirements.txt
+
+# make a query and put it into a text file
+python3 Hql.py -v -f ./my-query.hql
 ```
 
-Then rip it.
-
-```
-python3 Hql.py -f ./tests/tf11-simple.txt
-```
-
-This will compile out a compose file and container config files for use.
-Each query set has a guid, each container has a guid.
-
-```
-./out
-     /b8d1fad3
-              /compose.yml
-              /index-c4fb3561.json
-```
-
-Where `b8d1fad3` is the query guid, and `c4fb3561` is the container guid.
-The compose then creates services named after the type of container and its guid.
-The network created is also named after the query's guid.
-
-Then running will execute the query:
-
-```
-cd ./out/b8d1fad3
-podman compose up
-```
+Some examples are in the `tests` dir and are based on the TracerFIRE 11 dataset by Sandia National Labs.
+The dataset provides Elastic logs of a series of simulated cyber attacks, perfect for this situation.
