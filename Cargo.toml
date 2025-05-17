@@ -1,0 +1,13 @@
+[package]
+name = "Hql"
+version = "0.0.1"
+edition = "2021"
+authors = ["Sylvain Jones <sylvainjones+hql@hashfastr.com>"]
+
+[dependencies]
+lazy_static = "1.4"
+antlr_rust = {package = "do-not-use-antlr-rust", version = "0.3"}
+clap = { version = "4.5.38", features = ["cargo"] }
+log = "0.4.27"
+fern = "0.7"
+humantime = "2.2.0"
