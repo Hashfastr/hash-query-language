@@ -33,7 +33,7 @@ class Project(Operator):
                 df = PolarsTools.get_element(ctx.data, fields)
             
             elif i.type == "Path":
-                fields = i.eval(ctx, path=True)
+                fields = i.eval(ctx, list=True)
                 df = PolarsTools.get_element(ctx.data, fields)
 
             elif i.type == "DotCompositeFunction":
