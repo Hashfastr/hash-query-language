@@ -14,30 +14,6 @@ pasting the table into github first will give markdown links, then
 putting into a text document here will create commands for creating issues
 '''
 
-def get_issue_id(id:int):
-    result = subprocess.run(
-        ['gh', 'api', '-H', "Accept: application/vnd.github+json", '-H', "X-GitHub-Api-Version: 2022-11-28", f'/repos/Hashfastr/hash-query-language/issues/{id}'],
-        capture_output=True,
-        text=True
-    )
-    
-    try:
-        return json.loads(result.stdout)['id']
-    except:
-        raise Exception(json.dumps(json.loads(result.stdout), indent=2))
-
-def get_milestone_id(id:int):
-    result = subprocess.run(
-        ['gh', 'api', '-H', "Accept: application/vnd.github+json", '-H', "X-GitHub-Api-Version: 2022-11-28", f'/repos/Hashfastr/hash-query-language/milestones/{id}'],
-        capture_output=True,
-        text=True
-    )
-
-    try:
-        return json.loads(result.stdout)['id']
-    except:
-        raise Exception(json.dumps(json.loads(result.stdout), indent=2))
-
 def create_issue(name:str, desc:str, milestone:int):
     result = subprocess.run(
         ['gh', 'api',
@@ -90,7 +66,7 @@ with open(sys.argv[1]) as f:
         
         issue_id = create_issue(
             f'{name} {issue_suffix}',
-            url,
+            f'{url}\n\n{desc}',
             milestone_id
         )
         
