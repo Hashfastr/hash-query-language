@@ -30,10 +30,18 @@ class Project(Operator):
         for i in self.exprs:
             if i.type in ("NamedReference", "Identifier", "EscapedName"):
                 fields = [i.eval(ctx, as_str=True)]
+                
+                if not PolarsTools.assert_field(fields):
+                    raise QueryException(f"Referenced field {'.'.join(fields)} not found")
+                
                 df = PolarsTools.get_element(ctx.data, fields)
             
             elif i.type == "Path":
                 fields = i.eval(ctx, list=True)
+
+                if not PolarsTools.assert_field(ctx.data, fields):
+                    raise QueryException(f"Referenced field {'.'.join(fields)} not found")
+                
                 df = PolarsTools.get_element(ctx.data, fields)
 
             elif i.type == "DotCompositeFunction":
@@ -41,7 +49,7 @@ class Project(Operator):
                 
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
-                
+            
             data_sets.append(df)
             
         new = PolarsTools.merge(data_sets)
