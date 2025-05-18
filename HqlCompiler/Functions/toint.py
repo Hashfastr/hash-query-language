@@ -18,7 +18,7 @@ class toint(Function):
     def eval(self, ctx:Context, **kwargs):
         series = self.src.eval(ctx)
         
-        series_name = self.src.eval(ctx, as_str=True, list=True)
+        series_name = self.src.eval(ctx, as_str=True, as_list=True)
         if not isinstance(series_name, list):
             series_name = [series_name]
         

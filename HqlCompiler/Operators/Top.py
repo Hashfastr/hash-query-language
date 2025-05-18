@@ -37,7 +37,7 @@ class Top(Operator):
         }
         
     def eval(self, ctx:Context, **kwargs):
-        name = self.by.name.eval(ctx, as_str=True, list=True)
+        name = self.by.name.eval(ctx, as_str=True, as_list=True)
         if isinstance(name, str):
             name = [name]
             

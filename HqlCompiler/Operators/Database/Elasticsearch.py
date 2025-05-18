@@ -6,6 +6,7 @@ from HqlCompiler.Functions import Function
 from HqlCompiler.PolarsTools import PolarsTools
 from HqlCompiler.Context import Context
 
+import requests
 from elasticsearch import Elasticsearch as ES
 import polars as pl
 
@@ -29,7 +30,8 @@ class Elasticsearch(Database):
         
         self.compatible = [
             'Where',
-            'Take'
+            'Take',
+            'Count'
         ]
         
         # Set to the config default to avoid DoS
@@ -90,130 +92,36 @@ class Elasticsearch(Database):
         filter = None
 
         if expr.type == "BinaryLogic":
-            op = 'must' if expr.bitype == 'and' else 'should'
+            op = ' AND ' if expr.bitype == 'and' else ' OR '
             
             # base empty filter case
             if not expr.lh:
-                return {
-                    'match_all': {}
-                }
+                return ""
             
-            return {
-                'bool': {
-                    op: [
-                        self.gen_filter(expr.lh)
-                    ] + [self.gen_filter(x) for x in expr.rh]
-                }
-            }
+            terms = [
+                self.gen_filter(expr.lh)
+            ] + [self.gen_filter(x) for x in expr.rh]
+            
+            return op.join(terms)
         
         if expr.type == 'Equality':
-            # Need to check for these because of elastic limitations
-            # Might implement these at a high level at sometime
-            # Or translate to equvalent logic
-            # (field1=2 and field2=3) == (field3=4 or field4=5)
-            # (field1=2 and field2=3) and (field3=4 or field4=5)
-                        
-            if expr.lh.type == 'Path':
-                lh = '.'.join(expr.lh.eval(self.ctx, list=True))
-            else:
-                lh = expr.lh.eval(self.ctx, as_str=True)
-                
+            lh = expr.lh.eval(self.ctx, as_str=True)    
             rh = expr.rh.eval(self.ctx, as_str=True)
             
             if expr.eqtype == '==':
-                return {
-                    'term': {
-                        lh : rh
-                    }
-                }
+                return f"{lh}:\"{rh}\""
                 
             if expr.eqtype in ('<>', '!='):
-                return {
-                    'bool': {
-                        'must_not': {
-                            'term': {lh : rh}
-                        }
-                    }
-                }
+                return f"-{lh}:\"{rh}\""
         
         if expr.type == "BetweenEquality":
             lh = expr.lh.eval(self.ctx, as_str=True)
             start = expr.start.eval(self.ctx, as_str=True)
             end = expr.end.eval(self.ctx, as_str=True)
             
-            return {
-                'range': {
-                    lh : {
-                        'gte': start,
-                        'lte': end
-                    }
-                }
-            }
+            return f"{lh}:[{start} TO {end}]"
 
-        if expr.type == "PipeExpression":
-            return {
-                'bool': {
-                    'must': [self.gen_filter(expr.prepipe.expr)]
-                }
-            }
-            
-        if not filter:
-            raise CompilerException(f"Invalid filter type {expr.type}")
-            
-        return filter
-
-        if expr['type'] == '<':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'lt': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == '<=':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'lte': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == '>':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'gt': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == '>=':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'gte': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == 'ListEquality':
-            kvs = []
-            for i in expr['rh']:
-                kv = {
-                    'match': {
-                        expr['lh']['name']: i['value']
-                    }
-                }
-                kvs.append(kv)
-            
-            filter = {
-                'bool': {
-                    'should': kvs
-                }
-            }
-        
-        # Negative filters
-        if expr['type'] == '!=':
-            filter = {
-                'term': {
-                    expr['lh']['name'] : expr['rh']['value']
-                }
-            }
-            
-        if not filter:
-            raise CompilerException(f"Invalid filter type {expr['type']}")
-            
-        return filter
+        raise CompilerException(f"Invalid filter type {expr.type}")
     
     def make_query(self) -> dict:
         # Host, or hosts, to use for the query.
@@ -246,20 +154,24 @@ class Elasticsearch(Database):
         
         logging.debug("Starting initial query")
 
-        body = {
-            'query': self.gen_filter(self.filter_expr)
-        }
+        q = self.gen_filter(self.filter_expr)
         
-        logging.debug(f"{self.dbtype} query, using the following DSL:")
-        logging.debug(json.dumps(body))
+        logging.debug(f"{self.dbtype} query, using the following Lucene:")
+        logging.debug(q)
         logging.debug(f'Index pattern: {self.pattern}')
         logging.debug(f'Limit: {self.limit}')
+        
+        res = requests.get(
+            f'{HOSTS[0]}/{self.pattern}',
+            auth=(USER, PASS)
+        )
+        index = json.loads(res.text)
         
         res = client.search(
             index=self.pattern,
             size=SCROLL_MAX,
             scroll=SCROLL_TIME,
-            body=body
+            q=q
         )
         sid = res['_scroll_id']
         
@@ -278,8 +190,7 @@ class Elasticsearch(Database):
             
             # Ensure that we only print the number of remaining rows
             df = pl.from_dicts(res['hits']['hits'][:remainder]).unnest('_source')
-
-            # print(json.dumps(data, indent=2))
+            
             if results.is_empty():
                 results = df
             else:

@@ -37,7 +37,7 @@ class Project(Operator):
                 df = PolarsTools.get_element(ctx.data, fields)
             
             elif i.type == "Path":
-                fields = i.eval(ctx, list=True)
+                fields = i.eval(ctx, as_list=True)
 
                 if not PolarsTools.assert_field(ctx.data, fields):
                     raise QueryException(f"Referenced field {'.'.join(fields)} not found")

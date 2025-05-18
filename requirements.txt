@@ -2,3 +2,4 @@ polars
 antlr4-python3-runtime
 elasticsearch
 numpy
+requests
