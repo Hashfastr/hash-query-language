@@ -188,6 +188,9 @@ class Elasticsearch(Database):
                 logging.debug(f"Timed out? {res['timed_out']}")
                 break
             
+            with open('./so-network-data.json', 'w+') as f:
+                f.write(json.dumps(res['hits']['hits'][:remainder], indent=2))
+            
             # Ensure that we only print the number of remaining rows
             df = pl.from_dicts(res['hits']['hits'][:remainder]).unnest('_source')
             
