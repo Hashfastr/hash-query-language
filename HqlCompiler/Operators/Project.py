@@ -2,7 +2,7 @@ from .Operator import Operator
 from ..Expression import Expression
 import polars as pl
 from ..PolarsTools import PolarsTools
-from ..Results import Results
+from HqlCompiler.Data import Data
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *
 

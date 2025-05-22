@@ -1,5 +1,5 @@
 from .Operator import Operator
-from ..Results import Results
+from HqlCompiler.Data import Data
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
 import polars as pl

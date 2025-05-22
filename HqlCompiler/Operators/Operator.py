@@ -1,5 +1,5 @@
 import json
-from ..Results import Results
+from HqlCompiler.Data import Data
 import logging
 from HqlCompiler.Context import register_op, Context
 
