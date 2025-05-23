@@ -2,7 +2,7 @@ import HqlCompiler.Expression as Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
-from HqlCompiler.Data import Schema
+from HqlCompiler.Data import Schema, Data, Table
 from HqlCompiler.Context import Context
 import HqlCompiler.Types as t
 
@@ -13,6 +13,7 @@ import polars as pl
 import time
 import json
 import logging
+import deepdiff.diff as diff
 from .__proto__ import Database
 
 # Index in a database to grab data from, extremely simple.
@@ -245,7 +246,7 @@ class Elasticsearch(Database):
                 break
             
             # Ensure that we only print the number of remaining rows
-            results += [x['_source'] for x in res['hits']['hits'][:remainder]]
+            results += res['hits']['hits'][:remainder]
             
             remainder = self.limit - len(results)
             
@@ -262,32 +263,21 @@ class Elasticsearch(Database):
 
         client.clear_scroll(scroll_id=sid)
 
-        iname = [x for x in index][0]
-        props = index[iname]['mappings']['properties']
+        result_sets = dict()
+        for i in results:
+            if i['_index'] not in result_sets:
+                result_sets[i['_index']] = []
+            result_sets[i['_index']].append(i['_source'])
 
-        start = time.perf_counter()
-        jschema = Schema(results)
-        end = time.perf_counter()
-        logging.debug(f"Loading intermediate schema took {end - start}")
+        tables = []
+        for i in result_sets:
+            table = Table(init_data=result_sets[i], name=i)
+            tables.append(table)
 
-        start = time.perf_counter() 
-        results = jschema.adjust_mv(results)
-        end = time.perf_counter()
-        logging.debug(f"Making multivalue adjustments took {end - start}")
-        
-        start = time.perf_counter()
-        df = pl.from_dicts(results, schema=jschema.to_pl_schema())
-        end = time.perf_counter()
-        logging.debug(f"Loading raw data into intermediate dataframe took {end - start}")
-        
-        start = time.perf_counter()
-        eschema = Schema(schema=self.gen_elastic_schema(props))
-        end = time.perf_counter()
-        logging.debug(f"Creating elastic schema took {end - start}")
-        
-        start = time.perf_counter()
-        df = eschema.cast_to_schema(df, mv_fields=jschema.mv_fields)
-        end = time.perf_counter()
-        logging.debug(f"Casting intermediate dataframe to final took {end - start}")
+        dataset = Data(tables=tables)
 
-        return df
+        for i in dataset.tables:
+            eschema = Schema(schema=self.gen_elastic_schema(index[i.name]['mappings']['properties']))
+            i.change_schema(eschema)
+
+        return dataset

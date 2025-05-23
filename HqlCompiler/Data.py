@@ -7,33 +7,64 @@ import logging
 class Data():
     ...
 
-from itertools import count
-import sys
+class Table():
+    ...
 
-def stack_size2a(size=2):
-    """Get stack size for caller's frame.
-    """
-    frame = sys._getframe(size)
+class Schema():
+    ...
 
-    for size in count(size):
-        frame = frame.f_back
-        if not frame:
-            return size
+class Data():
+    def __init__(self, tables:list[Table]=None):
+        self.tables = tables if tables else []
+
+    def get_table(self, name:str):
+        for i in self.tables:
+            if i.name == name:
+                return i
+        return None
+    
+    def add_table(self, table:Table):
+        self.tables.append(table)
+        if not self.tables[-1].name:
+            self.tables[-1].name = f'Table {len(self.tables)}'
+
+    def to_dict(self):
+        dataset = dict()
+        for i in self.tables:
+            dataset[i.name] = i.to_dicts()
+
+        return dataset
 
 class Table():
-    def __init__(self, init_df:pl.DataFrame=None, init_data:list[dict]=None):
-        self.df = pl.DataFrame()
-        # self.input_schema = 
+    def __init__(self, df:pl.DataFrame=None, init_data:list[dict]=None, schema:Schema=None, name:str=None):
+        self.name = name
 
-        if init_df:
-            self.df = init_df
-            self.schema = pltools.gen_schema(self.df)
-
-        if init_data:
-            self.ingest(init_data)
+        if init_data and not schema:
+            self.schema = Schema(init_data)
+            init_data = self.schema.adjust_mv(init_data)
+            self.df = pl.from_dicts(init_data, schema=self.schema.to_pl_schema())
         
-    # def ingest(self, data:list[dict]):
-    #     self.schema = 
+        elif init_data and schema:
+            self.schema = schema
+            self.df = pl.from_dicts(init_data, schema=schema)
+        
+        elif df and schema:
+            self.schema = schema
+            self.df = schema.cast_to_schema(df)
+
+        elif df and not schema:
+            self.df = df
+            logging.warning('Dataframe loaded into table without Hql schema')
+
+        elif schema:
+            self.schema = schema
+
+    def change_schema(self, schema:Schema):
+        self.df = schema.cast_to_schema(self.df, mv_fields=self.schema.mv_fields)
+        self.schema = schema
+
+    def to_dicts(self):
+        return self.df.to_dicts()
 
 class Schema():
     def __init__(self, data:list[dict]=None, schema:dict=None):
