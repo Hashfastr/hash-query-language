@@ -2,6 +2,7 @@ import polars as pl
 from HqlCompiler.PolarsTools import PolarsTools as pltools
 import HqlCompiler.Types as t
 from HqlCompiler.Exceptions import *
+import logging
 
 class Data():
     ...
@@ -70,11 +71,11 @@ class Schema():
         elif prototype == type(None):
             return t.null()
         else:
-            print(f'Unhandled conversion type {prototype}')
+            logging.error(f'Unhandled conversion type {prototype}')
 
     def to_pl_schema(self, src:dict=None, name:str=None):
         if not src:
-            src = self.schema 
+            src = self.schema
 
         schema = {}
         for i in src:
@@ -83,20 +84,21 @@ class Schema():
                 i = name
             else:
                 j = src[i]
-
+                
             if isinstance(j, dict):
-                schema[i] = pl.Struct(self.to_pl_schema(j))
-                continue
+                if len(j) == 0:
+                    schema[i] = pl.Struct([])
+                else:
+                    schema[i] = pl.Struct(self.to_pl_schema(src=j))
 
-            if isinstance(j, t.multivalue):
+            elif isinstance(j, t.multivalue):
                 schema[i] = j.pl_schema()
-                continue
 
-            if isinstance(j, t.object):
+            elif isinstance(j, t.object):
                 schema[i] = j.pl_schema()
-                continue
-            
-            schema[i] = j().pl_schema()
+
+            else:
+                schema[i] = j().pl_schema()
 
             if name:
                 break
@@ -175,7 +177,6 @@ class Schema():
                 self.mv_fields += [[key] + x for x in new_schema.mv_fields]
 
                 continue
-
             
             new[key] = self.resolve_conflict(list(typeset))
             if isinstance(new[key], t.multivalue):
@@ -271,6 +272,6 @@ class Schema():
             if dtype == schema[col.name]().pl_schema():
                 newdf[col.name] = col
 
-            newdf[col.name] = col.cast(self.to_pl_schema(schema, name=col.name))
+            newdf[col.name] = col.cast(self.to_pl_schema(src=schema, name=col.name))
 
         return pl.DataFrame(newdf)

@@ -10,6 +10,7 @@ import requests
 from elasticsearch import Elasticsearch as ES
 import polars as pl
 
+import time
 import json
 import logging
 from .__proto__ import Database
@@ -31,7 +32,7 @@ class Elasticsearch(Database):
         self.compatible = [
             'Where',
             'Take',
-            'Count'
+            # 'Count'
         ]
         
         # Set to the config default to avoid DoS
@@ -261,13 +262,32 @@ class Elasticsearch(Database):
 
         client.clear_scroll(scroll_id=sid)
 
-        iname = list(index.keys())[0]
+        iname = [x for x in index][0]
         props = index[iname]['mappings']['properties']
 
+        start = time.perf_counter()
         jschema = Schema(results)
+        end = time.perf_counter()
+        logging.debug(f"Loading intermediate schema took {end - start}")
+
+        start = time.perf_counter() 
         results = jschema.adjust_mv(results)
+        end = time.perf_counter()
+        logging.debug(f"Making multivalue adjustments took {end - start}")
+        
+        start = time.perf_counter()
         df = pl.from_dicts(results, schema=jschema.to_pl_schema())
+        end = time.perf_counter()
+        logging.debug(f"Loading raw data into intermediate dataframe took {end - start}")
+        
+        start = time.perf_counter()
         eschema = Schema(schema=self.gen_elastic_schema(props))
+        end = time.perf_counter()
+        logging.debug(f"Creating elastic schema took {end - start}")
+        
+        start = time.perf_counter()
         df = eschema.cast_to_schema(df, mv_fields=jschema.mv_fields)
+        end = time.perf_counter()
+        logging.debug(f"Casting intermediate dataframe to final took {end - start}")
 
         return df
