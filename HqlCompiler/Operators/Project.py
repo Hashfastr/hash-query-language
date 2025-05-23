@@ -5,6 +5,7 @@ from ..PolarsTools import PolarsTools
 from HqlCompiler.Data import Data
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *
+from HqlCompiler.Operators import Operator
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.

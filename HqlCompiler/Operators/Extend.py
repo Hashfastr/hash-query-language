@@ -3,6 +3,7 @@ from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.PolarsTools import PolarsTools
 from HqlCompiler.Functions import Function
+from HqlCompiler.Operators import Operator
 import polars as pl
 from HqlCompiler.Context import register_op, Context
 

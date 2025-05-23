@@ -112,7 +112,7 @@ def main():
     start = time.perf_counter()
     
     results = compiler.run()
-    print(json.dumps(results.to_dicts()))
+    print(json.dumps(results.to_dicts(), default=repr))
    
     end = time.perf_counter() 
     logging.debug("Ran")

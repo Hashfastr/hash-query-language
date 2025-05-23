@@ -2,9 +2,9 @@ import HqlCompiler.Expression as Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
-from HqlCompiler.Functions import Function
-from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.Data import Schema
 from HqlCompiler.Context import Context
+import HqlCompiler.Types as t
 
 import requests
 from elasticsearch import Elasticsearch as ES
@@ -122,7 +122,63 @@ class Elasticsearch(Database):
             return f"{lh}:[{start} TO {end}]"
 
         raise CompilerException(f"Invalid filter type {expr.type}")
-    
+
+    def gen_elastic_schema(self, props:dict):
+        schema = {}
+        for i in props:
+            if 'properties' in props[i]:
+                schema[i] = self.gen_elastic_schema(props[i]['properties'])
+                continue
+            
+            ptype = props[i]['type']
+            if ptype in  ('scaled_float'):
+                schema[i] = t.decimal
+            elif ptype in ('half_float', 'float'):
+                schema[i] = t.float
+            elif ptype in ('double'):
+                schema[i] = t.double
+            elif ptype in ('byte'):
+                schema[i] = t.byte
+            elif ptype in ('short'):
+                schema[i] = t.short
+            elif ptype in ('integer'):
+                schema[i] = t.int
+            elif ptype in ('long'):
+                schema[i] = t.long
+            elif ptype in ('unsigned_long'):
+                schema[i] = t.ulong
+            elif ptype in ('ip'):
+                schema[i] = t.ip
+            elif ptype in ('date', 'date_nanos'):
+                schema[i] = t.datetime
+            elif ptype in ('date_range', 'integer_range', 'float_range', 'long_range', 'double_range', 'ip_range'):
+                rtype = self.gen_elastic_schema({'rtype': {'type': ptype.replace('_range', '')}})['rtype']
+                schema[i] = t.range(rtype, rtype)
+            elif ptype in ('keyword', 'constant_keyword', 'wildcard', 'binary', 'text', 'match_only_text'):
+                schema[i] = t.string
+            elif ptype in ('boolean'):
+                schema[i] = t.bool
+            elif ptype in ('flattened', 'object'):
+                schema[i] = t.object([])
+            elif ptype in ('nested'):
+                schema[i] = t.string
+            elif ptype in ('point', 'geo_point'):
+                # ptype = t.float
+                # schema[i] = t.multivalue(ptype)
+                schema[i] = {
+                    'lon': t.float,
+                    'lat': t.float
+                }
+            # elif ptype in ('object', 'flattened', 'nested'):
+            #     schema[i] = pl.
+            # elif ptype in ('geo_point'):
+            #     schema[i] = pl.String
+            # elif ptype in ('')
+            else:
+                print(f'{i} {ptype}')
+
+        return schema
+
     def make_query(self) -> dict:
         # Host, or hosts, to use for the query.
         # Should be in array format
@@ -180,39 +236,38 @@ class Elasticsearch(Database):
         # Will scroll through until we reach our limit, or no more results.
         # Enables the take operator
         remainder = self.limit
-        result_count = 0
-        results = pl.DataFrame()
-        while result_count < self.limit:            
+        results = []
+        while len(results) < self.limit:            
             if len(res['hits']['hits']) == 0:
                 logging.debug(f"No more results to evaluate")
                 logging.debug(f"Timed out? {res['timed_out']}")
                 break
             
-            with open('./so-network-data.json', 'w+') as f:
-                f.write(json.dumps(res['hits']['hits'][:remainder], indent=2))
-            
             # Ensure that we only print the number of remaining rows
-            df = pl.from_dicts(res['hits']['hits'][:remainder]).unnest('_source')
+            results += [x['_source'] for x in res['hits']['hits'][:remainder]]
             
-            if results.is_empty():
-                results = df
-            else:
-                results = pl.concat([results, df], how='diagonal_relaxed')
-            result_count += len(df)
+            remainder = self.limit - len(results)
             
-            remainder = self.limit - result_count
-            
-            if result_count >= self.limit:
+            if len(results) >= self.limit:
                 logging.debug('Quota reached')
                 break
             
-            logging.debug(f"Scroll {result_count} < {self.limit} max")
+            logging.debug(f"Scroll {len(results)} < {self.limit} max")
             
             res = client.scroll(
                 scroll_id=sid,
                 scroll=SCROLL_TIME,
-            )                
+            )
 
         client.clear_scroll(scroll_id=sid)
 
-        return results
+        iname = list(index.keys())[0]
+        props = index[iname]['mappings']['properties']
+
+        jschema = Schema(results)
+        results = jschema.adjust_mv(results)
+        df = pl.from_dicts(results, schema=jschema.to_pl_schema())
+        eschema = Schema(schema=self.gen_elastic_schema(props))
+        df = eschema.cast_to_schema(df, mv_fields=jschema.mv_fields)
+
+        return df

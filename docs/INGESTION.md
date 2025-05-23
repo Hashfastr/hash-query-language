@@ -125,7 +125,7 @@ So for example a IPv4 field can be converted from the UInt32 polars primative in
 
 ## In code
 Below is a basic code representation of this taken from the `from-dicts.ipynb` notebook.
-The code in the notebook might be slightly outdated but gets the gist across.
+The code in the notebook might be slightly outdated or different but gets the gist across.
 
 ```
 # Here json_data is the raw data returned by Elasticsearch

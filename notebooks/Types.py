@@ -1,5 +1,8 @@
 import polars as pl
 
+def cast(src:pl.Series, target:type):
+    pass
+
 class decimal(pl.Decimal):
     def pl_schema(self):
         return pl.Decimal()
@@ -112,6 +115,10 @@ class binary(pl.Binary):
 class bool(pl.Boolean):
     def pl_schema(self):
         return pl.Boolean()
+    
+class object(pl.Struct):
+    def pl_schema(self):
+        return pl.Struct
     
 class null(pl.Null):
     def pl_schema(self):

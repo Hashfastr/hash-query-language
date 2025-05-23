@@ -1,6 +1,7 @@
 from .Operator import Operator
 from HqlCompiler.Data import Data
 from HqlCompiler.Expression import Expression
+from HqlCompiler.Operators import Operator
 from HqlCompiler.Exceptions import *
 import polars as pl
 from HqlCompiler.Context import register_op, Context
