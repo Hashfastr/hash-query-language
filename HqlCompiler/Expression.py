@@ -387,10 +387,17 @@ class Path(Expression):
             logging.debug(e)
 
     def eval(self, ctx:Context, **kwargs):
-        if kwargs.get('list', False):
-            return [x.eval(ctx, as_str=True) for x in self.path]
-        
+        as_list = kwargs.get('as_list', False)
         as_str = kwargs.get('as_str', False)
+        
+        if as_list or as_str:
+            list = [x.eval(ctx, as_str=True) for x in self.path]
+        
+        if as_list:
+            return list
+            
+        if as_str:
+            return '.'.join(list)
         
         receiver = None
         for i in self.path:
@@ -448,7 +455,7 @@ class NamedExpression(Expression):
         receiver = kwargs.get('receiver', None)
             
         data = self.value.eval(ctx)
-        name = self.name.eval(ctx, list=True)
+        name = self.name.eval(ctx, as_list=True)
         return PolarsTools.build_element(name, data)
     
 class OrderedExpression(Expression):

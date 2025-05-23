@@ -1,4 +1,4 @@
-from .Operator import Operator
+from HqlCompiler.Operators import Operator
 from ..Expression import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_op

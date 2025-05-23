@@ -72,7 +72,7 @@ class PolarsTools():
             if index == 0:
                 raise Exception(f"Invalid field referenced {split}")
             else:
-                raise Exception(f"Invalid field {split} in path {'.'.join(fields[:index])}")
+                raise Exception(f"Invalid field {split} in path {'.'.join(fields)}")
         
         new = data.select(split)
         
@@ -95,3 +95,27 @@ class PolarsTools():
         
         new = PolarsTools.build_element(name[1:], data)
         return pl.DataFrame({name[0]: new.to_struct()})
+    
+    def assert_field(data:pl.DataFrame, fields:list[str]=None, index:int=0) -> bool:
+        split = fields[index]
+
+        if split not in data:
+            if index == 0:
+                raise Exception(f"Invalid field referenced {split}")
+            else:
+                raise Exception(f"Invalid field {split} in path {'.'.join(fields)}")
+        
+        new = data.select(split)
+        
+        if fields and len(fields) == 1:
+            if new[split].dtype == pl.Struct:
+                return True
+            
+            return True
+        
+        if isinstance(new[split].dtype, pl.Struct):
+            new = new.unnest(split)
+        else:
+            return True
+                
+        return PolarsTools.assert_field(new, fields, index + 1)

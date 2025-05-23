@@ -1,10 +1,11 @@
 from .Operator import Operator
-from ..Results import Results
+from HqlCompiler.Data import Data
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_op, Context
 import polars as pl
 import numpy as np
+from HqlCompiler.Operators import Operator
 
 '''
 Generates a single-column table of values

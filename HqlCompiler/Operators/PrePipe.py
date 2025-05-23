@@ -5,6 +5,7 @@ from ..PolarsTools import PolarsTools as pltools
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Functions import Function
 import HqlCompiler.Config as Config
+from HqlCompiler.Operators import Operator
 
 import logging
 from HqlCompiler.Exceptions import *

@@ -53,7 +53,7 @@ class series_stats(Function):
     
     def eval(self, ctx:Context, **kwargs):
         s = self.series_name.eval(ctx)
-        name = self.series_name.eval(ctx, as_str=True, list=True)
+        name = self.series_name.eval(ctx, as_str=True, as_list=True)
         
         if not isinstance(name, list):
             name = [name]

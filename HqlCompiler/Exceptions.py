@@ -26,3 +26,7 @@ class ParseException(HqlException):
 class CompilerException(HqlException):
     def __init__(self, message:str="A compiler error has occurred"):
         super().__init__(f"Compiler Exception: {message}")
+
+class QueryException(HqlException):
+    def __init__(self, message:str="A query error has occurred"):
+        super().__init__(f"Query Exception: {message}")

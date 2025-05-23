@@ -1,9 +1,9 @@
-from .Operator import Operator
-from ..Results import Results
+from HqlCompiler.Data import Data
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.PolarsTools import PolarsTools
 from HqlCompiler.Functions import Function
+from HqlCompiler.Operators import Operator
 import polars as pl
 from HqlCompiler.Context import register_op, Context
 
@@ -22,7 +22,7 @@ class Extend(Operator):
 
     def extend(self, data:pl.DataFrame, lh:Expression, rh:Expression):
         if rh.type == 'Path':
-            src = rh.eval(self.ctx, list=True)
+            src = rh.eval(self.ctx, as_list=True)
         elif rh.type in ('Identifier'):
             src = [rh.eval(self.ctx, as_str=True)]
         elif rh.type == "DotCompositeFunction":
@@ -31,7 +31,7 @@ class Extend(Operator):
             raise CompilerException(f'Unhandled Right-Hand expression type for extend: {rh.type}')
 
         if lh.type == 'Path':
-            dest = lh.eval(self.ctx, list=True)
+            dest = lh.eval(self.ctx, as_list=True)
         elif lh.type in ('Identifier'):
             dest = [lh.eval(self.ctx, as_str=True)]
         else:

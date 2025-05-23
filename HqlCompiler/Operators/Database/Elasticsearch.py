@@ -2,13 +2,15 @@ import HqlCompiler.Expression as Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
-from HqlCompiler.Functions import Function
-from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.Data import Schema
 from HqlCompiler.Context import Context
+import HqlCompiler.Types as t
 
+import requests
 from elasticsearch import Elasticsearch as ES
 import polars as pl
 
+import time
 import json
 import logging
 from .__proto__ import Database
@@ -29,7 +31,8 @@ class Elasticsearch(Database):
         
         self.compatible = [
             'Where',
-            'Take'
+            'Take',
+            # 'Count'
         ]
         
         # Set to the config default to avoid DoS
@@ -90,131 +93,93 @@ class Elasticsearch(Database):
         filter = None
 
         if expr.type == "BinaryLogic":
-            op = 'must' if expr.bitype == 'and' else 'should'
+            op = ' AND ' if expr.bitype == 'and' else ' OR '
             
             # base empty filter case
             if not expr.lh:
-                return {
-                    'match_all': {}
-                }
+                return ""
             
-            return {
-                'bool': {
-                    op: [
-                        self.gen_filter(expr.lh)
-                    ] + [self.gen_filter(x) for x in expr.rh]
-                }
-            }
+            terms = [
+                self.gen_filter(expr.lh)
+            ] + [self.gen_filter(x) for x in expr.rh]
+            
+            return op.join(terms)
         
         if expr.type == 'Equality':
-            # Need to check for these because of elastic limitations
-            # Might implement these at a high level at sometime
-            # Or translate to equvalent logic
-            # (field1=2 and field2=3) == (field3=4 or field4=5)
-            # (field1=2 and field2=3) and (field3=4 or field4=5)
-                        
-            if expr.lh.type == 'Path':
-                lh = '.'.join(expr.lh.eval(self.ctx, list=True))
-            else:
-                lh = expr.lh.eval(self.ctx, as_str=True)
-                
+            lh = expr.lh.eval(self.ctx, as_str=True)    
             rh = expr.rh.eval(self.ctx, as_str=True)
             
             if expr.eqtype == '==':
-                return {
-                    'term': {
-                        lh : rh
-                    }
-                }
+                return f"{lh}:\"{rh}\""
                 
             if expr.eqtype in ('<>', '!='):
-                return {
-                    'bool': {
-                        'must_not': {
-                            'term': {lh : rh}
-                        }
-                    }
-                }
+                return f"-{lh}:\"{rh}\""
         
         if expr.type == "BetweenEquality":
             lh = expr.lh.eval(self.ctx, as_str=True)
             start = expr.start.eval(self.ctx, as_str=True)
             end = expr.end.eval(self.ctx, as_str=True)
             
-            return {
-                'range': {
-                    lh : {
-                        'gte': start,
-                        'lte': end
-                    }
-                }
-            }
+            return f"{lh}:[{start} TO {end}]"
 
-        if expr.type == "PipeExpression":
-            return {
-                'bool': {
-                    'must': [self.gen_filter(expr.prepipe.expr)]
-                }
-            }
-            
-        if not filter:
-            raise CompilerException(f"Invalid filter type {expr.type}")
-            
-        return filter
+        raise CompilerException(f"Invalid filter type {expr.type}")
 
-        if expr['type'] == '<':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'lt': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == '<=':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'lte': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == '>':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'gt': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == '>=':
-            filter = {
-                'range': {
-                    expr['lh']['name'] : { 'gte': expr['rh']['value'] }
-                }
-            }
-        elif expr['type'] == 'ListEquality':
-            kvs = []
-            for i in expr['rh']:
-                kv = {
-                    'match': {
-                        expr['lh']['name']: i['value']
-                    }
-                }
-                kvs.append(kv)
+    def gen_elastic_schema(self, props:dict):
+        schema = {}
+        for i in props:
+            if 'properties' in props[i]:
+                schema[i] = self.gen_elastic_schema(props[i]['properties'])
+                continue
             
-            filter = {
-                'bool': {
-                    'should': kvs
+            ptype = props[i]['type']
+            if ptype in  ('scaled_float'):
+                schema[i] = t.decimal
+            elif ptype in ('half_float', 'float'):
+                schema[i] = t.float
+            elif ptype in ('double'):
+                schema[i] = t.double
+            elif ptype in ('byte'):
+                schema[i] = t.byte
+            elif ptype in ('short'):
+                schema[i] = t.short
+            elif ptype in ('integer'):
+                schema[i] = t.int
+            elif ptype in ('long'):
+                schema[i] = t.long
+            elif ptype in ('unsigned_long'):
+                schema[i] = t.ulong
+            elif ptype in ('ip'):
+                schema[i] = t.ip
+            elif ptype in ('date', 'date_nanos'):
+                schema[i] = t.datetime
+            elif ptype in ('date_range', 'integer_range', 'float_range', 'long_range', 'double_range', 'ip_range'):
+                rtype = self.gen_elastic_schema({'rtype': {'type': ptype.replace('_range', '')}})['rtype']
+                schema[i] = t.range(rtype, rtype)
+            elif ptype in ('keyword', 'constant_keyword', 'wildcard', 'binary', 'text', 'match_only_text'):
+                schema[i] = t.string
+            elif ptype in ('boolean'):
+                schema[i] = t.bool
+            elif ptype in ('flattened', 'object'):
+                schema[i] = t.object([])
+            elif ptype in ('nested'):
+                schema[i] = t.string
+            elif ptype in ('point', 'geo_point'):
+                # ptype = t.float
+                # schema[i] = t.multivalue(ptype)
+                schema[i] = {
+                    'lon': t.float,
+                    'lat': t.float
                 }
-            }
-        
-        # Negative filters
-        if expr['type'] == '!=':
-            filter = {
-                'term': {
-                    expr['lh']['name'] : expr['rh']['value']
-                }
-            }
-            
-        if not filter:
-            raise CompilerException(f"Invalid filter type {expr['type']}")
-            
-        return filter
-    
+            # elif ptype in ('object', 'flattened', 'nested'):
+            #     schema[i] = pl.
+            # elif ptype in ('geo_point'):
+            #     schema[i] = pl.String
+            # elif ptype in ('')
+            else:
+                print(f'{i} {ptype}')
+
+        return schema
+
     def make_query(self) -> dict:
         # Host, or hosts, to use for the query.
         # Should be in array format
@@ -246,20 +211,24 @@ class Elasticsearch(Database):
         
         logging.debug("Starting initial query")
 
-        body = {
-            'query': self.gen_filter(self.filter_expr)
-        }
+        q = self.gen_filter(self.filter_expr)
         
-        logging.debug(f"{self.dbtype} query, using the following DSL:")
-        logging.debug(json.dumps(body))
+        logging.debug(f"{self.dbtype} query, using the following Lucene:")
+        logging.debug(q)
         logging.debug(f'Index pattern: {self.pattern}')
         logging.debug(f'Limit: {self.limit}')
+        
+        res = requests.get(
+            f'{HOSTS[0]}/{self.pattern}',
+            auth=(USER, PASS)
+        )
+        index = json.loads(res.text)
         
         res = client.search(
             index=self.pattern,
             size=SCROLL_MAX,
             scroll=SCROLL_TIME,
-            body=body
+            q=q
         )
         sid = res['_scroll_id']
         
@@ -268,37 +237,57 @@ class Elasticsearch(Database):
         # Will scroll through until we reach our limit, or no more results.
         # Enables the take operator
         remainder = self.limit
-        result_count = 0
-        results = pl.DataFrame()
-        while result_count < self.limit:            
+        results = []
+        while len(results) < self.limit:            
             if len(res['hits']['hits']) == 0:
                 logging.debug(f"No more results to evaluate")
                 logging.debug(f"Timed out? {res['timed_out']}")
                 break
             
             # Ensure that we only print the number of remaining rows
-            df = pl.from_dicts(res['hits']['hits'][:remainder]).unnest('_source')
-
-            # print(json.dumps(data, indent=2))
-            if results.is_empty():
-                results = df
-            else:
-                results = pl.concat([results, df], how='diagonal_relaxed')
-            result_count += len(df)
+            results += [x['_source'] for x in res['hits']['hits'][:remainder]]
             
-            remainder = self.limit - result_count
+            remainder = self.limit - len(results)
             
-            if result_count >= self.limit:
+            if len(results) >= self.limit:
                 logging.debug('Quota reached')
                 break
             
-            logging.debug(f"Scroll {result_count} < {self.limit} max")
+            logging.debug(f"Scroll {len(results)} < {self.limit} max")
             
             res = client.scroll(
                 scroll_id=sid,
                 scroll=SCROLL_TIME,
-            )                
+            )
 
         client.clear_scroll(scroll_id=sid)
 
-        return results
+        iname = [x for x in index][0]
+        props = index[iname]['mappings']['properties']
+
+        start = time.perf_counter()
+        jschema = Schema(results)
+        end = time.perf_counter()
+        logging.debug(f"Loading intermediate schema took {end - start}")
+
+        start = time.perf_counter() 
+        results = jschema.adjust_mv(results)
+        end = time.perf_counter()
+        logging.debug(f"Making multivalue adjustments took {end - start}")
+        
+        start = time.perf_counter()
+        df = pl.from_dicts(results, schema=jschema.to_pl_schema())
+        end = time.perf_counter()
+        logging.debug(f"Loading raw data into intermediate dataframe took {end - start}")
+        
+        start = time.perf_counter()
+        eschema = Schema(schema=self.gen_elastic_schema(props))
+        end = time.perf_counter()
+        logging.debug(f"Creating elastic schema took {end - start}")
+        
+        start = time.perf_counter()
+        df = eschema.cast_to_schema(df, mv_fields=jschema.mv_fields)
+        end = time.perf_counter()
+        logging.debug(f"Casting intermediate dataframe to final took {end - start}")
+
+        return df
