@@ -15,42 +15,88 @@ class Schema():
     ...
 
 class Data():
-    def __init__(self, tables:list[Table]=None):
-        self.tables = tables if tables else []
+    # tables is a unique list of tables by name
+    # tables_list is a non-unique list of tables.
+    def __init__(self, tables:dict[Table]=None, tables_list:list[Table]=None):
+        self.tables = dict()
+
+        # empty base case
+        if not tables and not tables_list:
+            return self
+
+        table_groups = dict()
+
+        if not tables_list:
+            tables_list = []
+
+        if tables:
+            for key in tables:
+                tables_list.append(tables[key])
+
+        for i in tables_list:
+            if i.name not in table_groups:
+                table_groups[i.name] = [i]
+            else:
+                table_groups[i.name].append(i)
+
+        for name in table_groups:
+            # no need to merge, unique table
+            if len(table_groups[name]) == 1:
+                self.tables[name] = table_groups[name][0]
+                continue
+
+            self.tables[name] = Table.merge(table_groups[name])
+
+    def __len__(self):
+        length = 0
+        for i in self.tables:
+            length += len(self.tables[i])
+        return length
 
     def get_table(self, name:str):
-        for i in self.tables:
-            if i.name == name:
-                return i
+        if name in self.tables:
+            return self.tables[name]
         return None
     
     def add_table(self, table:Table):
-        self.tables.append(table)
-        if not self.tables[-1].name:
-            self.tables[-1].name = f'Table {len(self.tables)}'
+        tables = [table]
+        if table.name in self.tables:
+            tables.append(self.tables.pop(table.name))
+
+        if len(tables) != 1:
+            new = Table.merge(tables)
+        else:
+            new = tables[0]
+
+        self.tables[new.name] = new
 
     def get_elements(self, fields:list[list[str]]):
         tables = []
         for i in self.tables:
-            tables.append(i.get_elements(fields))
+            tables.append(self.tables[i].get_elements(fields))
 
-        return Data(tables=tables)
+        return Data(tables_list=tables)
 
     def to_dict(self):
         dataset = dict()
         for i in self.tables:
-            dataset[i.name] = i.to_dicts()
+            dataset[i] = self.tables[i].to_dicts()
 
         return dataset
     
     def merge(data:list[Data]):
-        
+        tables = []
+        for datum in data:
+            for name in datum.tables:
+                tables.append(datum.tables[name])
 
-        return None
+        return Data(tables_list=tables)
 
 class Table():
     def __init__(self, df:pl.DataFrame=None, init_data:list[dict]=None, schema:Schema=None, name:str=None):
         self.name = name
+        self.df = None
+        self.schema = None
 
         if init_data and not schema:
             self.schema = Schema(init_data)
@@ -71,6 +117,24 @@ class Table():
 
         elif schema:
             self.schema = schema
+
+    def __len__(self):
+        return len(self.df)
+
+    def merge(tables:list[Table]=None):
+        dfs = []
+        schemata = []
+        for table in tables:
+            if table.df:
+                dfs.append(table.df)
+
+                if table.schema:
+                    schemata.append(table.scheme)
+
+        df = plt.merge(dfs)
+        schema = Schema.merge(schemata)
+
+        return Table(df=df, schema=schema, name=tables[0].name)
 
     def change_schema(self, schema:Schema):
         self.df = schema.cast_to_schema(self.df, mv_fields=self.schema.mv_fields)
