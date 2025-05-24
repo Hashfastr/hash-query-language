@@ -36,6 +36,7 @@ class PolarsTools():
 
     # Fields is a list of the given path names.
     # host.name -> ['host', 'name']
+    # Returns a df representation of that field, maintains nested-ness
     def get_element(data:pl.DataFrame, fields:list[str], index:int=0):
         if index == len(fields):
             return pl.DataFrame({fields[index-1]: data.to_struct()})
@@ -61,7 +62,10 @@ class PolarsTools():
             return rec_data
         else:
             return pl.DataFrame({fields[index-1]: rec_data.to_struct()})
-        
+    
+    # Gets the value of an element, does not preserve df structure
+    # Just returns the value
+    # So for a base value, a series, and for a field that's a struct, a struct dataframe.
     def get_element_value(data:pl.DataFrame, fields:list[str]=None, index:int=0):
         if not fields:
             split = data.columns[0]

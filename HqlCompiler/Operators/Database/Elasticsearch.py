@@ -4,7 +4,7 @@ from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
 from HqlCompiler.Data import Schema, Data, Table
 from HqlCompiler.Context import Context
-import HqlCompiler.Types as t
+from HqlCompiler.Types import HqlTypes as ht
 
 import requests
 from elasticsearch import Elasticsearch as ES
@@ -134,42 +134,42 @@ class Elasticsearch(Database):
             
             ptype = props[i]['type']
             if ptype in  ('scaled_float'):
-                schema[i] = t.decimal
+                schema[i] = ht.decimal
             elif ptype in ('half_float', 'float'):
-                schema[i] = t.float
+                schema[i] = ht.float
             elif ptype in ('double'):
-                schema[i] = t.double
+                schema[i] = ht.double
             elif ptype in ('byte'):
-                schema[i] = t.byte
+                schema[i] = ht.byte
             elif ptype in ('short'):
-                schema[i] = t.short
+                schema[i] = ht.short
             elif ptype in ('integer'):
-                schema[i] = t.int
+                schema[i] = ht.int
             elif ptype in ('long'):
-                schema[i] = t.long
+                schema[i] = ht.long
             elif ptype in ('unsigned_long'):
-                schema[i] = t.ulong
+                schema[i] = ht.ulong
             elif ptype in ('ip'):
-                schema[i] = t.ip
+                schema[i] = ht.ip
             elif ptype in ('date', 'date_nanos'):
-                schema[i] = t.datetime
+                schema[i] = ht.datetime
             elif ptype in ('date_range', 'integer_range', 'float_range', 'long_range', 'double_range', 'ip_range'):
                 rtype = self.gen_elastic_schema({'rtype': {'type': ptype.replace('_range', '')}})['rtype']
-                schema[i] = t.range(rtype, rtype)
+                schema[i] = ht.range(rtype, rtype)
             elif ptype in ('keyword', 'constant_keyword', 'wildcard', 'binary', 'text', 'match_only_text'):
-                schema[i] = t.string
+                schema[i] = ht.string
             elif ptype in ('boolean'):
-                schema[i] = t.bool
+                schema[i] = ht.bool
             elif ptype in ('flattened', 'object'):
-                schema[i] = t.object([])
+                schema[i] = ht.object([])
             elif ptype in ('nested'):
-                schema[i] = t.string
+                schema[i] = ht.string
             elif ptype in ('point', 'geo_point'):
                 # ptype = t.float
                 # schema[i] = t.multivalue(ptype)
                 schema[i] = {
-                    'lon': t.float,
-                    'lat': t.float
+                    'lon': ht.float,
+                    'lat': ht.float
                 }
             # elif ptype in ('object', 'flattened', 'nested'):
             #     schema[i] = pl.

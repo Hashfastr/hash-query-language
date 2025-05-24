@@ -2,7 +2,7 @@ from .Operator import Operator
 from ..Expression import Expression
 import polars as pl
 from ..PolarsTools import PolarsTools
-from HqlCompiler.Data import Data
+from HqlCompiler.Data import Schema, Data, Table
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
@@ -27,7 +27,8 @@ class Project(Operator):
         ]
         
     def eval(self, ctx:Context, **kwargs):
-        data_sets = []
+        static = []
+        dynamic = []
         for i in self.exprs:
             if i.type in ("NamedReference", "Identifier", "EscapedName"):
                 fields = [i.eval(ctx, as_str=True)]
@@ -35,24 +36,18 @@ class Project(Operator):
                 if not PolarsTools.assert_field(fields):
                     raise QueryException(f"Referenced field {'.'.join(fields)} not found")
                 
-                df = PolarsTools.get_element(ctx.data, fields)
+                static.append(fields)
             
             elif i.type == "Path":
                 fields = i.eval(ctx, as_list=True)
-
-                if not PolarsTools.assert_field(ctx.data, fields):
-                    raise QueryException(f"Referenced field {'.'.join(fields)} not found")
-                
-                df = PolarsTools.get_element(ctx.data, fields)
+                static.append(fields)
 
             elif i.type == "DotCompositeFunction":
-                df = i.eval(ctx)
+                dynamic.append(i)
                 
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
-            
-            data_sets.append(df)
-            
-        new = PolarsTools.merge(data_sets)
-        
-        return new
+                        
+        new = [ctx.data.get_elements(static)]
+
+        return Data.merge(new)
