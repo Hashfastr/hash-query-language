@@ -1,7 +1,7 @@
 from .Operator import Operator
 from ..Expression import Expression
 import polars as pl
-from ..PolarsTools import PolarsTools
+from ..PolarsTools import plt
 from HqlCompiler.Data import Schema, Data, Table
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *
@@ -33,13 +33,17 @@ class Project(Operator):
             if i.type in ("NamedReference", "Identifier", "EscapedName"):
                 fields = [i.eval(ctx, as_str=True)]
                 
-                if not PolarsTools.assert_field(fields):
+                if not ctx.data.assert_field(fields):
                     raise QueryException(f"Referenced field {'.'.join(fields)} not found")
                 
                 static.append(fields)
             
             elif i.type == "Path":
                 fields = i.eval(ctx, as_list=True)
+
+                if not ctx.data.assert_field(fields):
+                    raise QueryException(f"Referenced field {'.'.join(fields)} not found")
+
                 static.append(fields)
 
             elif i.type == "DotCompositeFunction":

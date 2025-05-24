@@ -5,7 +5,7 @@ from typing import Tuple
 from .__proto__ import Function
 
 import polars as pl
-from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.PolarsTools import plt
 
 # This is a meta function resolved while parsing
 @register_func('series_stats')

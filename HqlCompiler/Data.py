@@ -1,5 +1,5 @@
 import polars as pl
-from HqlCompiler.PolarsTools import PolarsTools as plt
+from HqlCompiler.PolarsTools import plt as plt
 from HqlCompiler.Types import HqlTypes as ht
 from HqlCompiler.Exceptions import *
 import logging
@@ -92,6 +92,17 @@ class Data():
 
         return Data(tables_list=tables)
 
+    def assert_field(self, field:list[str]):
+        exists = []
+        for i in self.tables:
+            if self.tables[i].assert_field(field):
+                exists.append(self.tables[i])
+
+        if not len(exists):
+            logging.warning(f"Invalid field {'.'.join(field)} in table {i}")
+        
+        return exists
+
 class Table():
     def __init__(self, df:pl.DataFrame=None, init_data:list[dict]=None, schema:Schema=None, name:str=None):
         self.name = name
@@ -149,12 +160,17 @@ class Table():
     def get_elements(self, fields:list[list[str]]):
         dfs = []
         for field in fields:
-            dfs.append(plt.get_element(self.df, field))
+            df = plt.get_element(self.df, field)
+            if not df.is_empty():
+                dfs.append(df)
 
         df = plt.merge(dfs)
         schema = self.schema.extract_schema(fields)
 
         return Table(df, schema=schema, name=self.name)
+    
+    def assert_field(self, field:list[str]):
+        return plt.assert_field(self.df, field)
 
 class Schema():
     def __init__(self, data:list[dict]=None, schema:dict=None):

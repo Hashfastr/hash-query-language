@@ -1,6 +1,6 @@
 import polars as pl
 
-class PolarsTools():
+class plt():
     def advance(columns:list[pl.DataFrame]) -> list[pl.DataFrame]:
         new = []
         name = columns[0].columns[0]
@@ -28,7 +28,7 @@ class PolarsTools():
                 mergable.append(columns[i][0])
                 continue
 
-            new = pl.DataFrame({i: PolarsTools.merge(PolarsTools.advance(columns[i])).to_struct()})
+            new = pl.DataFrame({i: plt.merge(plt.advance(columns[i])).to_struct()})
 
             mergable.append(new)
             
@@ -56,7 +56,7 @@ class PolarsTools():
         else:
             return pl.DataFrame({fields[index-1]: new.to_struct()})
             
-        rec_data = PolarsTools.get_element(new, fields, index + 1)
+        rec_data = plt.get_element(new, fields, index + 1)
         
         if index == 0:
             return rec_data
@@ -91,30 +91,28 @@ class PolarsTools():
         else:
             return new.to_series()
         
-        return PolarsTools.get_element_value(new, fields, index + 1)
+        return plt.get_element_value(new, fields, index + 1)
     
     def build_element(name:list[str], data):
         if len(name) == 1:
             return pl.DataFrame({name[0]: data})
         
-        new = PolarsTools.build_element(name[1:], data)
+        new = plt.build_element(name[1:], data)
         return pl.DataFrame({name[0]: new.to_struct()})
     
-    def assert_field(data:pl.DataFrame, fields:list[str]=None, index:int=0) -> bool:
-        split = fields[index]
+    def assert_field(data:pl.DataFrame, field:list[str], index:int=0) -> bool:
+        split = field[index]
 
         if split not in data:
-            if index == 0:
-                raise Exception(f"Invalid field referenced {split}")
-            else:
-                raise Exception(f"Invalid field {split} in path {'.'.join(fields)}")
+            return False
+            # if index == 0:
+            #     raise Exception(f"Invalid field referenced {split}")
+            # else:
+            #     raise Exception(f"Invalid field {split} in path {'.'.join(field)}")
         
         new = data.select(split)
         
-        if fields and len(fields) == 1:
-            if new[split].dtype == pl.Struct:
-                return True
-            
+        if len(field) == 1:            
             return True
         
         if isinstance(new[split].dtype, pl.Struct):
@@ -122,4 +120,4 @@ class PolarsTools():
         else:
             return True
                 
-        return PolarsTools.assert_field(new, fields, index + 1)
+        return plt.assert_field(new, field, index + 1)

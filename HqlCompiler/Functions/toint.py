@@ -6,7 +6,7 @@ from typing import Tuple
 from .__proto__ import Function
 
 import polars as pl
-from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.PolarsTools import plt
 
 # This is a meta function resolved while parsing
 @register_func('toint')
@@ -22,5 +22,5 @@ class toint(Function):
         if not isinstance(series_name, list):
             series_name = [series_name]
         
-        df = PolarsTools.build_element(series_name, series.cast(pl.Int32))
+        df = plt.build_element(series_name, series.cast(pl.Int32))
         return df
