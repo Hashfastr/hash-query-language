@@ -168,11 +168,13 @@ class Table():
         dfs = []
         schemata = []
         for table in tables:
-            if table.df:
-                dfs.append(table.df)
+            if isinstance(table.df, type(None)) or table.df.is_empty():
+                continue
 
-                if table.schema:
-                    schemata.append(table.scheme)
+            dfs.append(table.df)
+
+            if table.schema:
+                schemata.append(table.schema)
 
         df = plt.merge(dfs)
         schema = Schema.merge(schemata)
@@ -233,8 +235,6 @@ class Table():
 
         new = self.get_elements([field])
         new.schema.set(field=field, htype=cast_type)
-        # print(new.schema.schema)
-        # print(new.df.to_dicts())
         new.df = new.schema.cast_to_schema(new.df)
 
         return new
@@ -246,14 +246,15 @@ class Table():
         self.df = self.df[:amount]
 
 class Schema():
-    def __init__(self, data:list[dict]=None, schema:dict=None):
+    def __init__(self, data:list[dict]=None, schema:dict=None, sample_size:int=0):
         # [['foo', 'bar'], ['cat']]
         self.mv_fields = []
         self.schema = dict()
 
         if data:
             if isinstance(data, list):
-                self.schema = self.gen_schema(data)
+                sample = data[:sample_size] if sample_size > 0 else data
+                self.schema = self.gen_schema(sample)
             else:
                 self.schema = self.gen_schema([data])
         else:
@@ -278,7 +279,7 @@ class Schema():
 
                 new[key] = i[j]
 
-        return new
+        return Schema(schema=new)
 
     # Extract the schema for a given set of fields
     def extract_schema(self, fields:list[list[str]], schema:dict=None):
@@ -464,7 +465,7 @@ class Schema():
             if col.dtype == pl.Struct: # or isinstance(schema[col.name], dict):
                 # print(json.dumps(schema[col.name], indent=2, default=repr))
                 subdata = pl.DataFrame(
-                    data.select(col.name).unnest(col.name),
+                    data.select(col.name),
                     # schema=self.to_pl_schema(schema)[col.name]
                 )
 

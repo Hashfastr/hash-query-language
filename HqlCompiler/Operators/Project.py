@@ -55,8 +55,11 @@ class Project(Operator):
         new = [ctx.data.get_elements(static)]
         
         for i in dynamic:
-            new.append(i.eval(ctx))
+            res = i.eval(ctx)
 
-        print(new)
+            if isinstance(res, list):
+                new += res
+            else:
+                new.append(res)
 
         return Data.merge(new)

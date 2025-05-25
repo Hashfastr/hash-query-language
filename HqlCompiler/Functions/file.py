@@ -9,21 +9,21 @@ from .__proto__ import Function
 @register_func('file')
 class file(Function):
     def __init__(self, args:list):
-        super().__init__(args, 1, 1)
+        super().__init__(args, 1, -1)
 
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):
             raise ArgumentException(f'Bad database argument datatype {args[0].type}')
         
     def eval(self, ctx:Context, **kwargs):
         db = kwargs.get('receiver', None)
-        filename = self.args[0].eval(ctx, as_str=True)
+        files = [x.eval(ctx, as_str=True) for x in self.args]
         
         if not db:
             dbconf = Config.HqlConfig.get_default_db()
             db = ctx.get_db(dbconf['TYPE'])(dbconf)
         
         if db and issubclass(type(db), Database) and db.has_method(self.name):
-            db.file = filename
+            db.files = files
         else:
             raise CompilerException(f'Function {self.name} cannot be called on {type(db)}')
         

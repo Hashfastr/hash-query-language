@@ -17,4 +17,6 @@ class toint(Function):
             field = [field]
         
         # df = plt.build_element(series_name, series.cast(pl.Int32))
-        return ctx.data.cast_subset(field, hqlt.int)
+        tables = ctx.data.cast_subset(field, hqlt.int)
+
+        return Data(tables_list=tables)
