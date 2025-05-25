@@ -388,11 +388,15 @@ class Path(Expression):
 
     def eval(self, ctx:Context, **kwargs):
         as_list = kwargs.get('as_list', False)
+        as_pl = kwargs.get('as_pl', False)
         as_str = kwargs.get('as_str', False)
         
-        if as_list or as_str:
+        if as_list or as_pl or as_str:
             list = [x.eval(ctx, as_str=True) for x in self.path]
         
+        if as_pl:
+            return plt.path_to_expr(list)
+
         if as_list:
             return list
             

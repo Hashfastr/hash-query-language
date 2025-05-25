@@ -1,7 +1,10 @@
 from HqlCompiler.Operators import Operator
 from ..Expression import Expression
 from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_op
+from HqlCompiler.Context import register_op, Context
+from HqlCompiler.Data import Data, Table, Schema
+from HqlCompiler.PolarsTools import plt
+import logging
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.
@@ -17,10 +20,22 @@ class Where(Operator):
         
         self.parameters = params if params else []
         self.expr = expr
-            
-    def to_dict(self):        
-        return {
-            'type': self.type,
-            'parameters': [x.to_dict() for x in self.parameters],
-            'expression': self.expr.to_dict()
-        }
+
+    '''
+    Counts each table and replaces the contents of that table with the count.
+    Adds an additional meta * table for the total count of all tables.
+    '''
+    def eval(self, ctx:Context, **kwargs):
+        pl_filter = plt.build_filter(ctx, self.expr)
+
+        tables = []
+        for name in ctx.data.tables:
+            table = ctx.data.tables[name]
+
+            try:
+                table.filter(pl_filter)
+                tables.append(table)
+            except QueryException as e:
+                logging.warning(e)
+
+        return Data(tables_list=tables)

@@ -245,6 +245,12 @@ class Table():
     def truncate(self, amount:int):
         self.df = self.df[:amount]
 
+    def filter(self, expr:pl.Expr):
+        try:
+            self.df = self.df.filter(expr)
+        except pl.exceptions.ColumnNotFoundError as e:
+            raise QueryException(e.args[0])
+
 class Schema():
     def __init__(self, data:list[dict]=None, schema:dict=None, sample_size:int=0):
         # [['foo', 'bar'], ['cat']]

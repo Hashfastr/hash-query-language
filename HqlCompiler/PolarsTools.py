@@ -1,5 +1,4 @@
 import polars as pl
-
 class plt():
     def advance(columns:list[pl.DataFrame]) -> list[pl.DataFrame]:
         new = []
@@ -121,3 +120,21 @@ class plt():
             return field
                 
         return plt.assert_field(new, field, index + 1)
+
+    def path_to_expr(path:list[str]):
+        expr = pl
+        for idx, i in enumerate(path):
+            if idx == 0:
+                expr = expr.col(i)
+            else:
+                expr = expr.struct.field(i)
+
+        return expr
+
+    def build_filter(ctx, expr):
+        if expr.type == 'Equality':
+            lh = expr.lh.eval(ctx, as_pl=True)    
+            rh = expr.rh.eval(ctx, as_pl=True)
+            return (lh == rh)
+        else:
+            print(expr.type)
