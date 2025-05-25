@@ -300,7 +300,7 @@ class Schema():
             else:
                 plschema[key] = element().pl_schema()
                 
-            return plschema
+        return plschema
 
     def gen_schema(self, data:list[dict]):
         # get a set of keys to handle
