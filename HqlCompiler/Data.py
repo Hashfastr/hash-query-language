@@ -33,12 +33,23 @@ class Data():
             for key in tables:
                 tables_list.append(tables[key])
 
+        for table in tables_list:
+            if not isinstance(table, Table):
+                raise CompilerException('Non-table passed to Data as init data')
+
+        # Fix names
+        for idx, i in enumerate(tables_list):
+            if i.name == None:
+                i.name = f'Table {idx}'
+
+        # Form table groups for merging
         for i in tables_list:
             if i.name not in table_groups:
                 table_groups[i.name] = [i]
             else:
                 table_groups[i.name].append(i)
 
+        # Merge table groups
         for name in table_groups:
             # no need to merge, unique table
             if len(table_groups[name]) == 1:

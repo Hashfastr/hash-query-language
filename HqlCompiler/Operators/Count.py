@@ -1,5 +1,5 @@
 from .Operator import Operator
-from HqlCompiler.Data import Data
+from HqlCompiler.Data import Data, Table
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Exceptions import *
@@ -14,8 +14,15 @@ class Count(Operator):
     def __init__(self, expr:Expression=None):
         super().__init__()
         self.expr = expr
-        
+    
+    '''
+    Counts each table and replaces the contents of that table with the count.
+    Adds an additional meta * table for the total count of all tables.
+    '''
     def eval(self, ctx:Context, **kwargs):
-        count = [{'Count': len(ctx.data)}]
+        counts = [Table(name='*', init_data=[{'Count': len(ctx.data)}])]
+        for table in ctx.data.tables:
+            count = [{'Count': len(ctx.data.tables[table])}]
+            counts.append(Table(name=table, init_data=count))
 
-        return pl.from_dicts(count)
+        return Data(tables_list=counts)
