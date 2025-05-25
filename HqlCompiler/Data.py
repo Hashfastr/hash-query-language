@@ -238,6 +238,12 @@ class Table():
         new.df = new.schema.cast_to_schema(new.df)
 
         return new
+    
+    '''
+    Truncates the dataset to a given amount
+    '''
+    def truncate(self, amount:int):
+        self.df = self.df[:amount]
 
 class Schema():
     def __init__(self, data:list[dict]=None, schema:dict=None):

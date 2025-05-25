@@ -825,6 +825,7 @@ strictQueryOperatorParameter:
         | WITHSOURCE
         | WITH_SOURCE
         | WITHNOSOURCE__
+        | GLOBAL
         )
     '=' (NameValue=identifierOrKeywordName | LiteralValue=literalExpression)
     ;

@@ -120,6 +120,7 @@ FLAGS: 'flags';
 FORK: 'fork';
 FROM: 'from';
 GETSCHEMA: 'getschema';
+GLOBAL: 'global';
 GRANNYASC: 'granny-asc';
 GRANNYDESC: 'granny-desc';
 GRAPHMARKCOMPONENTS: 'graph-mark-components';

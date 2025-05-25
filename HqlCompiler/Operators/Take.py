@@ -14,11 +14,21 @@ class Take(Operator):
     def __init__(self, expr:Expression):
         super().__init__()
         self.expr = expr
-        
+    
+    '''
+    Takes only so many results for each table.
+
+    If given the parameter global=True then it will limit results such that
+    the sum of all tables is less than or equal to the take amount.
+    Unimplemented.
+    '''
     def eval(self, ctx:Context, **kwargs):
         if self.expr.type != 'Integer':
             raise CompilerException(f'Invalid type {self.expr.type} given to take operator')
         
         limit = self.expr.eval(ctx)
+
+        for table in ctx.data.tables:
+            ctx.data.tables[table].truncate(limit)
         
-        return ctx.data[:limit]
+        return ctx.data

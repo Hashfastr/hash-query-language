@@ -43,5 +43,5 @@ class JSON(Database):
                 logging.critical(f'Could not load json or ndjson from file {self.base_path}{os.sep}{self.file}')
                 raise QueryException('JSON database not given valid json data')
 
-        table = Table(init_data=jdata)
+        table = Table(init_data=jdata, name=self.file)
         return Data.Data(tables_list=[table])
