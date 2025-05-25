@@ -103,87 +103,89 @@ class HqlTypes():
         else:
             logging.error(f'Unhandled conversion type {prototype}')
 
-    def cast(src:pl.Series, target:type):
-        pass
+    # src defined here but not implemented, yet....
+    # Target and src should be HqlType, can't definite it in the params for
+    # some reason, hate python scoping sometimes.
+    def cast(data:pl.Series, target, src=None):
+        if not isinstance(data, pl.Series):
+            raise CompilerException(f'Attempting to cast data of type {type(data)} to {target}')
 
-    class decimal(pl.Decimal):
+    class HqlType():
+        def __init__(self):
+            # Only init if it's a subclass
+            if len(type(self).__bases__):
+                super().__init__()
+                self.proto = type(self).__bases__[0]
+            else:
+                self.proto = None
+
         def pl_schema(self):
-            return pl.Decimal()
+            return self.proto
+
+        def cast(self, data:pl.Series):
+            return data.cast(self.proto)
+
+    class decimal(pl.Decimal, HqlType):
+        ...
         
-    class float(pl.Float32):
-        def pl_schema(self):
-            return pl.Float32()
+    class float(pl.Float32, HqlType):
+        ...
 
-    class double(pl.Float64):
-        def pl_schema(self):
-            return pl.Float64()
+    class double(pl.Float64, HqlType):
+        ...
         
-    class byte(pl.Int8):
-        def pl_schema(self):
-            return pl.Int8()
+    class byte(pl.Int8, HqlType):
+        ...
 
-    class short(pl.Int16):
-        def pl_schema(self):
-            return pl.Int16()
+    class short(pl.Int16, HqlType):
+        ...
 
-    class int(pl.Int32):
-        def pl_schema(self):
-            return pl.Int32()
+    class int(pl.Int32, HqlType):
+        ...
         
-    class long(pl.Int64):
-        def pl_schema(self):
-            return pl.Int64()
+    class long(pl.Int64, HqlType):
+        ...
 
-    class xlong(pl.Int128):
-        def pl_schema(self):
-            return pl.Int128()
+    class xlong(pl.Int128, HqlType):
+        ...
 
-    class guid(pl.Int128):
-        def pl_schema(self):
-            return pl.Int128()
+    class guid(pl.Int128, HqlType):
+        ...
         
-    class ubyte(pl.UInt8):
-        def pl_schema(self):
-            return pl.UInt8()
+    class ubyte(pl.UInt8, HqlType):
+        ...
         
-    class ushort(pl.UInt16):
-        def pl_schema(self):
-            return pl.UInt16()
+    class ushort(pl.UInt16, HqlType):
+        ...
         
-    class uint(pl.UInt32):
-        def pl_schema(self):
-            return pl.UInt32()
+    class uint(pl.UInt32, HqlType):
+        ...
         
-    class ulong(pl.UInt64):
-        def pl_schema(self):
-            return pl.UInt64()
+    class ulong(pl.UInt64, HqlType):
+        ...
 
-    class ip(pl.String):
-        def pl_schema(self):
-            return pl.String()
+    class ip(pl.String, HqlType):
+        ...
 
-    class ip4(pl.UInt32):
-        def pl_schema(self):
-            return pl.UInt32()
+    class ip4(pl.UInt32, HqlType):
+        ...
 
-    class ip6(pl.Int128):
-        def pl_schema(self):
-            return pl.Int128()
+    class ip6(pl.Int128, HqlType):
+        ...
             
-    class datetime(pl.Datetime):
-        def pl_schema(self):
-            return pl.Datetime()
+    class datetime(pl.Datetime, HqlType):
+        ...
         
-    class duration(pl.Duration):
-        def pl_schema(self):
-            return pl.Duration()
+    class duration(pl.Duration, HqlType):
+        ...
             
-    class time(pl.Time):
-        def pl_schema(self):
-            return pl.Time()
+    class time(pl.Time, HqlType):
+        ...
 
-    class range(pl.Struct):
+    class range(pl.Struct, HqlType):
         def __init__(self, start, end):
+            super().__init__()
+
             self.start = start
             # self.start_clusivity = 'gt' if start_clusivity == 'gt' else 'gte'
             self.end = end
@@ -192,39 +194,31 @@ class HqlTypes():
         def pl_schema(self):
             return self.__class__.__bases__[0].__init__({'start': self.start, 'end': self.end})
             
-    class matrix(pl.Array):
-        def pl_schema(self):
-            return pl.Array()
+    class matrix(pl.Array, HqlType):
+        ...
         
-    class string(pl.String):
-        def pl_schema(self):
-            return pl.String()
+    class string(pl.String, HqlType):
+        ...
             
-    class enum(pl.Enum):
-        def pl_schema(self):
-            return pl.Enum()
+    class enum(pl.Enum, HqlType):
+        ...
             
-    class binary(pl.Binary):
-        def pl_schema(self):
-            return pl.Binary()
+    class binary(pl.Binary, HqlType):
+        ...
         
-    class bool(pl.Boolean):
-        def pl_schema(self):
-            return pl.Boolean()
+    class bool(pl.Boolean, HqlType):
+        ...
         
-    class object(pl.Struct):
-        def pl_schema(self):
-            return pl.Struct
+    class object(pl.Struct, HqlType):
+        ...
         
-    class null(pl.Null):
-        def pl_schema(self):
-            return pl.Null()
+    class null(pl.Null, HqlType):
+        ...
         
-    class unknown(pl.Unknown):
-        def pl_schema(self):
-            return pl.Unknown()
+    class unknown(pl.Unknown, HqlType):
+        ...
         
-    class multivalue(pl.List):
+    class multivalue(pl.List, HqlType):
         def pl_schema(self):
             if isinstance(self.inner, type(self)):
                 return pl.List(self.inner.pl_schema())

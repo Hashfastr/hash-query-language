@@ -53,5 +53,10 @@ class Project(Operator):
                 raise CompilerException(f'Unhandled project expression {i.type}')
                         
         new = [ctx.data.get_elements(static)]
+        
+        for i in dynamic:
+            new.append(i.eval(ctx))
+
+        print(new)
 
         return Data.merge(new)

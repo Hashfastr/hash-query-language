@@ -92,6 +92,8 @@ class Data():
 
         return Data(tables_list=tables)
 
+    # Ensures that the field exists in at least one table
+    # Returns the tables where it exists
     def assert_field(self, field:list[str]):
         exists = []
         for i in self.tables:
@@ -102,6 +104,25 @@ class Data():
             logging.warning(f"Invalid field {'.'.join(field)} in table {i}")
         
         return exists
+    
+    def cast_in_place(self, field:list[str], cast_type:ht.HqlType):
+        tables = self.assert_field(field)
+        if not tables:
+            return False
+
+        for i in tables:
+            i.cast_in_place(field, cast_type)
+
+        return self
+    
+    # Casts and returns the subset dataset
+    def cast_subset(self, field:list[str], cast_type:ht.HqlType):
+        tables = []
+        for i in self.tables:
+            table = self.tables[i].cast_subset(field, cast_type)
+            if table:
+                tables.append(table)
+        return tables
 
 class Table():
     def __init__(self, df:pl.DataFrame=None, init_data:list[dict]=None, schema:Schema=None, name:str=None):
@@ -158,19 +179,54 @@ class Table():
     # [['foo', 'bar'], ['client', 'ip', 'src']]
     # Returns a Table with the subset of the data
     def get_elements(self, fields:list[list[str]]):
+        fields = self.assert_fields(fields)
+
         dfs = []
         for field in fields:
             df = plt.get_element(self.df, field)
             if not df.is_empty():
                 dfs.append(df)
 
-        df = plt.merge(dfs)
+        if dfs:
+            df = plt.merge(dfs)
+        else:
+            df = pl.DataFrame()
+                
         schema = self.schema.extract_schema(fields)
 
-        return Table(df, schema=schema, name=self.name)
+        return Table(df=df, schema=schema, name=self.name)
     
+    def assert_fields(self, fields:list[list[str]]):
+        asserted_fields = []
+        for field in fields:
+            afield = self.assert_field(field)
+            if afield:
+                asserted_fields.append(afield)
+        return asserted_fields
+
     def assert_field(self, field:list[str]):
         return plt.assert_field(self.df, field)
+    
+    def cast_in_place(self, field:list[str], cast_type:ht.HqlType):
+        if not self.assert_field(field):
+            return None
+        
+        self.schema.set(field=field, htype=cast_type)
+        self.df = self.schema.cast_to_schema(self.df)
+
+        return self
+    
+    def cast_subset(self, field:list[str], cast_type:ht.HqlType):
+        if not self.assert_field(field):
+            return None
+
+        new = self.get_elements([field])
+        new.schema.set(field=field, htype=cast_type)
+        # print(new.schema.schema)
+        # print(new.df.to_dicts())
+        new.df = new.schema.cast_to_schema(new.df)
+
+        return new
 
 class Schema():
     def __init__(self, data:list[dict]=None, schema:dict=None):
@@ -183,10 +239,8 @@ class Schema():
                 self.schema = self.gen_schema(data)
             else:
                 self.schema = self.gen_schema([data])
-        elif schema:
-            self.schema = schema
         else:
-            raise Exception('Attemping to initialize Schema() with no data!')
+            self.schema = schema
         
     def merge(schemata:list):
         new = dict()
@@ -223,40 +277,30 @@ class Schema():
 
         return Schema(schema=new)
 
-    def to_pl_schema(self, src:dict=None, name:str=None):
-        if not src:
-            src = self.schema
+    # schema parameter required for recursion
+    def to_pl_schema(self, schema:dict=None):
+        if not schema:
+            schema = self.schema
 
-        schema = {}
-        for i in src:
-            if name:
-                j = src[name]
-                i = name
-            else:
-                j = src[i]
+        # Base case, create empty struct
+        if len(schema) == 0:
+            return []
+
+        plschema = {}
+        for key in schema:
+            element = schema[key]
                 
-            if isinstance(j, dict):
-                if len(j) == 0:
-                    schema[i] = pl.Struct([])
-                else:
-                    schema[i] = pl.Struct(self.to_pl_schema(src=j))
+            if isinstance(element, dict):
+                plschema[key] = pl.Struct(self.to_pl_schema(schema=element))
 
-            elif isinstance(j, ht.multivalue):
-                schema[i] = j.pl_schema()
+            elif type(element) in (ht.multivalue, ht.object):
+                plschema[key] = element.pl_schema()              
 
-            elif isinstance(j, ht.object):
-                schema[i] = j.pl_schema()
-
+            # all other HqlType types should not be instanciated yet
             else:
-                schema[i] = j().pl_schema()
-
-            if name:
-                break
-
-        if name:
-            return schema[name]
-        else:
-            return schema
+                plschema[key] = element().pl_schema()
+                
+            return plschema
 
     def gen_schema(self, data:list[dict]):
         # get a set of keys to handle
@@ -326,6 +370,25 @@ class Schema():
                 self.adjust_mv(rows, [field[1:]])
 
         return data
+    
+    def set(self, field:list[str], htype:ht, schema:dict=None):
+        if not schema:
+            schema = self.schema
+
+        base = field[0]
+        if len(field) == 1:
+            # cannot set a dict to type
+            if isinstance(schema[base], dict):
+                return False
+            
+            schema[base] = htype
+            return True
+        
+        if isinstance(schema[base], dict):
+            return self.set(field=field[1:], htype=htype, schema=schema[base])
+        
+        # nested field referenced, but not possible
+        return False
             
     def cast_to_schema(self, data:pl.DataFrame, schema:dict=None, mv_fields:list=None):
         newdf = {}
@@ -333,10 +396,13 @@ class Schema():
         schema = schema if schema else self.schema
         mv_fields = mv_fields if mv_fields else self.mv_fields
 
+        if not isinstance(schema, dict):
+            return data
+
         for col in data:
             # Base case, we don't specify anything in the target schema
             # so pass through
-            if isinstance(schema, dict) and col.name not in schema:
+            if col.name not in schema:
                 newdf[col.name] = col
                 continue
 
@@ -380,7 +446,7 @@ class Schema():
                 target = schema[col.name]().pl_schema()
 
                 if intermediate != target:
-                    newdf[col.name] = ht.cast(col, pl.List(target))
+                    newdf[col.name] = col.cast(col, ht.multivalue(schema[col.name]))
                 else:
                     newdf[col.name] = col
 
@@ -390,7 +456,8 @@ class Schema():
 
             if dtype == schema[col.name]().pl_schema():
                 newdf[col.name] = col
+                continue
 
-            newdf[col.name] = col.cast(self.to_pl_schema(src=schema, name=col.name))
+            newdf[col.name] = col.cast(self.to_pl_schema(schema=schema)[col.name])
 
         return pl.DataFrame(newdf)

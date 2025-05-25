@@ -1,0 +1,3064 @@
+{
+  "@timestamp": "datetime",
+  "@version": "string",
+  "agent": {
+    "build": {
+      "original": "string"
+    },
+    "ephemeral_id": "string",
+    "hostname": "string",
+    "id": "string",
+    "name": "string",
+    "type": "string",
+    "version": "string"
+  },
+  "client": {
+    "address": "string",
+    "as": {
+      "number": "long",
+      "organization": {
+        "name": "string"
+      }
+    },
+    "bytes": "long",
+    "domain": "string",
+    "geo": {
+      "city_name": "string",
+      "continent_code": "string",
+      "continent_name": "string",
+      "country_iso_code": "string",
+      "country_name": "string",
+      "location": {
+        "lon": "float",
+        "lat": "float"
+      },
+      "name": "string",
+      "postal_code": "string",
+      "region_iso_code": "string",
+      "region_name": "string",
+      "timezone": "string"
+    },
+    "ip": "ip",
+    "mac": "string",
+    "nat": {
+      "ip": "ip",
+      "port": "long"
+    },
+    "packets": "long",
+    "port": "long",
+    "registered_domain": "string",
+    "subdomain": "string",
+    "top_level_domain": "string",
+    "user": {
+      "domain": "string",
+      "email": "string",
+      "full_name": "string",
+      "group": {
+        "domain": "string",
+        "id": "string",
+        "name": "string"
+      },
+      "hash": "string",
+      "id": "string",
+      "name": "string",
+      "roles": "string"
+    }
+  },
+  "cloud": {
+    "account": {
+      "id": "string",
+      "name": "string"
+    },
+    "availability_zone": "string",
+    "instance": {
+      "id": "string",
+      "name": "string"
+    },
+    "machine": {
+      "type": "string"
+    },
+    "project": {
+      "id": "string",
+      "name": "string"
+    },
+    "provider": "string",
+    "region": "string",
+    "service": {
+      "name": "string"
+    }
+  },
+  "container": {
+    "id": "string",
+    "image": {
+      "name": "string",
+      "tag": "string"
+    },
+    "labels": "object({})",
+    "name": "string",
+    "runtime": "string"
+  },
+  "data_stream": {
+    "dataset": "string",
+    "namespace": "string",
+    "type": "string"
+  },
+  "destination": {
+    "address": "string",
+    "as": {
+      "number": "long",
+      "organization": {
+        "name": "string"
+      }
+    },
+    "bytes": "long",
+    "domain": "string",
+    "geo": {
+      "city_name": "string",
+      "continent_code": "string",
+      "continent_name": "string",
+      "country_iso_code": "string",
+      "country_name": "string",
+      "ip": "ip",
+      "location": {
+        "lon": "float",
+        "lat": "float"
+      },
+      "name": "string",
+      "postal_code": "string",
+      "region_iso_code": "string",
+      "region_name": "string",
+      "timezone": "string"
+    },
+    "hostname": "string",
+    "ip": "ip",
+    "mac": "string",
+    "nat": {
+      "ip": "ip",
+      "port": "long"
+    },
+    "packets": "long",
+    "port": "long",
+    "registered_domain": "string",
+    "subdomain": "string",
+    "top_level_domain": "string",
+    "user": {
+      "domain": "string",
+      "email": "string",
+      "full_name": "string",
+      "group": {
+        "domain": "string",
+        "id": "string",
+        "name": "string"
+      },
+      "hash": "string",
+      "id": "string",
+      "name": "string",
+      "roles": "string"
+    }
+  },
+  "destination_geo": {
+    "asn": "long",
+    "ip": "ip",
+    "network": "string",
+    "organization_name": "string"
+  },
+  "dll": {
+    "code_signature": {
+      "digest_algorithm": "string",
+      "exists": "bool",
+      "signing_id": "string",
+      "status": "string",
+      "subject_name": "string",
+      "team_id": "string",
+      "timestamp": "datetime",
+      "trusted": "bool",
+      "valid": "bool"
+    },
+    "hash": {
+      "md5": "string",
+      "sha1": "string",
+      "sha256": "string",
+      "sha512": "string",
+      "ssdeep": "string"
+    },
+    "name": "string",
+    "path": "string",
+    "pe": {
+      "architecture": "string",
+      "company": "string",
+      "description": "string",
+      "file_version": "string",
+      "imphash": "string",
+      "original_file_name": "string",
+      "product": "string"
+    }
+  },
+  "dns": {
+    "answers": {
+      "class": "string",
+      "data": "string",
+      "name": "string",
+      "ttl": "long",
+      "type": "string"
+    },
+    "header_flags": "string",
+    "id": "string",
+    "op_code": "string",
+    "question": {
+      "class": "string",
+      "name": "string",
+      "registered_domain": "string",
+      "subdomain": "string",
+      "top_level_domain": "string",
+      "type": "string"
+    },
+    "resolved_ip": "ip",
+    "response_code": "string",
+    "type": "string"
+  },
+  "ecs": {
+    "version": "string"
+  },
+  "error": {
+    "code": "string",
+    "debug": "string",
+    "id": "string",
+    "message": "string",
+    "reason": "string",
+    "stack_trace": "string",
+    "status": "string",
+    "status_code": "long",
+    "type": "string"
+  },
+  "event": {
+    "action": "string",
+    "agent_id_status": "string",
+    "category": "string",
+    "code": "string",
+    "created": "datetime",
+    "dataset": "string",
+    "duration": "long",
+    "end": "datetime",
+    "hash": "string",
+    "id": "string",
+    "ingested": "datetime",
+    "kind": "string",
+    "module": "string",
+    "original": "string",
+    "outcome": "string",
+    "provider": "string",
+    "reason": "string",
+    "reference": "string",
+    "risk_score": "decimal",
+    "risk_score_norm": "decimal",
+    "sequence": "long",
+    "severity": "long",
+    "start": "datetime",
+    "timezone": "string",
+    "type": "string",
+    "url": "string"
+  },
+  "file": {
+    "accessed": "datetime",
+    "attributes": "string",
+    "code_signature": {
+      "digest_algorithm": "string",
+      "exists": "bool",
+      "signing_id": "string",
+      "status": "string",
+      "subject_name": "string",
+      "team_id": "string",
+      "timestamp": "datetime",
+      "trusted": "bool",
+      "valid": "bool"
+    },
+    "created": "datetime",
+    "ctime": "datetime",
+    "device": "string",
+    "directory": "string",
+    "drive_letter": "string",
+    "elf": {
+      "architecture": "string",
+      "byte_order": "string",
+      "cpu_type": "string",
+      "creation_date": "datetime",
+      "exports": "object({})",
+      "header": {
+        "abi_version": "string",
+        "class": "string",
+        "data": "string",
+        "entrypoint": "long",
+        "object_version": "string",
+        "os_abi": "string",
+        "type": "string",
+        "version": "string"
+      },
+      "imports": "object({})",
+      "sections": {
+        "chi2": "long",
+        "entropy": "long",
+        "flags": "string",
+        "name": "string",
+        "physical_offset": "string",
+        "physical_size": "long",
+        "type": "string",
+        "virtual_address": "long",
+        "virtual_size": "long"
+      },
+      "segments": {
+        "sections": "string",
+        "type": "string"
+      },
+      "shared_libraries": "string",
+      "telfhash": "string"
+    },
+    "extension": "string",
+    "fork_name": "string",
+    "gid": "string",
+    "group": "string",
+    "hash": {
+      "md5": "string",
+      "sha1": "string",
+      "sha256": "string",
+      "sha512": "string",
+      "ssdeep": "string"
+    },
+    "inode": "string",
+    "mime_type": "string",
+    "mode": "string",
+    "mtime": "datetime",
+    "name": "string",
+    "owner": "string",
+    "path": "string",
+    "pe": {
+      "architecture": "string",
+      "company": "string",
+      "description": "string",
+      "file_version": "string",
+      "imphash": "string",
+      "original_file_name": "string",
+      "product": "string"
+    },
+    "size": "long",
+    "target": "string",
+    "target_path": "string",
+    "type": "string",
+    "uid": "string",
+    "x509": {
+      "alternative_names": "string",
+      "issuer": {
+        "common_name": "string",
+        "country": "string",
+        "distinguished_name": "string",
+        "locality": "string",
+        "organization": "string",
+        "organizational_unit": "string",
+        "state_or_province": "string"
+      },
+      "not_after": "datetime",
+      "not_before": "datetime",
+      "public_key_algorithm": "string",
+      "public_key_curve": "string",
+      "public_key_exponent": "long",
+      "public_key_size": "long",
+      "serial_number": "string",
+      "signature_algorithm": "string",
+      "subject": {
+        "common_name": "string",
+        "country": "string",
+        "distinguished_name": "string",
+        "locality": "string",
+        "organization": "string",
+        "organizational_unit": "string",
+        "state_or_province": "string"
+      },
+      "version_number": "string"
+    }
+  },
+  "flow_method": "string",
+  "group": {
+    "domain": "string",
+    "id": "string",
+    "name": "string"
+  },
+  "host": {
+    "architecture": "string",
+    "cpu": {
+      "usage": "decimal"
+    },
+    "disk": {
+      "read": {
+        "bytes": "long"
+      },
+      "write": {
+        "bytes": "long"
+      }
+    },
+    "domain": "string",
+    "geo": {
+      "city_name": "string",
+      "continent_code": "string",
+      "continent_name": "string",
+      "country_iso_code": "string",
+      "country_name": "string",
+      "location": {
+        "lon": "float",
+        "lat": "float"
+      },
+      "name": "string",
+      "postal_code": "string",
+      "region_iso_code": "string",
+      "region_name": "string",
+      "timezone": "string"
+    },
+    "hostname": "string",
+    "id": "string",
+    "ip": "ip",
+    "mac": "string",
+    "name": "string",
+    "network": {
+      "egress": {
+        "bytes": "long",
+        "packets": "long"
+      },
+      "ingress": {
+        "bytes": "long",
+        "packets": "long"
+      }
+    },
+    "os": {
+      "build": "string",
+      "family": "string",
+      "full": "string",
+      "kernel": "string",
+      "name": "string",
+      "platform": "string",
+      "type": "string",
+      "version": "string"
+    },
+    "type": "string",
+    "uptime": "long",
+    "user": {
+      "domain": "string",
+      "email": "string",
+      "full_name": "string",
+      "group": {
+        "domain": "string",
+        "id": "string",
+        "name": "string"
+      },
+      "hash": "string",
+      "id": "string",
+      "name": "string",
+      "roles": "string"
+    }
+  },
+  "http": {
+    "request": {
+      "body": {
+        "bytes": "long",
+        "content": "string"
+      },
+      "bytes": "long",
+      "id": "string",
+      "method": "string",
+      "mime_type": "string",
+      "referrer": "string"
+    },
+    "response": {
+      "body": {
+        "bytes": "long",
+        "content": "string"
+      },
+      "bytes": "long",
+      "mime_type": "string",
+      "status_code": "long"
+    },
+    "version": "string"
+  },
+  "http_request": {
+    "headers": {
+      "accept": "string",
+      "accept-encoding": "string",
+      "accept-language": "string",
+      "cache-control": "string",
+      "connection": "string",
+      "content-length": "string",
+      "content-type": "string",
+      "cookie": "string",
+      "kbn-system-request": "string",
+      "kbn-version": "string",
+      "origin": "string",
+      "pragma": "string",
+      "referer": "string",
+      "sec-ch-ua": "string",
+      "sec-ch-ua-mobile": "string",
+      "sec-ch-ua-platform": "string",
+      "sec-fetch-dest": "string",
+      "sec-fetch-mode": "string",
+      "sec-fetch-site": "string",
+      "sec-fetch-user": "string",
+      "sec-websocket-extensions": "string",
+      "sec-websocket-key": "string",
+      "sec-websocket-version": "string",
+      "upgrade-insecure-requests": "string",
+      "user-agent": "string",
+      "x-forwarded-for": "string",
+      "x-forwarded-proto": "string",
+      "x-real-ip": "string"
+    },
+    "host": "string",
+    "method": "string",
+    "path": "string",
+    "query": "string",
+    "remote": "string",
+    "scheme": "string"
+  },
+  "http_response": {
+    "headers": {
+      "cache-control": "string",
+      "content-type": "string",
+      "link": "string",
+      "location": "string",
+      "set-cookie": "string",
+      "vary": "string",
+      "x-content-type-options": "string",
+      "x-kratos-authenticated-identity-id": "string",
+      "x-total-count": "string"
+    },
+    "size": "long",
+    "status": "long",
+    "status_code": "long",
+    "text_status": "string",
+    "took": "long"
+  },
+  "identity_id": "string",
+  "input": {
+    "type": "string"
+  },
+  "labels": "object({})",
+  "level": "string",
+  "log": {
+    "file": {
+      "path": "string"
+    },
+    "level": "string",
+    "logger": "string",
+    "offset": "long",
+    "origin": {
+      "file": {
+        "line": "int",
+        "name": "string"
+      },
+      "function": "string"
+    },
+    "original": "string",
+    "syslog": {
+      "facility": {
+        "code": "long",
+        "name": "string"
+      },
+      "priority": "long",
+      "severity": {
+        "code": "long",
+        "name": "string"
+      }
+    }
+  },
+  "login_flow": {
+    "created_at": "string",
+    "expires_at": "string",
+    "id": "string",
+    "issued_at": "string",
+    "refresh": "bool",
+    "request_url": "string",
+    "requested_aal": "string",
+    "type": "string",
+    "ui": {
+      "action": "string",
+      "method": "string",
+      "nodes": {
+        "attributes": {
+          "disabled": "bool",
+          "name": "string",
+          "node_type": "string",
+          "required": "bool",
+          "type": "string",
+          "value": "string"
+        },
+        "group": "string",
+        "meta": {
+          "label": {
+            "context": "object({})",
+            "id": "long",
+            "text": "string",
+            "type": "string"
+          }
+        },
+        "type": "string"
+      }
+    },
+    "updated_at": "string"
+  },
+  "message": "string",
+  "metadata": {
+    "beat": "string",
+    "ip_address": "string",
+    "type": "string",
+    "version": "string"
+  },
+  "msg": "string",
+  "network": {
+    "application": "string",
+    "bytes": "long",
+    "community_id": "string",
+    "direction": "string",
+    "forwarded_ip": "ip",
+    "iana_number": "string",
+    "inner": {
+      "vlan": {
+        "id": "string",
+        "name": "string"
+      }
+    },
+    "name": "string",
+    "packets": "long",
+    "protocol": "string",
+    "transport": "string",
+    "type": "string",
+    "vlan": {
+      "id": "string",
+      "name": "string"
+    }
+  },
+  "observer": {
+    "egress": {
+      "interface": {
+        "alias": "string",
+        "id": "string",
+        "name": "string"
+      },
+      "vlan": {
+        "id": "string",
+        "name": "string"
+      },
+      "zone": "string"
+    },
+    "geo": {
+      "city_name": "string",
+      "continent_code": "string",
+      "continent_name": "string",
+      "country_iso_code": "string",
+      "country_name": "string",
+      "location": {
+        "lon": "float",
+        "lat": "float"
+      },
+      "name": "string",
+      "postal_code": "string",
+      "region_iso_code": "string",
+      "region_name": "string",
+      "timezone": "string"
+    },
+    "hostname": "string",
+    "ingress": {
+      "interface": {
+        "alias": "string",
+        "id": "string",
+        "name": "string"
+      },
+      "vlan": {
+        "id": "string",
+        "name": "string"
+      },
+      "zone": "string"
+    },
+    "ip": "ip",
+    "mac": "string",
+    "name": "string",
+    "os": {
+      "family": "string",
+      "full": "string",
+      "kernel": "string",
+      "name": "string",
+      "platform": "string",
+      "type": "string",
+      "version": "string"
+    },
+    "product": "string",
+    "serial_number": "string",
+    "type": "string",
+    "vendor": "string",
+    "version": "string"
+  },
+  "orchestrator": {
+    "api_version": "string",
+    "cluster": {
+      "name": "string",
+      "url": "string",
+      "version": "string"
+    },
+    "namespace": "string",
+    "organization": "string",
+    "resource": {
+      "name": "string",
+      "type": "string"
+    },
+    "type": "string"
+  },
+  "organization": {
+    "id": "string",
+    "name": "string"
+  },
+  "package": {
+    "architecture": "string",
+    "build_version": "string",
+    "checksum": "string",
+    "description": "string",
+    "install_scope": "string",
+    "installed": "datetime",
+    "license": "string",
+    "name": "string",
+    "path": "string",
+    "reference": "string",
+    "size": "long",
+    "type": "string",
+    "version": "string"
+  },
+  "process": {
+    "args": "string",
+    "args_count": "long",
+    "code_signature": {
+      "digest_algorithm": "string",
+      "exists": "bool",
+      "signing_id": "string",
+      "status": "string",
+      "subject_name": "string",
+      "team_id": "string",
+      "timestamp": "datetime",
+      "trusted": "bool",
+      "valid": "bool"
+    },
+    "command_line": "string",
+    "elf": {
+      "architecture": "string",
+      "byte_order": "string",
+      "cpu_type": "string",
+      "creation_date": "datetime",
+      "exports": "object({})",
+      "header": {
+        "abi_version": "string",
+        "class": "string",
+        "data": "string",
+        "entrypoint": "long",
+        "object_version": "string",
+        "os_abi": "string",
+        "type": "string",
+        "version": "string"
+      },
+      "imports": "object({})",
+      "sections": {
+        "chi2": "long",
+        "entropy": "long",
+        "flags": "string",
+        "name": "string",
+        "physical_offset": "string",
+        "physical_size": "long",
+        "type": "string",
+        "virtual_address": "long",
+        "virtual_size": "long"
+      },
+      "segments": {
+        "sections": "string",
+        "type": "string"
+      },
+      "shared_libraries": "string",
+      "telfhash": "string"
+    },
+    "end": "datetime",
+    "entity_id": "string",
+    "executable": "string",
+    "exit_code": "long",
+    "hash": {
+      "md5": "string",
+      "sha1": "string",
+      "sha256": "string",
+      "sha512": "string",
+      "ssdeep": "string"
+    },
+    "name": "string",
+    "parent": {
+      "args": "string",
+      "args_count": "long",
+      "code_signature": {
+        "digest_algorithm": "string",
+        "exists": "bool",
+        "signing_id": "string",
+        "status": "string",
+        "subject_name": "string",
+        "team_id": "string",
+        "timestamp": "datetime",
+        "trusted": "bool",
+        "valid": "bool"
+      },
+      "command_line": "string",
+      "elf": {
+        "architecture": "string",
+        "byte_order": "string",
+        "cpu_type": "string",
+        "creation_date": "datetime",
+        "exports": "object({})",
+        "header": {
+          "abi_version": "string",
+          "class": "string",
+          "data": "string",
+          "entrypoint": "long",
+          "object_version": "string",
+          "os_abi": "string",
+          "type": "string",
+          "version": "string"
+        },
+        "imports": "object({})",
+        "sections": {
+          "chi2": "long",
+          "entropy": "long",
+          "flags": "string",
+          "name": "string",
+          "physical_offset": "string",
+          "physical_size": "long",
+          "type": "string",
+          "virtual_address": "long",
+          "virtual_size": "long"
+        },
+        "segments": {
+          "sections": "string",
+          "type": "string"
+        },
+        "shared_libraries": "string",
+        "telfhash": "string"
+      },
+      "end": "datetime",
+      "entity_id": "string",
+      "executable": "string",
+      "exit_code": "long",
+      "hash": {
+        "md5": "string",
+        "sha1": "string",
+        "sha256": "string",
+        "sha512": "string",
+        "ssdeep": "string"
+      },
+      "name": "string",
+      "pe": {
+        "architecture": "string",
+        "company": "string",
+        "description": "string",
+        "file_version": "string",
+        "imphash": "string",
+        "original_file_name": "string",
+        "product": "string"
+      },
+      "pgid": "long",
+      "pid": "long",
+      "ppid": "long",
+      "start": "datetime",
+      "thread": {
+        "id": "long",
+        "name": "string"
+      },
+      "title": "string",
+      "uptime": "long",
+      "working_directory": "string"
+    },
+    "pe": {
+      "architecture": "string",
+      "company": "string",
+      "description": "string",
+      "file_version": "string",
+      "imphash": "string",
+      "original_file_name": "string",
+      "product": "string"
+    },
+    "pgid": "long",
+    "pid": "long",
+    "ppid": "long",
+    "start": "datetime",
+    "thread": {
+      "id": "long",
+      "name": "string"
+    },
+    "title": "string",
+    "uptime": "long",
+    "working_directory": "string"
+  },
+  "registry": {
+    "data": {
+      "bytes": "string",
+      "strings": "string",
+      "type": "string"
+    },
+    "hive": "string",
+    "key": "string",
+    "path": "string",
+    "value": "string"
+  },
+  "related": {
+    "hash": "string",
+    "hosts": "string",
+    "ip": "ip",
+    "user": "string"
+  },
+  "rule": {
+    "author": "string",
+    "category": "string",
+    "description": "string",
+    "id": "string",
+    "license": "string",
+    "name": "string",
+    "reference": "string",
+    "ruleset": "string",
+    "uuid": "string",
+    "version": "string"
+  },
+  "server": {
+    "address": "string",
+    "as": {
+      "number": "long",
+      "organization": {
+        "name": "string"
+      }
+    },
+    "bytes": "long",
+    "domain": "string",
+    "geo": {
+      "city_name": "string",
+      "continent_code": "string",
+      "continent_name": "string",
+      "country_iso_code": "string",
+      "country_name": "string",
+      "location": {
+        "lon": "float",
+        "lat": "float"
+      },
+      "name": "string",
+      "postal_code": "string",
+      "region_iso_code": "string",
+      "region_name": "string",
+      "timezone": "string"
+    },
+    "ip": "ip",
+    "mac": "string",
+    "nat": {
+      "ip": "ip",
+      "port": "long"
+    },
+    "packets": "long",
+    "port": "long",
+    "registered_domain": "string",
+    "subdomain": "string",
+    "top_level_domain": "string",
+    "user": {
+      "domain": "string",
+      "email": "string",
+      "full_name": "string",
+      "group": {
+        "domain": "string",
+        "id": "string",
+        "name": "string"
+      },
+      "hash": "string",
+      "id": "string",
+      "name": "string",
+      "roles": "string"
+    }
+  },
+  "service": {
+    "address": "string",
+    "environment": "string",
+    "ephemeral_id": "string",
+    "id": "string",
+    "name": "string",
+    "node": {
+      "name": "string"
+    },
+    "state": "string",
+    "type": "string",
+    "version": "string"
+  },
+  "service_name": "string",
+  "service_version": "string",
+  "session_id": "string",
+  "source": {
+    "address": "string",
+    "as": {
+      "number": "long",
+      "organization": {
+        "name": "string"
+      }
+    },
+    "bytes": "long",
+    "domain": "string",
+    "geo": {
+      "city_name": "string",
+      "continent_code": "string",
+      "continent_name": "string",
+      "country_iso_code": "string",
+      "country_name": "string",
+      "location": {
+        "lon": "float",
+        "lat": "float"
+      },
+      "name": "string",
+      "postal_code": "string",
+      "region_iso_code": "string",
+      "region_name": "string",
+      "timezone": "string"
+    },
+    "hostname": "string",
+    "ip": "ip",
+    "mac": "string",
+    "nat": {
+      "ip": "ip",
+      "port": "long"
+    },
+    "packets": "long",
+    "port": "long",
+    "registered_domain": "string",
+    "subdomain": "string",
+    "top_level_domain": "string",
+    "user": {
+      "domain": "string",
+      "email": "string",
+      "full_name": "string",
+      "group": {
+        "domain": "string",
+        "id": "string",
+        "name": "string"
+      },
+      "hash": "string",
+      "id": "string",
+      "name": "string",
+      "roles": "string"
+    }
+  },
+  "span": {
+    "id": "string"
+  },
+  "tags": "string",
+  "threat": {
+    "enrichments": {
+      "indicator": {
+        "as": {
+          "number": "long",
+          "organization": {
+            "name": "string"
+          }
+        },
+        "confidence": "string",
+        "description": "string",
+        "email": {
+          "address": "string"
+        },
+        "file": {
+          "accessed": "datetime",
+          "attributes": "string",
+          "code_signature": {
+            "digest_algorithm": "string",
+            "exists": "bool",
+            "signing_id": "string",
+            "status": "string",
+            "subject_name": "string",
+            "team_id": "string",
+            "timestamp": "datetime",
+            "trusted": "bool",
+            "valid": "bool"
+          },
+          "created": "datetime",
+          "ctime": "datetime",
+          "device": "string",
+          "directory": "string",
+          "drive_letter": "string",
+          "elf": {
+            "architecture": "string",
+            "byte_order": "string",
+            "cpu_type": "string",
+            "creation_date": "datetime",
+            "exports": "object({})",
+            "header": {
+              "abi_version": "string",
+              "class": "string",
+              "data": "string",
+              "entrypoint": "long",
+              "object_version": "string",
+              "os_abi": "string",
+              "type": "string",
+              "version": "string"
+            },
+            "imports": "object({})",
+            "sections": {
+              "chi2": "long",
+              "entropy": "long",
+              "flags": "string",
+              "name": "string",
+              "physical_offset": "string",
+              "physical_size": "long",
+              "type": "string",
+              "virtual_address": "long",
+              "virtual_size": "long"
+            },
+            "segments": {
+              "sections": "string",
+              "type": "string"
+            },
+            "shared_libraries": "string",
+            "telfhash": "string"
+          },
+          "extension": "string",
+          "fork_name": "string",
+          "gid": "string",
+          "group": "string",
+          "hash": {
+            "md5": "string",
+            "sha1": "string",
+            "sha256": "string",
+            "sha512": "string",
+            "ssdeep": "string"
+          },
+          "inode": "string",
+          "mime_type": "string",
+          "mode": "string",
+          "mtime": "datetime",
+          "name": "string",
+          "owner": "string",
+          "path": "string",
+          "pe": {
+            "architecture": "string",
+            "company": "string",
+            "description": "string",
+            "file_version": "string",
+            "imphash": "string",
+            "original_file_name": "string",
+            "product": "string"
+          },
+          "size": "long",
+          "target_path": "string",
+          "type": "string",
+          "uid": "string",
+          "x509": {
+            "alternative_names": "string",
+            "issuer": {
+              "common_name": "string",
+              "country": "string",
+              "distinguished_name": "string",
+              "locality": "string",
+              "organization": "string",
+              "organizational_unit": "string",
+              "state_or_province": "string"
+            },
+            "not_after": "datetime",
+            "not_before": "datetime",
+            "public_key_algorithm": "string",
+            "public_key_curve": "string",
+            "public_key_exponent": "long",
+            "public_key_size": "long",
+            "serial_number": "string",
+            "signature_algorithm": "string",
+            "subject": {
+              "common_name": "string",
+              "country": "string",
+              "distinguished_name": "string",
+              "locality": "string",
+              "organization": "string",
+              "organizational_unit": "string",
+              "state_or_province": "string"
+            },
+            "version_number": "string"
+          }
+        },
+        "first_seen": "datetime",
+        "geo": {
+          "city_name": "string",
+          "continent_code": "string",
+          "continent_name": "string",
+          "country_iso_code": "string",
+          "country_name": "string",
+          "location": {
+            "lon": "float",
+            "lat": "float"
+          },
+          "name": "string",
+          "postal_code": "string",
+          "region_iso_code": "string",
+          "region_name": "string",
+          "timezone": "string"
+        },
+        "ip": "ip",
+        "last_seen": "datetime",
+        "marking": {
+          "tlp": "string"
+        },
+        "modified_at": "datetime",
+        "port": "long",
+        "provider": "string",
+        "reference": "string",
+        "registry": {
+          "data": {
+            "bytes": "string",
+            "strings": "string",
+            "type": "string"
+          },
+          "hive": "string",
+          "key": "string",
+          "path": "string",
+          "value": "string"
+        },
+        "scanner_stats": "long",
+        "sightings": "long",
+        "type": "string",
+        "url": {
+          "domain": "string",
+          "extension": "string",
+          "fragment": "string",
+          "full": "string",
+          "original": "string",
+          "password": "string",
+          "path": "string",
+          "port": "long",
+          "query": "string",
+          "registered_domain": "string",
+          "scheme": "string",
+          "subdomain": "string",
+          "top_level_domain": "string",
+          "username": "string"
+        },
+        "x509": {
+          "alternative_names": "string",
+          "issuer": {
+            "common_name": "string",
+            "country": "string",
+            "distinguished_name": "string",
+            "locality": "string",
+            "organization": "string",
+            "organizational_unit": "string",
+            "state_or_province": "string"
+          },
+          "not_after": "datetime",
+          "not_before": "datetime",
+          "public_key_algorithm": "string",
+          "public_key_curve": "string",
+          "public_key_exponent": "long",
+          "public_key_size": "long",
+          "serial_number": "string",
+          "signature_algorithm": "string",
+          "subject": {
+            "common_name": "string",
+            "country": "string",
+            "distinguished_name": "string",
+            "locality": "string",
+            "organization": "string",
+            "organizational_unit": "string",
+            "state_or_province": "string"
+          },
+          "version_number": "string"
+        }
+      },
+      "matched": {
+        "atomic": "string",
+        "field": "string",
+        "id": "string",
+        "index": "string",
+        "type": "string"
+      }
+    },
+    "framework": "string",
+    "group": {
+      "alias": "string",
+      "id": "string",
+      "name": "string",
+      "reference": "string"
+    },
+    "indicator": {
+      "as": {
+        "number": "long",
+        "organization": {
+          "name": "string"
+        }
+      },
+      "confidence": "string",
+      "description": "string",
+      "email": {
+        "address": "string"
+      },
+      "file": {
+        "accessed": "datetime",
+        "attributes": "string",
+        "code_signature": {
+          "digest_algorithm": "string",
+          "exists": "bool",
+          "signing_id": "string",
+          "status": "string",
+          "subject_name": "string",
+          "team_id": "string",
+          "timestamp": "datetime",
+          "trusted": "bool",
+          "valid": "bool"
+        },
+        "created": "datetime",
+        "ctime": "datetime",
+        "device": "string",
+        "directory": "string",
+        "drive_letter": "string",
+        "elf": {
+          "architecture": "string",
+          "byte_order": "string",
+          "cpu_type": "string",
+          "creation_date": "datetime",
+          "exports": "object({})",
+          "header": {
+            "abi_version": "string",
+            "class": "string",
+            "data": "string",
+            "entrypoint": "long",
+            "object_version": "string",
+            "os_abi": "string",
+            "type": "string",
+            "version": "string"
+          },
+          "imports": "object({})",
+          "sections": {
+            "chi2": "long",
+            "entropy": "long",
+            "flags": "string",
+            "name": "string",
+            "physical_offset": "string",
+            "physical_size": "long",
+            "type": "string",
+            "virtual_address": "long",
+            "virtual_size": "long"
+          },
+          "segments": {
+            "sections": "string",
+            "type": "string"
+          },
+          "shared_libraries": "string",
+          "telfhash": "string"
+        },
+        "extension": "string",
+        "fork_name": "string",
+        "gid": "string",
+        "group": "string",
+        "hash": {
+          "md5": "string",
+          "sha1": "string",
+          "sha256": "string",
+          "sha512": "string",
+          "ssdeep": "string"
+        },
+        "inode": "string",
+        "mime_type": "string",
+        "mode": "string",
+        "mtime": "datetime",
+        "name": "string",
+        "owner": "string",
+        "path": "string",
+        "pe": {
+          "architecture": "string",
+          "company": "string",
+          "description": "string",
+          "file_version": "string",
+          "imphash": "string",
+          "original_file_name": "string",
+          "product": "string"
+        },
+        "size": "long",
+        "target_path": "string",
+        "type": "string",
+        "uid": "string",
+        "x509": {
+          "alternative_names": "string",
+          "issuer": {
+            "common_name": "string",
+            "country": "string",
+            "distinguished_name": "string",
+            "locality": "string",
+            "organization": "string",
+            "organizational_unit": "string",
+            "state_or_province": "string"
+          },
+          "not_after": "datetime",
+          "not_before": "datetime",
+          "public_key_algorithm": "string",
+          "public_key_curve": "string",
+          "public_key_exponent": "long",
+          "public_key_size": "long",
+          "serial_number": "string",
+          "signature_algorithm": "string",
+          "subject": {
+            "common_name": "string",
+            "country": "string",
+            "distinguished_name": "string",
+            "locality": "string",
+            "organization": "string",
+            "organizational_unit": "string",
+            "state_or_province": "string"
+          },
+          "version_number": "string"
+        }
+      },
+      "first_seen": "datetime",
+      "geo": {
+        "city_name": "string",
+        "continent_code": "string",
+        "continent_name": "string",
+        "country_iso_code": "string",
+        "country_name": "string",
+        "location": {
+          "lon": "float",
+          "lat": "float"
+        },
+        "name": "string",
+        "postal_code": "string",
+        "region_iso_code": "string",
+        "region_name": "string",
+        "timezone": "string"
+      },
+      "ip": "ip",
+      "last_seen": "datetime",
+      "marking": {
+        "tlp": "string"
+      },
+      "modified_at": "datetime",
+      "port": "long",
+      "provider": "string",
+      "reference": "string",
+      "registry": {
+        "data": {
+          "bytes": "string",
+          "strings": "string",
+          "type": "string"
+        },
+        "hive": "string",
+        "key": "string",
+        "path": "string",
+        "value": "string"
+      },
+      "scanner_stats": "long",
+      "sightings": "long",
+      "type": "string",
+      "url": {
+        "domain": "string",
+        "extension": "string",
+        "fragment": "string",
+        "full": "string",
+        "original": "string",
+        "password": "string",
+        "path": "string",
+        "port": "long",
+        "query": "string",
+        "registered_domain": "string",
+        "scheme": "string",
+        "subdomain": "string",
+        "top_level_domain": "string",
+        "username": "string"
+      },
+      "x509": {
+        "alternative_names": "string",
+        "issuer": {
+          "common_name": "string",
+          "country": "string",
+          "distinguished_name": "string",
+          "locality": "string",
+          "organization": "string",
+          "organizational_unit": "string",
+          "state_or_province": "string"
+        },
+        "not_after": "datetime",
+        "not_before": "datetime",
+        "public_key_algorithm": "string",
+        "public_key_curve": "string",
+        "public_key_exponent": "long",
+        "public_key_size": "long",
+        "serial_number": "string",
+        "signature_algorithm": "string",
+        "subject": {
+          "common_name": "string",
+          "country": "string",
+          "distinguished_name": "string",
+          "locality": "string",
+          "organization": "string",
+          "organizational_unit": "string",
+          "state_or_province": "string"
+        },
+        "version_number": "string"
+      }
+    },
+    "software": {
+      "alias": "string",
+      "id": "string",
+      "name": "string",
+      "platforms": "string",
+      "reference": "string",
+      "type": "string"
+    },
+    "tactic": {
+      "id": "string",
+      "name": "string",
+      "reference": "string"
+    },
+    "technique": {
+      "id": "string",
+      "name": "string",
+      "reference": "string",
+      "subtechnique": {
+        "id": "string",
+        "name": "string",
+        "reference": "string"
+      }
+    }
+  },
+  "time": "string",
+  "tls": {
+    "cipher": "string",
+    "client": {
+      "certificate": "string",
+      "certificate_chain": "string",
+      "hash": {
+        "md5": "string",
+        "sha1": "string",
+        "sha256": "string"
+      },
+      "issuer": "string",
+      "ja3": "string",
+      "not_after": "datetime",
+      "not_before": "datetime",
+      "server_name": "string",
+      "subject": "string",
+      "supported_ciphers": "string",
+      "x509": {
+        "alternative_names": "string",
+        "issuer": {
+          "common_name": "string",
+          "country": "string",
+          "distinguished_name": "string",
+          "locality": "string",
+          "organization": "string",
+          "organizational_unit": "string",
+          "state_or_province": "string"
+        },
+        "not_after": "datetime",
+        "not_before": "datetime",
+        "public_key_algorithm": "string",
+        "public_key_curve": "string",
+        "public_key_exponent": "long",
+        "public_key_size": "long",
+        "serial_number": "string",
+        "signature_algorithm": "string",
+        "subject": {
+          "common_name": "string",
+          "country": "string",
+          "distinguished_name": "string",
+          "locality": "string",
+          "organization": "string",
+          "organizational_unit": "string",
+          "state_or_province": "string"
+        },
+        "version_number": "string"
+      }
+    },
+    "curve": "string",
+    "established": "bool",
+    "next_protocol": "string",
+    "resumed": "bool",
+    "server": {
+      "certificate": "string",
+      "certificate_chain": "string",
+      "hash": {
+        "md5": "string",
+        "sha1": "string",
+        "sha256": "string"
+      },
+      "issuer": "string",
+      "ja3s": "string",
+      "not_after": "datetime",
+      "not_before": "datetime",
+      "subject": "string",
+      "x509": {
+        "alternative_names": "string",
+        "issuer": {
+          "common_name": "string",
+          "country": "string",
+          "distinguished_name": "string",
+          "locality": "string",
+          "organization": "string",
+          "organizational_unit": "string",
+          "state_or_province": "string"
+        },
+        "not_after": "datetime",
+        "not_before": "datetime",
+        "public_key_algorithm": "string",
+        "public_key_curve": "string",
+        "public_key_exponent": "long",
+        "public_key_size": "long",
+        "serial_number": "string",
+        "signature_algorithm": "string",
+        "subject": {
+          "common_name": "string",
+          "country": "string",
+          "distinguished_name": "string",
+          "locality": "string",
+          "organization": "string",
+          "organizational_unit": "string",
+          "state_or_province": "string"
+        },
+        "version_number": "string"
+      }
+    },
+    "version": "string",
+    "version_protocol": "string"
+  },
+  "trace": {
+    "id": "string"
+  },
+  "transaction": {
+    "id": "string"
+  },
+  "url": {
+    "domain": "string",
+    "extension": "string",
+    "fragment": "string",
+    "full": "string",
+    "original": "string",
+    "password": "string",
+    "path": "string",
+    "port": "long",
+    "query": "string",
+    "registered_domain": "string",
+    "scheme": "string",
+    "subdomain": "string",
+    "top_level_domain": "string",
+    "username": "string"
+  },
+  "user": {
+    "name": "string"
+  },
+  "user_agent": {
+    "device": {
+      "name": "string"
+    },
+    "name": "string",
+    "original": "string",
+    "os": {
+      "family": "string",
+      "full": "string",
+      "kernel": "string",
+      "name": "string",
+      "platform": "string",
+      "type": "string",
+      "version": "string"
+    },
+    "version": "string"
+  },
+  "vulnerability": {
+    "category": "string",
+    "classification": "string",
+    "description": "string",
+    "enumeration": "string",
+    "id": "string",
+    "reference": "string",
+    "report_id": "string",
+    "scanner": {
+      "vendor": "string"
+    },
+    "score": {
+      "base": "decimal",
+      "environmental": "decimal",
+      "temporal": "decimal",
+      "version": "string"
+    },
+    "severity": "string"
+  },
+  "winlog": {
+    "activity_id": "string",
+    "api": "string",
+    "channel": "string",
+    "computer_name": "string",
+    "error": "object({})",
+    "event_data": {
+      "AccessList": "string",
+      "AccessMask": "string",
+      "AccessReason": "string",
+      "AdapterName": "string",
+      "AdapterSuffixName": "string",
+      "AdditionalInfo": "string",
+      "AdditionalInfo2": "string",
+      "Address": "string",
+      "AddressLength": "string",
+      "AlgorithmName": "string",
+      "Application": "string",
+      "Archived": "string",
+      "AuthenticationPackageName": "string",
+      "Binary": "string",
+      "BitlockerUserInputTime": "string",
+      "BootMode": "string",
+      "BootType": "string",
+      "BuildVersion": "string",
+      "CallTrace": "string",
+      "CallerProcessId": "string",
+      "CallerProcessName": "string",
+      "ClientCreationTime": "string",
+      "ClientProcessId": "string",
+      "ClientProcessStartKey": "string",
+      "Company": "string",
+      "Contents": "string",
+      "CorruptionActionState": "string",
+      "CountOfCredentialsReturned": "string",
+      "CreationUtcTime": "string",
+      "DCName": "string",
+      "Description": "string",
+      "DestAddress": "string",
+      "DestPort": "string",
+      "DestinationIsIpv6": "string",
+      "DestinationPortName": "string",
+      "Detail": "string",
+      "Details": "string",
+      "Device": "string",
+      "DeviceName": "string",
+      "DeviceNameLength": "string",
+      "DeviceTime": "string",
+      "DeviceVersionMajor": "string",
+      "DeviceVersionMinor": "string",
+      "Direction": "string",
+      "DirtyPages": "string",
+      "DisabledPrivilegeList": "string",
+      "DnsServerList": "string",
+      "DriveName": "string",
+      "DriverName": "string",
+      "DriverNameLength": "string",
+      "DwordVal": "string",
+      "ElevatedToken": "string",
+      "EnabledPrivilegeList": "string",
+      "EntryCount": "string",
+      "ErrorCode": "string",
+      "EventCountTotal": "string",
+      "EventIdx": "string",
+      "EventType": "string",
+      "ExtraInfo": "string",
+      "FQDN": "string",
+      "FailureName": "string",
+      "FailureNameLength": "string",
+      "FailureReason": "string",
+      "FileVersion": "string",
+      "FilterRTID": "string",
+      "FinalStatus": "string",
+      "Flags": "string",
+      "GPOList": "string",
+      "GrantedAccess": "string",
+      "Group": "string",
+      "GroupMembership": "string",
+      "HandleId": "string",
+      "Hash": "string",
+      "Hashes": "string",
+      "HiveName": "string",
+      "HiveNameLength": "string",
+      "HostName": "string",
+      "Identity": "string",
+      "IdleImplementation": "string",
+      "IdleStateCount": "string",
+      "ImageLoaded": "string",
+      "ImagePath": "string",
+      "ImpersonationLevel": "string",
+      "Initiated": "string",
+      "InstanceId": "string",
+      "IntegrityLevel": "string",
+      "IpAddress": "string",
+      "IpPort": "string",
+      "Ipaddress": "string",
+      "IsExecutable": "string",
+      "KeyFilePath": "string",
+      "KeyLength": "string",
+      "KeyName": "string",
+      "KeyType": "string",
+      "KeysUpdated": "string",
+      "LastBootGood": "string",
+      "LastShutdownGood": "string",
+      "LayerName": "string",
+      "LayerRTID": "string",
+      "LmPackageName": "string",
+      "LogonGuid": "string",
+      "LogonId": "string",
+      "LogonProcessName": "string",
+      "LogonType": "string",
+      "MajorVersion": "string",
+      "MandatoryLabel": "string",
+      "MaxRunspaces": "string",
+      "MaximumPerformancePercent": "string",
+      "MemberName": "string",
+      "MemberSid": "string",
+      "MinRunspaces": "string",
+      "MinimumPerformancePercent": "string",
+      "MinimumThrottlePercent": "string",
+      "MinorVersion": "string",
+      "NewProcessId": "string",
+      "NewProcessName": "string",
+      "NewSchemeGuid": "string",
+      "NewSd": "string",
+      "NewSize": "string",
+      "NewState": "string",
+      "NewTime": "string",
+      "NewValue": "string",
+      "NewValueType": "string",
+      "NominalFrequency": "string",
+      "Number": "string",
+      "ObjectName": "string",
+      "ObjectServer": "string",
+      "ObjectType": "string",
+      "ObjectValueName": "string",
+      "OldSchemeGuid": "string",
+      "OldSd": "string",
+      "OldTime": "string",
+      "OldValue": "string",
+      "OldValueType": "string",
+      "Operation": "string",
+      "OperationType": "string",
+      "OriginalFileName": "string",
+      "OriginalSize": "string",
+      "PackageName": "string",
+      "ParentProcessId": "string",
+      "ParentProcessName": "string",
+      "ParentUser": "string",
+      "Path": "string",
+      "PerformanceImplementation": "string",
+      "PipeName": "string",
+      "PreAuthType": "string",
+      "PreviousCreationUtcTime": "string",
+      "PreviousTime": "string",
+      "PrivilegeList": "string",
+      "ProcessCreationTime": "string",
+      "ProcessId": "string",
+      "ProcessName": "string",
+      "ProcessPath": "string",
+      "ProcessPid": "string",
+      "ProcessingMode": "string",
+      "ProcessingTimeInMilliseconds": "string",
+      "Product": "string",
+      "Properties": "string",
+      "Protocol": "string",
+      "ProviderName": "string",
+      "PuaCount": "string",
+      "PuaPolicyId": "string",
+      "QfeVersion": "string",
+      "QueryName": "string",
+      "QueryResults": "string",
+      "QueryStatus": "string",
+      "ReadOperation": "string",
+      "Reason": "string",
+      "RelativeTargetName": "string",
+      "Resource": "string",
+      "ResourceAttributes": "string",
+      "ResourceManager": "string",
+      "RestrictedAdminMode": "string",
+      "RestrictedSidCount": "string",
+      "ReturnCode": "string",
+      "RpcCallClientLocality": "string",
+      "RuleAttr": "string",
+      "RuleId": "string",
+      "RuleName": "string",
+      "Schema": "string",
+      "SchemaFriendlyName": "string",
+      "SchemaVersion": "string",
+      "ScriptBlockText": "string",
+      "Sent UpdateServer": "string",
+      "Service": "string",
+      "ServiceAccount": "string",
+      "ServiceFileName": "string",
+      "ServiceName": "string",
+      "ServiceSid": "string",
+      "ServiceStartType": "string",
+      "ServiceType": "string",
+      "ServiceVersion": "string",
+      "SessionId": "string",
+      "ShareLocalPath": "string",
+      "ShareName": "string",
+      "ShutdownActionType": "string",
+      "ShutdownEventCode": "string",
+      "ShutdownReason": "string",
+      "Signature": "string",
+      "SignatureStatus": "string",
+      "Signed": "string",
+      "SourceAddress": "string",
+      "SourceHandleId": "string",
+      "SourceImage": "string",
+      "SourceIsIpv6": "string",
+      "SourcePort": "string",
+      "SourcePortName": "string",
+      "SourceProcessGUID": "string",
+      "SourceProcessId": "string",
+      "SourceThreadId": "string",
+      "SourceUser": "string",
+      "StartTime": "string",
+      "StartType": "string",
+      "State": "string",
+      "Status": "string",
+      "StopTime": "string",
+      "SubStatus": "string",
+      "SubjectDomainName": "string",
+      "SubjectLogonId": "string",
+      "SubjectUserName": "string",
+      "SubjectUserSid": "string",
+      "SupportInfo1": "string",
+      "SupportInfo2": "string",
+      "TSId": "string",
+      "TargetDomainName": "string",
+      "TargetHandleId": "string",
+      "TargetImage": "string",
+      "TargetInfo": "string",
+      "TargetLinkedLogonId": "string",
+      "TargetLogonGuid": "string",
+      "TargetLogonId": "string",
+      "TargetName": "string",
+      "TargetObject": "string",
+      "TargetOutboundDomainName": "string",
+      "TargetOutboundUserName": "string",
+      "TargetProcessGUID": "string",
+      "TargetProcessId": "string",
+      "TargetServerName": "string",
+      "TargetSid": "string",
+      "TargetUser": "string",
+      "TargetUserName": "string",
+      "TargetUserSid": "string",
+      "TaskContent": "string",
+      "TaskContentNew": "string",
+      "TaskName": "string",
+      "TerminalSessionId": "string",
+      "TicketEncryptionType": "string",
+      "TicketOptions": "string",
+      "TimeDifferenceMilliseconds": "string",
+      "TimeSampleSeconds": "string",
+      "TokenElevationType": "string",
+      "TransactionId": "string",
+      "TransmittedServices": "string",
+      "Type": "string",
+      "UserSid": "string",
+      "UtcTime": "string",
+      "Version": "string",
+      "VirtualAccount": "string",
+      "Workstation": "string",
+      "WorkstationName": "string",
+      "param1": "string",
+      "param10": "string",
+      "param11": "string",
+      "param12": "string",
+      "param13": "string",
+      "param14": "string",
+      "param15": "string",
+      "param16": "string",
+      "param17": "string",
+      "param18": "string",
+      "param19": "string",
+      "param2": "string",
+      "param20": "string",
+      "param21": "string",
+      "param22": "string",
+      "param23": "string",
+      "param24": "string",
+      "param25": "string",
+      "param26": "string",
+      "param27": "string",
+      "param28": "string",
+      "param29": "string",
+      "param3": "string",
+      "param30": "string",
+      "param4": "string",
+      "param5": "string",
+      "param6": "string",
+      "param7": "string",
+      "param8": "string",
+      "param9": "string",
+      "serviceGuid": "string",
+      "updateGuid": "string",
+      "updateRevisionNumber": "string",
+      "updateTitle": "string"
+    },
+    "event_id": "string",
+    "keywords": "string",
+    "logon": {
+      "failure": {
+        "reason": "string",
+        "status": "string",
+        "sub_status": "string"
+      },
+      "id": "string",
+      "type": "string"
+    },
+    "opcode": "string",
+    "process": {
+      "pid": "long",
+      "thread": {
+        "id": "long"
+      }
+    },
+    "provider_guid": "string",
+    "provider_name": "string",
+    "record_id": "string",
+    "related_activity_id": "string",
+    "task": "string",
+    "time_created": "datetime",
+    "user": {
+      "domain": "string",
+      "identifier": "string",
+      "name": "string",
+      "type": "string"
+    },
+    "user_data": {
+      "BackupPath": "string",
+      "Channel": "string",
+      "binaryData": "string",
+      "binaryDataSize": "string",
+      "param1": "string",
+      "xml_name": "string"
+    },
+    "version": "long"
+  }
+}{
+  "activity_id": "string",
+  "api": "string",
+  "channel": "string",
+  "computer_name": "string",
+  "error": "object({})",
+  "event_data": {
+    "AccessList": "string",
+    "AccessMask": "string",
+    "AccessReason": "string",
+    "AdapterName": "string",
+    "AdapterSuffixName": "string",
+    "AdditionalInfo": "string",
+    "AdditionalInfo2": "string",
+    "Address": "string",
+    "AddressLength": "string",
+    "AlgorithmName": "string",
+    "Application": "string",
+    "Archived": "string",
+    "AuthenticationPackageName": "string",
+    "Binary": "string",
+    "BitlockerUserInputTime": "string",
+    "BootMode": "string",
+    "BootType": "string",
+    "BuildVersion": "string",
+    "CallTrace": "string",
+    "CallerProcessId": "string",
+    "CallerProcessName": "string",
+    "ClientCreationTime": "string",
+    "ClientProcessId": "string",
+    "ClientProcessStartKey": "string",
+    "Company": "string",
+    "Contents": "string",
+    "CorruptionActionState": "string",
+    "CountOfCredentialsReturned": "string",
+    "CreationUtcTime": "string",
+    "DCName": "string",
+    "Description": "string",
+    "DestAddress": "string",
+    "DestPort": "string",
+    "DestinationIsIpv6": "string",
+    "DestinationPortName": "string",
+    "Detail": "string",
+    "Details": "string",
+    "Device": "string",
+    "DeviceName": "string",
+    "DeviceNameLength": "string",
+    "DeviceTime": "string",
+    "DeviceVersionMajor": "string",
+    "DeviceVersionMinor": "string",
+    "Direction": "string",
+    "DirtyPages": "string",
+    "DisabledPrivilegeList": "string",
+    "DnsServerList": "string",
+    "DriveName": "string",
+    "DriverName": "string",
+    "DriverNameLength": "string",
+    "DwordVal": "string",
+    "ElevatedToken": "string",
+    "EnabledPrivilegeList": "string",
+    "EntryCount": "string",
+    "ErrorCode": "string",
+    "EventCountTotal": "string",
+    "EventIdx": "string",
+    "EventType": "string",
+    "ExtraInfo": "string",
+    "FQDN": "string",
+    "FailureName": "string",
+    "FailureNameLength": "string",
+    "FailureReason": "string",
+    "FileVersion": "string",
+    "FilterRTID": "string",
+    "FinalStatus": "string",
+    "Flags": "string",
+    "GPOList": "string",
+    "GrantedAccess": "string",
+    "Group": "string",
+    "GroupMembership": "string",
+    "HandleId": "string",
+    "Hash": "string",
+    "Hashes": "string",
+    "HiveName": "string",
+    "HiveNameLength": "string",
+    "HostName": "string",
+    "Identity": "string",
+    "IdleImplementation": "string",
+    "IdleStateCount": "string",
+    "ImageLoaded": "string",
+    "ImagePath": "string",
+    "ImpersonationLevel": "string",
+    "Initiated": "string",
+    "InstanceId": "string",
+    "IntegrityLevel": "string",
+    "IpAddress": "string",
+    "IpPort": "string",
+    "Ipaddress": "string",
+    "IsExecutable": "string",
+    "KeyFilePath": "string",
+    "KeyLength": "string",
+    "KeyName": "string",
+    "KeyType": "string",
+    "KeysUpdated": "string",
+    "LastBootGood": "string",
+    "LastShutdownGood": "string",
+    "LayerName": "string",
+    "LayerRTID": "string",
+    "LmPackageName": "string",
+    "LogonGuid": "string",
+    "LogonId": "string",
+    "LogonProcessName": "string",
+    "LogonType": "string",
+    "MajorVersion": "string",
+    "MandatoryLabel": "string",
+    "MaxRunspaces": "string",
+    "MaximumPerformancePercent": "string",
+    "MemberName": "string",
+    "MemberSid": "string",
+    "MinRunspaces": "string",
+    "MinimumPerformancePercent": "string",
+    "MinimumThrottlePercent": "string",
+    "MinorVersion": "string",
+    "NewProcessId": "string",
+    "NewProcessName": "string",
+    "NewSchemeGuid": "string",
+    "NewSd": "string",
+    "NewSize": "string",
+    "NewState": "string",
+    "NewTime": "string",
+    "NewValue": "string",
+    "NewValueType": "string",
+    "NominalFrequency": "string",
+    "Number": "string",
+    "ObjectName": "string",
+    "ObjectServer": "string",
+    "ObjectType": "string",
+    "ObjectValueName": "string",
+    "OldSchemeGuid": "string",
+    "OldSd": "string",
+    "OldTime": "string",
+    "OldValue": "string",
+    "OldValueType": "string",
+    "Operation": "string",
+    "OperationType": "string",
+    "OriginalFileName": "string",
+    "OriginalSize": "string",
+    "PackageName": "string",
+    "ParentProcessId": "string",
+    "ParentProcessName": "string",
+    "ParentUser": "string",
+    "Path": "string",
+    "PerformanceImplementation": "string",
+    "PipeName": "string",
+    "PreAuthType": "string",
+    "PreviousCreationUtcTime": "string",
+    "PreviousTime": "string",
+    "PrivilegeList": "string",
+    "ProcessCreationTime": "string",
+    "ProcessId": "string",
+    "ProcessName": "string",
+    "ProcessPath": "string",
+    "ProcessPid": "string",
+    "ProcessingMode": "string",
+    "ProcessingTimeInMilliseconds": "string",
+    "Product": "string",
+    "Properties": "string",
+    "Protocol": "string",
+    "ProviderName": "string",
+    "PuaCount": "string",
+    "PuaPolicyId": "string",
+    "QfeVersion": "string",
+    "QueryName": "string",
+    "QueryResults": "string",
+    "QueryStatus": "string",
+    "ReadOperation": "string",
+    "Reason": "string",
+    "RelativeTargetName": "string",
+    "Resource": "string",
+    "ResourceAttributes": "string",
+    "ResourceManager": "string",
+    "RestrictedAdminMode": "string",
+    "RestrictedSidCount": "string",
+    "ReturnCode": "string",
+    "RpcCallClientLocality": "string",
+    "RuleAttr": "string",
+    "RuleId": "string",
+    "RuleName": "string",
+    "Schema": "string",
+    "SchemaFriendlyName": "string",
+    "SchemaVersion": "string",
+    "ScriptBlockText": "string",
+    "Sent UpdateServer": "string",
+    "Service": "string",
+    "ServiceAccount": "string",
+    "ServiceFileName": "string",
+    "ServiceName": "string",
+    "ServiceSid": "string",
+    "ServiceStartType": "string",
+    "ServiceType": "string",
+    "ServiceVersion": "string",
+    "SessionId": "string",
+    "ShareLocalPath": "string",
+    "ShareName": "string",
+    "ShutdownActionType": "string",
+    "ShutdownEventCode": "string",
+    "ShutdownReason": "string",
+    "Signature": "string",
+    "SignatureStatus": "string",
+    "Signed": "string",
+    "SourceAddress": "string",
+    "SourceHandleId": "string",
+    "SourceImage": "string",
+    "SourceIsIpv6": "string",
+    "SourcePort": "string",
+    "SourcePortName": "string",
+    "SourceProcessGUID": "string",
+    "SourceProcessId": "string",
+    "SourceThreadId": "string",
+    "SourceUser": "string",
+    "StartTime": "string",
+    "StartType": "string",
+    "State": "string",
+    "Status": "string",
+    "StopTime": "string",
+    "SubStatus": "string",
+    "SubjectDomainName": "string",
+    "SubjectLogonId": "string",
+    "SubjectUserName": "string",
+    "SubjectUserSid": "string",
+    "SupportInfo1": "string",
+    "SupportInfo2": "string",
+    "TSId": "string",
+    "TargetDomainName": "string",
+    "TargetHandleId": "string",
+    "TargetImage": "string",
+    "TargetInfo": "string",
+    "TargetLinkedLogonId": "string",
+    "TargetLogonGuid": "string",
+    "TargetLogonId": "string",
+    "TargetName": "string",
+    "TargetObject": "string",
+    "TargetOutboundDomainName": "string",
+    "TargetOutboundUserName": "string",
+    "TargetProcessGUID": "string",
+    "TargetProcessId": "string",
+    "TargetServerName": "string",
+    "TargetSid": "string",
+    "TargetUser": "string",
+    "TargetUserName": "string",
+    "TargetUserSid": "string",
+    "TaskContent": "string",
+    "TaskContentNew": "string",
+    "TaskName": "string",
+    "TerminalSessionId": "string",
+    "TicketEncryptionType": "string",
+    "TicketOptions": "string",
+    "TimeDifferenceMilliseconds": "string",
+    "TimeSampleSeconds": "string",
+    "TokenElevationType": "string",
+    "TransactionId": "string",
+    "TransmittedServices": "string",
+    "Type": "string",
+    "UserSid": "string",
+    "UtcTime": "string",
+    "Version": "string",
+    "VirtualAccount": "string",
+    "Workstation": "string",
+    "WorkstationName": "string",
+    "param1": "string",
+    "param10": "string",
+    "param11": "string",
+    "param12": "string",
+    "param13": "string",
+    "param14": "string",
+    "param15": "string",
+    "param16": "string",
+    "param17": "string",
+    "param18": "string",
+    "param19": "string",
+    "param2": "string",
+    "param20": "string",
+    "param21": "string",
+    "param22": "string",
+    "param23": "string",
+    "param24": "string",
+    "param25": "string",
+    "param26": "string",
+    "param27": "string",
+    "param28": "string",
+    "param29": "string",
+    "param3": "string",
+    "param30": "string",
+    "param4": "string",
+    "param5": "string",
+    "param6": "string",
+    "param7": "string",
+    "param8": "string",
+    "param9": "string",
+    "serviceGuid": "string",
+    "updateGuid": "string",
+    "updateRevisionNumber": "string",
+    "updateTitle": "string"
+  },
+  "event_id": "string",
+  "keywords": "string",
+  "logon": {
+    "failure": {
+      "reason": "string",
+      "status": "string",
+      "sub_status": "string"
+    },
+    "id": "string",
+    "type": "string"
+  },
+  "opcode": "string",
+  "process": {
+    "pid": "long",
+    "thread": {
+      "id": "long"
+    }
+  },
+  "provider_guid": "string",
+  "provider_name": "string",
+  "record_id": "string",
+  "related_activity_id": "string",
+  "task": "string",
+  "time_created": "datetime",
+  "user": {
+    "domain": "string",
+    "identifier": "string",
+    "name": "string",
+    "type": "string"
+  },
+  "user_data": {
+    "BackupPath": "string",
+    "Channel": "string",
+    "binaryData": "string",
+    "binaryDataSize": "string",
+    "param1": "string",
+    "xml_name": "string"
+  },
+  "version": "long"
+}{
+  "pid": "long",
+  "thread": {
+    "id": "long"
+  }
+}{
+  "id": "long"
+}{
+  "domain": "string",
+  "identifier": "string",
+  "name": "string",
+  "type": "string"
+}{
+  "AccessList": "string",
+  "AccessMask": "string",
+  "AccessReason": "string",
+  "AdapterName": "string",
+  "AdapterSuffixName": "string",
+  "AdditionalInfo": "string",
+  "AdditionalInfo2": "string",
+  "Address": "string",
+  "AddressLength": "string",
+  "AlgorithmName": "string",
+  "Application": "string",
+  "Archived": "string",
+  "AuthenticationPackageName": "string",
+  "Binary": "string",
+  "BitlockerUserInputTime": "string",
+  "BootMode": "string",
+  "BootType": "string",
+  "BuildVersion": "string",
+  "CallTrace": "string",
+  "CallerProcessId": "string",
+  "CallerProcessName": "string",
+  "ClientCreationTime": "string",
+  "ClientProcessId": "string",
+  "ClientProcessStartKey": "string",
+  "Company": "string",
+  "Contents": "string",
+  "CorruptionActionState": "string",
+  "CountOfCredentialsReturned": "string",
+  "CreationUtcTime": "string",
+  "DCName": "string",
+  "Description": "string",
+  "DestAddress": "string",
+  "DestPort": "string",
+  "DestinationIsIpv6": "string",
+  "DestinationPortName": "string",
+  "Detail": "string",
+  "Details": "string",
+  "Device": "string",
+  "DeviceName": "string",
+  "DeviceNameLength": "string",
+  "DeviceTime": "string",
+  "DeviceVersionMajor": "string",
+  "DeviceVersionMinor": "string",
+  "Direction": "string",
+  "DirtyPages": "string",
+  "DisabledPrivilegeList": "string",
+  "DnsServerList": "string",
+  "DriveName": "string",
+  "DriverName": "string",
+  "DriverNameLength": "string",
+  "DwordVal": "string",
+  "ElevatedToken": "string",
+  "EnabledPrivilegeList": "string",
+  "EntryCount": "string",
+  "ErrorCode": "string",
+  "EventCountTotal": "string",
+  "EventIdx": "string",
+  "EventType": "string",
+  "ExtraInfo": "string",
+  "FQDN": "string",
+  "FailureName": "string",
+  "FailureNameLength": "string",
+  "FailureReason": "string",
+  "FileVersion": "string",
+  "FilterRTID": "string",
+  "FinalStatus": "string",
+  "Flags": "string",
+  "GPOList": "string",
+  "GrantedAccess": "string",
+  "Group": "string",
+  "GroupMembership": "string",
+  "HandleId": "string",
+  "Hash": "string",
+  "Hashes": "string",
+  "HiveName": "string",
+  "HiveNameLength": "string",
+  "HostName": "string",
+  "Identity": "string",
+  "IdleImplementation": "string",
+  "IdleStateCount": "string",
+  "ImageLoaded": "string",
+  "ImagePath": "string",
+  "ImpersonationLevel": "string",
+  "Initiated": "string",
+  "InstanceId": "string",
+  "IntegrityLevel": "string",
+  "IpAddress": "string",
+  "IpPort": "string",
+  "Ipaddress": "string",
+  "IsExecutable": "string",
+  "KeyFilePath": "string",
+  "KeyLength": "string",
+  "KeyName": "string",
+  "KeyType": "string",
+  "KeysUpdated": "string",
+  "LastBootGood": "string",
+  "LastShutdownGood": "string",
+  "LayerName": "string",
+  "LayerRTID": "string",
+  "LmPackageName": "string",
+  "LogonGuid": "string",
+  "LogonId": "string",
+  "LogonProcessName": "string",
+  "LogonType": "string",
+  "MajorVersion": "string",
+  "MandatoryLabel": "string",
+  "MaxRunspaces": "string",
+  "MaximumPerformancePercent": "string",
+  "MemberName": "string",
+  "MemberSid": "string",
+  "MinRunspaces": "string",
+  "MinimumPerformancePercent": "string",
+  "MinimumThrottlePercent": "string",
+  "MinorVersion": "string",
+  "NewProcessId": "string",
+  "NewProcessName": "string",
+  "NewSchemeGuid": "string",
+  "NewSd": "string",
+  "NewSize": "string",
+  "NewState": "string",
+  "NewTime": "string",
+  "NewValue": "string",
+  "NewValueType": "string",
+  "NominalFrequency": "string",
+  "Number": "string",
+  "ObjectName": "string",
+  "ObjectServer": "string",
+  "ObjectType": "string",
+  "ObjectValueName": "string",
+  "OldSchemeGuid": "string",
+  "OldSd": "string",
+  "OldTime": "string",
+  "OldValue": "string",
+  "OldValueType": "string",
+  "Operation": "string",
+  "OperationType": "string",
+  "OriginalFileName": "string",
+  "OriginalSize": "string",
+  "PackageName": "string",
+  "ParentProcessId": "string",
+  "ParentProcessName": "string",
+  "ParentUser": "string",
+  "Path": "string",
+  "PerformanceImplementation": "string",
+  "PipeName": "string",
+  "PreAuthType": "string",
+  "PreviousCreationUtcTime": "string",
+  "PreviousTime": "string",
+  "PrivilegeList": "string",
+  "ProcessCreationTime": "string",
+  "ProcessId": "string",
+  "ProcessName": "string",
+  "ProcessPath": "string",
+  "ProcessPid": "string",
+  "ProcessingMode": "string",
+  "ProcessingTimeInMilliseconds": "string",
+  "Product": "string",
+  "Properties": "string",
+  "Protocol": "string",
+  "ProviderName": "string",
+  "PuaCount": "string",
+  "PuaPolicyId": "string",
+  "QfeVersion": "string",
+  "QueryName": "string",
+  "QueryResults": "string",
+  "QueryStatus": "string",
+  "ReadOperation": "string",
+  "Reason": "string",
+  "RelativeTargetName": "string",
+  "Resource": "string",
+  "ResourceAttributes": "string",
+  "ResourceManager": "string",
+  "RestrictedAdminMode": "string",
+  "RestrictedSidCount": "string",
+  "ReturnCode": "string",
+  "RpcCallClientLocality": "string",
+  "RuleAttr": "string",
+  "RuleId": "string",
+  "RuleName": "string",
+  "Schema": "string",
+  "SchemaFriendlyName": "string",
+  "SchemaVersion": "string",
+  "ScriptBlockText": "string",
+  "Sent UpdateServer": "string",
+  "Service": "string",
+  "ServiceAccount": "string",
+  "ServiceFileName": "string",
+  "ServiceName": "string",
+  "ServiceSid": "string",
+  "ServiceStartType": "string",
+  "ServiceType": "string",
+  "ServiceVersion": "string",
+  "SessionId": "string",
+  "ShareLocalPath": "string",
+  "ShareName": "string",
+  "ShutdownActionType": "string",
+  "ShutdownEventCode": "string",
+  "ShutdownReason": "string",
+  "Signature": "string",
+  "SignatureStatus": "string",
+  "Signed": "string",
+  "SourceAddress": "string",
+  "SourceHandleId": "string",
+  "SourceImage": "string",
+  "SourceIsIpv6": "string",
+  "SourcePort": "string",
+  "SourcePortName": "string",
+  "SourceProcessGUID": "string",
+  "SourceProcessId": "string",
+  "SourceThreadId": "string",
+  "SourceUser": "string",
+  "StartTime": "string",
+  "StartType": "string",
+  "State": "string",
+  "Status": "string",
+  "StopTime": "string",
+  "SubStatus": "string",
+  "SubjectDomainName": "string",
+  "SubjectLogonId": "string",
+  "SubjectUserName": "string",
+  "SubjectUserSid": "string",
+  "SupportInfo1": "string",
+  "SupportInfo2": "string",
+  "TSId": "string",
+  "TargetDomainName": "string",
+  "TargetHandleId": "string",
+  "TargetImage": "string",
+  "TargetInfo": "string",
+  "TargetLinkedLogonId": "string",
+  "TargetLogonGuid": "string",
+  "TargetLogonId": "string",
+  "TargetName": "string",
+  "TargetObject": "string",
+  "TargetOutboundDomainName": "string",
+  "TargetOutboundUserName": "string",
+  "TargetProcessGUID": "string",
+  "TargetProcessId": "string",
+  "TargetServerName": "string",
+  "TargetSid": "string",
+  "TargetUser": "string",
+  "TargetUserName": "string",
+  "TargetUserSid": "string",
+  "TaskContent": "string",
+  "TaskContentNew": "string",
+  "TaskName": "string",
+  "TerminalSessionId": "string",
+  "TicketEncryptionType": "string",
+  "TicketOptions": "string",
+  "TimeDifferenceMilliseconds": "string",
+  "TimeSampleSeconds": "string",
+  "TokenElevationType": "string",
+  "TransactionId": "string",
+  "TransmittedServices": "string",
+  "Type": "string",
+  "UserSid": "string",
+  "UtcTime": "string",
+  "Version": "string",
+  "VirtualAccount": "string",
+  "Workstation": "string",
+  "WorkstationName": "string",
+  "param1": "string",
+  "param10": "string",
+  "param11": "string",
+  "param12": "string",
+  "param13": "string",
+  "param14": "string",
+  "param15": "string",
+  "param16": "string",
+  "param17": "string",
+  "param18": "string",
+  "param19": "string",
+  "param2": "string",
+  "param20": "string",
+  "param21": "string",
+  "param22": "string",
+  "param23": "string",
+  "param24": "string",
+  "param25": "string",
+  "param26": "string",
+  "param27": "string",
+  "param28": "string",
+  "param29": "string",
+  "param3": "string",
+  "param30": "string",
+  "param4": "string",
+  "param5": "string",
+  "param6": "string",
+  "param7": "string",
+  "param8": "string",
+  "param9": "string",
+  "serviceGuid": "string",
+  "updateGuid": "string",
+  "updateRevisionNumber": "string",
+  "updateTitle": "string"
+}{
+  "args": "string",
+  "args_count": "long",
+  "code_signature": {
+    "digest_algorithm": "string",
+    "exists": "bool",
+    "signing_id": "string",
+    "status": "string",
+    "subject_name": "string",
+    "team_id": "string",
+    "timestamp": "datetime",
+    "trusted": "bool",
+    "valid": "bool"
+  },
+  "command_line": "string",
+  "elf": {
+    "architecture": "string",
+    "byte_order": "string",
+    "cpu_type": "string",
+    "creation_date": "datetime",
+    "exports": "object({})",
+    "header": {
+      "abi_version": "string",
+      "class": "string",
+      "data": "string",
+      "entrypoint": "long",
+      "object_version": "string",
+      "os_abi": "string",
+      "type": "string",
+      "version": "string"
+    },
+    "imports": "object({})",
+    "sections": {
+      "chi2": "long",
+      "entropy": "long",
+      "flags": "string",
+      "name": "string",
+      "physical_offset": "string",
+      "physical_size": "long",
+      "type": "string",
+      "virtual_address": "long",
+      "virtual_size": "long"
+    },
+    "segments": {
+      "sections": "string",
+      "type": "string"
+    },
+    "shared_libraries": "string",
+    "telfhash": "string"
+  },
+  "end": "datetime",
+  "entity_id": "string",
+  "executable": "string",
+  "exit_code": "long",
+  "hash": {
+    "md5": "string",
+    "sha1": "string",
+    "sha256": "string",
+    "sha512": "string",
+    "ssdeep": "string"
+  },
+  "name": "string",
+  "parent": {
+    "args": "string",
+    "args_count": "long",
+    "code_signature": {
+      "digest_algorithm": "string",
+      "exists": "bool",
+      "signing_id": "string",
+      "status": "string",
+      "subject_name": "string",
+      "team_id": "string",
+      "timestamp": "datetime",
+      "trusted": "bool",
+      "valid": "bool"
+    },
+    "command_line": "string",
+    "elf": {
+      "architecture": "string",
+      "byte_order": "string",
+      "cpu_type": "string",
+      "creation_date": "datetime",
+      "exports": "object({})",
+      "header": {
+        "abi_version": "string",
+        "class": "string",
+        "data": "string",
+        "entrypoint": "long",
+        "object_version": "string",
+        "os_abi": "string",
+        "type": "string",
+        "version": "string"
+      },
+      "imports": "object({})",
+      "sections": {
+        "chi2": "long",
+        "entropy": "long",
+        "flags": "string",
+        "name": "string",
+        "physical_offset": "string",
+        "physical_size": "long",
+        "type": "string",
+        "virtual_address": "long",
+        "virtual_size": "long"
+      },
+      "segments": {
+        "sections": "string",
+        "type": "string"
+      },
+      "shared_libraries": "string",
+      "telfhash": "string"
+    },
+    "end": "datetime",
+    "entity_id": "string",
+    "executable": "string",
+    "exit_code": "long",
+    "hash": {
+      "md5": "string",
+      "sha1": "string",
+      "sha256": "string",
+      "sha512": "string",
+      "ssdeep": "string"
+    },
+    "name": "string",
+    "pe": {
+      "architecture": "string",
+      "company": "string",
+      "description": "string",
+      "file_version": "string",
+      "imphash": "string",
+      "original_file_name": "string",
+      "product": "string"
+    },
+    "pgid": "long",
+    "pid": "long",
+    "ppid": "long",
+    "start": "datetime",
+    "thread": {
+      "id": "long",
+      "name": "string"
+    },
+    "title": "string",
+    "uptime": "long",
+    "working_directory": "string"
+  },
+  "pe": {
+    "architecture": "string",
+    "company": "string",
+    "description": "string",
+    "file_version": "string",
+    "imphash": "string",
+    "original_file_name": "string",
+    "product": "string"
+  },
+  "pgid": "long",
+  "pid": "long",
+  "ppid": "long",
+  "start": "datetime",
+  "thread": {
+    "id": "long",
+    "name": "string"
+  },
+  "title": "string",
+  "uptime": "long",
+  "working_directory": "string"
+}{
+  "architecture": "string",
+  "company": "string",
+  "description": "string",
+  "file_version": "string",
+  "imphash": "string",
+  "original_file_name": "string",
+  "product": "string"
+}{
+  "build": {
+    "original": "string"
+  },
+  "ephemeral_id": "string",
+  "hostname": "string",
+  "id": "string",
+  "name": "string",
+  "type": "string",
+  "version": "string"
+}{
+  "beat": "string",
+  "ip_address": "string",
+  "type": "string",
+  "version": "string"
+}{
+  "egress": {
+    "interface": {
+      "alias": "string",
+      "id": "string",
+      "name": "string"
+    },
+    "vlan": {
+      "id": "string",
+      "name": "string"
+    },
+    "zone": "string"
+  },
+  "geo": {
+    "city_name": "string",
+    "continent_code": "string",
+    "continent_name": "string",
+    "country_iso_code": "string",
+    "country_name": "string",
+    "location": {
+      "lon": "float",
+      "lat": "float"
+    },
+    "name": "string",
+    "postal_code": "string",
+    "region_iso_code": "string",
+    "region_name": "string",
+    "timezone": "string"
+  },
+  "hostname": "string",
+  "ingress": {
+    "interface": {
+      "alias": "string",
+      "id": "string",
+      "name": "string"
+    },
+    "vlan": {
+      "id": "string",
+      "name": "string"
+    },
+    "zone": "string"
+  },
+  "ip": "ip",
+  "mac": "string",
+  "name": "string",
+  "os": {
+    "family": "string",
+    "full": "string",
+    "kernel": "string",
+    "name": "string",
+    "platform": "string",
+    "type": "string",
+    "version": "string"
+  },
+  "product": "string",
+  "serial_number": "string",
+  "type": "string",
+  "vendor": "string",
+  "version": "string"
+}{
+  "action": "string",
+  "agent_id_status": "string",
+  "category": "string",
+  "code": "string",
+  "created": "datetime",
+  "dataset": "string",
+  "duration": "long",
+  "end": "datetime",
+  "hash": "string",
+  "id": "string",
+  "ingested": "datetime",
+  "kind": "string",
+  "module": "string",
+  "original": "string",
+  "outcome": "string",
+  "provider": "string",
+  "reason": "string",
+  "reference": "string",
+  "risk_score": "decimal",
+  "risk_score_norm": "decimal",
+  "sequence": "long",
+  "severity": "long",
+  "start": "datetime",
+  "timezone": "string",
+  "type": "string",
+  "url": "string"
+}{
+  "file": {
+    "path": "string"
+  },
+  "level": "string",
+  "logger": "string",
+  "offset": "long",
+  "origin": {
+    "file": {
+      "line": "int",
+      "name": "string"
+    },
+    "function": "string"
+  },
+  "original": "string",
+  "syslog": {
+    "facility": {
+      "code": "long",
+      "name": "string"
+    },
+    "priority": "long",
+    "severity": {
+      "code": "long",
+      "name": "string"
+    }
+  }
+}{
+  "name": "string"
+}{
+  "architecture": "string",
+  "cpu": {
+    "usage": "decimal"
+  },
+  "disk": {
+    "read": {
+      "bytes": "long"
+    },
+    "write": {
+      "bytes": "long"
+    }
+  },
+  "domain": "string",
+  "geo": {
+    "city_name": "string",
+    "continent_code": "string",
+    "continent_name": "string",
+    "country_iso_code": "string",
+    "country_name": "string",
+    "location": {
+      "lon": "float",
+      "lat": "float"
+    },
+    "name": "string",
+    "postal_code": "string",
+    "region_iso_code": "string",
+    "region_name": "string",
+    "timezone": "string"
+  },
+  "hostname": "string",
+  "id": "string",
+  "ip": "ip",
+  "mac": "string",
+  "name": "string",
+  "network": {
+    "egress": {
+      "bytes": "long",
+      "packets": "long"
+    },
+    "ingress": {
+      "bytes": "long",
+      "packets": "long"
+    }
+  },
+  "os": {
+    "build": "string",
+    "family": "string",
+    "full": "string",
+    "kernel": "string",
+    "name": "string",
+    "platform": "string",
+    "type": "string",
+    "version": "string"
+  },
+  "type": "string",
+  "uptime": "long",
+  "user": {
+    "domain": "string",
+    "email": "string",
+    "full_name": "string",
+    "group": {
+      "domain": "string",
+      "id": "string",
+      "name": "string"
+    },
+    "hash": "string",
+    "id": "string",
+    "name": "string",
+    "roles": "string"
+  }
+}{
+  "build": "string",
+  "family": "string",
+  "full": "string",
+  "kernel": "string",
+  "name": "string",
+  "platform": "string",
+  "type": "string",
+  "version": "string"
+}{
+  "version": "string"
+}{
+  "event": {
+    "code": "string"
+  }
+}{
+  "code": "string"
+}{
+  "event": {
+    "code": "int"
+  }
+}

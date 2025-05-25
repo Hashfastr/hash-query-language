@@ -25,7 +25,7 @@ class plt():
         mergable = []
         for i in columns:
             if len(columns[i]) == 1:
-                mergable.append(columns[i][0])
+                mergable += columns[i]
                 continue
 
             new = pl.DataFrame({i: plt.merge(plt.advance(columns[i])).to_struct()})
@@ -104,7 +104,7 @@ class plt():
         split = field[index]
 
         if split not in data:
-            return False
+            return None
             # if index == 0:
             #     raise Exception(f"Invalid field referenced {split}")
             # else:
@@ -113,11 +113,11 @@ class plt():
         new = data.select(split)
         
         if len(field) == 1:            
-            return True
+            return field
         
         if isinstance(new[split].dtype, pl.Struct):
             new = new.unnest(split)
         else:
-            return True
+            return field
                 
         return plt.assert_field(new, field, index + 1)
