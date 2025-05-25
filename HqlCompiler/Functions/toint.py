@@ -2,7 +2,7 @@ from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_func, Context
 from HqlCompiler.Data import Data
 from .__proto__ import Function
-from HqlCompiler.Types import HqlTypes as ht
+from HqlCompiler.Types import HqlTypes as hqlt
 
 # This is a meta function resolved while parsing
 @register_func('toint')
@@ -17,4 +17,4 @@ class toint(Function):
             field = [field]
         
         # df = plt.build_element(series_name, series.cast(pl.Int32))
-        return ctx.data.cast_subset(field, ht.int)
+        return ctx.data.cast_subset(field, hqlt.int)

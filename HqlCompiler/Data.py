@@ -1,6 +1,6 @@
 import polars as pl
 from HqlCompiler.PolarsTools import plt as plt
-from HqlCompiler.Types import HqlTypes as ht
+from HqlCompiler.Types import HqlTypes as hqlt
 from HqlCompiler.Exceptions import *
 import logging
 import json
@@ -105,7 +105,7 @@ class Data():
         
         return exists
     
-    def cast_in_place(self, field:list[str], cast_type:ht.HqlType):
+    def cast_in_place(self, field:list[str], cast_type:hqlt.HqlType):
         tables = self.assert_field(field)
         if not tables:
             return False
@@ -116,7 +116,7 @@ class Data():
         return self
     
     # Casts and returns the subset dataset
-    def cast_subset(self, field:list[str], cast_type:ht.HqlType):
+    def cast_subset(self, field:list[str], cast_type:hqlt.HqlType):
         tables = []
         for i in self.tables:
             table = self.tables[i].cast_subset(field, cast_type)
@@ -207,7 +207,7 @@ class Table():
     def assert_field(self, field:list[str]):
         return plt.assert_field(self.df, field)
     
-    def cast_in_place(self, field:list[str], cast_type:ht.HqlType):
+    def cast_in_place(self, field:list[str], cast_type:hqlt.HqlType):
         if not self.assert_field(field):
             return None
         
@@ -216,7 +216,7 @@ class Table():
 
         return self
     
-    def cast_subset(self, field:list[str], cast_type:ht.HqlType):
+    def cast_subset(self, field:list[str], cast_type:hqlt.HqlType):
         if not self.assert_field(field):
             return None
 
@@ -290,10 +290,12 @@ class Schema():
         for key in schema:
             element = schema[key]
                 
+            # Recurse case
             if isinstance(element, dict):
                 plschema[key] = pl.Struct(self.to_pl_schema(schema=element))
 
-            elif type(element) in (ht.multivalue, ht.object):
+            # Instanciated cases
+            elif type(element) in (hqlt.multivalue, hqlt.object):
                 plschema[key] = element.pl_schema()              
 
             # all other HqlType types should not be instanciated yet
@@ -302,94 +304,121 @@ class Schema():
                 
         return plschema
 
+    # Gen schema from dicts
     def gen_schema(self, data:list[dict]):
         # get a set of keys to handle
         keyset = set()
-        for i in data:
-            if i:
-                keyset |= set(i.keys())
+        for datum in data:
+            if datum:
+                keyset |= set(datum.keys())
         keyset = list(keyset)
 
         new = dict()
         for key in keyset:
             typeset = set()
             for datum in data:
+                # Add null case
                 if key not in datum:
-                    typeset.add(ht.null())
-                    continue
+                    typeset.add(hqlt.null())
 
-                if isinstance(datum[key], dict):
+                elif isinstance(datum[key], dict):
                     typeset.add(dict)
-                    continue
-
-                typeset.add(ht.to_hql_type(proto=datum[key]))
+                
+                else:
+                    typeset.add(hqlt.to_hql_type(datum[key]))
+            typeset = list(typeset)
 
             # recurse on an object
             if dict in typeset:
-                if len(typeset) != 1 and ht.null() not in typeset:
+                # The only two acceptable existences of dict being in a typeset
+                # are {dict} and {dict, hqlt.null}
+                if len(typeset) != 1 and hqlt.null() not in typeset:
                     raise Exception(f"Cannot merge types {list(typeset)}")
                 
+                # Unnest the nested dict
                 sub_data = []
-                for i in data:
-                    if key in i:
-                        sub_data.append(i[key])
+                for datum in data:
+                    if key in datum:
+                        sub_data.append(datum[key])
+
+                # Create the new schema from the unnested dict
                 new_schema = Schema(sub_data)
 
-                new[key] = new_schema.schema
                 # absorb the new schema's multivalue fields, adding our key onto it
                 self.mv_fields += [[key] + x for x in new_schema.mv_fields]
+                new[key] = new_schema.schema
 
-                continue
-            
-            new[key] = ht.resolve_conflict(list(typeset))
-            if isinstance(new[key], ht.multivalue):
-                self.mv_fields.append([key])
+            else:
+                # Find the best type
+                new[key] = hqlt.resolve_conflict(typeset)
+
+                # If it is multivalue, then mark and track it
+                if isinstance(new[key], hqlt.multivalue):
+                    self.mv_fields.append([key])
 
         return new
     
-    def adjust_mv(self, data:list[dict], mv_fields:list[list[str]]=None):        
-        if not mv_fields:
-            mv_fields = self.mv_fields
+    # Adjusts json to multivalue
+    def adjust_mv(self, data:list[dict], mv_fields:list[list[str]]=None) -> list[dict]:
+        mv_fields = mv_fields if mv_fields else self.mv_fields
 
+        # Loop through each defined multivalue field
         for field in mv_fields:
+            # Get base path element
             key = field[0]
+
+            # If this is the end of the road
             if len(field) == 1:
                 for row in data:
+                    # Skip rows that do not have the field present
                     if key not in row:
                         continue
 
+                    # Skip rows where the field as already been multivalued
                     if isinstance(row[key], list):
                         continue
 
+                    # Adjust multivalue by placing the base value into a list
                     row[key] = [row[key]]
+            
+            # Need to recurse on a nested key
             else:
                 rows = []
-                for i in data:
-                    if key in i:
-                        rows.append(i[key])
+                for row in data:
+                    # Only recurse on rows with the field we need
+                    if key in row:
+                        rows.append(row[key])
+                
+                # Recurse, advancing the field path
                 self.adjust_mv(rows, [field[1:]])
 
         return data
     
-    def set(self, field:list[str], htype:ht, schema:dict=None):
+    # Set a field to a specific type in the schema
+    # apply_schema is then expected to be ran
+    def set(self, field:list[str], htype:list[hqlt.HqlType], schema:dict=None):
         if not schema:
             schema = self.schema
 
-        base = field[0]
+        key = field[0]
         if len(field) == 1:
             # cannot set a dict to type
-            if isinstance(schema[base], dict):
+            if isinstance(schema[key], dict):
                 return False
             
-            schema[base] = htype
+            # Set the type
+            schema[key] = htype
             return True
         
-        if isinstance(schema[base], dict):
-            return self.set(field=field[1:], htype=htype, schema=schema[base])
+        # Recursion case
+        if isinstance(schema[key], dict):
+            # Advance field path and schema
+            return self.set(field[1:], htype, schema=schema[key])
         
         # nested field referenced, but not possible
+        # e.g. a basetype is referenced as if it were a dict
         return False
-            
+    
     def cast_to_schema(self, data:pl.DataFrame, schema:dict=None, mv_fields:list=None):
         newdf = {}
 
@@ -407,7 +436,7 @@ class Schema():
                 continue
 
             # Generic unspecified object
-            if schema[col.name] == ht.object:
+            if schema[col.name] == hqlt.object:
                 newdf[col.name] = col
                 continue
 
@@ -446,7 +475,7 @@ class Schema():
                 target = schema[col.name]().pl_schema()
 
                 if intermediate != target:
-                    newdf[col.name] = col.cast(col, ht.multivalue(schema[col.name]))
+                    newdf[col.name] = col.cast(hqlt.multivalue(schema[col.name]).pl_schema())
                 else:
                     newdf[col.name] = col
 

@@ -115,7 +115,7 @@ class HqlTypes():
             # Only init if it's a subclass
             if len(type(self).__bases__):
                 super().__init__()
-                self.proto = type(self).__bases__[0]
+                self.proto = type(self).__bases__[-1]
             else:
                 self.proto = None
 
@@ -125,64 +125,64 @@ class HqlTypes():
         def cast(self, data:pl.Series):
             return data.cast(self.proto)
 
-    class decimal(pl.Decimal, HqlType):
+    class decimal(HqlType, pl.Decimal):
         ...
         
-    class float(pl.Float32, HqlType):
+    class float(HqlType, pl.Float32):
         ...
 
-    class double(pl.Float64, HqlType):
+    class double(HqlType, pl.Float64):
         ...
         
-    class byte(pl.Int8, HqlType):
+    class byte(HqlType, pl.Int8):
         ...
 
-    class short(pl.Int16, HqlType):
+    class short(HqlType, pl.Int16):
         ...
 
-    class int(pl.Int32, HqlType):
+    class int(HqlType, pl.Int32):
         ...
         
-    class long(pl.Int64, HqlType):
+    class long(HqlType, pl.Int64):
         ...
 
-    class xlong(pl.Int128, HqlType):
+    class xlong(HqlType, pl.Int128):
         ...
 
-    class guid(pl.Int128, HqlType):
+    class guid(HqlType, pl.Int128):
         ...
         
-    class ubyte(pl.UInt8, HqlType):
+    class ubyte(HqlType, pl.UInt8):
         ...
         
-    class ushort(pl.UInt16, HqlType):
+    class ushort(HqlType, pl.UInt16):
         ...
         
-    class uint(pl.UInt32, HqlType):
+    class uint(HqlType, pl.UInt32):
         ...
         
-    class ulong(pl.UInt64, HqlType):
+    class ulong(HqlType, pl.UInt64):
         ...
 
-    class ip(pl.String, HqlType):
+    class ip(HqlType, pl.String):
         ...
 
-    class ip4(pl.UInt32, HqlType):
+    class ip4(HqlType, pl.UInt32):
         ...
 
-    class ip6(pl.Int128, HqlType):
+    class ip6(HqlType, pl.Int128):
         ...
             
-    class datetime(pl.Datetime, HqlType):
+    class datetime(HqlType, pl.Datetime):
         ...
         
-    class duration(pl.Duration, HqlType):
+    class duration(HqlType, pl.Duration):
         ...
             
-    class time(pl.Time, HqlType):
+    class time(HqlType, pl.Time):
         ...
 
-    class range(pl.Struct, HqlType):
+    class range(HqlType, pl.Struct):
         def __init__(self, start, end):
             super().__init__()
 
@@ -194,31 +194,33 @@ class HqlTypes():
         def pl_schema(self):
             return self.__class__.__bases__[0].__init__({'start': self.start, 'end': self.end})
             
-    class matrix(pl.Array, HqlType):
+    class matrix(HqlType, pl.Array):
         ...
         
-    class string(pl.String, HqlType):
+    class string(HqlType, pl.String):
         ...
             
-    class enum(pl.Enum, HqlType):
+    class enum(HqlType, pl.Enum):
         ...
             
-    class binary(pl.Binary, HqlType):
+    class binary(HqlType, pl.Binary):
         ...
         
-    class bool(pl.Boolean, HqlType):
+    class bool(HqlType, pl.Boolean):
         ...
         
-    class object(pl.Struct, HqlType):
+    class object(HqlType, pl.Struct):
+        def __init__(self, fields:list[str]):
+            pl.Struct.__init__(self, fields)
+            self.proto = pl.Struct
+
+    class null(HqlType, pl.Null):
         ...
         
-    class null(pl.Null, HqlType):
+    class unknown(HqlType, pl.Unknown):
         ...
         
-    class unknown(pl.Unknown, HqlType):
-        ...
-        
-    class multivalue(pl.List, HqlType):
+    class multivalue(pl.List):
         def pl_schema(self):
             if isinstance(self.inner, type(self)):
                 return pl.List(self.inner.pl_schema())
