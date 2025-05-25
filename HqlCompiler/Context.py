@@ -58,6 +58,9 @@ class Context():
         else:
             raise CompilerException(f"Unknown database {name} referenced")
 
+    def get_db_types(self):
+        return list(self.dbs.keys())
+
     def get_func(self, name:str):
         if name in self.funcs:
             return self.funcs[name]

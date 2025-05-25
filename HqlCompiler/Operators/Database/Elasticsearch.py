@@ -20,11 +20,9 @@ from .__proto__ import Database
 @register_database('Elasticsearch')
 class Elasticsearch(Database):
     def __init__(self, config:dict):
-        super().__init__()
+        Database.__init__(self, config)
         
         self.pattern = "*"
-
-        self.config = config
 
         # The database filter always starts as an and
         self.filter_expr = Expression.BinaryLogic(None, [], 'and')
@@ -48,12 +46,9 @@ class Elasticsearch(Database):
         self.methods = [
             'index'
         ]
-    
-        self.ctx = None
-        
+            
     def get_variable(self, name: str):
         self.pattern = name
-        
         return self
     
     def can_integrate(self, type:str):
@@ -65,14 +60,7 @@ class Elasticsearch(Database):
         
         # should only have on expression
         if op.type == 'Take':
-            self.add_limit(op.expr.value)
-
-    def eval(self, ctx:Context, **kwargs):
-        self.ctx = ctx
-        return self.make_query()
-    
-    def add_limit(self, limit:int):
-        self.limit = limit
+            self.limit = op.expr.value
 
     def add_index(self, pattern:str):
         self.pattern = pattern

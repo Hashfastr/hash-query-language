@@ -289,9 +289,12 @@ class Schema():
         plschema = {}
         for key in schema:
             element = schema[key]
-                
+            
+            if element == {}:
+                plschema[key] = pl.Struct([])
+
             # Recurse case
-            if isinstance(element, dict):
+            elif isinstance(element, dict):
                 plschema[key] = pl.Struct(self.to_pl_schema(schema=element))
 
             # Instanciated cases
