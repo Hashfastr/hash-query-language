@@ -45,5 +45,5 @@ class JSON(Database):
             logging.critical('Correct usage: database("json").file("filename")')
             logging.critical('Where filename exists relative to the configured base_path')
             raise QueryException('No file provided to JSON database')
-        
+                
         return Data.Data(tables_list=[self.load_file(x) for x in self.files])

@@ -80,6 +80,11 @@ class Data():
             new = tables[0]
 
         self.tables[new.name] = new
+        
+    def get_schema(self):
+        schemata = {}
+        for name in self.tables:
+            schemata[name] = self.tables[name].get_schema
 
     def get_elements(self, fields:list[list[str]]):
         tables = []
@@ -90,8 +95,14 @@ class Data():
 
     def to_dict(self):
         dataset = dict()
+        
+        dataset['data'] = {}
         for i in self.tables:
-            dataset[i] = self.tables[i].to_dicts()
+            dataset['data'][i] = self.tables[i].to_dicts()
+            
+        dataset['schema'] = {}
+        for i in self.tables:
+            dataset['schema'][i] = self.tables[i].get_schema()
 
         return dataset
     
@@ -184,6 +195,9 @@ class Table():
     def change_schema(self, schema:Schema):
         self.df = schema.cast_to_schema(self.df, mv_fields=self.schema.mv_fields)
         self.schema = schema
+        
+    def get_schema(self):
+        return self.schema.schema
 
     def to_dicts(self):
         return self.df.to_dicts()
@@ -301,6 +315,7 @@ class Schema():
 
         return Schema(schema=new)
 
+    # Generates a schema with types replaced with their polars primatives
     # schema parameter required for recursion
     def to_pl_schema(self, schema:dict=None):
         if not schema:
@@ -517,3 +532,35 @@ class Schema():
             newdf[col.name] = col.cast(self.to_pl_schema(schema=schema)[col.name])
 
         return pl.DataFrame(newdf)
+
+    '''
+    Validates a parser logical expression against the schema.
+    Ensures that referenced fields exist in the schema.
+    '''
+    def get_type(self, path:list[str]):
+        schema = self.schema
+        mv_fields = self.mv_fields
+        for idx, i in enumerate(path):
+            if idx == len(path) - 1:
+                if isinstance(schema[path[idx]], dict):
+                    fields = list(schema[path[idx]].keys())
+                    path_type = hqlt.object(fields)
+                    break
+                
+                
+            
+            if isinstance(schema[i], dict):
+                schema = schema[i]
+                new_fields = []
+                for j in mv_fields:
+                    if j[0] == i:
+                        new_fields.append(j[1:])
+                mv_fields = new_fields
+                
+                continue
+            
+        for j in mv_fields:
+            if len(j) == 1 and j[0] == i and not isinstance(path_type, hqlt.multivalue):
+                return hqlt.multivalue(path_type)
+            
+        return path_type

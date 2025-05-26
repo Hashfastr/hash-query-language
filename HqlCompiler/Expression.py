@@ -386,6 +386,10 @@ class Path(Expression):
             logging.debug(self.path)
             logging.debug(e)
 
+    def lint(self, ctx:Context):
+        plf = self.eval(ctx, as_pl=True)
+        # ctx.data.
+
     def eval(self, ctx:Context, **kwargs):
         as_list = kwargs.get('as_list', False)
         as_pl = kwargs.get('as_pl', False)

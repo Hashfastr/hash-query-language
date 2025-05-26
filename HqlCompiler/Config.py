@@ -17,9 +17,9 @@ class Config():
         try:
             return self.conf['databases'][dbname]
         except KeyError:
-            logging.critical('Config file is missing databases definition')
-            logging.critical('Check that your config contains a database')
-            raise Exceptions.ConfigException('Missing database definition')
+            logging.critical(f'Config file for {dbname} is missing databases definition')
+            logging.critical('Check that your config contains a database under that name')
+            raise Exceptions.ConfigException(f'Missing database definition {dbname}')
         
     def get_default_db(self):
         try:

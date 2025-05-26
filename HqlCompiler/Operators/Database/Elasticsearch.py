@@ -3,17 +3,13 @@ from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
 from HqlCompiler.Data import Schema, Data, Table
-from HqlCompiler.Context import Context
 from HqlCompiler.Types import HqlTypes as hqlt
 
 import requests
 from elasticsearch import Elasticsearch as ES
-import polars as pl
 
-import time
 import json
 import logging
-import deepdiff.diff as diff
 from .__proto__ import Database
 
 # Index in a database to grab data from, extremely simple.

@@ -208,7 +208,10 @@ class HqlTypes():
         
     class bool(HqlType, pl.Boolean):
         ...
-        
+    
+    '''
+    This is a generic object, unspecified the contents
+    '''
     class object(HqlType, pl.Struct):
         def __init__(self, fields:list[str]):
             pl.Struct.__init__(self, fields)
