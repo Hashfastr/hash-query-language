@@ -1,4 +1,5 @@
 import polars as pl
+import logging
 
 class pltools():
     def advance(columns:list[pl.DataFrame]) -> list[pl.DataFrame]:
@@ -138,4 +139,4 @@ class pltools():
             rh = expr.rh.eval(ctx, as_pl=True)
             return (lh == rh)
         else:
-            print(expr.type)
+            logging.warning(f'Unimplemented filter expression type {expr.type}')

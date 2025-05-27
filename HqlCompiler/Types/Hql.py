@@ -10,7 +10,6 @@ class HqlTypes():
         def __init__(self):
             # Only init if it's a subclass
             if len(type(self).__bases__):
-                super().__init__()
                 self.proto = type(self).__bases__[-1]
             else:
                 self.proto = None
@@ -19,7 +18,7 @@ class HqlTypes():
             self.super = (HqlTypes.string, HqlTypes.multivalue)
 
         def pl_schema(self):
-            return self.proto
+            return self.proto()
 
         def cast(self, data:pl.Series):
             return data.cast(self.proto)
@@ -31,6 +30,9 @@ class HqlTypes():
         return get_type(f'hql_{name}')
     
     def resolve_conflict(types:list[HqlType]):
+        if len(types) == 1:
+            return types[0]
+        
         # Check to see if there's a multivalue we need to handle
         mv = False
         for i in types:
@@ -197,7 +199,7 @@ class HqlTypes():
             pl.Boolean.__init__(self)
             
             self.priority = 1
-            self.super = (HqlTypes.string, HqlTypes.multivalue)
+            self.super = (HqlTypes.int, HqlTypes.string, HqlTypes.multivalue)
 
     '''
     This is a generic object, unspecified the contents
@@ -213,6 +215,9 @@ class HqlTypes():
             
         def cast(self, data: pl.Struct):
             return data
+        
+        def pl_schema(self):
+            return self.proto(self.fields)
 
     @register_type('hql_null')
     class null(HqlType, pl.Null):
@@ -229,12 +234,15 @@ class HqlTypes():
         
     @register_type('hql_multivalue')
     class multivalue(HqlType, pl.List):
-        def __init__(self, inner:"HqlTypes.HqlType"=None):
+        def __init__(self, inner:"HqlTypes.HqlType"):
             HqlTypes.HqlType.__init__(self)
-            pl.List.__init__(self)
             
             self.priority = 5
             self.super = ()
+            
+            if isinstance(inner, type):
+                inner = inner()
+                        
             self.inner = inner
         
         def pl_schema(self):

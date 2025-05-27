@@ -70,7 +70,6 @@ def get_type(name):
     if name in type_registry:
         return type_registry[name]
     else:
-        print(type_registry.keys())
         raise CompilerException(f"Unknown type {name} referenced")
 
 # Essentially a scoped context

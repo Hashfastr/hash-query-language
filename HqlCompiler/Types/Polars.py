@@ -17,7 +17,7 @@ class PolarsTypes():
                 self.HqlType = None
         
         def hql_schema(self):
-            return self.HqlType
+            return self.HqlType()
         
         def pl_schema(self):
             return self
@@ -134,6 +134,11 @@ class PolarsTypes():
     @register_type('polars_Object')   
     class Object(PolarsType, Hql.object):
         ...
+
+    @register_type('polars_Struct')   
+    class Struct(PolarsType, Hql.object):
+        def __init__(self, fields:list[str]):
+            super().__init__()
         
     @register_type('polars_Unknown')
     class Unknown(PolarsType, Hql.unknown):

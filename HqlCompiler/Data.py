@@ -165,9 +165,12 @@ class Table():
         self.schema = None
 
         if init_data and not schema:
-            self.schema = Schema(init_data)
+            self.schema = Schema(init_data, target='hql')
             init_data = self.schema.adjust_mv(init_data)
-            self.df = pl.from_dicts(init_data, schema=self.schema.to_pl_schema())
+            schema = self.schema.convert_schema(target='polars')
+            print(json.dumps(init_data[0], indent=2, default=2))
+            print(json.dumps(schema, indent=2, default=repr))
+            self.df = pl.from_dicts(init_data, schema=schema)
         
         elif init_data and schema:
             self.schema = schema
@@ -260,7 +263,7 @@ class Table():
             return None
 
         new = self.get_elements([field])
-        new.schema.set(field=field, htype=cast_type)
+        new.schema.set(path=field, htype=cast_type)
         new.df = new.schema.cast_to_schema(new.df)
 
         return new
@@ -278,7 +281,13 @@ class Table():
             raise QueryException(e.args[0])
 
 class Schema():
-    def __init__(self, data: Union[pl.DataFrame, dict, list[dict]]=None, schema:dict=None, sample_size:int=0):
+    def __init__(
+            self,
+            data: Union[pl.DataFrame, dict, list[dict]]=None,
+            schema:dict=None,
+            sample_size:int=0,
+            target:str='hql'
+        ):
         # [['foo', 'bar'], ['cat']]
         self.schema = dict()
 
@@ -293,6 +302,8 @@ class Schema():
             self.schema = Schema.from_df(data)
         elif data:
             raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
+        
+        self.schema = self.convert_schema(target=target)
                 
     def merge(schemata:list):
         new = dict()
@@ -331,29 +342,45 @@ class Schema():
 
     # Generates a schema with types replaced with their polars primatives
     # schema parameter required for recursion
-    def convert_schema(self, schema:dict=None, target:CompilerType=hqlt.HqlType):
+    def convert_schema(self, schema:dict=None, target:str='hql'):
+        supported = ('hql', 'polars')
+        
+        if target not in supported:
+            logging.critical(f'Unsupported schema conversion type {target}')
+            logging.critical(f'Supported schemas: {supported}')
+            raise CompilerException(f'Unsupported schema conversion type {target}')
+        
         if not schema:
             schema = self.schema
+            
+        if not isinstance(schema, dict):
+            return schema
 
-        # Base case, create empty struct
+        # Base case, create empty object/struct
         if len(schema) == 0:
-            return []
+            if target == 'hql':
+                return hqlt.object([])
+            elif target == 'polars':
+                return plt.Struct([])
 
         target_schema = dict()
-        for key in schema:
+        for key in schema:            
             element = schema[key]
             
             if element == {}:
-                target_schema[key] = pl.Struct([])
+                if target == 'hql':
+                    target_schema[key] = hqlt.null()
+                elif target == 'polars':
+                    target_schema[key] = pl.Null()
 
             # Recurse case
             elif isinstance(element, dict):
-                target_schema[key] = pl.Struct(self.convert_schema(schema=element, target=target))
+                target_schema[key] = self.convert_schema(schema=element, target=target)
 
             else:
-                if target == hqlt.HqlType:
+                if target == 'hql':
                     target_schema[key] = element.hql_schema()
-                elif target == plt.PolarsType:
+                elif target == 'polars':
                     target_schema[key] = element.pl_schema()
                 
         return target_schema
@@ -363,20 +390,30 @@ class Schema():
     def from_json(data:list[dict]):
         # get a set of keys to handle
         keyset = set()
-        for datum in data:
-            if datum:
-                keyset |= set(datum.keys())
+        for row in data:
+            if row:
+                keyset |= set(row.keys())
         keyset = list(keyset)
+        
+        # if we have no keys then we have an empty dict
+        if not len(keyset):
+            return pyt.dict([])
 
         new = dict()
         for key in keyset:
             typeset = set()
-            for datum in data:
-                if isinstance(datum[key], dict):
+            for row in data:
+                if key not in row:
+                    continue
+                    
+                if isinstance(row[key], dict):
                     typeset.add(dict)
                 
+                elif isinstance(row[key], list):
+                    typeset.add(pyt.list(pyt.resolve_mv(row[key])))
+                    
                 else:
-                    typeset.add(pyt.from_name(type(datum[key]).__name__))
+                    typeset.add(pyt.from_name(type(row[key]).__name__)())
             
             typeset = list(typeset)
 
@@ -389,17 +426,17 @@ class Schema():
                 
                 # Unnest the nested dict
                 sub_data = []
-                for datum in data:
-                    if key in datum:
-                        sub_data.append(datum[key])
+                for row in data:
+                    if key in row:
+                        sub_data.append(row[key])
 
                 # Create the new schema from the unnested dict
-                new[key] = Schema(sub_data)
+                new[key] = Schema(data=sub_data).schema
 
             else:
                 # Find the best type
-                new[key] = hqlt.resolve_conflict(typeset)
-
+                new[key] = pyt.resolve_conflict(typeset)
+                
         return new
     
     def from_df(df:pl.DataFrame) -> dict:
@@ -415,7 +452,7 @@ class Schema():
 
     # Adjusts json to multivalue
     def adjust_mv(self, data:list[dict], schema:dict=None) -> list[dict]:
-        schema = schema if schema else self.schema
+        schema = schema if schema != None else self.schema
         
         # Loop through each defined multivalue field
         for key in schema:

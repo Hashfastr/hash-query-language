@@ -51,5 +51,7 @@ class CSV(Database):
             logging.critical('Correct usage: database("csv").file("filename")')
             logging.critical('Where filename exists relative to the configured base_path')
             raise QueryException('No file provided to CSV database')
+        
+        self.eval_ops()
                 
         return Data(tables_list=[self.load_file(x) for x in self.files])
