@@ -1,3 +1,3 @@
-database('json').file('./notebooks/so-network-data.json')
+database('json').file('./notebooks/big.json', './notebooks/so-network-data.json')
 | count
 | take 10

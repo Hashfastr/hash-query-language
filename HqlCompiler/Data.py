@@ -165,11 +165,11 @@ class Table():
         self.schema = None
 
         if init_data and not schema:
-            self.schema = Schema(init_data, target='hql')
+            self.schema = Schema(init_data)
             init_data = self.schema.adjust_mv(init_data)
-            schema = self.schema.convert_schema(target='polars')
-            print(json.dumps(init_data[0], indent=2, default=2))
-            print(json.dumps(schema, indent=2, default=repr))
+            schema = self.schema.gen_pl_schema()
+            # print(json.dumps(init_data[0], indent=2, default=2))
+            # print(json.dumps(schema, indent=2, default=repr))
             self.df = pl.from_dicts(init_data, schema=schema)
         
         elif init_data and schema:
@@ -384,6 +384,23 @@ class Schema():
                     target_schema[key] = element.pl_schema()
                 
         return target_schema
+
+    def gen_pl_schema(self, schema:dict=None):
+        schema = schema if schema else self.schema
+        
+        new_schema = {}
+        for key in schema:
+            if isinstance(schema[key], dict):
+                if len(schema[key]):
+                    new_schema[key] = pl.Struct(self.gen_pl_schema(schema=schema[key]))
+                else:
+                    new_schema[key] = pl.Struct([])
+                    
+                continue
+            
+            new_schema[key] = schema[key].pl_schema()
+    
+        return new_schema
 
     # Gen schema from dicts
     # Uses python typing
