@@ -3,7 +3,7 @@ from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
 from HqlCompiler.Data import Schema, Data, Table
-from HqlCompiler.Types import HqlTypes as hqlt
+from HqlCompiler.Types.Elasticsearch import ESTypes
 
 import requests
 from elasticsearch import Elasticsearch as ES
@@ -47,16 +47,16 @@ class Elasticsearch(Database):
         self.pattern = name
         return self
     
-    def can_integrate(self, type:str):
-        return type in self.compatible
-    
-    def add_op(self, op:Operator):
-        if op.type == 'Where':
-            self.add_filter(op.expr)
-        
-        # should only have on expression
-        if op.type == 'Take':
-            self.limit = op.expr.value
+    def eval_ops(self):
+        for op in self.ops:
+            if op.type == 'Where':
+                self.add_filter(op.expr)
+            
+            # should only have on expression
+            if op.type == 'Take':
+                self.limit = op.expr.eval(self.ctx)
+                if not isinstance(self.limit, int):
+                    raise QueryException(f'Take operator passed non-int type {self.n_rows}')
 
     def add_index(self, pattern:str):
         self.pattern = pattern
@@ -116,52 +116,7 @@ class Elasticsearch(Database):
                 schema[i] = self.gen_elastic_schema(props[i]['properties'])
                 continue
             
-            ptype = props[i]['type']
-            if ptype in  ('scaled_float'):
-                schema[i] = hqlt.decimal
-            elif ptype in ('half_float', 'float'):
-                schema[i] = hqlt.float
-            elif ptype in ('double'):
-                schema[i] = hqlt.double
-            elif ptype in ('byte'):
-                schema[i] = hqlt.byte
-            elif ptype in ('short'):
-                schema[i] = hqlt.short
-            elif ptype in ('integer'):
-                schema[i] = hqlt.int
-            elif ptype in ('long'):
-                schema[i] = hqlt.long
-            elif ptype in ('unsigned_long'):
-                schema[i] = hqlt.ulong
-            elif ptype in ('ip'):
-                schema[i] = hqlt.ip
-            elif ptype in ('date', 'date_nanos'):
-                schema[i] = hqlt.datetime
-            elif ptype in ('date_range', 'integer_range', 'float_range', 'long_range', 'double_range', 'ip_range'):
-                rtype = self.gen_elastic_schema({'rtype': {'type': ptype.replace('_range', '')}})['rtype']
-                schema[i] = hqlt.range(rtype, rtype)
-            elif ptype in ('keyword', 'constant_keyword', 'wildcard', 'binary', 'text', 'match_only_text'):
-                schema[i] = hqlt.string
-            elif ptype in ('boolean'):
-                schema[i] = hqlt.bool
-            elif ptype in ('flattened', 'object'):
-                schema[i] = hqlt.object([])
-            elif ptype in ('nested'):
-                schema[i] = hqlt.string
-            elif ptype in ('point', 'geo_point'):
-                # ptype = t.float
-                # schema[i] = t.multivalue(ptype)
-                schema[i] = {
-                    'lon': hqlt.float,
-                    'lat': hqlt.float
-                }
-            # elif ptype in ('object', 'flattened', 'nested'):
-            #     schema[i] = pl.
-            # elif ptype in ('geo_point'):
-            #     schema[i] = pl.String
-            # elif ptype in ('')
-            else:
-                print(f'{i} {ptype}')
+            schema[i] = ESTypes.from_name(props[i]['type'])()
 
         return schema
 
@@ -193,6 +148,8 @@ class Elasticsearch(Database):
             request_timeout=TIMEOUT,
             retry_on_timeout=True,
         )
+        
+        self.eval_ops()
         
         logging.debug("Starting initial query")
 

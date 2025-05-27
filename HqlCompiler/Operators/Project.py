@@ -1,7 +1,4 @@
-from .Operator import Operator
-from ..Expression import Expression
-import polars as pl
-from ..PolarsTools import plt
+from HqlCompiler.Expression import Expression
 from HqlCompiler.Data import Schema, Data, Table
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *

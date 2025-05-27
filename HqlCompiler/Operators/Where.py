@@ -3,7 +3,7 @@ from ..Expression import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Data import Data, Table, Schema
-from HqlCompiler.PolarsTools import plt
+from HqlCompiler.PolarsTools import pltools
 import logging
 
 # Where operator
@@ -26,7 +26,7 @@ class Where(Operator):
     Adds an additional meta * table for the total count of all tables.
     '''
     def eval(self, ctx:Context, **kwargs):
-        pl_filter = plt.build_filter(ctx, self.expr)
+        pl_filter = pltools.build_filter(ctx, self.expr)
 
         tables = []
         for name in ctx.data.tables:

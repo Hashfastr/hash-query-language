@@ -1,5 +1,6 @@
 import polars as pl
-class plt():
+
+class pltools():
     def advance(columns:list[pl.DataFrame]) -> list[pl.DataFrame]:
         new = []
         name = columns[0].columns[0]

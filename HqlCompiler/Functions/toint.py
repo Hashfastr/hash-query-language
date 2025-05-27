@@ -2,7 +2,7 @@ from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_func, Context
 from HqlCompiler.Data import Data
 from .__proto__ import Function
-from HqlCompiler.Types import HqlTypes as hqlt
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 # This is a meta function resolved while parsing
 @register_func('toint')

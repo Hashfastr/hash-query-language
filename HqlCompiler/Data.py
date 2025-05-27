@@ -1,7 +1,13 @@
 import polars as pl
-from HqlCompiler.PolarsTools import plt as plt
-from HqlCompiler.Types import HqlTypes as hqlt
+from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Exceptions import *
+
+from HqlCompiler.Types.Compiler import CompilerType
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from HqlCompiler.Types.Python import PythonTypes as pyt
+from HqlCompiler.Types.Polars import PolarsTypes as plt
+
+from typing import Union
 import logging
 import json
 
@@ -22,13 +28,14 @@ class Data():
 
         # empty base case
         if not tables and not tables_list:
-            return self
+            return
 
         table_groups = dict()
 
         if not tables_list:
             tables_list = []
 
+        # convert everything to a list for processing
         if tables:
             for key in tables:
                 tables_list.append(tables[key])
@@ -37,7 +44,7 @@ class Data():
             if not isinstance(table, Table):
                 raise CompilerException('Non-table passed to Data as init data')
 
-        # Fix names
+        # Give names to names-less tables
         for idx, i in enumerate(tables_list):
             if i.name == None:
                 i.name = f'Table {idx}'
@@ -57,17 +64,19 @@ class Data():
                 continue
 
             self.tables[name] = Table.merge(table_groups[name])
-
+            
     def __len__(self):
         length = 0
         for i in self.tables:
             length += len(self.tables[i])
+            
         return length
 
     def get_table(self, name:str):
         if name in self.tables:
             return self.tables[name]
-        return None
+        else:
+            return None
     
     def add_table(self, table:Table):
         tables = [table]
@@ -84,8 +93,11 @@ class Data():
     def get_schema(self):
         schemata = {}
         for name in self.tables:
-            schemata[name] = self.tables[name].get_schema
+            schemata[name] = self.tables[name].get_schema()
+        
+        return schemata
 
+    # Given a list of string paths, get a dataset containing only those fields
     def get_elements(self, fields:list[list[str]]):
         tables = []
         for i in self.tables:
@@ -115,7 +127,7 @@ class Data():
         return Data(tables_list=tables)
 
     # Ensures that the field exists in at least one table
-    # Returns the tables where it exists
+    # Returns the tables where it does exists
     def assert_field(self, field:list[str]):
         exists = []
         for i in self.tables:
@@ -159,7 +171,7 @@ class Table():
         
         elif init_data and schema:
             self.schema = schema
-            self.df = pl.from_dicts(init_data, schema=schema)
+            self.df = pl.from_dicts(init_data, schema=schema.to_pl_schema())
         
         elif not df.is_empty() and schema:
             self.schema = schema
@@ -167,7 +179,7 @@ class Table():
 
         elif not df.is_empty() and not schema:
             self.df = df
-            logging.warning('Dataframe loaded into table without Hql schema')
+            self.schema = Schema(data=df)
 
         elif schema:
             self.schema = schema
@@ -187,13 +199,13 @@ class Table():
             if table.schema:
                 schemata.append(table.schema)
 
-        df = plt.merge(dfs)
+        df = pltools.merge(dfs)
         schema = Schema.merge(schemata)
 
         return Table(df=df, schema=schema, name=tables[0].name)
 
     def change_schema(self, schema:Schema):
-        self.df = schema.cast_to_schema(self.df, mv_fields=self.schema.mv_fields)
+        self.df = schema.cast_to_schema(self.df)
         self.schema = schema
         
     def get_schema(self):
@@ -210,12 +222,12 @@ class Table():
 
         dfs = []
         for field in fields:
-            df = plt.get_element(self.df, field)
+            df = pltools.get_element(self.df, field)
             if not df.is_empty():
                 dfs.append(df)
 
         if dfs:
-            df = plt.merge(dfs)
+            df = pltools.merge(dfs)
         else:
             df = pl.DataFrame()
                 
@@ -232,7 +244,7 @@ class Table():
         return asserted_fields
 
     def assert_field(self, field:list[str]):
-        return plt.assert_field(self.df, field)
+        return pltools.assert_field(self.df, field)
     
     def cast_in_place(self, field:list[str], cast_type:hqlt.HqlType):
         if not self.assert_field(field):
@@ -266,20 +278,22 @@ class Table():
             raise QueryException(e.args[0])
 
 class Schema():
-    def __init__(self, data:list[dict]=None, schema:dict=None, sample_size:int=0):
+    def __init__(self, data: Union[pl.DataFrame, dict, list[dict]]=None, schema:dict=None, sample_size:int=0):
         # [['foo', 'bar'], ['cat']]
-        self.mv_fields = []
         self.schema = dict()
 
-        if data:
-            if isinstance(data, list):
-                sample = data[:sample_size] if sample_size > 0 else data
-                self.schema = self.gen_schema(sample)
-            else:
-                self.schema = self.gen_schema([data])
-        else:
+        if schema:
             self.schema = schema
-        
+        elif isinstance(data, list):
+            sample = data[:sample_size] if sample_size > 0 else data
+            self.schema = Schema.from_json(sample)
+        elif isinstance(data, dict):
+            self.schema = Schema.from_json([data])
+        elif isinstance(data, pl.DataFrame):
+            self.schema = Schema.from_df(data)
+        elif data:
+            raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
+                
     def merge(schemata:list):
         new = dict()
         for idx, i in enumerate(schemata):
@@ -317,7 +331,7 @@ class Schema():
 
     # Generates a schema with types replaced with their polars primatives
     # schema parameter required for recursion
-    def to_pl_schema(self, schema:dict=None):
+    def convert_schema(self, schema:dict=None, target:CompilerType=hqlt.HqlType):
         if not schema:
             schema = self.schema
 
@@ -325,29 +339,28 @@ class Schema():
         if len(schema) == 0:
             return []
 
-        plschema = {}
+        target_schema = dict()
         for key in schema:
             element = schema[key]
             
             if element == {}:
-                plschema[key] = pl.Struct([])
+                target_schema[key] = pl.Struct([])
 
             # Recurse case
             elif isinstance(element, dict):
-                plschema[key] = pl.Struct(self.to_pl_schema(schema=element))
+                target_schema[key] = pl.Struct(self.convert_schema(schema=element, target=target))
 
-            # Instanciated cases
-            elif type(element) in (hqlt.multivalue, hqlt.object):
-                plschema[key] = element.pl_schema()              
-
-            # all other HqlType types should not be instanciated yet
             else:
-                plschema[key] = element().pl_schema()
+                if target == hqlt.HqlType:
+                    target_schema[key] = element.hql_schema()
+                elif target == plt.PolarsType:
+                    target_schema[key] = element.pl_schema()
                 
-        return plschema
+        return target_schema
 
     # Gen schema from dicts
-    def gen_schema(self, data:list[dict]):
+    # Uses python typing
+    def from_json(data:list[dict]):
         # get a set of keys to handle
         keyset = set()
         for datum in data:
@@ -359,22 +372,19 @@ class Schema():
         for key in keyset:
             typeset = set()
             for datum in data:
-                # Add null case
-                if key not in datum:
-                    typeset.add(hqlt.null())
-
-                elif isinstance(datum[key], dict):
+                if isinstance(datum[key], dict):
                     typeset.add(dict)
                 
                 else:
-                    typeset.add(hqlt.to_hql_type(datum[key]))
+                    typeset.add(pyt.from_name(type(datum[key]).__name__))
+            
             typeset = list(typeset)
 
             # recurse on an object
             if dict in typeset:
                 # The only two acceptable existences of dict being in a typeset
-                # are {dict} and {dict, hqlt.null}
-                if len(typeset) != 1 and hqlt.null() not in typeset:
+                # are {dict} and {dict, pyt.null}
+                if len(typeset) != 1 and pyt.NoneType not in typeset:
                     raise Exception(f"Cannot merge types {list(typeset)}")
                 
                 # Unnest the nested dict
@@ -384,112 +394,94 @@ class Schema():
                         sub_data.append(datum[key])
 
                 # Create the new schema from the unnested dict
-                new_schema = Schema(sub_data)
-
-                # absorb the new schema's multivalue fields, adding our key onto it
-                self.mv_fields += [[key] + x for x in new_schema.mv_fields]
-                new[key] = new_schema.schema
+                new[key] = Schema(sub_data)
 
             else:
                 # Find the best type
                 new[key] = hqlt.resolve_conflict(typeset)
 
-                # If it is multivalue, then mark and track it
-                if isinstance(new[key], hqlt.multivalue):
-                    self.mv_fields.append([key])
-
         return new
     
-    # Adjusts json to multivalue
-    def adjust_mv(self, data:list[dict], mv_fields:list[list[str]]=None) -> list[dict]:
-        mv_fields = mv_fields if mv_fields else self.mv_fields
-
-        # Loop through each defined multivalue field
-        for field in mv_fields:
-            # Get base path element
-            key = field[0]
-
-            # If this is the end of the road
-            if len(field) == 1:
-                for row in data:
-                    # Skip rows that do not have the field present
-                    if key not in row:
-                        continue
-
-                    # Skip rows where the field as already been multivalued
-                    if isinstance(row[key], list):
-                        continue
-
-                    # Adjust multivalue by placing the base value into a list
-                    row[key] = [row[key]]
+    def from_df(df:pl.DataFrame) -> dict:
+        schema = dict()
+        
+        for col in df:
+            if isinstance(col.dtype, pl.Struct):
+                schema[col.name] = Schema.from_df(pl.DataFrame(col))
+                
+            schema[col.name] = plt.from_pure_polars(col.dtype)
             
-            # Need to recurse on a nested key
-            else:
+        return schema
+
+    # Adjusts json to multivalue
+    def adjust_mv(self, data:list[dict], schema:dict=None) -> list[dict]:
+        schema = schema if schema else self.schema
+        
+        # Loop through each defined multivalue field
+        for key in schema:
+            if isinstance(schema[key], dict):
                 rows = []
                 for row in data:
-                    # Only recurse on rows with the field we need
                     if key in row:
                         rows.append(row[key])
-                
-                # Recurse, advancing the field path
-                self.adjust_mv(rows, [field[1:]])
+                        
+                self.adjust_mv(data, schema=schema[key])
+            
+            if not isinstance(schema[key], hqlt.multivalue):
+                continue
+            
+            for row in data:
+                if key in row and not isinstance(row[key], list):
+                    row[key] = [row[key]]
 
         return data
     
     # Set a field to a specific type in the schema
     # apply_schema is then expected to be ran
-    def set(self, field:list[str], htype:list[hqlt.HqlType], schema:dict=None):
-        if not schema:
-            schema = self.schema
-
-        key = field[0]
-        if len(field) == 1:
-            # cannot set a dict to type
-            if isinstance(schema[key], dict):
-                return False
+    def set(self, path:list[str], htype:hqlt.HqlType):
+        schema = self.schema
+        
+        for idx, field in enumerate(path):
+            if field in schema:
+                if isinstance(schema[field], dict):
+                    schema = schema[field]
+                    continue
+                elif idx == len(path) - 1:
+                    schema = htype
+                    return True
             
-            # Set the type
-            schema[key] = htype
-            return True
+            return False
         
-        # Recursion case
-        if isinstance(schema[key], dict):
-            # Advance field path and schema
-            return self.set(field[1:], htype, schema=schema[key])
-        
-        # nested field referenced, but not possible
-        # e.g. a basetype is referenced as if it were a dict
         return False
     
-    def cast_to_schema(self, data:pl.DataFrame, schema:dict=None, mv_fields:list=None):
+    def cast_to_schema(self, data:pl.DataFrame, schema:dict=None):
         newdf = {}
-
         schema = schema if schema else self.schema
-        mv_fields = mv_fields if mv_fields else self.mv_fields
 
         if not isinstance(schema, dict):
             return data
 
         for col in data:
             # Base case, we don't specify anything in the target schema
-            # so pass through
+            # so pass through, and fill out the missing schema value
             if col.name not in schema:
+                schema[col.name] = plt.from_name(col.dtype)().hql_schema()
                 newdf[col.name] = col
-                continue
-
-            # Generic unspecified object
-            if schema[col.name] == hqlt.object:
-                newdf[col.name] = col
-                continue
 
             # Case to recurse on a nested object
-            if col.dtype == pl.Struct: # or isinstance(schema[col.name], dict):
-                # print(json.dumps(schema[col.name], indent=2, default=repr))
+            elif col.dtype == pl.Struct and not isinstance(schema[col.name], hqlt.object):
                 subdata = pl.DataFrame(
-                    data.select(col.name),
-                    # schema=self.to_pl_schema(schema)[col.name]
+                    data.select(col.name)
                 )
 
+
+                # advance the multivalue fields to only those applicable to the recurse
+                new_fields = []
+                for i in mv_fields:
+                    if i[0] == col.name:
+                        new_fields.append(i[1:])
+
+                
                 # advance the multivalue fields to only those applicable to the recurse
                 new_fields = []
                 for i in mv_fields:
@@ -498,26 +490,23 @@ class Schema():
 
                 newdf[col.name] = self.cast_to_schema(
                     subdata, 
-                    schema=schema[col.name],
-                    mv_fields=new_fields
+                    schema=schema[col.name]
                 )
-
-                continue
-
-            # See if the current field is designated multi-value
-            mv = False
-            for i in mv_fields:
-                if len(i) == 1 and i[0] == col.name:
-                    mv = True
-
+                
+            else:
+                newdf[col.name] = schema[col.name].cast(col)
+                    
+            '''
             # mv should always be specified by the schema
             # Unhandled fields are skipped at the top
             if mv:
-                intermediate = col.dtype.inner
-                target = schema[col.name]().pl_schema()
+                intermediate = col.dtype.inner if isinstance(col.dtype, pl.List) else col.dtype
+                target = 
+                target = schema[col.name].pl_schema()
 
                 if intermediate != target:
-                    newdf[col.name] = col.cast(hqlt.multivalue(schema[col.name]).pl_schema())
+                    newdf[col.name] = schema[col.name].
+                    newdf[col.name] = col.cast(hqlt.multivalue(type(schema[col.name])).pl_schema())
                 else:
                     newdf[col.name] = col
 
@@ -530,6 +519,7 @@ class Schema():
                 continue
 
             newdf[col.name] = col.cast(self.to_pl_schema(schema=schema)[col.name])
+            '''
 
         return pl.DataFrame(newdf)
 
@@ -539,28 +529,17 @@ class Schema():
     '''
     def get_type(self, path:list[str]):
         schema = self.schema
-        mv_fields = self.mv_fields
-        for idx, i in enumerate(path):
-            if idx == len(path) - 1:
-                if isinstance(schema[path[idx]], dict):
-                    fields = list(schema[path[idx]].keys())
-                    path_type = hqlt.object(fields)
-                    break
-                
-                
+
+        for idx, field in enumerate(path):
+            if field in schema:
+                if isinstance(schema[field], dict):
+                    schema = schema[field]
+                    continue
+                elif idx == len(path) - 1:
+                    return True
+                else:
+                    return False
             
-            if isinstance(schema[i], dict):
-                schema = schema[i]
-                new_fields = []
-                for j in mv_fields:
-                    if j[0] == i:
-                        new_fields.append(j[1:])
-                mv_fields = new_fields
-                
-                continue
-            
-        for j in mv_fields:
-            if len(j) == 1 and j[0] == i and not isinstance(path_type, hqlt.multivalue):
-                return hqlt.multivalue(path_type)
-            
-        return path_type
+            return False
+        
+        return False

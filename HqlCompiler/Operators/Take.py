@@ -22,13 +22,13 @@ class Take(Operator):
     the sum of all tables is less than or equal to the take amount.
     Unimplemented.
     '''
-    def eval(self, ctx:Context, **kwargs):
-        if self.expr.type != 'Integer':
-            raise CompilerException(f'Invalid type {self.expr.type} given to take operator')
-        
+    def eval(self, ctx:Context, **kwargs):        
         limit = self.expr.eval(ctx)
+
+        if not isinstance(limit, int):
+            raise QueryException(f'Take operator passed non-int type {self.n_rows}')
 
         for table in ctx.data.tables:
             ctx.data.tables[table].truncate(limit)
-        
+                
         return ctx.data

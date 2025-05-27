@@ -1,7 +1,7 @@
 from HqlCompiler.Data import Data
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
-from HqlCompiler.PolarsTools import plt
+from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
 from HqlCompiler.Operators import Operator
 import polars as pl
@@ -42,11 +42,11 @@ class Extend(Operator):
             for i in src:
                 receiver = i.eval(self.ctx)
             
-            src_data = plt.get_element_value(receiver)
+            src_data = pltools.get_element_value(receiver)
         else:
-            src_data = plt.get_element_value(data, src)
+            src_data = pltools.get_element_value(data, src)
         
-        dest_data = plt.build_element(dest, src_data)
+        dest_data = pltools.build_element(dest, src_data)
         return dest_data
             
     def eval(self, ctx:Context, **kwargs):
