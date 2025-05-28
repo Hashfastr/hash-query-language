@@ -279,6 +279,7 @@ TOTABLE: 'totable';
 TREEMAP: 'treemap';
 TYPEOF: 'typeof';
 UNION: 'union';
+UNNEST: 'unnest';
 UNSTACKED: 'unstacked';
 UUID: 'uuid';
 VIEW: 'view';

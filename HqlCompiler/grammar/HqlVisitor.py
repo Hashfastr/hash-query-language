@@ -909,6 +909,16 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#unnestOperator.
+    def visitUnnestOperator(self, ctx:HqlParser.UnnestOperatorContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#unnestOperatorOnClause.
+    def visitUnnestOperatorOnClause(self, ctx:HqlParser.UnnestOperatorOnClauseContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#contextualSubExpression.
     def visitContextualSubExpression(self, ctx:HqlParser.ContextualSubExpressionContext):
         return self.visitChildren(ctx)

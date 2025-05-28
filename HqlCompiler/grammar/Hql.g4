@@ -208,6 +208,7 @@ afterPipeOperator:
     | topNestedOperator
     | unionOperator
     | whereOperator
+    | unnestOperator
     ;
 
 beforeOrAfterPipeOperator:
@@ -782,6 +783,11 @@ unionOperatorExpression:
 whereOperator:
     Keyword=(FILTER | WHERE) (Parameters+=strictQueryOperatorParameter)* Predicate=namedExpression;
 
+unnestOperator:
+    UNNEST Field=unnamedExpression (OnClause=joinOperatorOnClause)?;
+
+unnestOperatorOnClause:
+    ON (Expressions+=unnamedExpression (',' Expressions+=unnamedExpression)*)?;
 
 contextualSubExpression:
       pipeSubExpression 
