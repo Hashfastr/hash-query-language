@@ -36,7 +36,7 @@ class JSON(Database):
                 logging.critical(f'Could not load json or ndjson from file {self.base_path}{os.sep}{filename}')
                 raise QueryException('JSON database not given valid json data')
 
-        jdata = jdata[:10]
+        # jdata = jdata[:10]
         # print(json.dumps(jdata, indent=2))
             
         return Table(init_data=jdata, name=filename)
@@ -48,5 +48,5 @@ class JSON(Database):
             logging.critical('Correct usage: database("json").file("filename")')
             logging.critical('Where filename exists relative to the configured base_path')
             raise QueryException('No file provided to JSON database')
-                
+        
         return Data(tables_list=[self.load_file(x) for x in self.files])

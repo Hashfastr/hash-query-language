@@ -74,7 +74,7 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data:"Data.Data") -> None:
+    def __init__(self, data) -> None:
         self.dbs = copy.copy(database_registry)
         self.ops = copy.copy(op_registry)
         self.funcs = copy.copy(func_registry)

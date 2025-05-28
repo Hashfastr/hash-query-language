@@ -784,7 +784,7 @@ whereOperator:
     Keyword=(FILTER | WHERE) (Parameters+=strictQueryOperatorParameter)* Predicate=namedExpression;
 
 unnestOperator:
-    UNNEST Field=unnamedExpression (OnClause=joinOperatorOnClause)?;
+    UNNEST Field=unnamedExpression (OnClause=unnestOperatorOnClause)?;
 
 unnestOperatorOnClause:
     ON (Expressions+=unnamedExpression (',' Expressions+=unnamedExpression)*)?;

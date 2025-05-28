@@ -62,3 +62,12 @@ class Operators(HqlVisitor):
         )
         
         return expr
+
+    def visitUnnestOperator(self, ctx: HqlParser.UnnestOperatorContext):
+        field = self.visit(ctx.Field)
+        tables = self.visit(ctx.OnClause)
+        
+        return Ops.Unnest(field, tables)
+    
+    def visitUnnestOperatorOnClause(self, ctx: HqlParser.UnnestOperatorOnClauseContext):
+        return [self.visit(x) for x in ctx.Expressions]

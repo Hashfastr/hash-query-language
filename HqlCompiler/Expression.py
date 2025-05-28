@@ -178,15 +178,15 @@ class NamedReference(Expression):
     
     def eval(self, ctx:Context, **kwargs):
         name_str = self.name.eval(ctx, as_str=True)
-        
+
         if kwargs.get('as_pl', False):
             return pltools.path_to_expr([name_str])
+
+        if kwargs.get('as_list', False):
+            return [name_str]
         
         if kwargs.get('as_str', False):
             return name_str
-        
-        if kwargs.get('list', False):
-            return [name_str]
         
         receiver = kwargs.get('receiver', None)
         if receiver is not None:

@@ -924,7 +924,7 @@ def serializedATN():
         0,2148,2150,3,370,185,0,2149,2148,1,0,0,0,2150,2153,1,0,0,0,2151,
         2149,1,0,0,0,2151,2152,1,0,0,0,2152,2154,1,0,0,0,2153,2151,1,0,0,
         0,2154,2155,3,376,188,0,2155,359,1,0,0,0,2156,2157,5,256,0,0,2157,
-        2159,3,384,192,0,2158,2160,3,192,96,0,2159,2158,1,0,0,0,2159,2160,
+        2159,3,384,192,0,2158,2160,3,362,181,0,2159,2158,1,0,0,0,2159,2160,
         1,0,0,0,2160,361,1,0,0,0,2161,2170,5,187,0,0,2162,2167,3,384,192,
         0,2163,2164,5,9,0,0,2164,2166,3,384,192,0,2165,2163,1,0,0,0,2166,
         2169,1,0,0,0,2167,2165,1,0,0,0,2167,2168,1,0,0,0,2168,2171,1,0,0,
@@ -17103,7 +17103,7 @@ class HqlParser ( Parser ):
             super().__init__(parent, invokingState)
             self.parser = parser
             self.Field = None # UnnamedExpressionContext
-            self.OnClause = None # JoinOperatorOnClauseContext
+            self.OnClause = None # UnnestOperatorOnClauseContext
 
         def UNNEST(self):
             return self.getToken(HqlParser.UNNEST, 0)
@@ -17112,8 +17112,8 @@ class HqlParser ( Parser ):
             return self.getTypedRuleContext(HqlParser.UnnamedExpressionContext,0)
 
 
-        def joinOperatorOnClause(self):
-            return self.getTypedRuleContext(HqlParser.JoinOperatorOnClauseContext,0)
+        def unnestOperatorOnClause(self):
+            return self.getTypedRuleContext(HqlParser.UnnestOperatorOnClauseContext,0)
 
 
         def getRuleIndex(self):
@@ -17152,7 +17152,7 @@ class HqlParser ( Parser ):
             _la = self._input.LA(1)
             if _la==187:
                 self.state = 2158
-                localctx.OnClause = self.joinOperatorOnClause()
+                localctx.OnClause = self.unnestOperatorOnClause()
 
 
         except RecognitionException as re:

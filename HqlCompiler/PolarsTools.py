@@ -29,7 +29,7 @@ class pltools():
                 mergable += columns[i]
                 continue
 
-            new = pl.DataFrame({i: plt.merge(plt.advance(columns[i])).to_struct()})
+            new = pl.DataFrame({i: pltools.merge(pltools.advance(columns[i])).to_struct()})
 
             mergable.append(new)
             
@@ -57,7 +57,7 @@ class pltools():
         else:
             return pl.DataFrame({fields[index-1]: new.to_struct()})
             
-        rec_data = plt.get_element(new, fields, index + 1)
+        rec_data = pltools.get_element(new, fields, index + 1)
         
         if index == 0:
             return rec_data
@@ -67,11 +67,13 @@ class pltools():
     # Gets the value of an element, does not preserve df structure
     # Just returns the value
     # So for a base value, a series, and for a field that's a struct, a struct dataframe.
-    def get_element_value(data:pl.DataFrame, fields:list[str]=None, index:int=0):
-        if not fields:
-            split = data.columns[0]
-        else:
-            split = fields[index]
+    def get_element_value(data:pl.DataFrame, fields:list[str], index:int=0):
+        # if not fields:
+        #     split = data.columns[0]
+        # else:
+        #     split = fields[index]
+                
+        split = fields[index]
 
         if split not in data:
             if index == 0:
@@ -92,13 +94,13 @@ class pltools():
         else:
             return new.to_series()
         
-        return plt.get_element_value(new, fields, index + 1)
+        return pltools.get_element_value(new, fields, index + 1)
     
     def build_element(name:list[str], data):
         if len(name) == 1:
             return pl.DataFrame({name[0]: data})
         
-        new = plt.build_element(name[1:], data)
+        new = pltools.build_element(name[1:], data)
         return pl.DataFrame({name[0]: new.to_struct()})
     
     def assert_field(data:pl.DataFrame, field:list[str], index:int=0) -> bool:
@@ -106,10 +108,6 @@ class pltools():
 
         if split not in data:
             return None
-            # if index == 0:
-            #     raise Exception(f"Invalid field referenced {split}")
-            # else:
-            #     raise Exception(f"Invalid field {split} in path {'.'.join(field)}")
         
         new = data.select(split)
         
@@ -121,7 +119,7 @@ class pltools():
         else:
             return field
                 
-        return plt.assert_field(new, field, index + 1)
+        return pltools.assert_field(new, field, index + 1)
 
     def path_to_expr(path:list[str]):
         expr = pl

@@ -90,6 +90,9 @@ class Data():
 
         self.tables[new.name] = new
         
+    def replace_table(self, table:Table):
+        self.tables[table.name] = table
+        
     def get_schema(self):
         schemata = {}
         for name in self.tables:
@@ -159,7 +162,14 @@ class Data():
         return tables
 
 class Table():
-    def __init__(self, df:pl.DataFrame=None, init_data:list[dict]=None, schema:Schema=None, name:str=None):
+    def __init__(
+            self,
+            df:pl.DataFrame=None,
+            init_data:list[dict]=None,
+            schema:Schema=None,
+            name:str=None
+        ):
+        
         self.name = name
         self.df = None
         self.schema = None
@@ -178,7 +188,7 @@ class Table():
         
         elif not df.is_empty() and schema:
             self.schema = schema
-            self.df = schema.cast_to_schema(df)
+            self.df = schema.apply(df)
 
         elif not df.is_empty() and not schema:
             self.df = df
@@ -189,6 +199,34 @@ class Table():
 
     def __len__(self):
         return len(self.df)
+
+    def to_dicts(self):
+        return self.df.to_dicts()
+
+    def get_schema(self):
+        return self.schema.schema
+
+    def set_schema(self, schema:Schema):
+        self.df = schema.apply(self.df)
+        self.schema = schema
+        
+    '''
+    Truncates the dataset to a given amount
+    '''
+    def truncate(self, amount:int):
+        self.df = self.df[:amount]
+
+    '''
+    Runs a polars filter on the table
+    '''
+    def filter(self, expr:pl.Expr):
+        try:
+            self.df = self.df.filter(expr)
+        except pl.exceptions.ColumnNotFoundError as e:
+            raise QueryException(e.args[0])
+        
+    def get_value(self, path:list[str]):
+        return pltools.get_element_value(self.df, fields=path)
 
     def merge(tables:list[Table]=None):
         dfs = []
@@ -207,20 +245,12 @@ class Table():
 
         return Table(df=df, schema=schema, name=tables[0].name)
 
-    def change_schema(self, schema:Schema):
-        self.df = schema.cast_to_schema(self.df)
-        self.schema = schema
-        
-    def get_schema(self):
-        return self.schema.schema
-
-    def to_dicts(self):
-        return self.df.to_dicts()
-    
-    # Takes in a list of paths
-    # [['foo', 'bar'], ['client', 'ip', 'src']]
-    # Returns a Table with the subset of the data
-    def get_elements(self, fields:list[list[str]]):
+    '''
+    Takes in a list of paths
+    [['foo', 'bar'], ['client', 'ip', 'src']]
+    Returns a Table with the subset of the data
+    '''
+    def subset(self, fields:list[list[str]]):
         fields = self.assert_fields(fields)
 
         dfs = []
@@ -233,8 +263,8 @@ class Table():
             df = pltools.merge(dfs)
         else:
             df = pl.DataFrame()
-                
-        schema = self.schema.extract_schema(fields)
+
+        schema = self.schema.subset(fields)
 
         return Table(df=df, schema=schema, name=self.name)
     
@@ -254,41 +284,18 @@ class Table():
             return None
         
         self.schema.set(field=field, htype=cast_type)
-        self.df = self.schema.cast_to_schema(self.df)
+        self.df = self.schema.apply(self.df)
 
         return self
-    
-    def cast_subset(self, field:list[str], cast_type:hqlt.HqlType):
-        if not self.assert_field(field):
-            return None
-
-        new = self.get_elements([field])
-        new.schema.set(path=field, htype=cast_type)
-        new.df = new.schema.cast_to_schema(new.df)
-
-        return new
-    
-    '''
-    Truncates the dataset to a given amount
-    '''
-    def truncate(self, amount:int):
-        self.df = self.df[:amount]
-
-    def filter(self, expr:pl.Expr):
-        try:
-            self.df = self.df.filter(expr)
-        except pl.exceptions.ColumnNotFoundError as e:
-            raise QueryException(e.args[0])
 
 class Schema():
     def __init__(
             self,
             data: Union[pl.DataFrame, dict, list[dict]]=None,
             schema:dict=None,
-            sample_size:int=0,
-            target:str='hql'
+            sample_size:int=1
         ):
-        # [['foo', 'bar'], ['cat']]
+        
         self.schema = dict()
 
         if schema:
@@ -303,7 +310,8 @@ class Schema():
         elif data:
             raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
         
-        self.schema = self.convert_schema(target=target)
+        # Immediately convert to hql schema
+        self.schema = self.convert_schema(target='hql')
                 
     def merge(schemata:list):
         new = dict()
@@ -327,7 +335,7 @@ class Schema():
         return Schema(schema=new)
 
     # Extract the schema for a given set of fields
-    def extract_schema(self, fields:list[list[str]], schema:dict=None):
+    def subset(self, fields:list[list[str]], schema:dict=None):
         schema = schema if schema else self.schema
 
         new = dict()
@@ -336,7 +344,7 @@ class Schema():
                 new[field[0]] = schema[field[0]]
                 continue
 
-            new[field[0]] = self.extract_schema([field[1:]], schema=schema[field[0]]).schema
+            new[field[0]] = self.subset([field[1:]], schema=schema[field[0]]).schema
 
         return Schema(schema=new)
 
@@ -385,6 +393,10 @@ class Schema():
                 
         return target_schema
 
+    '''
+    Generates a schema for use in polars using their types
+    Uses structs for nested objects instead of json objects
+    '''
     def gen_pl_schema(self, schema:dict=None):
         schema = schema if schema else self.schema
         
@@ -402,8 +414,10 @@ class Schema():
     
         return new_schema
 
-    # Gen schema from dicts
-    # Uses python typing
+    '''
+    Gen schema from dicts
+    Uses python typing
+    '''
     def from_json(data:list[dict]):
         # get a set of keys to handle
         keyset = set()
@@ -456,6 +470,9 @@ class Schema():
                 
         return new
     
+    '''
+    Generates a schema using polars typing
+    '''
     def from_df(df:pl.DataFrame) -> dict:
         schema = dict()
         
@@ -490,8 +507,10 @@ class Schema():
 
         return data
     
-    # Set a field to a specific type in the schema
-    # apply_schema is then expected to be ran
+    '''
+    Set a field to a specific type in the schema
+    apply is then expected to be ran
+    '''
     def set(self, path:list[str], htype:hqlt.HqlType):
         schema = self.schema
         
@@ -508,78 +527,40 @@ class Schema():
         
         return False
     
-    def cast_to_schema(self, data:pl.DataFrame, schema:dict=None):
+    '''
+    Applies a schema to a dataset
+    '''
+    def apply(self, df:pl.DataFrame, schema:dict=None):
         newdf = {}
         schema = schema if schema else self.schema
+        
+        if schema == None:
+            return pl.DataFrame()
 
-        if not isinstance(schema, dict):
-            return data
-
-        for col in data:
+        for col in df:
             # Base case, we don't specify anything in the target schema
             # so pass through, and fill out the missing schema value
             if col.name not in schema:
-                schema[col.name] = plt.from_name(col.dtype)().hql_schema()
                 newdf[col.name] = col
 
             # Case to recurse on a nested object
             elif col.dtype == pl.Struct and not isinstance(schema[col.name], hqlt.object):
                 subdata = pl.DataFrame(
-                    data.select(col.name)
+                    df.select(col.name).unnest(col.name)
                 )
-
-
-                # advance the multivalue fields to only those applicable to the recurse
-                new_fields = []
-                for i in mv_fields:
-                    if i[0] == col.name:
-                        new_fields.append(i[1:])
-
                 
-                # advance the multivalue fields to only those applicable to the recurse
-                new_fields = []
-                for i in mv_fields:
-                    if i[0] == col.name:
-                        new_fields.append(i[1:])
-
-                newdf[col.name] = self.cast_to_schema(
+                newdf[col.name] = self.apply(
                     subdata, 
                     schema=schema[col.name]
                 )
                 
             else:
                 newdf[col.name] = schema[col.name].cast(col)
-                    
-            '''
-            # mv should always be specified by the schema
-            # Unhandled fields are skipped at the top
-            if mv:
-                intermediate = col.dtype.inner if isinstance(col.dtype, pl.List) else col.dtype
-                target = 
-                target = schema[col.name].pl_schema()
-
-                if intermediate != target:
-                    newdf[col.name] = schema[col.name].
-                    newdf[col.name] = col.cast(hqlt.multivalue(type(schema[col.name])).pl_schema())
-                else:
-                    newdf[col.name] = col
-
-                continue
-
-            dtype = col.dtype.inner if isinstance(col.dtype, pl.List) else col.dtype
-
-            if dtype == schema[col.name]().pl_schema():
-                newdf[col.name] = col
-                continue
-
-            newdf[col.name] = col.cast(self.to_pl_schema(schema=schema)[col.name])
-            '''
 
         return pl.DataFrame(newdf)
 
     '''
-    Validates a parser logical expression against the schema.
-    Ensures that referenced fields exist in the schema.
+    Gets the type of a given path in the schema
     '''
     def get_type(self, path:list[str]):
         schema = self.schema
@@ -590,10 +571,10 @@ class Schema():
                     schema = schema[field]
                     continue
                 elif idx == len(path) - 1:
-                    return True
+                    return schema[field]
                 else:
-                    return False
+                    return None
             
-            return False
+            return None
         
-        return False
+        return schema
