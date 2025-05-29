@@ -11,18 +11,34 @@ from HqlCompiler.Context import register_op, Context
 # https://learn.microsoft.com/en-us/kusto/query/count-operator
 @register_op('Count')
 class Count(Operator):
-    def __init__(self, expr:Expression=None):
+    def __init__(self, name:Expression=None):
         super().__init__()
-        self.expr = expr
+        self.name = name
     
     '''
     Counts each table and replaces the contents of that table with the count.
     Adds an additional meta * table for the total count of all tables.
     '''
     def eval(self, ctx:Context, **kwargs):
-        counts = [Table(name='*', init_data=[{'Count': len(ctx.data)}])]
+        name = self.name.eval(ctx, as_str=True) if self.name else None
+        
+        counts = dict()
         for table in ctx.data.tables:
-            count = [{'Count': len(ctx.data.tables[table])}]
-            counts.append(Table(name=table, init_data=count))
-
-        return Data(tables_list=counts)
+            counts[table] = len(ctx.data.tables[table])
+            
+        # cast count to a field
+        if name:
+            data = ctx.data
+            new_tables = []
+            for count in counts:
+                new_tables.append(data.tables[count])
+                new_tables.append(Table(name=count, init_data=[{name: counts[count]}]))
+                                
+        # Replace tables with counts
+        else:
+            new_tables = []
+            for count in counts:
+                new = [{'Count': counts[count]}]
+                new_tables.append(Table(name=count, init_data=new))
+                
+        return Data(tables_list=new_tables)

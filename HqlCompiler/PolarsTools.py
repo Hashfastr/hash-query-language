@@ -22,13 +22,16 @@ class pltools():
                 columns[name] = []
             
             columns[name].append(i)
-            
+
         mergable = []
         for i in columns:
+            if i == 'network':
+                print(columns[i])
+            
             if len(columns[i]) == 1:
                 mergable += columns[i]
                 continue
-
+                
             new = pl.DataFrame({i: pltools.merge(pltools.advance(columns[i])).to_struct()})
 
             mergable.append(new)

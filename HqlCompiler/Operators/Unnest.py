@@ -7,6 +7,7 @@ from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Data import Data, Table, Schema
 
 import logging
+import json
 
 # Creates a field with a value in the extend
 #

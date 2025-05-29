@@ -254,11 +254,6 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#countOperatorAsClause.
-    def visitCountOperatorAsClause(self, ctx:HqlParser.CountOperatorAsClauseContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by HqlParser#distinctOperator.
     def visitDistinctOperator(self, ctx:HqlParser.DistinctOperatorContext):
         return self.visitChildren(ctx)
@@ -1336,6 +1331,11 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#simpleOrWildcardedNameReference.
     def visitSimpleOrWildcardedNameReference(self, ctx:HqlParser.SimpleOrWildcardedNameReferenceContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#tableNameReference.
+    def visitTableNameReference(self, ctx:HqlParser.TableNameReferenceContext):
         return self.visitChildren(ctx)
 
 

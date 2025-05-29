@@ -256,10 +256,7 @@ consumeOperator:
     CONSUME (Parameters+=relaxedQueryOperatorParameter)*;
 
 countOperator:
-    COUNT (Parameters+=relaxedQueryOperatorParameter)*;
-
-countOperatorAsClause:
-    AS Name=identifierName;
+    COUNT (Parameters+=relaxedQueryOperatorParameter)* (TO Name=unnamedExpression);
 
 distinctOperator:
     DISTINCT (Parameters+=relaxedQueryOperatorParameter)* 
@@ -750,7 +747,7 @@ summarizeOperatorLegacyBinClause:
 
 
 takeOperator:
-    Keyword=(LIMIT | TAKE) (Parameters+=strictQueryOperatorParameter)* Limit=namedExpression (FROM Tables+=namedExpression (',' Tables+=namedExpression)*)?;
+    Keyword=(LIMIT | TAKE) (Parameters+=strictQueryOperatorParameter)* Limit=unnamedExpression (FROM Tables+=tableNameReference (',' Tables+=tableNameReference)*)?;
 
 topOperator:
     TOP (Parameters+=strictQueryOperatorParameter)* Expression=namedExpression BY ByExpression=orderedExpression;
@@ -1253,6 +1250,10 @@ simpleOrWildcardedNameReference:
       SimpleName=simpleNameReference
     | WildcardedName=wildcardedNameReference
     ;
+
+tableNameReference:
+      TableName=TABLEIDENTIFIER
+    | EscapedName=escapedName;
 
 ///////////////////////////////////////
 // names

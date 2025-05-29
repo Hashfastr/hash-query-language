@@ -452,8 +452,11 @@ fragment TwelveHexDigits:
 
 IDENTIFIER:
       ('$' | '_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9')*
-    | ('$' | '_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9' | '*' | '-')* // Modified to allow for index patterns
     | ('0'..'9')+ ('_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9')*
+    ;
+
+TABLEIDENTIFIER:
+    ('$' | '_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9' | '*' | '-')*
     ;
 
 WHITESPACE:

@@ -35,7 +35,9 @@ class Operators(HqlVisitor):
         return Ops.Take(limit, tables)
 
     def visitCountOperator(self, ctx: HqlParser.CountOperatorContext):
-        return Ops.Count()
+        name = self.visit(ctx.Name)
+        
+        return Ops.Count(name)
     
     def visitProjectOperator(self, ctx: HqlParser.ProjectOperatorContext):
         exprs = []

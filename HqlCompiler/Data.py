@@ -62,7 +62,7 @@ class Data():
             if len(table_groups[name]) == 1:
                 self.tables[name] = table_groups[name][0]
                 continue
-
+            
             self.tables[name] = Table.merge(table_groups[name])
             
     def __len__(self):
@@ -249,9 +249,14 @@ class Table():
         return pltools.get_element_value(self.df, fields=path)
 
     def merge(tables:list[Table]=None):
+        name=None
         dfs = []
         schemata = []
         for table in tables:
+            if not name:
+                name = table.name
+            
+            # skip empty dataframes
             if isinstance(table.df, type(None)) or table.df.is_empty():
                 continue
 
@@ -263,7 +268,7 @@ class Table():
         df = pltools.merge(dfs)
         schema = Schema.merge(schemata)
 
-        return Table(df=df, schema=schema, name=tables[0].name)
+        return Table(df=df, schema=schema, name=name)
 
     '''
     Takes in a list of paths
@@ -553,7 +558,7 @@ class Schema():
     def apply(self, df:pl.DataFrame, schema:dict=None):
         newdf = {}
         schema = schema if schema else self.schema
-        
+                
         if schema == None:
             return pl.DataFrame()
 
@@ -575,6 +580,9 @@ class Schema():
                 )
                 
             else:
+                # print(schema)
+                # print(col.name)
+                # print(col)
                 newdf[col.name] = schema[col.name].cast(col)
 
         return pl.DataFrame(newdf)

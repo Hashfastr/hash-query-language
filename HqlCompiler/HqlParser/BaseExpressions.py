@@ -95,3 +95,6 @@ class BaseExpressions(HqlVisitor):
         
         expr = Expression.OrderedExpression(order=order, nulls=nulls)
         return expr
+
+    # def visitTableNameReference(self, ctx: HqlParser.TableNameReferenceContext):
+    #     return 
