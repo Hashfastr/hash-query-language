@@ -256,7 +256,7 @@ consumeOperator:
     CONSUME (Parameters+=relaxedQueryOperatorParameter)*;
 
 countOperator:
-    COUNT (Parameters+=relaxedQueryOperatorParameter)* (TO Name=unnamedExpression);
+    COUNT (Parameters+=relaxedQueryOperatorParameter)* (AS Name=tableNameReference)?;
 
 distinctOperator:
     DISTINCT (Parameters+=relaxedQueryOperatorParameter)* 
