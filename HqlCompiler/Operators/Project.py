@@ -49,7 +49,7 @@ class Project(Operator):
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
                         
-        new = [ctx.data.get_elements(static)]
+        new = [ctx.data.subset(static)]
         
         for i in dynamic:
             res = i.eval(ctx)

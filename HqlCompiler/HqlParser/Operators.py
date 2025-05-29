@@ -26,7 +26,13 @@ class Operators(HqlVisitor):
         return Ops.Where(predicate, params)
 
     def visitTakeOperator(self, ctx: HqlParser.TakeOperatorContext):
-        return Ops.Take(self.visit(ctx.Expression))
+        limit = self.visit(ctx.Limit)
+        
+        tables = []
+        for i in ctx.Tables:
+            tables.append(self.visit(i))
+        
+        return Ops.Take(limit, tables)
 
     def visitCountOperator(self, ctx: HqlParser.CountOperatorContext):
         return Ops.Count()

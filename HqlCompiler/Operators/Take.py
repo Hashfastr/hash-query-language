@@ -11,9 +11,10 @@ from HqlCompiler.Context import register_op, Context
 # https://learn.microsoft.com/en-us/kusto/query/take-operator
 @register_op('Take')
 class Take(Operator):
-    def __init__(self, expr:Expression):
+    def __init__(self, limit:Expression, tables:list[Expression]):
         super().__init__()
-        self.expr = expr
+        self.limit = limit
+        self.tables = tables
     
     '''
     Takes only so many results for each table.
@@ -23,12 +24,21 @@ class Take(Operator):
     Unimplemented.
     '''
     def eval(self, ctx:Context, **kwargs):        
-        limit = self.expr.eval(ctx)
+        limit = self.limit.eval(ctx)
 
         if not isinstance(limit, int):
             raise QueryException(f'Take operator passed non-int type {self.n_rows}')
+        
+        table_names = []
+        for i in self.tables:
+            table_names.append(i.eval(ctx, as_str=True))
+            
+        if not table_names:
+            table_names.append('*')
 
-        for table in ctx.data.tables:
-            ctx.data.tables[table].truncate(limit)
-                
+        for i in table_names:
+            tables = ctx.data.get_tables(i)
+            for j in tables:
+                j.truncate(limit)
+
         return ctx.data

@@ -72,11 +72,31 @@ class Data():
             
         return length
 
-    def get_table(self, name:str):
-        if name in self.tables:
-            return self.tables[name]
-        else:
-            return None
+    '''
+    Gets tables relevant to a given table pattern
+    
+    * 
+    gets all tables
+    
+    so-beats-*
+    gets all tables starting with so-beats-
+    
+    so-network-2022.10
+    Just gets the table named so-network-2022.10
+    '''
+    def get_tables(self, name:str):
+        if '*' not in name:
+            table = self.tables.get(name, None)
+            return [table] if table else None
+        
+        prefix = name.split('*')[0]
+        
+        tables = []
+        for table in self.tables:
+            if table.startswith(prefix):
+                tables.append(table)
+                
+        return tables
     
     def add_table(self, table:Table):
         tables = [table]
@@ -101,10 +121,10 @@ class Data():
         return schemata
 
     # Given a list of string paths, get a dataset containing only those fields
-    def get_elements(self, fields:list[list[str]]):
+    def subset(self, fields:list[list[str]]):
         tables = []
         for i in self.tables:
-            tables.append(self.tables[i].get_elements(fields))
+            tables.append(self.tables[i].subset(fields))
 
         return Data(tables_list=tables)
 

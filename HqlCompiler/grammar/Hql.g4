@@ -750,7 +750,7 @@ summarizeOperatorLegacyBinClause:
 
 
 takeOperator:
-    Keyword=(LIMIT | TAKE) (Parameters+=strictQueryOperatorParameter)* Expression=namedExpression;
+    Keyword=(LIMIT | TAKE) (Parameters+=strictQueryOperatorParameter)* Limit=namedExpression (FROM Tables+=namedExpression (',' Tables+=namedExpression)*)?;
 
 topOperator:
     TOP (Parameters+=strictQueryOperatorParameter)* Expression=namedExpression BY ByExpression=orderedExpression;

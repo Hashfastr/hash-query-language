@@ -28,17 +28,17 @@ class Unnest(Operator):
         field = self.field.eval(ctx, as_list=True, as_str=True)
         for i in self.tables:
             table = i.eval(ctx, as_str=True)
-            if table not in ctx.data.tables:
-                raise QueryException(f'Attempting to unnest unknown table {table}')
             
-            new_df = ctx.data.tables[table].get_value(field)
-            if not isinstance(new_df, pl.DataFrame):
-                raise QueryException(f'{field} in {table} is not a nested object')
-                        
-            new_schema = Schema(schema=ctx.data.tables[table].schema.get_type(field))
-            if not new_schema:
-                logging.warning(f'No schema defined for field {field} in table {table}')
-                
-            ctx.data.replace_table(Table(df=new_df, schema=new_schema, name=table))
+            tables = ctx.data.get_tables(table)
+            for j in tables:
+                new_df = j.get_value(field)
+                if not isinstance(new_df, pl.DataFrame):
+                    raise QueryException(f'{field} in {j.name} is not a nested object')
+                            
+                new_schema = Schema(schema=j.schema.get_type(field))
+                if not new_schema:
+                    logging.warning(f'No schema defined for field {field} in table {table}')
+                    
+                ctx.data.replace_table(Table(df=new_df, schema=new_schema, name=table))
         
         return ctx.data
