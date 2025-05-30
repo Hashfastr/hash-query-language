@@ -125,6 +125,13 @@ class Data():
             tables.append(self.tables[i].subset(fields))
 
         return Data(tables_list=tables)
+    
+    def unnest(self, field:list[str]):
+        tables = []
+        for i in self.tables:
+            tables.append(self.tables[i].unnest(field))
+            
+        return Data(tables_list=tables)
 
     def to_dict(self):
         dataset = dict()
@@ -310,6 +317,19 @@ class Table():
         schema = self.schema.subset(fields)
 
         return Table(df=df, schema=schema, name=self.name)
+    
+    def unnest(self, field:list[str]):
+        if not self.assert_field(field):
+            raise QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
+        
+        df = self.get_value(field)
+        if not isinstance(df, pl.DataFrame):
+            raise QueryException(f'{field} in {self.name} is not a nested object')
+        
+        schema = Schema(schema=self.schema.get_type(field))
+        
+        return Table(df=df, schema=schema, name=self.name)
+        
     
     def assert_fields(self, fields:list[list[str]]):
         asserted_fields = []
@@ -591,7 +611,7 @@ class Schema():
                 subdata = pl.DataFrame(
                     df.select(col.name).unnest(col.name)
                 )
-                
+            
                 newdf[col.name] = self.apply(
                     subdata, 
                     schema=schema[col.name]

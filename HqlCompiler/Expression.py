@@ -7,6 +7,7 @@ from HqlCompiler.Operators.Database import Database
 from HqlCompiler.Context import Context
 from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
+from HqlCompiler.Data import Data, Table, Schema
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -268,14 +269,19 @@ class Identifier(Expression):
         if kwargs.get('as_str', False):
             return self.name
         
-        if kwargs.get('list', False):
+        if kwargs.get('as_list', False):
             return [self.name]
-                
+        
+        as_value = kwargs.get('as_value', True)
         receiver = kwargs.get('receiver', None)
         
-        if receiver is not None:
-            if isinstance(receiver, pl.DataFrame):
-                return pltools.get_element_value(receiver, [self.name])
+        if not ctx.data.assert_field([self.name]):
+            raise QueryException(f"Referenced field {'.'.join([self.name])} not found")
+        
+        if receiver:
+            if isinstance(receiver, Data):
+                if as_value:
+                    return Data.subset()
             elif issubclass(type(receiver), Database):
                 return receiver.get_variable(self.name)
             else:
@@ -397,6 +403,7 @@ class Path(Expression):
         as_list = kwargs.get('as_list', False)
         as_pl = kwargs.get('as_pl', False)
         as_str = kwargs.get('as_str', False)
+        as_value = kwargs.get('as_value', True)
         
         if as_list or as_pl or as_str:
             list = [x.eval(ctx, as_str=True) for x in self.path]
