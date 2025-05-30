@@ -12,7 +12,7 @@ class file(Function):
         super().__init__(args, 1, -1)
 
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):
-            raise ArgumentException(f'Bad database argument datatype {args[0].type}')
+            raise ArgumentException(f'Bad database file argument datatype {args[0].type}')
         
     def eval(self, ctx:Context, **kwargs):
         db = kwargs.get('receiver', None)

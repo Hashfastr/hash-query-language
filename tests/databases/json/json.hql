@@ -1,2 +1,2 @@
-database('json').file('./notebooks/big.json', './notebooks/so-network-data.json')
+database('json').http('https://files.hashfastr.com/hql-datasets/big.json')
 | count
