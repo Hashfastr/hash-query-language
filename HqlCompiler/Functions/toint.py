@@ -1,26 +1,22 @@
-from polars import DataFrame
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_func, Context
-import logging
-from typing import Tuple
+from HqlCompiler.Data import Data
 from .__proto__ import Function
-
-import polars as pl
-from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 # This is a meta function resolved while parsing
 @register_func('toint')
 class toint(Function):
     def __init__(self, args:list):
-        super().__init__(args, 1, 1, )
+        super().__init__(args, 1, 1,)
         self.src = args[0]
                 
-    def eval(self, ctx:Context, **kwargs):
-        series = self.src.eval(ctx)
+    def eval(self, ctx:Context, **kwargs):        
+        field = self.src.eval(ctx, as_str=True, as_list=True)
+        if not isinstance(field, list):
+            field = [field]
         
-        series_name = self.src.eval(ctx, as_str=True, as_list=True)
-        if not isinstance(series_name, list):
-            series_name = [series_name]
-        
-        df = PolarsTools.build_element(series_name, series.cast(pl.Int32))
-        return df
+        # df = plt.build_element(series_name, series.cast(pl.Int32))
+        tables = ctx.data.cast_subset(field, hqlt.int)
+
+        return Data(tables_list=tables)

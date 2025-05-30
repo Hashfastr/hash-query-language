@@ -11,14 +11,49 @@ from HqlCompiler.Context import register_op, Context
 # https://learn.microsoft.com/en-us/kusto/query/take-operator
 @register_op('Take')
 class Take(Operator):
-    def __init__(self, expr:Expression):
+    def __init__(self, limit:Expression, tables:list[Expression]):
         super().__init__()
-        self.expr = expr
+        self.limit = limit
+        self.tables = tables
+    
+    def get_limits(self, ctx:Context):
+        n_rows = self.limit.eval(ctx)
+        tables = []
+        for i in self.tables:
+            table = i.eval(ctx, as_str=True)
+            tables.append(table)
+            
+        if not tables:
+            tables.append('*')
         
-    def eval(self, ctx:Context, **kwargs):
-        if self.expr.type != 'Integer':
-            raise CompilerException(f'Invalid type {self.expr.type} given to take operator')
+        if not isinstance(n_rows, int):
+            raise QueryException(f'Take operator passed non-int type {n_rows}')
         
-        limit = self.expr.eval(ctx)
+        return (n_rows, tables)
+    
+    '''
+    Takes only so many results for each table.
+
+    If given the parameter global=True then it will limit results such that
+    the sum of all tables is less than or equal to the take amount.
+    Unimplemented.
+    '''
+    def eval(self, ctx:Context, **kwargs):        
+        limit = self.limit.eval(ctx)
+
+        if not isinstance(limit, int):
+            raise QueryException(f'Take operator passed non-int type {self.n_rows}')
         
-        return ctx.data[:limit]
+        table_names = []
+        for i in self.tables:
+            table_names.append(i.eval(ctx, as_str=True))
+            
+        if not table_names:
+            table_names.append('*')
+
+        for i in table_names:
+            tables = ctx.data.get_tables(i)
+            for j in tables:
+                j.truncate(limit)
+
+        return ctx.data

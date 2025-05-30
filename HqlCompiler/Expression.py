@@ -5,7 +5,7 @@ import polars as pl
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators.Database import Database
 from HqlCompiler.Context import Context
-from HqlCompiler.PolarsTools import PolarsTools
+from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
 
 # An expression is any grouping of other expressions
@@ -178,23 +178,26 @@ class NamedReference(Expression):
     
     def eval(self, ctx:Context, **kwargs):
         name_str = self.name.eval(ctx, as_str=True)
+
+        if kwargs.get('as_pl', False):
+            return pltools.path_to_expr([name_str])
+
+        if kwargs.get('as_list', False):
+            return [name_str]
         
         if kwargs.get('as_str', False):
             return name_str
         
-        if kwargs.get('list', False):
-            return [name_str]
-        
         receiver = kwargs.get('receiver', None)
         if receiver is not None:
             if type(receiver) == pl.DataFrame:
-                return PolarsTools.get_element_value(ctx.data, [name_str])
+                return pltools.get_element_value(ctx.data, [name_str])
             elif issubclass(type(receiver), Database):
                 return receiver.get_variable(name_str)
             else:
                 raise CompilerException(f'{type(receiver)} cannot have child named references!')
         
-        return PolarsTools.get_element_value(ctx.data, [name_str])
+        return pltools.get_element_value(ctx.data, [name_str])
 
 # A string literal
 # literally a string
@@ -236,13 +239,13 @@ class EscapedName(StringLiteral):
         receiver = kwargs.get('receiver', None)
         if receiver:
             if type(receiver) == pl.DataFrame:
-                return PolarsTools.get_element_value(ctx.data, [name_str])
+                return pltools.get_element_value(ctx.data, [name_str])
             elif issubclass(type(receiver), Database):
                 return receiver.get_variable(name_str)
             else:
                 raise CompilerException(f'{type(receiver)} cannot have child named references!')
             
-        return PolarsTools.get_element_value(ctx.data, [name_str])
+        return pltools.get_element_value(ctx.data, [name_str])
 
 # An identifier is like a variable that is not unique across everything
 # A keyword is unique across the compiler
@@ -272,13 +275,13 @@ class Identifier(Expression):
         
         if receiver is not None:
             if isinstance(receiver, pl.DataFrame):
-                return PolarsTools.get_element_value(receiver, [self.name])
+                return pltools.get_element_value(receiver, [self.name])
             elif issubclass(type(receiver), Database):
                 return receiver.get_variable(self.name)
             else:
                 raise CompilerException(f'{type(receiver)} cannot have child named references!')
             
-        return PolarsTools.get_element(ctx.data, [self.name])
+        return pltools.get_element(ctx.data, [self.name])
 
 # Integer
 # An integer
@@ -386,13 +389,21 @@ class Path(Expression):
             logging.debug(self.path)
             logging.debug(e)
 
+    def lint(self, ctx:Context):
+        plf = self.eval(ctx, as_pl=True)
+        # ctx.data.
+
     def eval(self, ctx:Context, **kwargs):
         as_list = kwargs.get('as_list', False)
+        as_pl = kwargs.get('as_pl', False)
         as_str = kwargs.get('as_str', False)
         
-        if as_list or as_str:
+        if as_list or as_pl or as_str:
             list = [x.eval(ctx, as_str=True) for x in self.path]
         
+        if as_pl:
+            return pltools.path_to_expr(list)
+
         if as_list:
             return list
             
@@ -456,7 +467,7 @@ class NamedExpression(Expression):
             
         data = self.value.eval(ctx)
         name = self.name.eval(ctx, as_list=True)
-        return PolarsTools.build_element(name, data)
+        return pltools.build_element(name, data)
     
 class OrderedExpression(Expression):
     def __init__(self, name:Expression=None, order:str='desc', nulls:str=''):

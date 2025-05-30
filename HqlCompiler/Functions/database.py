@@ -22,12 +22,13 @@ class database(Function):
 
         if self.args != [] and self.args[0].type != 'StringLiteral':
             raise ArgumentException(f'Bad database argument datatype {args[0].type}')
-        
+            
     def eval(self, ctx:Context, **kwargs):
-        if self.args == [] or self.args[0].eval(ctx, as_str=True) == '':
+        name = self.args[0].eval(None, as_str=True)
+        if self.args == [] or name == '':
             dbconf = Config.HqlConfig.get_default_db()
         else:
-            dbconf = Config.HqlConfig.get_database(self.args[0].eval(ctx, as_str=True))
+            dbconf = Config.HqlConfig.get_database(name)
         
         # This will probably have some unintended consequences
         # Enable when ready
@@ -39,5 +40,10 @@ class database(Function):
         #         raise CompilerException(f'Invalid variable set in database call {arg[0]}')
             
         #     dbconf[arg[0]] = arg[1]
-                
+        
+        if 'TYPE' not in dbconf:
+            logging.critical('Missing database type in database config')
+            logging.critical(f"Available DB types: {', '.join(ctx.get_db_types())}")
+            raise ConfigException(f'Missing TYPE definition in database config for {name}')
+
         return ctx.get_db(dbconf['TYPE'])(dbconf)

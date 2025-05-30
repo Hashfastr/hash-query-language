@@ -8,11 +8,12 @@ class Function():
         self.name = self.__class__.__name__
         self.args = args
         self.min = min
+        # Can disable by passing -1
         self.max = max
         
         if len(args) < min:
             raise ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
-        if len(args) > max:
+        if max != -1 and len(args) > max:
             raise ArgumentException(f'Function {self.name} got {len(args)} args, expected at most {self.max}')
         
     def to_dict(self):

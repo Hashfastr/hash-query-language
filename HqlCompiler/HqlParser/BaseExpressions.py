@@ -27,7 +27,27 @@ class BaseExpressions(HqlVisitor):
         literal = self.visit(ctx.StringLiteral)
         expr = Expression.EscapedName(literal.value)
         return expr
+
+    def visitWildcardedName(self, ctx: HqlParser.WildcardedNameContext):
+        prefix = self.visit(ctx.Prefix)
+        segments = []
+        for i in ctx.Segments:
+            segments.append(self.visit(i))
+
+        name = prefix + '*' + ''.join(segments)
+        
+        return Expression.NamedReference(Expression.Identifier(name))
     
+    def visitWildcardedNamePrefix(self, ctx: HqlParser.WildcardedNamePrefixContext):
+        if ctx.Identifier:
+            return ctx.getText()
+        
+        if ctx.Keyword:
+            return self.visit(ctx.Keyword)
+        
+        if ctx.ExtendedKeyword:
+            return self.visit(ctx.ExtendedKeyword)
+            
     def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
         text = ""
         
@@ -95,3 +115,6 @@ class BaseExpressions(HqlVisitor):
         
         expr = Expression.OrderedExpression(order=order, nulls=nulls)
         return expr
+
+    # def visitTableNameReference(self, ctx: HqlParser.TableNameReferenceContext):
+    #     return 

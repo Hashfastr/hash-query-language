@@ -12,6 +12,10 @@
             "SCROLL_SIZE": 10000,
             "TIMEOUT": 10,
             "TYPE": "Elasticsearch"
+        },
+        "json": {
+            "BASE_PATH": ".",
+            "TYPE": "JSON"
         }
     },
     "DEBUG": false

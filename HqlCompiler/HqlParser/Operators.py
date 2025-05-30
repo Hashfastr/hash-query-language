@@ -26,10 +26,18 @@ class Operators(HqlVisitor):
         return Ops.Where(predicate, params)
 
     def visitTakeOperator(self, ctx: HqlParser.TakeOperatorContext):
-        return Ops.Take(self.visit(ctx.Expression))
+        limit = self.visit(ctx.Limit)
+        
+        tables = []
+        for i in ctx.Tables:
+            tables.append(self.visit(i))
+        
+        return Ops.Take(limit, tables)
 
     def visitCountOperator(self, ctx: HqlParser.CountOperatorContext):
-        return Ops.Count()
+        name = self.visit(ctx.Name) if ctx.Name else None
+        
+        return Ops.Count(name)
     
     def visitProjectOperator(self, ctx: HqlParser.ProjectOperatorContext):
         exprs = []
@@ -62,3 +70,12 @@ class Operators(HqlVisitor):
         )
         
         return expr
+
+    def visitUnnestOperator(self, ctx: HqlParser.UnnestOperatorContext):
+        field = self.visit(ctx.Field)
+        tables = self.visit(ctx.OnClause)
+        
+        return Ops.Unnest(field, tables)
+    
+    def visitUnnestOperatorOnClause(self, ctx: HqlParser.UnnestOperatorOnClauseContext):
+        return [self.visit(x) for x in ctx.Expressions]

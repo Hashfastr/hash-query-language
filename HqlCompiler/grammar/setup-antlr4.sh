@@ -16,5 +16,5 @@ Done!
 
 You can now run
 
-antlr4 -Dlanguage=Python3 Hql.g4
+antlr4 -Dlanguage=Python3 -visitor Hql.g4
 EOF

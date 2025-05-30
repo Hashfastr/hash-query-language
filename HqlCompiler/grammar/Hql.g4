@@ -208,6 +208,7 @@ afterPipeOperator:
     | topNestedOperator
     | unionOperator
     | whereOperator
+    | unnestOperator
     ;
 
 beforeOrAfterPipeOperator:
@@ -255,10 +256,7 @@ consumeOperator:
     CONSUME (Parameters+=relaxedQueryOperatorParameter)*;
 
 countOperator:
-    COUNT (Parameters+=relaxedQueryOperatorParameter)*;
-
-countOperatorAsClause:
-    AS Name=identifierName;
+    COUNT (Parameters+=relaxedQueryOperatorParameter)* (AS Name=tableNameReference)?;
 
 distinctOperator:
     DISTINCT (Parameters+=relaxedQueryOperatorParameter)* 
@@ -749,7 +747,7 @@ summarizeOperatorLegacyBinClause:
 
 
 takeOperator:
-    Keyword=(LIMIT | TAKE) (Parameters+=strictQueryOperatorParameter)* Expression=namedExpression;
+    Keyword=(LIMIT | TAKE) (Parameters+=strictQueryOperatorParameter)* Limit=unnamedExpression (FROM Tables+=tableNameReference (',' Tables+=tableNameReference)*)?;
 
 topOperator:
     TOP (Parameters+=strictQueryOperatorParameter)* Expression=namedExpression BY ByExpression=orderedExpression;
@@ -782,6 +780,11 @@ unionOperatorExpression:
 whereOperator:
     Keyword=(FILTER | WHERE) (Parameters+=strictQueryOperatorParameter)* Predicate=namedExpression;
 
+unnestOperator:
+    UNNEST Field=unnamedExpression (OnClause=unnestOperatorOnClause)?;
+
+unnestOperatorOnClause:
+    ON (Expressions+=unnamedExpression (',' Expressions+=unnamedExpression)*)?;
 
 contextualSubExpression:
       pipeSubExpression 
@@ -825,6 +828,7 @@ strictQueryOperatorParameter:
         | WITHSOURCE
         | WITH_SOURCE
         | WITHNOSOURCE__
+        | GLOBAL
         )
     '=' (NameValue=identifierOrKeywordName | LiteralValue=literalExpression)
     ;
@@ -1245,6 +1249,12 @@ wildcardedNameReference:
 simpleOrWildcardedNameReference:
       SimpleName=simpleNameReference
     | WildcardedName=wildcardedNameReference
+    ;
+
+tableNameReference:
+      WildcardName=wildcardedName
+    | IdentifierName=identifierName
+    | EscapedName=escapedName
     ;
 
 ///////////////////////////////////////

@@ -2,15 +2,12 @@ import HqlCompiler.Expression as Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
-from HqlCompiler.Data import Schema
-from HqlCompiler.Context import Context
-import HqlCompiler.Types as t
+from HqlCompiler.Data import Schema, Data, Table
+from HqlCompiler.Types.Elasticsearch import ESTypes
 
 import requests
 from elasticsearch import Elasticsearch as ES
-import polars as pl
 
-import time
 import json
 import logging
 from .__proto__ import Database
@@ -19,11 +16,9 @@ from .__proto__ import Database
 @register_database('Elasticsearch')
 class Elasticsearch(Database):
     def __init__(self, config:dict):
-        super().__init__()
+        Database.__init__(self, config)
         
         self.pattern = "*"
-
-        self.config = config
 
         # The database filter always starts as an and
         self.filter_expr = Expression.BinaryLogic(None, [], 'and')
@@ -47,31 +42,21 @@ class Elasticsearch(Database):
         self.methods = [
             'index'
         ]
-    
-        self.ctx = None
-        
+            
     def get_variable(self, name: str):
         self.pattern = name
-        
         return self
     
-    def can_integrate(self, type:str):
-        return type in self.compatible
-    
-    def add_op(self, op:Operator):
-        if op.type == 'Where':
-            self.add_filter(op.expr)
-        
-        # should only have on expression
-        if op.type == 'Take':
-            self.add_limit(op.expr.value)
-
-    def eval(self, ctx:Context, **kwargs):
-        self.ctx = ctx
-        return self.make_query()
-    
-    def add_limit(self, limit:int):
-        self.limit = limit
+    def eval_ops(self):
+        for op in self.ops:
+            if op.type == 'Where':
+                self.add_filter(op.expr)
+            
+            # should only have on expression
+            if op.type == 'Take':
+                self.limit = op.expr.eval(self.ctx)
+                if not isinstance(self.limit, int):
+                    raise QueryException(f'Take operator passed non-int type {self.n_rows}')
 
     def add_index(self, pattern:str):
         self.pattern = pattern
@@ -131,52 +116,7 @@ class Elasticsearch(Database):
                 schema[i] = self.gen_elastic_schema(props[i]['properties'])
                 continue
             
-            ptype = props[i]['type']
-            if ptype in  ('scaled_float'):
-                schema[i] = t.decimal
-            elif ptype in ('half_float', 'float'):
-                schema[i] = t.float
-            elif ptype in ('double'):
-                schema[i] = t.double
-            elif ptype in ('byte'):
-                schema[i] = t.byte
-            elif ptype in ('short'):
-                schema[i] = t.short
-            elif ptype in ('integer'):
-                schema[i] = t.int
-            elif ptype in ('long'):
-                schema[i] = t.long
-            elif ptype in ('unsigned_long'):
-                schema[i] = t.ulong
-            elif ptype in ('ip'):
-                schema[i] = t.ip
-            elif ptype in ('date', 'date_nanos'):
-                schema[i] = t.datetime
-            elif ptype in ('date_range', 'integer_range', 'float_range', 'long_range', 'double_range', 'ip_range'):
-                rtype = self.gen_elastic_schema({'rtype': {'type': ptype.replace('_range', '')}})['rtype']
-                schema[i] = t.range(rtype, rtype)
-            elif ptype in ('keyword', 'constant_keyword', 'wildcard', 'binary', 'text', 'match_only_text'):
-                schema[i] = t.string
-            elif ptype in ('boolean'):
-                schema[i] = t.bool
-            elif ptype in ('flattened', 'object'):
-                schema[i] = t.object([])
-            elif ptype in ('nested'):
-                schema[i] = t.string
-            elif ptype in ('point', 'geo_point'):
-                # ptype = t.float
-                # schema[i] = t.multivalue(ptype)
-                schema[i] = {
-                    'lon': t.float,
-                    'lat': t.float
-                }
-            # elif ptype in ('object', 'flattened', 'nested'):
-            #     schema[i] = pl.
-            # elif ptype in ('geo_point'):
-            #     schema[i] = pl.String
-            # elif ptype in ('')
-            else:
-                print(f'{i} {ptype}')
+            schema[i] = ESTypes.from_name(props[i]['type'])()
 
         return schema
 
@@ -208,6 +148,8 @@ class Elasticsearch(Database):
             request_timeout=TIMEOUT,
             retry_on_timeout=True,
         )
+        
+        self.eval_ops()
         
         logging.debug("Starting initial query")
 
@@ -245,7 +187,7 @@ class Elasticsearch(Database):
                 break
             
             # Ensure that we only print the number of remaining rows
-            results += [x['_source'] for x in res['hits']['hits'][:remainder]]
+            results += res['hits']['hits'][:remainder]
             
             remainder = self.limit - len(results)
             
@@ -262,32 +204,21 @@ class Elasticsearch(Database):
 
         client.clear_scroll(scroll_id=sid)
 
-        iname = [x for x in index][0]
-        props = index[iname]['mappings']['properties']
+        result_sets = dict()
+        for i in results:
+            if i['_index'] not in result_sets:
+                result_sets[i['_index']] = []
+            result_sets[i['_index']].append(i['_source'])
 
-        start = time.perf_counter()
-        jschema = Schema(results)
-        end = time.perf_counter()
-        logging.debug(f"Loading intermediate schema took {end - start}")
+        tables = []
+        for i in result_sets:
+            table = Table(init_data=result_sets[i], name=i)
+            tables.append(table)
 
-        start = time.perf_counter() 
-        results = jschema.adjust_mv(results)
-        end = time.perf_counter()
-        logging.debug(f"Making multivalue adjustments took {end - start}")
-        
-        start = time.perf_counter()
-        df = pl.from_dicts(results, schema=jschema.to_pl_schema())
-        end = time.perf_counter()
-        logging.debug(f"Loading raw data into intermediate dataframe took {end - start}")
-        
-        start = time.perf_counter()
-        eschema = Schema(schema=self.gen_elastic_schema(props))
-        end = time.perf_counter()
-        logging.debug(f"Creating elastic schema took {end - start}")
-        
-        start = time.perf_counter()
-        df = eschema.cast_to_schema(df, mv_fields=jschema.mv_fields)
-        end = time.perf_counter()
-        logging.debug(f"Casting intermediate dataframe to final took {end - start}")
+        dataset = Data(tables_list=tables)
 
-        return df
+        for i in dataset.tables:
+            eschema = Schema(schema=self.gen_elastic_schema(index[i]['mappings']['properties']))
+            dataset.tables[i].change_schema(eschema)
+
+        return dataset

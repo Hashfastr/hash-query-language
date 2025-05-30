@@ -120,6 +120,7 @@ FLAGS: 'flags';
 FORK: 'fork';
 FROM: 'from';
 GETSCHEMA: 'getschema';
+GLOBAL: 'global';
 GRANNYASC: 'granny-asc';
 GRANNYDESC: 'granny-desc';
 GRAPHMARKCOMPONENTS: 'graph-mark-components';
@@ -278,6 +279,7 @@ TOTABLE: 'totable';
 TREEMAP: 'treemap';
 TYPEOF: 'typeof';
 UNION: 'union';
+UNNEST: 'unnest';
 UNSTACKED: 'unstacked';
 UUID: 'uuid';
 VIEW: 'view';
@@ -450,7 +452,6 @@ fragment TwelveHexDigits:
 
 IDENTIFIER:
       ('$' | '_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9')*
-    | ('$' | '_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9' | '*' | '-')* // Modified to allow for index patterns
     | ('0'..'9')+ ('_' | 'a'..'z' | 'A'..'Z') ('_' | 'a'..'z' | 'A'..'Z' | '0'..'9')*
     ;
 
