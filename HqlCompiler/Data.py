@@ -98,7 +98,7 @@ class Data():
         tables = []
         for table in self.tables:
             if table.startswith(prefix):
-                tables.append(table)
+                tables.append(self.tables[table])
                 
         return tables
     

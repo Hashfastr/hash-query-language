@@ -1,0 +1,2 @@
+- [Take](./Operators/Take.md)
+- [Count](./Operators/Count.md)
