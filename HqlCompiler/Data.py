@@ -87,7 +87,11 @@ class Data():
     def get_tables(self, name:str):
         if '*' not in name:
             table = self.tables.get(name, None)
-            return [table] if table else None
+            
+            if not table:
+                raise QueryException(f'Unknown table {name} referenced')
+            
+            return [table]
         
         prefix = name.split('*')[0]
         
@@ -99,16 +103,10 @@ class Data():
         return tables
     
     def add_table(self, table:Table):
-        tables = [table]
         if table.name in self.tables:
-            tables.append(self.tables.pop(table.name))
-
-        if len(tables) != 1:
-            new = Table.merge(tables)
-        else:
-            new = tables[0]
-
-        self.tables[new.name] = new
+            raise QueryException(f'Table {table.name} already exists')
+        
+        self.tables[table.name] = table
         
     def replace_table(self, table:Table):
         self.tables[table.name] = table
@@ -248,26 +246,46 @@ class Table():
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, fields=path)
 
-    def merge(tables:list[Table]=None):
-        name=None
-        dfs = []
-        schemata = []
+    def merge(tables:list[Table]=None, schema:Schema=None):
+        if not tables:
+            return Table()
+        
+        name = tables[0].name if not name else None
+        
+        # gen schema
+        if not schema:
+            schemas = []
+            for table in tables:
+                schemas.append(table.schema)
+                
+            schema = Schema.merge(schemas)
+        
+        # generate col groups
+        col_groups = {}
         for table in tables:
-            if not name:
-                name = table.name
-            
             # skip empty dataframes
             if isinstance(table.df, type(None)) or table.df.is_empty():
                 continue
-
-            dfs.append(table.df)
-
-            if table.schema:
-                schemata.append(table.schema)
-
-        df = pltools.merge(dfs)
-        schema = Schema.merge(schemata)
-
+            
+            for col in table.df:
+                if col.name not in col_groups:
+                    col_groups[col.name] = []
+                    
+                col_groups[col.name].append(col)
+        
+        cols = {}
+        for col in col_groups:
+            if len(col_groups[col]) == 1:
+                cols[col] = col_groups[col][0]
+                continue
+            
+            if isinstance(schema[col], dict):
+                ...
+                
+        # df = pltools.merge(dfs)
+        
+        df = pl.DataFrame(cols)
+        
         return Table(df=df, schema=schema, name=name)
 
     '''

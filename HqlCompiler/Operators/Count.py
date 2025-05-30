@@ -28,11 +28,14 @@ class Count(Operator):
             
         # cast count to a field
         if name:
-            data = ctx.data
-            new_tables = []
+            new_data = []
             for count in counts:
-                new_tables.append(data.tables[count])
-                new_tables.append(Table(name=count, init_data=[{name: counts[count]}]))
+                new_data.append({'Table': count, 'Count': counts[count]})
+            
+            new_table = Table(init_data=new_data, name=name)
+            ctx.data.add_table(new_table)
+            
+            return ctx.data
                                 
         # Replace tables with counts
         else:
@@ -41,4 +44,4 @@ class Count(Operator):
                 new = [{'Count': counts[count]}]
                 new_tables.append(Table(name=count, init_data=new))
                 
-        return Data(tables_list=new_tables)
+            return Data(tables_list=new_tables)

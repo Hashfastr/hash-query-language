@@ -1252,8 +1252,10 @@ simpleOrWildcardedNameReference:
     ;
 
 tableNameReference:
-      TableName=TABLEIDENTIFIER
-    | EscapedName=escapedName;
+      WildcardName=wildcardedName
+    | IdentifierName=identifierName
+    | EscapedName=escapedName
+    ;
 
 ///////////////////////////////////////
 // names

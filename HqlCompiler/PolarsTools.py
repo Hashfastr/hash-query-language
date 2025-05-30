@@ -11,17 +11,32 @@ class pltools():
         return new
 
     def merge(dataframes:list[pl.DataFrame]):
+        # Get counts for each column, knowing where we have conflicts.
         columns = {}
         for i in dataframes:
             if len(i.columns) == 0:
                 continue
-           
-            name = i.columns[0]
             
-            if name not in columns:
-                columns[name] = []
+            # count and collect columns
+            for j in i:
+                if j.name not in columns:
+                    columns[j.name] = []
+                    
+                columns[j.name].append(j)
+
+        mergable = []
+        for i in columns:
+            if len(columns[i]) == 1:
+                mergable.append(columns[i][0])
+                continue
             
-            columns[name].append(i)
+            
+            
+            # merge conflicting columns
+            merge_dfs = []
+            for j in columns[i]:
+                merge_dfs.append(pl.DataFrame())
+
 
         mergable = []
         for i in columns:
