@@ -4,12 +4,10 @@ from HqlCompiler.Context import *
 
 import os
 import polars as pl
-from csv import DictReader
 import logging
 import requests
 from io import StringIO
 
-from HqlCompiler.Operators.Operator import Operator
 from .__proto__ import Database
 
 # Index in a database to grab data from, extremely simple.
@@ -88,6 +86,7 @@ class CSV(Database):
 
         unknown_tables = []
         for table in list(tables):
+            matched = False
             for name in names:
                 if name.startswith(table.split('*')[0]):
                     matched = True
