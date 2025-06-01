@@ -63,7 +63,7 @@ class Data():
                 self.tables[name] = table_groups[name][0]
                 continue
             
-            self.tables[name] = Table.merge(table_groups[name])
+            self.tables[name] = Table.merge(tables=table_groups[name])
             
     def __len__(self):
         length = 0
@@ -265,7 +265,7 @@ class Table():
         if not tables:
             return Table()
         
-        name = tables[0].name if not name else None
+        name = tables[0].name
         
         # gen schema
         if not schema:
