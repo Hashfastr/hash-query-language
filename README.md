@@ -1,3 +1,8 @@
+# Disclaimer
+I'm still building the core foundation, only a small set of things work, and it's not a guarantee.
+I'm not accepting contributions right now.
+Goal is to have a solid working set of features for DEATH-Con 2025.
+
 # Hash Query Language (Hql)
 Hash Query Language (Hql) is a query language designed to implement a single feature set across all database backends.
 Is this accomplished by using the grammar of [Kusto Query Language](https://github.com/microsoft/Kusto-Query-Language) (KQL), a query language by Microsoft made for Azure Data Explorer, the basis for Log Analytics Workspace.
