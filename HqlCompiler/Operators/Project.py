@@ -24,39 +24,16 @@ class Project(Operator):
         ]
         
     def eval(self, ctx:Context, **kwargs):
-        static = []
-        dynamic = []
+        data_sets = []
         for i in self.exprs:
-            if i.type in ("NamedReference", "Identifier", "EscapedName"):
-                fields = [i.eval(ctx, as_str=True)]
-                
-                if not ctx.data.assert_field(fields):
-                    raise QueryException(f"Referenced field {'.'.join(fields)} not found")
-                
-                static.append(fields)
-            
-            elif i.type == "Path":
-                fields = i.eval(ctx, as_list=True)
-
-                if not ctx.data.assert_field(fields):
-                    raise QueryException(f"Referenced field {'.'.join(fields)} not found")
-
-                static.append(fields)
+            if i.type in ("NamedReference", "Identifier", "EscapedName", "Wildcard", "Path"):
+                data_sets.append(i.eval(ctx, as_value=False))
 
             elif i.type == "DotCompositeFunction":
-                dynamic.append(i)
+                # dynamic.append(i)
+                pass
                 
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
         
-        new = [ctx.data.subset(static)]
-        
-        for i in dynamic:
-            res = i.eval(ctx)
-
-            if isinstance(res, list):
-                new += res
-            else:
-                new.append(res)
-
-        return Data.merge(new)
+        return Data.merge(data_sets)

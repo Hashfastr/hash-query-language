@@ -119,18 +119,18 @@ class Data():
         return schemata
 
     # Given a list of string paths, get a dataset containing only those fields
-    def subset(self, fields:list[list[str]]):
+    def select(self, fields:list[str]):
         tables = []
         for i in self.tables:
-            tables.append(self.tables[i].subset(fields))
+            tables.append(self.tables[i].select(fields))
 
         return Data(tables_list=tables)
     
     def unnest(self, field:list[str]):
         tables = []
         for i in self.tables:
-            tables.append(self.tables[i].unnest(field))
-            
+            new = self.tables[i].unnest(field)
+        
         return Data(tables_list=tables)
 
     def to_dict(self):
@@ -176,16 +176,11 @@ class Data():
             i.cast_in_place(field, cast_type)
 
         return self
-    
-    # Casts and returns the subset dataset
-    def cast_subset(self, field:list[str], cast_type:hqlt.HqlType):
-        tables = []
-        for i in self.tables:
-            table = self.tables[i].cast_subset(field, cast_type)
-            if table:
-                tables.append(table)
-        return tables
 
+'''
+Table for a structure of data, includes schema definition.
+Mimics a pl.DataFrame
+'''
 class Table():
     def __init__(
             self,
@@ -203,8 +198,6 @@ class Table():
             self.schema = Schema(init_data)
             init_data = self.schema.adjust_mv(init_data)
             schema = self.schema.gen_pl_schema()
-            # print(json.dumps(init_data[0], indent=2, default=2))
-            # print(json.dumps(schema, indent=2, default=repr))
             self.df = pl.from_dicts(init_data, schema=schema)
         
         elif init_data and schema:
@@ -296,25 +289,18 @@ class Table():
         return Table(df=df, schema=schema, name=name)
 
     '''
-    Takes in a list of paths
-    [['foo', 'bar'], ['client', 'ip', 'src']]
-    Returns a Table with the subset of the data
+    Takes in a list of path parts
+    client.ip.src
+    ['client', 'ip', 'src']
+    Returns a Table with just the data of that path
+    If not found then it returns an empty table with the parent name.
     '''
-    def subset(self, fields:list[list[str]]):
-        fields = self.assert_fields(fields)
-
-        dfs = []
-        for field in fields:
-            df = pltools.get_element(self.df, field)
-            if not df.is_empty():
-                dfs.append(df)
-
-        if dfs:
-            df = pltools.merge(dfs)
-        else:
-            df = pl.DataFrame()
-
-        schema = self.schema.subset(fields)
+    def select(self, field:list[str]):
+        if not self.assert_field(field):
+            return Table(name=self.name)
+        
+        df = pltools.get_element(self.df, field)
+        schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)
     
@@ -323,24 +309,16 @@ class Table():
             raise QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
         
         df = self.get_value(field)
-        if not isinstance(df, pl.DataFrame):
-            raise QueryException(f'{field} in {self.name} is not a nested object')
         
-        schema = Schema(schema=self.schema.get_type(field))
+        if isinstance(df, pl.Series):
+            stype = self.schema.get_type(field)
+            return Series(df, stype)
         
+        schema  = Schema(schema=self.schema.get_type(field))
         return Table(df=df, schema=schema, name=self.name)
-        
-    
-    def assert_fields(self, fields:list[list[str]]):
-        asserted_fields = []
-        for field in fields:
-            afield = self.assert_field(field)
-            if afield:
-                asserted_fields.append(afield)
-        return asserted_fields
 
     def assert_field(self, field:list[str]):
-        return pltools.assert_field(self.df, field)
+        return self.schema.assert_field(field)
     
     def cast_in_place(self, field:list[str], cast_type:hqlt.HqlType):
         if not self.assert_field(field):
@@ -350,6 +328,14 @@ class Table():
         self.df = self.schema.apply(self.df)
 
         return self
+
+'''
+Series for individual values, mimics a pl.Series
+'''
+class Series():
+    def __init__(self, series:pl.Series, stype:hqlt.HqlType):
+        self.series = series
+        self.type = stype
 
 class Schema():
     def __init__(
@@ -398,18 +384,19 @@ class Schema():
         return Schema(schema=new)
 
     # Extract the schema for a given set of fields
-    def subset(self, fields:list[list[str]], schema:dict=None):
-        schema = schema if schema else self.schema
-
-        new = dict()
-        for field in fields:
-            if len(field) == 1:
-                new[field[0]] = schema[field[0]]
-                continue
-
-            new[field[0]] = self.subset([field[1:]], schema=schema[field[0]]).schema
-
-        return Schema(schema=new)
+    def select(self, field:list[str]):
+        cur = self.unnest(field).schema
+        for part in field:
+            cur = {part: cur}
+        return Schema(schema=cur)
+    
+    def unnest(self, field:list[str]):
+        cur = self.schema
+        for part in field:
+            if part not in cur:
+                raise QueryException(f"Referenced field {'.'.join(field)} not in schema")
+            cur = cur[part]
+        return Schema(schema=cur)
 
     # Generates a schema with types replaced with their polars primatives
     # schema parameter required for recursion
@@ -618,9 +605,6 @@ class Schema():
                 )
                 
             else:
-                # print(schema)
-                # print(col.name)
-                # print(col)
                 newdf[col.name] = schema[col.name].cast(col)
 
         return pl.DataFrame(newdf)
@@ -628,19 +612,25 @@ class Schema():
     '''
     Gets the type of a given path in the schema
     '''
-    def get_type(self, path:list[str]):
+    def get_type(self, field:list[str]):
         schema = self.schema
 
-        for idx, field in enumerate(path):
-            if field in schema:
-                if isinstance(schema[field], dict):
-                    schema = schema[field]
+        for idx, part in enumerate(field):
+            if part in schema:
+                if isinstance(schema[part], dict):
+                    schema = schema[part]
                     continue
-                elif idx == len(path) - 1:
-                    return schema[field]
+                elif idx == len(field) - 1:
+                    return schema[part]
                 else:
                     return None
             
             return None
         
         return schema
+    
+    def assert_field(self, field:list[str]):
+        if self.get_type(field) == None:
+            return False
+        else:
+            return True

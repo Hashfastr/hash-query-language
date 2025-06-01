@@ -1,7 +1,7 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expression as Expression
+import HqlCompiler.Expression as Expr
 import HqlCompiler.Operators as Ops
 
 from HqlCompiler.Exceptions import *
@@ -14,7 +14,7 @@ class Operators(HqlVisitor):
         name = ctx.NameToken.text
         value = self.visit(ctx.NameValue) if ctx.NameValue else self.visit(ctx.LiteralValue)
         
-        return Expression.OpParameter(name, value)
+        return Expr.OpParameter(name, value)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
         predicate = self.visit(ctx.Predicate)

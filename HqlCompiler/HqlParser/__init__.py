@@ -5,7 +5,7 @@ from HqlCompiler.grammar.HqlParser import HqlParser
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 
 from HqlCompiler.Query import *
-import HqlCompiler.Expression as Expression
+import HqlCompiler.Expression as Expr
 
 from .BaseExpressions import BaseExpressions
 from .Functions import Functions
@@ -83,4 +83,4 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
         for i in ctx.PipedOperators:
             pipes.append(self.visit(i))
         
-        return Expression.PipeExpression(prepipe=prepipe, pipes=pipes)
+        return Expr.PipeExpression(prepipe=prepipe, pipes=pipes)

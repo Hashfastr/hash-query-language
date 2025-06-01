@@ -1,4 +1,4 @@
-import HqlCompiler.Expression as Expression
+import HqlCompiler.Expression as Expr
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *
@@ -21,7 +21,7 @@ class Elasticsearch(Database):
         self.pattern = "*"
 
         # The database filter always starts as an and
-        self.filter_expr = Expression.BinaryLogic(None, [], 'and')
+        self.filter_expr = Expr.BinaryLogic(None, [], 'and')
         self.filters = []
         
         self.compatible = [
@@ -62,7 +62,7 @@ class Elasticsearch(Database):
         self.pattern = pattern
     
     # When executed it assumes another where op, implying 'and' with other filters
-    def add_filter(self, expr:Expression):
+    def add_filter(self, expr:Expr):
         if not self.filter_expr.lh:
             logging.debug(f'Create initial filter for {self.dbtype}')
             self.filter_expr.lh = expr
@@ -72,9 +72,9 @@ class Elasticsearch(Database):
         if self.filter_expr.type == 'BinaryLogic' and self.filter_expr.bitype == 'and':
             self.filter_expr.rh.append(expr)
         else:
-            self.filter_expr = Expression.BinaryLogic(self.filter_expr, expr, 'and')
+            self.filter_expr = Expr.BinaryLogic(self.filter_expr, expr, 'and')
 
-    def gen_filter(self, expr:Expression):
+    def gen_filter(self, expr:Expr):
         filter = None
 
         if expr.type == "BinaryLogic":

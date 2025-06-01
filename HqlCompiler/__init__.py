@@ -1,7 +1,7 @@
 __all__ = [
     "Operators",
     "Exceptions",
-    "Expression",
+    "Expr",
     "HqlVisitor",
     "Query",
     "Compiler"
@@ -13,7 +13,7 @@ from HqlCompiler.Query import *
 from HqlCompiler.Functions import *
 from HqlCompiler.Operators.Database import Database as Database
 from HqlCompiler.Operators.Database import get_database
-import HqlCompiler.Expression as Expression
+import HqlCompiler.Expression as Expr
 from HqlCompiler.Context import Context
 import logging
 
