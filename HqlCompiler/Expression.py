@@ -350,13 +350,22 @@ class Path(Expression):
         if as_str:
             return '.'.join(list)
                 
-        receiver = None
+        receiver = ctx.data
+        static = []
         for i in self.path:
             if i.type == "DotCompositeFunction":
+                if static:
+                    receiver = receiver.select(static).unnest(static)
+                    
                 receiver = i.eval(ctx, receiver=receiver, as_value=True)
             else:
-                receiver = i.eval(ctx, receiver=receiver, as_value=True)
-         
+                static.append(i.eval(ctx, receiver=receiver, as_str=True))
+                
+        if static:
+            receiver = receiver.select(static)
+            if as_value:
+                receiver = receiver.unnest(static)
+                 
         return receiver
     
 class BinaryLogic(Expression):

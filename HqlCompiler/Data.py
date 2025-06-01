@@ -130,6 +130,8 @@ class Data():
         tables = []
         for i in self.tables:
             new = self.tables[i].unnest(field)
+            print(type(new))
+            tables.append(new)
         
         return Data(tables_list=tables)
 
@@ -178,6 +180,14 @@ class Data():
         return self
 
 '''
+Series for individual values, mimics a pl.Series
+'''
+class Series():
+    def __init__(self, series:pl.Series, stype:hqlt.HqlType):
+        self.series = series
+        self.type = stype
+
+'''
 Table for a structure of data, includes schema definition.
 Mimics a pl.DataFrame
 '''
@@ -185,6 +195,7 @@ class Table():
     def __init__(
             self,
             df:pl.DataFrame=None,
+            series:Series=None,
             init_data:list[dict]=None,
             schema:Schema=None,
             name:str=None
@@ -192,9 +203,13 @@ class Table():
         
         self.name = name
         self.df = None
+        self.series = None
         self.schema = None
 
-        if init_data and not schema:
+        if series:
+            self.series = series
+
+        elif init_data and not schema:
             self.schema = Schema(init_data)
             init_data = self.schema.adjust_mv(init_data)
             schema = self.schema.gen_pl_schema()
@@ -311,12 +326,12 @@ class Table():
         df = self.get_value(field)
         
         if isinstance(df, pl.Series):
-            stype = self.schema.get_type(field)
-            return Series(df, stype)
-        
-        schema  = Schema(schema=self.schema.get_type(field))
-        return Table(df=df, schema=schema, name=self.name)
-
+            return Series(df, self.schema.get_type(field))            
+            
+        else:
+            schema = Schema(schema=self.schema.get_type(field))
+            return Table(df=df, schema=schema, name=self.name)
+            
     def assert_field(self, field:list[str]):
         return self.schema.assert_field(field)
     
@@ -328,14 +343,6 @@ class Table():
         self.df = self.schema.apply(self.df)
 
         return self
-
-'''
-Series for individual values, mimics a pl.Series
-'''
-class Series():
-    def __init__(self, series:pl.Series, stype:hqlt.HqlType):
-        self.series = series
-        self.type = stype
 
 class Schema():
     def __init__(
@@ -386,7 +393,7 @@ class Schema():
     # Extract the schema for a given set of fields
     def select(self, field:list[str]):
         cur = self.unnest(field).schema
-        for part in field:
+        for part in field[::-1]:
             cur = {part: cur}
         return Schema(schema=cur)
     
@@ -602,11 +609,11 @@ class Schema():
                 newdf[col.name] = self.apply(
                     subdata, 
                     schema=schema[col.name]
-                )
-                
+                ).to_struct()
+                                
             else:
                 newdf[col.name] = schema[col.name].cast(col)
-
+             
         return pl.DataFrame(newdf)
 
     '''
@@ -621,10 +628,10 @@ class Schema():
                     schema = schema[part]
                     continue
                 elif idx == len(field) - 1:
-                    return schema[part]
+                    return schema.get(part, None)
                 else:
                     return None
-            
+                        
             return None
         
         return schema
