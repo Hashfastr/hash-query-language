@@ -24,16 +24,25 @@ class Project(Operator):
         ]
         
     def eval(self, ctx:Context, **kwargs):
-        data_sets = []
+        datasets = []
         for i in self.exprs:
             if i.type in ("NamedReference", "Identifier", "EscapedName", "Wildcard", "Path"):
-                data_sets.append(i.eval(ctx, as_value=False))
+                datasets.append(i.eval(ctx, as_value=False))
 
             elif i.type == "DotCompositeFunction":
                 # dynamic.append(i)
                 pass
                 
+            elif i.type == "NamedExpression":
+                datasets.append(i.eval(ctx))
+                
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
+            
+        for data in datasets:
+            for table in data.tables:
+                print(len(data.tables[table]))
+                print(data.tables[table].schema.schema)
         
-        return Data.merge(data_sets)
+        return Data.merge(datasets)
+        # return Data()

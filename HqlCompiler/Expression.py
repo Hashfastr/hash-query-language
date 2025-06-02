@@ -192,8 +192,7 @@ class NamedReference(Expression):
         
         # If we're operating on a dataset
         elif isinstance(receiver, Data):
-            receiver = receiver.select([self.name])
-            return receiver.unnest([self.name]) if as_value else receiver
+            return receiver.unnest([self.name]) if as_value else receiver.select([self.name])
         
         # If we're operating on a database
         elif issubclass(type(receiver), Database):
@@ -355,16 +354,14 @@ class Path(Expression):
         for i in self.path:
             if i.type == "DotCompositeFunction":
                 if static:
-                    receiver = receiver.select(static).unnest(static)
+                    receiver = receiver.unnest(static)
                     
                 receiver = i.eval(ctx, receiver=receiver, as_value=True)
             else:
                 static.append(i.eval(ctx, receiver=receiver, as_str=True))
                 
         if static:
-            receiver = receiver.select(static)
-            if as_value:
-                receiver = receiver.unnest(static)
+            receiver = receiver.unnest(static) if as_value else receiver.select(static)
                  
         return receiver
     
@@ -412,11 +409,24 @@ class NamedExpression(Expression):
         }
         
     def eval(self, ctx:Context, **kwargs):
-        receiver = kwargs.get('receiver', None)
-            
         data = self.value.eval(ctx)
-        name = self.name.eval(ctx, as_list=True)
-        return pltools.build_element(name, data)
+        
+        for table in data.tables:
+            for name in self.name:
+                path = name.eval(ctx, as_list=True)
+                
+                cur = data.tables[table]
+                
+                if cur.series:
+                    schema = cur.series.type
+                    cur = cur.series.series
+                else:
+                    schema = cur.schema.schema
+                    cur = cur.df
+                
+                ctx.data.tables[table].insert(path, cur, schema)
+                    
+        return ctx.data
     
 class OrderedExpression(Expression):
     def __init__(self, name:Expression=None, order:str='desc', nulls:str=''):

@@ -130,7 +130,10 @@ class Data():
         tables = []
         for i in self.tables:
             new = self.tables[i].unnest(field)
-            print(type(new))
+            
+            if isinstance(new, Series):
+                new = Table(series=new, name=i)
+            
             tables.append(new)
         
         return Data(tables_list=tables)
@@ -260,6 +263,22 @@ class Table():
         
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, fields=path)
+    
+    def deconflict_path(self, path:list[str]):
+        cur = self.df
+        for idx, part in enumerate(path):
+            if part not in cur:
+                return path
+            
+            if idx != len(path) - 1 and cur[part].dtype == pl.Struct:
+                cur = cur.unnest(part)
+                continue
+            
+            i = 0
+            while f'{part}.{i}' in self.df:
+                i += 1
+            part = f'{part}.{i}'
+            path[idx] = part
 
     def merge(tables:list[Table]=None, schema:Schema=None):
         if not tables:
@@ -294,7 +313,7 @@ class Table():
                 cols[col] = col_groups[col][0]
                 continue
             
-            if isinstance(schema[col], dict):
+            if isinstance(schema.schema.get(col, None), dict):
                 ...
                 
         # df = pltools.merge(dfs)
@@ -331,7 +350,128 @@ class Table():
         else:
             schema = Schema(schema=self.schema.get_type(field))
             return Table(df=df, schema=schema, name=self.name)
+
+    def rename(self, src:list[str], dest:list[str]):
+        if not self.assert_field(src):
+            raise QueryException('Attempting to rename a non-existing field')
+        
+        if self.assert_field(dest):
+            raise QueryException('Attempting to rename field into an existing field')
+        
+        value = self.pop(src).unnest(src)
+        if value.series:
+            schema = value.series.type
+            value = value.series.series
+        else:
+            schema = value.schema.schema
+            value = value.df
+        
+        self.insert(dest, value, schema)
+    
+    # Inserts a peice of data at a given name
+    def insert(
+            self,
+            name:list[str],
+            value:Union[Data, Series],
+            vtype:CompilerType,
+            cur_df:pl.DataFrame=None,
+            idx:int=0
+        ):
+        if not hasattr(cur_df, 'is_null'):
+            cur_df = self.df
             
+        split = name[idx]
+        
+        # Endpoint
+        if idx == len(name) - 1:
+            # Find a unique name
+            if split in cur_df:
+                i = 0
+                while f'{split}.{i}' in cur_df:
+                    i += 1
+                split = f'{split}.{i}'
+                name[idx] = split
+
+            self.schema.set(name, vtype)
+            
+            new = pl.DataFrame({name[-1]: value})
+            new = pl.concat([new, cur_df], how='horizontal')
+            return new
+        
+        # Not the end, but we're now free to do whatever we want
+        if split not in cur_df:
+            recurse = self.insert(name, value, vtype, cur_df=pl.DataFrame(), idx=idx + 1)
+            new = pl.DataFrame({split: recurse})
+            new = pl.concat([new, cur_df], how='horizontal')
+            return new
+        
+        # Mask out where we will be recursing
+        mask = cur_df.remove(split)
+        
+        # Recurse up a nested object
+        if cur_df[split].dtype == pl.Struct:
+            recurse = self.insert(name, value, vtype, cur_df=cur_df.select(split).unnest(split), idx=idx + 1)
+            new = pl.DataFrame({split: recurse})
+            new = pl.concat([new, mask], how='horizontal')
+            return new
+        
+        # Conflict, a base type is where we're trying to put a struct
+        else:
+            i = 0
+            while f'{split}.{i}' in cur_df:
+                # Merging case
+                if cur_df[f'{split}.{i}'].dtype == pl.Struct:
+                    break
+                i += 1
+            split = f'{split}.{i}'
+            name[idx] = split
+         
+            if cur_df[split].dtype == pl.Struct:
+                recurse = self.insert(name, value, vtype, cur_df=cur_df.select(split).unnest(split), idx=idx + 1)
+            else:
+                recurse = self.insert(name, value, vtype, cur_df=pl.DataFrame(), idx=idx + 1)
+            
+            new = pl.DataFrame({split: recurse})
+            new = pl.concat([new, cur_df], how='horizontal')
+            return new
+
+    def remove(self, name:list[str], cur_df:pl.DataFrame=None, idx:int=0):
+        if not hasattr(cur_df, 'is_null'):
+            cur_df = self.df
+            
+        if idx == 0 and not self.assert_field(name):
+            return cur_df
+            
+        split = name[idx]
+        mask = cur_df.remove(split)
+        
+        if idx == len(name) - 1:
+            return mask
+        
+        if cur_df[split].dtype == pl.Struct:
+            recurse = self.remove(name, cur_df=cur_df.unnest(split), idx=idx + 1)
+            
+            if not recurse.is_empty():
+                recurse = pl.DataFrame({split: recurse})
+                merged = pl.concat([mask, recurse], how='horizontal')
+            else:
+                merged = mask
+        else:
+            merged = mask
+
+        return merged
+            
+    def pop(self, name:list[str]):
+        if not self.assert_field(name):
+            raise QueryException('Attempting to pop a non-existing field')
+        
+        # Schema is tracked through the select
+        value = self.select(name)
+        self.schema.pop(name)
+        self.remove(name)
+        
+        return value
+                
     def assert_field(self, field:list[str]):
         return self.schema.assert_field(field)
     
@@ -404,7 +544,57 @@ class Schema():
                 raise QueryException(f"Referenced field {'.'.join(field)} not in schema")
             cur = cur[part]
         return Schema(schema=cur)
-
+    
+    def rename(self, src:list[str], dest:list[str]):
+        if not self.assert_field(src):
+            raise QueryException('Attempting to rename a non-existing field')
+        
+        if self.assert_field(dest):
+            raise QueryException('Attempting to rename field into an existing field')
+        
+        src_type = self.pop(src)
+        
+        cur = self.schema
+        for idx, i in enumerate(dest):
+            if idx == len(dest) - 1:
+                cur[i] = src_type
+            else:
+                cur = cur[i]
+                
+    def pop(self, name:list[str]):
+        if not self.assert_field(name):
+            raise QueryException('Attempting to pop a non-existing field')
+        
+        cur = self.schema
+        for idx, i in enumerate(name):
+            if idx == len(name) - 1:
+                src_type = cur.pop(i)
+            else:
+                cur = cur[i]
+                
+        return src_type
+    
+    '''
+    Set a field to a specific type in the schema
+    apply is then expected to be ran
+    '''
+    def set(self, name:list[str], htype:Union[hqlt.HqlType, Schema, dict]):
+        if isinstance(htype, Schema):
+            htype = htype.schema
+        
+        schema = self.schema
+        
+        for idx, split in enumerate(name):
+            if idx == len(name) - 1:
+                schema[split] = htype
+            else:
+                if split not in schema:
+                    schema = {split: dict()}
+                elif isinstance(schema[split], dict):
+                    schema = schema[split]
+                else:
+                    raise CompilerException('Attempting to set a dict to a type in schema')
+    
     # Generates a schema with types replaced with their polars primatives
     # schema parameter required for recursion
     def convert_schema(self, schema:dict=None, target:str='hql'):
@@ -563,26 +753,6 @@ class Schema():
                     row[key] = [row[key]]
 
         return data
-    
-    '''
-    Set a field to a specific type in the schema
-    apply is then expected to be ran
-    '''
-    def set(self, path:list[str], htype:hqlt.HqlType):
-        schema = self.schema
-        
-        for idx, field in enumerate(path):
-            if field in schema:
-                if isinstance(schema[field], dict):
-                    schema = schema[field]
-                    continue
-                elif idx == len(path) - 1:
-                    schema = htype
-                    return True
-            
-            return False
-        
-        return False
     
     '''
     Applies a schema to a dataset

@@ -219,6 +219,9 @@ class HqlTypes():
         def pl_schema(self):
             return self.proto(self.fields)
 
+        def hql_schema(self):
+            return self
+
     @register_type('hql_null')
     class null(HqlType, pl.Null):
         def __init__(self):
