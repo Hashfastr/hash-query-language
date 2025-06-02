@@ -417,8 +417,6 @@ class NamedExpression(Expression):
             data = ctx.data
         else:
             data = Data()
-            
-        new_tables = []
         
         # loop through value tables as those are the only ones we can vouch for
         for table in value.tables:
@@ -436,7 +434,9 @@ class NamedExpression(Expression):
                 else:
                     schema = cur.schema.schema
                     cur = cur.df
-
+                    
+                
+                                
                 data.tables[table].insert(path, cur, schema)
 
         return data

@@ -12,11 +12,7 @@ class toint(Function):
         self.src = args[0]
                 
     def eval(self, ctx:Context, **kwargs):        
-        field = self.src.eval(ctx, as_str=True, as_list=True)
-        if not isinstance(field, list):
-            field = [field]
-        
-        # df = plt.build_element(series_name, series.cast(pl.Int32))
-        tables = ctx.data.cast_subset(field, hqlt.int)
+        path = self.src.eval(ctx, as_list=True)
+        data = ctx.data.select(path)
 
-        return Data(tables_list=tables)
+        return data.cast_in_place(path, hqlt.int())

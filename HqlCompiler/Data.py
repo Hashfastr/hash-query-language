@@ -241,7 +241,9 @@ class Table():
             self.schema = Schema()
 
     def __len__(self):
-        return len(self.df)
+        if hasattr(self.df, '__len__'):
+            return len(self.df)
+        return 0
 
     def to_dicts(self):
         return self.df.to_dicts()
@@ -478,11 +480,11 @@ class Table():
     def assert_field(self, field:list[str]):
         return self.schema.assert_field(field)
     
-    def cast_in_place(self, field:list[str], cast_type:hqlt.HqlType):
-        if not self.assert_field(field):
+    def cast_in_place(self, path:list[str], cast_type:hqlt.HqlType):
+        if not self.assert_field(path):
             return None
         
-        self.schema.set(field=field, htype=cast_type)
+        self.schema.set(path, cast_type)
         self.df = self.schema.apply(self.df)
 
         return self
@@ -593,14 +595,14 @@ class Schema():
     Set a field to a specific type in the schema
     apply is then expected to be ran
     '''
-    def set(self, name:list[str], htype:Union[hqlt.HqlType, Schema, dict]):
+    def set(self, path:list[str], htype:Union[hqlt.HqlType, Schema, dict]):
         if isinstance(htype, Schema):
             htype = htype.schema
         
         schema = self.schema
         
-        for idx, split in enumerate(name):
-            if idx == len(name) - 1:
+        for idx, split in enumerate(path):
+            if idx == len(path) - 1:
                 schema[split] = htype
             else:
                 if split not in schema:
@@ -775,6 +777,12 @@ class Schema():
     Applies a schema to a dataset
     '''
     def apply(self, df:pl.DataFrame, schema:dict=None):
+        if not hasattr(df, 'cast'):
+            raise CompilerException('Attempting to apply a schema to an empty dataframe!')
+        
+        return df.cast(self.gen_pl_schema())
+        
+        '''
         newdf = {}
         schema = schema if schema else self.schema
                 
@@ -799,9 +807,11 @@ class Schema():
                 ).to_struct()
                                 
             else:
+                newdf[col.name] = 
                 newdf[col.name] = schema[col.name].cast(col)
              
         return pl.DataFrame(newdf)
+        '''
     
     def assert_field(self, field:list[str]):
         if self.unnest(field) == None:
