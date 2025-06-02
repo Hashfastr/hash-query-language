@@ -204,8 +204,12 @@ class Table():
             name:str=None
         ):
         
+        if hasattr(df, 'is_empty'):
+            self.df = df
+        else:
+            self.df = pl.DataFrame()
+        
         self.name = name
-        self.df = None
         self.series = None
         self.schema = None
 
@@ -222,16 +226,19 @@ class Table():
             self.schema = schema
             self.df = pl.from_dicts(init_data, schema=schema.to_pl_schema())
         
-        elif not df.is_empty() and schema:
+        elif not self.df.is_empty() and schema:
             self.schema = schema
-            self.df = schema.apply(df)
+            self.df = schema.apply(self.df)
 
-        elif not df.is_empty() and not schema:
-            self.df = df
-            self.schema = Schema(data=df)
+        elif not self.df.is_empty() and not schema:
+            self.schema = Schema(data=self.df)
 
         elif schema:
+            logging.warning('Schema defined in table without data')
             self.schema = schema
+
+        else:
+            self.schema = Schema()
 
     def __len__(self):
         return len(self.df)
@@ -345,10 +352,10 @@ class Table():
         df = self.get_value(field)
         
         if isinstance(df, pl.Series):
-            return Series(df, self.schema.get_type(field))            
+            return Series(df, self.schema.unnest(field))            
             
         else:
-            schema = Schema(schema=self.schema.get_type(field))
+            schema = Schema(schema=self.schema.unnest(field))
             return Table(df=df, schema=schema, name=self.name)
 
     def rename(self, src:list[str], dest:list[str]):
@@ -381,7 +388,7 @@ class Table():
             cur_df = self.df
             
         split = name[idx]
-        
+                
         # Endpoint
         if idx == len(name) - 1:
             # Find a unique name
@@ -393,27 +400,18 @@ class Table():
                 name[idx] = split
 
             self.schema.set(name, vtype)
-            
             new = pl.DataFrame({name[-1]: value})
-            new = pl.concat([new, cur_df], how='horizontal')
-            return new
         
         # Not the end, but we're now free to do whatever we want
-        if split not in cur_df:
+        elif split not in cur_df:
             recurse = self.insert(name, value, vtype, cur_df=pl.DataFrame(), idx=idx + 1)
             new = pl.DataFrame({split: recurse})
-            new = pl.concat([new, cur_df], how='horizontal')
-            return new
-        
-        # Mask out where we will be recursing
-        mask = cur_df.remove(split)
         
         # Recurse up a nested object
-        if cur_df[split].dtype == pl.Struct:
+        elif cur_df[split].dtype == pl.Struct:        
             recurse = self.insert(name, value, vtype, cur_df=cur_df.select(split).unnest(split), idx=idx + 1)
+            cur_df = cur_df.remove(split)
             new = pl.DataFrame({split: recurse})
-            new = pl.concat([new, mask], how='horizontal')
-            return new
         
         # Conflict, a base type is where we're trying to put a struct
         else:
@@ -432,8 +430,13 @@ class Table():
                 recurse = self.insert(name, value, vtype, cur_df=pl.DataFrame(), idx=idx + 1)
             
             new = pl.DataFrame({split: recurse})
-            new = pl.concat([new, cur_df], how='horizontal')
-            return new
+        
+        new = pl.concat([new, cur_df], how='horizontal')
+        
+        if idx == 0:
+            self.df = new
+        
+        return new
 
     def remove(self, name:list[str], cur_df:pl.DataFrame=None, idx:int=0):
         if not hasattr(cur_df, 'is_null'):
@@ -495,7 +498,10 @@ class Schema():
         self.schema = dict()
 
         if schema:
-            self.schema = schema
+            if isinstance(schema, Schema):
+                self.schema = schema.schema
+            else:
+                self.schema = schema
         elif isinstance(data, list):
             sample = data[:sample_size] if sample_size > 0 else data
             self.schema = Schema.from_json(sample)
@@ -505,10 +511,15 @@ class Schema():
             self.schema = Schema.from_df(data)
         elif data:
             raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
-        
+                              
         # Immediately convert to hql schema
-        self.schema = self.convert_schema(target='hql')
-                
+        # Except empty schema
+        if len(self.schema):
+            self.schema = self.convert_schema(target='hql')
+    
+    def __len__(self):
+        return len(self.schema)
+    
     def merge(schemata:list):
         new = dict()
         for idx, i in enumerate(schemata):
@@ -532,7 +543,7 @@ class Schema():
 
     # Extract the schema for a given set of fields
     def select(self, field:list[str]):
-        cur = self.unnest(field).schema
+        cur = self.unnest(field)
         for part in field[::-1]:
             cur = {part: cur}
         return Schema(schema=cur)
@@ -541,9 +552,13 @@ class Schema():
         cur = self.schema
         for part in field:
             if part not in cur:
-                raise QueryException(f"Referenced field {'.'.join(field)} not in schema")
+                return None
             cur = cur[part]
-        return Schema(schema=cur)
+            
+        if isinstance(cur, dict):
+            return Schema(schema=cur)
+        else:
+            return cur
     
     def rename(self, src:list[str], dest:list[str]):
         if not self.assert_field(src):
@@ -595,8 +610,10 @@ class Schema():
                 else:
                     raise CompilerException('Attempting to set a dict to a type in schema')
     
-    # Generates a schema with types replaced with their polars primatives
-    # schema parameter required for recursion
+    '''
+    Generates a schema with types replaced with their polars primatives
+    schema parameter required for recursion
+    '''
     def convert_schema(self, schema:dict=None, target:str='hql'):
         supported = ('hql', 'polars')
         
@@ -607,9 +624,9 @@ class Schema():
         
         if not schema:
             schema = self.schema
-            
+                    
         if not isinstance(schema, dict):
-            return schema
+            raise CompilerException('Attempting to convert non-dict schema')
 
         # Base case, create empty object/struct
         if len(schema) == 0:
@@ -785,29 +802,9 @@ class Schema():
                 newdf[col.name] = schema[col.name].cast(col)
              
         return pl.DataFrame(newdf)
-
-    '''
-    Gets the type of a given path in the schema
-    '''
-    def get_type(self, field:list[str]):
-        schema = self.schema
-
-        for idx, part in enumerate(field):
-            if part in schema:
-                if isinstance(schema[part], dict):
-                    schema = schema[part]
-                    continue
-                elif idx == len(field) - 1:
-                    return schema.get(part, None)
-                else:
-                    return None
-                        
-            return None
-        
-        return schema
     
     def assert_field(self, field:list[str]):
-        if self.get_type(field) == None:
+        if self.unnest(field) == None:
             return False
         else:
             return True

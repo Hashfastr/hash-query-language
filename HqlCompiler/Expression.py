@@ -409,13 +409,26 @@ class NamedExpression(Expression):
         }
         
     def eval(self, ctx:Context, **kwargs):
-        data = self.value.eval(ctx)
+        insert = kwargs.get('insert', True)
+        value = self.value.eval(ctx)
         
-        for table in data.tables:
+        # Chose which dataset to insert on
+        if insert:
+            data = ctx.data
+        else:
+            data = Data()
+            
+        new_tables = []
+        
+        # loop through value tables as those are the only ones we can vouch for
+        for table in value.tables:
+            if table not in data.tables:
+                data.tables[table] = Table(name=table)
+            
             for name in self.name:
                 path = name.eval(ctx, as_list=True)
                 
-                cur = data.tables[table]
+                cur = value.tables[table]
                 
                 if cur.series:
                     schema = cur.series.type
@@ -423,11 +436,11 @@ class NamedExpression(Expression):
                 else:
                     schema = cur.schema.schema
                     cur = cur.df
-                
-                ctx.data.tables[table].insert(path, cur, schema)
-                    
-        return ctx.data
-    
+
+                data.tables[table].insert(path, cur, schema)
+
+        return data
+
 class OrderedExpression(Expression):
     def __init__(self, name:Expression=None, order:str='desc', nulls:str=''):
         super().__init__()

@@ -34,15 +34,10 @@ class Project(Operator):
                 pass
                 
             elif i.type == "NamedExpression":
-                datasets.append(i.eval(ctx))
+                datasets.append(i.eval(ctx, insert=False))
                 
             else:
                 raise CompilerException(f'Unhandled project expression {i.type}')
-            
-        for data in datasets:
-            for table in data.tables:
-                print(len(data.tables[table]))
-                print(data.tables[table].schema.schema)
         
         return Data.merge(datasets)
-        # return Data()
+        #return Data()
