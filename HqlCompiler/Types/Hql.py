@@ -175,10 +175,16 @@ class HqlTypes():
             if data.dtype != self.proto:
                 raise CompilerException('Attempting to human a non-converted ip4 field')
 
+            d = 0xFF
+            c = d << 8
+            b = c << 8
+            a = b << 8
+
             ips = []
             for i in data:
-                ...
-                
+                ips.append(f'{(i & a) >> 24}.{(i & b) >> 16}.{(i & c) >> 8}.{i & d}')
+
+            return pl.Series(ips, dtype=pl.String)                
 
     @register_type('hql_ip6')
     class ip6(HqlType, pl.Int128):

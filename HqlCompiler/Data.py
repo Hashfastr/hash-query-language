@@ -246,7 +246,8 @@ class Table():
         return 0
 
     def to_dicts(self):
-        return self.df.to_dicts()
+        human = self.schema.present_complex(self.df)
+        return human.to_dicts()
 
     def get_schema(self):
         return self.schema.schema
@@ -850,40 +851,29 @@ class Schema():
             raise CompilerException('Attempting to apply a schema to an empty dataframe!')
         
         return df.cast(self.gen_pl_schema())
-        
-        '''
-        newdf = {}
-        schema = schema if schema else self.schema
-                
-        if schema == None:
-            return pl.DataFrame()
-
-        for col in df:
-            # Base case, we don't specify anything in the target schema
-            # so pass through, and fill out the missing schema value
-            if col.name not in schema:
-                newdf[col.name] = col
-
-            # Case to recurse on a nested object
-            elif col.dtype == pl.Struct and not isinstance(schema[col.name], hqlt.object):
-                subdata = pl.DataFrame(
-                    df.select(col.name).unnest(col.name)
-                )
-            
-                newdf[col.name] = self.apply(
-                    subdata, 
-                    schema=schema[col.name]
-                ).to_struct()
-                                
-            else:
-                newdf[col.name] = 
-                newdf[col.name] = schema[col.name].cast(col)
-             
-        return pl.DataFrame(newdf)
-        '''
     
     def assert_field(self, field:list[str]):
         if self.unnest(field) == None:
             return False
         else:
             return True
+        
+    def present_complex(self, df:pl.DataFrame, schema:dict=None):
+        schema = schema if schema != None else self.schema
+
+        newdf = {}
+        for col in df:
+            if col.name not in schema:
+                newdf[col.name] = col
+                continue
+
+            if isinstance(schema[col.name], dict):
+                newdf[col.name] = self.present_complex(pl.DataFrame(col), schema[col.name])
+                continue
+
+            if schema[col.name].complex:
+                newdf[col.name] = schema[col.name].human(col)
+            else:
+                newdf[col.name] = col
+
+        return pl.DataFrame(newdf)
