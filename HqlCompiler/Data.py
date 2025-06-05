@@ -273,6 +273,9 @@ class Table():
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, fields=path)
     
+    '''
+    Unused, might use later
+    '''
     def deconflict_path(self, path:list[str]):
         cur = self.df
         for idx, part in enumerate(path):
@@ -360,6 +363,34 @@ class Table():
             schema = Schema(schema=self.schema.unnest(field))
             return Table(df=df, schema=schema, name=self.name)
 
+    '''
+    Returns the deep stripped value of a DataFrame with a single value.
+    So {'destination': {'ip': hqlt.ip4}} would just return hqlt.ip4.
+    A more complex case is:
+
+    {
+        'destination': {
+            'ip': hqlt.ip4,
+            'port': hqlt.short
+        }
+    }
+
+    Which would just return:
+
+    {
+        'ip': hqlt.ip4,
+        'port': hqlt.short
+    }
+
+    The idea here is if you want to extract the value of a function, this does it.
+    '''
+    def strip(self):
+        cur = self.df
+        while isinstance(cur, pl.DataFrame) and len(cur.columns) == 1:
+            key = cur.columns[0]
+            cur = pltools.get_element_value(cur, [key])
+        return cur
+
     def rename(self, src:list[str], dest:list[str]):
         if not self.assert_field(src):
             raise QueryException('Attempting to rename a non-existing field')
@@ -381,8 +412,8 @@ class Table():
     def insert(
             self,
             name:list[str],
-            value:Union[Data, Series],
-            vtype:CompilerType,
+            value:Union[pl.DataFrame, pl.Series],
+            vtype:Union[CompilerType, dict],
             cur_df:pl.DataFrame=None,
             idx:int=0
         ):
@@ -561,6 +592,37 @@ class Schema():
             return Schema(schema=cur)
         else:
             return cur
+
+    '''
+    Returns the deep stripped value of a dict with a single value.
+    So {'destination': {'ip': hqlt.ip4}} would just return hqlt.ip4.
+    A more complex case is:
+
+    {
+        'destination': {
+            'ip': hqlt.ip4,
+            'port': hqlt.short
+        }
+    }
+
+    Which would just return:
+
+    {
+        'ip': hqlt.ip4,
+        'port': hqlt.short
+    }
+
+    The idea here is if you want to extract the value of a function, this does it.
+
+    Doesn't return a schema object as it might be a type or a dict
+    Typically this is called with a named expression, so it's gonna build the schema anyways.
+    '''
+    def strip(self):
+        cur = self.schema
+        while isinstance(cur, dict) and len(cur) == 1:
+            key = list(cur.keys())[0]
+            cur = cur[key]
+        return cur
     
     def rename(self, src:list[str], dest:list[str]):
         if not self.assert_field(src):
@@ -595,23 +657,30 @@ class Schema():
     Set a field to a specific type in the schema
     apply is then expected to be ran
     '''
-    def set(self, path:list[str], htype:Union[hqlt.HqlType, Schema, dict]):
+    def set(self, path:list[str], htype:Union[hqlt.HqlType, Schema, dict], schema:Union[dict, Schema]=None, idx:int=0):
         if isinstance(htype, Schema):
             htype = htype.schema
         
-        schema = self.schema
-        
-        for idx, split in enumerate(path):
-            if idx == len(path) - 1:
-                schema[split] = htype
-            else:
-                if split not in schema:
-                    schema = {split: dict()}
-                elif isinstance(schema[split], dict):
-                    schema = schema[split]
-                else:
-                    raise CompilerException('Attempting to set a dict to a type in schema')
-    
+        schema = schema if schema != None else self.schema
+        if isinstance(schema, Schema):
+            schema = schema.schema
+
+        split = path[idx]
+
+        if idx == len(path) - 1:
+            schema[split] = htype
+            return schema
+
+        if split in schema:
+            schema[split] = self.set(path, htype, schema=schema[split], idx=idx+1)
+        else:
+            schema[split] = self.set(path, htype, {}, idx=idx+1)
+
+        if idx == 0:
+            self.schema = schema
+        else:
+            return schema
+
     '''
     Generates a schema with types replaced with their polars primatives
     schema parameter required for recursion

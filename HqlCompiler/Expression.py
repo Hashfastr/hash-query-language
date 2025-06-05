@@ -306,7 +306,7 @@ class DotCompositeFunction(Expression):
             
             if not no_exec:
                 receiver = func.eval(ctx, receiver=receiver)
-        
+         
         if no_exec:
             return func_list
         else:
@@ -432,10 +432,8 @@ class NamedExpression(Expression):
                     schema = cur.series.type
                     cur = cur.series.series
                 else:
-                    schema = cur.schema.schema
-                    cur = cur.df
-                    
-                
+                    schema = cur.schema.strip()
+                    cur = cur.strip()
                                 
                 data.tables[table].insert(path, cur, schema)
 

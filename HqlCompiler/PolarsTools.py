@@ -120,6 +120,10 @@ class pltools():
         if expr.type == 'Equality':
             lh = expr.lh.eval(ctx, as_pl=True)    
             rh = expr.rh.eval(ctx, as_pl=True)
-            return (lh == rh)
+
+            if expr.eqtype == '==':
+                return (lh == rh)
+            elif expr.eqtype == '!=':
+                return (lh != rh)
         else:
             logging.warning(f'Unimplemented filter expression type {expr.type}')

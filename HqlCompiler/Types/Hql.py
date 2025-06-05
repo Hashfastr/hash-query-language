@@ -137,7 +137,37 @@ class HqlTypes():
 
     @register_type('hql_ip4')
     class ip4(HqlType, pl.UInt32):
-        ...
+        def cast(self, data:pl.Series):
+            # lazy if not string
+            if data.dtype != pl.String:
+                return data.cast(self.proto)
+
+            ips = []
+            for i in data:
+                if not i:
+                    ips.append(None)
+                    continue
+
+                split = i.split('.')
+                num = 0
+                for idx, j in enumerate(split):
+                    try:
+                        # support short hand ipv4
+                        if idx == len(split) - 1:
+                            num += int(split[idx])
+                            break
+
+                        # magnitude scales with the index
+                        num += int(split[idx]) * (256 * (3 - idx))
+                    
+                    # Likely IPv6 if we hit this
+                    # Or trash garbo data
+                    except ValueError:
+                        continue
+
+                ips.append(num)
+                
+            return pl.Series(ips, dtype=self.proto)
 
     @register_type('hql_ip6')
     class ip6(HqlType, pl.Int128):
