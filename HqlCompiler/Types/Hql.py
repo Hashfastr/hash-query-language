@@ -14,6 +14,7 @@ class HqlTypes():
             else:
                 self.proto = None
                 
+            self.complex = False
             self.priority = 0
             self.super = (HqlTypes.string, HqlTypes.multivalue)
 
@@ -137,6 +138,12 @@ class HqlTypes():
 
     @register_type('hql_ip4')
     class ip4(HqlType, pl.UInt32):
+        def __init__(self):
+            HqlTypes.HqlType.__init__(self)
+            pl.UInt32.__init__(self)
+
+            self.complex = True
+
         def cast(self, data:pl.Series):
             # lazy if not string
             if data.dtype != pl.String:
@@ -152,13 +159,8 @@ class HqlTypes():
                 num = 0
                 for idx, j in enumerate(split):
                     try:
-                        # support short hand ipv4
-                        if idx == len(split) - 1:
-                            num += int(split[idx])
-                            break
-
                         # magnitude scales with the index
-                        num += int(split[idx]) * (256 * (3 - idx))
+                        num += int(split[idx]) << (8 * (3 - idx))
                     
                     # Likely IPv6 if we hit this
                     # Or trash garbo data
@@ -168,6 +170,15 @@ class HqlTypes():
                 ips.append(num)
                 
             return pl.Series(ips, dtype=self.proto)
+        
+        def human(self, data:pl.Series):
+            if data.dtype != self.proto:
+                raise CompilerException('Attempting to human a non-converted ip4 field')
+
+            ips = []
+            for i in data:
+                ...
+                
 
     @register_type('hql_ip6')
     class ip6(HqlType, pl.Int128):
