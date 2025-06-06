@@ -52,7 +52,7 @@ class toip4(Typecast):
             df = data.tables[table].strip()
             series = dtype.cast(df)
 
-            new = Table()
+            new = Table(name=table)
             new.insert(path, series, dtype)
             tables.append(new)
 
