@@ -536,6 +536,8 @@ class Schema():
                 self.schema = schema.schema
             else:
                 self.schema = schema
+            
+            self.schema = Schema.normalize(self.schema)
         elif isinstance(data, list):
             sample = data[:sample_size] if sample_size > 0 else data
             self.schema = Schema.from_json(sample)
@@ -574,6 +576,23 @@ class Schema():
                 new[key] = i[j]
 
         return Schema(schema=new)
+    
+    '''
+    Created to solve the problem of nested Schema objects in a schema dict.
+    Just unnests them such that we have a pure dict structure.
+    '''
+    def normalize(node):
+        if isinstance(node, dict):
+            new = dict()
+            for key in node:
+                new[key] = Schema.normalize(node[key])
+            return new
+        
+        elif isinstance(node, Schema):
+            return node.schema
+        
+        else:
+            return node
 
     # Extract the schema for a given set of fields
     def select(self, field:list[str]):

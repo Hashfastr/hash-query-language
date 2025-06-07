@@ -116,6 +116,11 @@ class series_stats(Function):
                     f'{prefix}_max': stype
                 }
             )
+            
+            # Explode out the rows so the number of rows of the source
+            # Reasoning is that if we don't do this, all of the data extra data
+            # will be marked as null and would suck
+            df = df.select(pl.all().repeat_by(len(s))).explode(pl.all())
 
             tables.append(Table(df=df, name=table))
        
