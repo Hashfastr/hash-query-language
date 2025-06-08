@@ -30,8 +30,7 @@ class Project(Operator):
                 datasets.append(i.eval(ctx, as_value=False))
 
             elif i.type == "DotCompositeFunction":
-                # dynamic.append(i)
-                pass
+                datasets.append(i.eval(ctx, as_value=False))
                 
             elif i.type == "NamedExpression":
                 datasets.append(i.eval(ctx, insert=False))
