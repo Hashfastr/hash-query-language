@@ -43,7 +43,9 @@ class CSV(Database):
     
     def from_file(self, filename:str, limit:int=None) -> str:
         try:
-            with open(f'{self.base_path}{os.sep}{filename}', mode='r') as f:
+            base = self.base_path if self.base_path else '.'
+            
+            with open(f'{base}{os.sep}{filename}', mode='r') as f:
                 data = pl.read_csv(f, n_rows=limit)
         except:
             logging.critical(f'Could not load csv from {filename}')
@@ -53,6 +55,8 @@ class CSV(Database):
         
     def from_url(self, url:str, limit:int=None) -> str:
         try:
+            url = f'{self.base_path}/{url}' if self.base_path else url
+            
             res = requests.get(url)
             if res.status_code != 200:
                 raise QueryException(f'Could not query remote url {url}')
