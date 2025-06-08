@@ -34,6 +34,12 @@ class todouble(Typecast):
     def __init__(self, args:list):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.double()
+        
+@register_func('tostring')
+class tostring(Typecast):
+    def __init__(self, args:list):
+        Typecast.__init__(self, args)
+        self.cast_type = hqlt.string()
 
 @register_func('toip4')
 class toip4(Typecast):
