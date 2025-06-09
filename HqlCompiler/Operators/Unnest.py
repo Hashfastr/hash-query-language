@@ -9,19 +9,19 @@ from HqlCompiler.Data import Data, Table, Schema
 import logging
 import json
 
-# Creates a field with a value in the extend
-#
-# StormEvents
-# | project EndTime, StartTime
-# | extend Duration = EndTime - StartTime
-#
-# https://learn.microsoft.com/en-us/kusto/query/extend-operator
 @register_op('Unnest')
 class Unnest(Operator):
     def __init__(self, field:Expression, tables:list[Expression]):
         super().__init__()
         self.field = field
         self.tables = tables
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'field': self.field.to_dict(),
+            'tables': [x.to_dict() for x in self.tables]
+        }
             
     def eval(self, ctx:Context, **kwargs):
         self.ctx = ctx
