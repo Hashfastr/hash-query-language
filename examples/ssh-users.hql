@@ -1,7 +1,0 @@
-let AttackerIPs = syslog-*
-| where program == "sshd" and user == "hashfastr" and status == "Accepted"
-| project IP;
-syslog-*
-| where program == "sshd" and status == "Accepted"
-| join kind=inner (AttackerIPs) on IP
-| project timestamp, user, IP, authtype
