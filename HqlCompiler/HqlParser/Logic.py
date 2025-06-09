@@ -1,7 +1,7 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expression as Expression
+import HqlCompiler.Expression as Expr
 
 from HqlCompiler.Exceptions import *
 
@@ -12,7 +12,7 @@ class Logic(HqlVisitor):
         pass
     
     def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):
-        expr = Expression.Equality(
+        expr = Expr.Equality(
             ctx.OperatorToken.text,
             self.visit(ctx.Left),
             self.visit(ctx.Right)
@@ -21,7 +21,7 @@ class Logic(HqlVisitor):
         return expr
     
     def visitBetweenEqualityExpression(self, ctx: HqlParser.BetweenEqualityExpressionContext):
-        expr = Expression.BetweenEquality(
+        expr = Expr.BetweenEquality(
             self.visit(ctx.Left),
             self.visit(ctx.StartExpression),
             self.visit(ctx.EndExpression),
@@ -40,7 +40,7 @@ class Logic(HqlVisitor):
         if len(right) == 0:
             return left
         
-        expr = Expression.BinaryLogic(
+        expr = Expr.BinaryLogic(
             left,
             right,
             'or'
@@ -61,7 +61,7 @@ class Logic(HqlVisitor):
         if len(right) == 0:
             return left
         
-        expr = Expression.BinaryLogic(
+        expr = Expr.BinaryLogic(
             left,
             right,
             'and'

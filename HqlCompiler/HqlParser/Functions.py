@@ -1,7 +1,7 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expression as Expression
+import HqlCompiler.Expression as Expr
 
 from HqlCompiler.Exceptions import *
 
@@ -12,7 +12,7 @@ class Functions(HqlVisitor):
         pass
     
     def visitFunctionCallOrPathPathExpression(self, ctx: HqlParser.FunctionCallOrPathPathExpressionContext):
-        path = Expression.Path()
+        path = Expr.Path()
         
         expr = self.visit(ctx.Expression)
         if expr == None:
@@ -32,7 +32,7 @@ class Functions(HqlVisitor):
         return path
     
     def visitNamedFunctionCallExpression(self, ctx: HqlParser.NamedFunctionCallExpressionContext):
-        expr = Expression.FuncExpr(self.visit(ctx.Name))
+        expr = Expr.FuncExpr(self.visit(ctx.Name))
         
         for i in ctx.Arguments:
             expr.args.append(self.visit(i))
@@ -45,4 +45,4 @@ class Functions(HqlVisitor):
         for i in ctx.Operations:
             funcs.append(self.visit(i))
         
-        return Expression.DotCompositeFunction(funcs)
+        return Expr.DotCompositeFunction(funcs)

@@ -113,7 +113,6 @@ def main():
     
     results = compiler.run()
     print(json.dumps(results.to_dict(), default=repr))
-    # print(Data.[x.schema for x in results])
    
     end = time.perf_counter() 
     logging.debug("Ran")

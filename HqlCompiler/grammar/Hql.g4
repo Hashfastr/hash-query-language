@@ -784,7 +784,7 @@ unnestOperator:
     UNNEST Field=unnamedExpression (OnClause=unnestOperatorOnClause)?;
 
 unnestOperatorOnClause:
-    ON (Expressions+=unnamedExpression (',' Expressions+=unnamedExpression)*)?;
+    ON (Expressions+=tableNameReference (',' Expressions+=tableNameReference)*)?;
 
 contextualSubExpression:
       pipeSubExpression 

@@ -14,6 +14,7 @@ class HqlTypes():
             else:
                 self.proto = None
                 
+            self.complex = False
             self.priority = 0
             self.super = (HqlTypes.string, HqlTypes.multivalue)
 
@@ -137,7 +138,53 @@ class HqlTypes():
 
     @register_type('hql_ip4')
     class ip4(HqlType, pl.UInt32):
-        ...
+        def __init__(self):
+            HqlTypes.HqlType.__init__(self)
+            pl.UInt32.__init__(self)
+
+            self.complex = True
+
+        def cast(self, data:pl.Series):
+            # lazy if not string
+            if data.dtype != pl.String:
+                return data.cast(self.proto)
+
+            ips = []
+            for i in data:
+                if not i:
+                    ips.append(None)
+                    continue
+
+                split = i.split('.')
+                num = 0
+                for idx, j in enumerate(split):
+                    try:
+                        # magnitude scales with the index
+                        num += int(split[idx]) << (8 * (3 - idx))
+                    
+                    # Likely IPv6 if we hit this
+                    # Or trash garbo data
+                    except ValueError:
+                        continue
+
+                ips.append(num)
+                
+            return pl.Series(ips, dtype=self.proto)
+        
+        def human(self, data:pl.Series):
+            if data.dtype != self.proto:
+                raise CompilerException('Attempting to human a non-converted ip4 field')
+
+            d = 0xFF
+            c = d << 8
+            b = c << 8
+            a = b << 8
+
+            ips = []
+            for i in data:
+                ips.append(f'{(i & a) >> 24}.{(i & b) >> 16}.{(i & c) >> 8}.{i & d}')
+
+            return pl.Series(ips, dtype=pl.String)                
 
     @register_type('hql_ip6')
     class ip6(HqlType, pl.Int128):
@@ -218,6 +265,9 @@ class HqlTypes():
         
         def pl_schema(self):
             return self.proto(self.fields)
+
+        def hql_schema(self):
+            return self
 
     @register_type('hql_null')
     class null(HqlType, pl.Null):

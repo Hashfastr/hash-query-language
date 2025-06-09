@@ -10,47 +10,32 @@ class pltools():
             
         return new
 
-    def merge(dataframes:list[pl.DataFrame]):
+    def merge(dfs:list[pl.DataFrame]):
         # Get counts for each column, knowing where we have conflicts.
         columns = {}
-        for i in dataframes:
-            if len(i.columns) == 0:
+        for df in dfs:
+            if len(df.columns) == 0:
                 continue
             
             # count and collect columns
-            for j in i:
-                if j.name not in columns:
-                    columns[j.name] = []
+            for col in df:
+                if col.name not in columns:
+                    columns[col.name] = []
                     
-                columns[j.name].append(j)
+                columns[col.name].append(col)
 
         mergable = []
         for i in columns:
             if len(columns[i]) == 1:
-                mergable.append(columns[i][0])
+                mergable.append(pl.DataFrame({i: columns[i][0]}))
                 continue
-            
-            
-            
-            # merge conflicting columns
-            merge_dfs = []
-            for j in columns[i]:
-                merge_dfs.append(pl.DataFrame())
 
-
-        mergable = []
-        for i in columns:
-            if i == 'network':
-                print(columns[i])
-            
-            if len(columns[i]) == 1:
-                mergable += columns[i]
-                continue
+            raise Exception('unhandled merge case')
                 
-            new = pl.DataFrame({i: pltools.merge(pltools.advance(columns[i])).to_struct()})
+            #new = pl.DataFrame({i: pltools.merge(pltools.advance(columns[i])).to_struct()})
 
-            mergable.append(new)
-            
+            #mergable.append(new)
+                        
         return pl.concat(mergable, how="horizontal")
 
     # Fields is a list of the given path names.
@@ -120,24 +105,6 @@ class pltools():
         
         new = pltools.build_element(name[1:], data)
         return pl.DataFrame({name[0]: new.to_struct()})
-    
-    def assert_field(data:pl.DataFrame, field:list[str], index:int=0) -> bool:
-        split = field[index]
-
-        if split not in data:
-            return None
-        
-        new = data.select(split)
-        
-        if len(field) == 1:            
-            return field
-        
-        if isinstance(new[split].dtype, pl.Struct):
-            new = new.unnest(split)
-        else:
-            return field
-                
-        return pltools.assert_field(new, field, index + 1)
 
     def path_to_expr(path:list[str]):
         expr = pl
@@ -153,6 +120,10 @@ class pltools():
         if expr.type == 'Equality':
             lh = expr.lh.eval(ctx, as_pl=True)    
             rh = expr.rh.eval(ctx, as_pl=True)
-            return (lh == rh)
+
+            if expr.eqtype == '==':
+                return (lh == rh)
+            elif expr.eqtype == '!=':
+                return (lh != rh)
         else:
             logging.warning(f'Unimplemented filter expression type {expr.type}')

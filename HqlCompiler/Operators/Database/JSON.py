@@ -26,12 +26,16 @@ class JSON(Database):
         ]
     
     def from_file(self, filename:str) -> str:
-        with open(f'{self.base_path}{os.sep}{filename}', mode='r') as f:
+        base = self.base_path if self.base_path else '.'
+        
+        with open(f'{base}{os.sep}{filename}', mode='r') as f:
             data = self.load_data(f.read(), src=f"{self.base_path}{os.sep}{filename}")
             
         return data
         
     def from_url(self, url:str) -> str:
+        url = f'{self.base_path}{url}' if self.base_path else url
+        
         res = requests.get(url)
         if res.status_code != 200:
             raise QueryException(f'Could not query remote url {url}')
@@ -57,8 +61,10 @@ class JSON(Database):
             logging.critical('No file or http provided to JSON database')
             logging.critical('Correct usages:')
             logging.critical('                database("json").file("filename")')
-            logging.critical('                database("json").http("https://host/file.json")')
-            logging.critical('Where filename exists relative to the configured base_path')
+            logging.critical('                database("json").http("file.json")')
+            logging.critical('Where filename exists relative to the configured BASE_PATH')
+            logging.critical('Similarly, file.json represents a file on a server prepended by BASE_PATH')
+            logging.critical('If basepath is not specified it is taken as literal for http, or current dir for file.')
             raise QueryException('No file provided to JSON database')
         
         tables = []

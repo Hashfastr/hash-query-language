@@ -7,6 +7,8 @@ from HqlCompiler.Operators.Database import Database
 from HqlCompiler.Context import Context
 from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
+from HqlCompiler.Data import Data, Table, Schema
+from enum import Enum
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -158,46 +160,59 @@ class BetweenEquality(Expression):
 # A named reference, can be scoped
 # Scopes are not implemented yet.
 class NamedReference(Expression):
-    def __init__(self, name:Expression, scope:str=""):
+    def __init__(self, name:str, scope:str=""):
         super().__init__()
         self.name = name
         self.scope = scope
-        
-    def get_name(self):
-        if hasattr(self.name, 'name'):
-            return self.name.name
-        else:
-            return self.name
-        
+
     def to_dict(self):
         return {
             'type': self.type,
-            'name': self.name.to_dict(),
+            'name': self.name,
             'scope': self.scope,
         }
     
     def eval(self, ctx:Context, **kwargs):
-        name_str = self.name.eval(ctx, as_str=True)
-
         if kwargs.get('as_pl', False):
-            return pltools.path_to_expr([name_str])
+            return pltools.path_to_expr([self.name])
 
         if kwargs.get('as_list', False):
-            return [name_str]
+            return [self.name]
         
         if kwargs.get('as_str', False):
-            return name_str
+            return self.name
         
-        receiver = kwargs.get('receiver', None)
-        if receiver is not None:
-            if type(receiver) == pl.DataFrame:
-                return pltools.get_element_value(ctx.data, [name_str])
-            elif issubclass(type(receiver), Database):
-                return receiver.get_variable(name_str)
-            else:
-                raise CompilerException(f'{type(receiver)} cannot have child named references!')
+        as_value = kwargs.get('as_value', True)
+        receiver = kwargs.get('receiver', ctx.data)
+        receiver = receiver if receiver else ctx.data
+
+        # Ensure we have the right field
+        if not receiver.assert_field([self.name]):
+            raise QueryException(f"Referenced field {self.name} not found")
         
-        return pltools.get_element_value(ctx.data, [name_str])
+        # If we're operating on a dataset
+        elif isinstance(receiver, Data):
+            return receiver.unnest([self.name]) if as_value else receiver.select([self.name])
+        
+        # If we're operating on a database
+        elif issubclass(type(receiver), Database):
+            return receiver.get_variable(self.name)
+        
+        # Not implemented, or bug
+        else:
+            raise CompilerException(f'{type(receiver)} cannot have child named references!')
+        
+class EscapedNamedReference(NamedReference):
+    ...
+    
+class Keyword(NamedReference):
+    ...
+    
+class Identifier(NamedReference):
+    ...
+    
+class Wildcard(NamedReference):
+    ...
 
 # A string literal
 # literally a string
@@ -215,73 +230,6 @@ class StringLiteral(Expression):
         
     def eval(self, ctx:Context, **kwargs):
         return self.value
-        
-class EscapedName(StringLiteral):
-    def __init__(self, name:str):
-        super().__init__(name)
-        self.name = self.value
-        self.escaped = True
-        
-    def to_dict(self):
-        dict = super().to_dict()
-        dict['escaped'] = self.escaped
-        return dict
-    
-    def eval(self, ctx:Context, **kwargs):
-        name_str = self.name
-        
-        if kwargs.get('as_str', False):
-            return name_str
-        
-        if kwargs.get('list', False):
-            return [name_str]
-        
-        receiver = kwargs.get('receiver', None)
-        if receiver:
-            if type(receiver) == pl.DataFrame:
-                return pltools.get_element_value(ctx.data, [name_str])
-            elif issubclass(type(receiver), Database):
-                return receiver.get_variable(name_str)
-            else:
-                raise CompilerException(f'{type(receiver)} cannot have child named references!')
-            
-        return pltools.get_element_value(ctx.data, [name_str])
-
-# An identifier is like a variable that is not unique across everything
-# A keyword is unique across the compiler
-# database('test').index('test')
-# Here database is unique while index is not, multiple things can have a index child
-class Identifier(Expression):
-    def __init__(self, name:str, keyword:bool=False):
-        super().__init__()
-        self.name = name
-        self.keyword = keyword
-        
-    def to_dict(self):
-        return {
-            'type': self.type,
-            'keyword': self.keyword,
-            'name': self.name
-        }
-    
-    def eval(self, ctx:Context, **kwargs):
-        if kwargs.get('as_str', False):
-            return self.name
-        
-        if kwargs.get('list', False):
-            return [self.name]
-                
-        receiver = kwargs.get('receiver', None)
-        
-        if receiver is not None:
-            if isinstance(receiver, pl.DataFrame):
-                return pltools.get_element_value(receiver, [self.name])
-            elif issubclass(type(receiver), Database):
-                return receiver.get_variable(self.name)
-            else:
-                raise CompilerException(f'{type(receiver)} cannot have child named references!')
-            
-        return pltools.get_element(ctx.data, [self.name])
 
 # Integer
 # An integer
@@ -321,16 +269,6 @@ class FuncExpr(Expression):
         self.name = name
         self.args = args if args else []
     
-    # def get_full_statement(self):
-    #     args = []
-    #     for i in self.args:
-    #         if hasattr(i, 'get_name'):
-    #             args.append(i.get_name())
-    #         else:
-    #             args.append(i.get_value())
-        
-    #     return self.name + f"({', '.join(args)})"
-    
     def to_dict(self):
         return {
             'type': self.type,
@@ -339,7 +277,7 @@ class FuncExpr(Expression):
         }
     
     # Evals to function objects
-    def eval(self, ctx:Context, **kwargs):        
+    def eval(self, ctx:Context, **kwargs):
         func = ctx.get_func(self.name.eval(ctx, as_str=True))
         logging.debug(f'Resolved func {func}')
 
@@ -368,7 +306,7 @@ class DotCompositeFunction(Expression):
             
             if not no_exec:
                 receiver = func.eval(ctx, receiver=receiver)
-        
+         
         if no_exec:
             return func_list
         else:
@@ -397,6 +335,7 @@ class Path(Expression):
         as_list = kwargs.get('as_list', False)
         as_pl = kwargs.get('as_pl', False)
         as_str = kwargs.get('as_str', False)
+        as_value = kwargs.get('as_value', True)
         
         if as_list or as_pl or as_str:
             list = [x.eval(ctx, as_str=True) for x in self.path]
@@ -406,17 +345,24 @@ class Path(Expression):
 
         if as_list:
             return list
-            
+        
         if as_str:
             return '.'.join(list)
-        
-        receiver = None
+                
+        receiver = ctx.data
+        static = []
         for i in self.path:
             if i.type == "DotCompositeFunction":
-                receiver = i.eval(ctx, receiver=receiver, as_str=as_str)
+                if static:
+                    receiver = receiver.unnest(static)
+                    
+                receiver = i.eval(ctx, receiver=receiver, as_value=True)
             else:
-                receiver = i.eval(ctx, receiver=receiver, as_str=as_str)
-        
+                static.append(i.eval(ctx, receiver=receiver, as_str=True))
+                
+        if static:
+            receiver = receiver.unnest(static) if as_value else receiver.select(static)
+                 
         return receiver
     
 class BinaryLogic(Expression):
@@ -463,12 +409,36 @@ class NamedExpression(Expression):
         }
         
     def eval(self, ctx:Context, **kwargs):
-        receiver = kwargs.get('receiver', None)
+        insert = kwargs.get('insert', True)
+        value = self.value.eval(ctx)
+        
+        # Chose which dataset to insert on
+        if insert:
+            data = ctx.data
+        else:
+            data = Data()
+        
+        # loop through value tables as those are the only ones we can vouch for
+        for table in value.tables:
+            if table not in data.tables:
+                data.tables[table] = Table(name=table)
             
-        data = self.value.eval(ctx)
-        name = self.name.eval(ctx, as_list=True)
-        return pltools.build_element(name, data)
-    
+            for name in self.name:
+                path = name.eval(ctx, as_list=True)
+                
+                cur = value.tables[table]
+                
+                if cur.series:
+                    schema = cur.series.type
+                    cur = cur.series.series
+                else:
+                    schema = cur.schema.strip()
+                    cur = cur.strip()
+                                
+                data.tables[table].insert(path, cur, schema)
+
+        return data
+
 class OrderedExpression(Expression):
     def __init__(self, name:Expression=None, order:str='desc', nulls:str=''):
         super().__init__()

@@ -1,4 +1,4 @@
-database('json').file('./notebooks/big.json', './notebooks/so-network-data.json')
+database('json').http('tf11-so-beats-large.json')
 | where winlog.computer_name == "asarea.vxnwua.net"
 | project toint(event.code)
 | take 10

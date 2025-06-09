@@ -1,7 +1,7 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expression as Expression
+import HqlCompiler.Expression as Expr
 
 from HqlCompiler.Exceptions import *
 
@@ -11,32 +11,30 @@ class BaseExpressions(HqlVisitor):
     def __init__(self):
         pass
     
+    '''
+    Name references
+    
+    Not values, but references to values such as columns and tables.
+    '''
     def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
         name = self.visit(ctx.Name)
-        
-        if isinstance(name, Expression.NamedReference):
-            #name.scope = self.visit(ctx.Scope)
-            return name
-        
-        # scope unimplemented
-        expr = Expression.NamedReference(name)
-        return expr
+        #name.scope = self.visit(ctx.Scope)
+        return name
     
     def visitEscapedName(self, ctx: HqlParser.EscapedNameContext):
         # Probably need to unescape these eventually
         literal = self.visit(ctx.StringLiteral)
-        expr = Expression.EscapedName(literal.value)
-        return expr
+        return Expr.EscapedNamedReference(literal.value)
 
     def visitWildcardedName(self, ctx: HqlParser.WildcardedNameContext):
-        prefix = self.visit(ctx.Prefix)
+        prefix = self.visit(ctx.Prefix) if ctx.Prefix else ''
         segments = []
         for i in ctx.Segments:
             segments.append(self.visit(i))
 
         name = prefix + '*' + ''.join(segments)
         
-        return Expression.NamedReference(Expression.Identifier(name))
+        return Expr.Wildcard(name)
     
     def visitWildcardedNamePrefix(self, ctx: HqlParser.WildcardedNamePrefixContext):
         if ctx.Identifier:
@@ -47,7 +45,48 @@ class BaseExpressions(HqlVisitor):
         
         if ctx.ExtendedKeyword:
             return self.visit(ctx.ExtendedKeyword)
+        
+    def visitKeywordName(self, ctx: HqlParser.KeywordNameContext):
+        return Expr.Keyword(ctx.Token.text)
+    
+    def visitIdentifierName(self, ctx: HqlParser.IdentifierNameContext):
+        return Expr.Identifier(ctx.Token.text)
+    
+    '''
+    Variable assignment, i.e. an expression given a name
+    
+    foo=toint(bar)
+    '''
+    def visitNamedExpression(self, ctx: HqlParser.NamedExpressionContext):
+        if not ctx.Name:
+            return self.visit(ctx.Expression)
+                
+        names = self.visit(ctx.Name)
+        value = self.visit(ctx.Expression)
+                
+        return Expr.NamedExpression(names, value)
+    
+    def visitNamedExpressionNameClause(self, ctx: HqlParser.NamedExpressionNameClauseContext):
+        if ctx.Name:
+            return [self.visit(ctx.Name)]
+        else:
+            return self.visit(ctx.NameList)
+        
+    def visitNamedExpressionNameList(self, ctx: HqlParser.NamedExpressionNameListContext):
+        names = []
+        for name in ctx.Names:
+            names.append(self.visit(name))
             
+        return names
+
+    '''
+    Individual constant values
+    
+    Strings
+    Longs
+    Bools
+    Ints
+    '''
     def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
         text = ""
         
@@ -56,52 +95,23 @@ class BaseExpressions(HqlVisitor):
         for i in ctx.Tokens:
             text += i.text.strip("\"").strip('\'')
             break
-            
-        return Expression.StringLiteral(text)
-    
-    def visitSimpleNameReference(self, ctx: HqlParser.SimpleNameReferenceContext):
-        name = self.visit(ctx.Name)
-                
-        if name == None:
-            logging.error('None given to NamedReference, unimplemented feature?')
-            raise ParseException()
         
-        if isinstance(name, Expression.NamedReference):
-            return name
-        
-        return Expression.NamedReference(name)
-
-    def visitNamedExpression(self, ctx: HqlParser.NamedExpressionContext):
-        if not ctx.Name:
-            return self.visit(ctx.Expression)
-                
-        name = self.visit(ctx.Name)
-        value = self.visit(ctx.Expression)
-                
-        return Expression.NamedExpression(name, value)
-    
-    def visitNamedExpressionNameClause(self, ctx: HqlParser.NamedExpressionNameClauseContext):
-        if ctx.Name:
-            return self.visit(ctx.Name)
-        else:
-            return self.visit(ctx.NameList)
-    
-    def visitKeywordName(self, ctx: HqlParser.KeywordNameContext):
-        return Expression.Identifier(ctx.Token.text, keyword=True)
-    
-    def visitIdentifierName(self, ctx: HqlParser.IdentifierNameContext):
-        return Expression.Identifier(ctx.Token.text)
+        return Expr.StringLiteral(text)
 
     def visitLongLiteralExpression(self, ctx: HqlParser.LongLiteralExpressionContext):
-        return Expression.Integer(ctx.Token.text)
+        return Expr.Integer(ctx.Token.text)
     
     def visitBooleanLiteralExpression(self, ctx: HqlParser.BooleanLiteralExpressionContext):
-        return Expression.Bool(ctx.Token.text)
+        return Expr.Bool(ctx.Token.text)
 
     def visitOrderedExpression(self, ctx: HqlParser.OrderedExpressionContext):
         expr = self.visit(ctx.Ordering)
         expr.name = self.visit(ctx.Expression)
         return expr
+    
+    '''
+    Sort specific
+    '''
     
     def visitSortOrdering(self, ctx: HqlParser.SortOrderingContext):
         order = 'desc'
@@ -113,7 +123,7 @@ class BaseExpressions(HqlVisitor):
         if ctx.NullsKind:
             nulls = ctx.NullsKind.text
         
-        expr = Expression.OrderedExpression(order=order, nulls=nulls)
+        expr = Expr.OrderedExpression(order=order, nulls=nulls)
         return expr
 
     # def visitTableNameReference(self, ctx: HqlParser.TableNameReferenceContext):

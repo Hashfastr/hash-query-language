@@ -63,7 +63,7 @@ class Data():
                 self.tables[name] = table_groups[name][0]
                 continue
             
-            self.tables[name] = Table.merge(table_groups[name])
+            self.tables[name] = Table.merge(tables=table_groups[name])
             
     def __len__(self):
         length = 0
@@ -119,11 +119,23 @@ class Data():
         return schemata
 
     # Given a list of string paths, get a dataset containing only those fields
-    def subset(self, fields:list[list[str]]):
+    def select(self, fields:list[str]):
         tables = []
         for i in self.tables:
-            tables.append(self.tables[i].subset(fields))
+            tables.append(self.tables[i].select(fields))
 
+        return Data(tables_list=tables)
+    
+    def unnest(self, field:list[str]):
+        tables = []
+        for i in self.tables:
+            new = self.tables[i].unnest(field)
+            
+            if isinstance(new, Series):
+                new = Table(series=new, name=i)
+            
+            tables.append(new)
+        
         return Data(tables_list=tables)
 
     def to_dict(self):
@@ -151,6 +163,10 @@ class Data():
     # Returns the tables where it does exists
     def assert_field(self, field:list[str]):
         exists = []
+        
+        if not self.tables:
+            return exists
+        
         for i in self.tables:
             if self.tables[i].assert_field(field):
                 exists.append(self.tables[i])
@@ -169,57 +185,75 @@ class Data():
             i.cast_in_place(field, cast_type)
 
         return self
-    
-    # Casts and returns the subset dataset
-    def cast_subset(self, field:list[str], cast_type:hqlt.HqlType):
-        tables = []
-        for i in self.tables:
-            table = self.tables[i].cast_subset(field, cast_type)
-            if table:
-                tables.append(table)
-        return tables
 
+'''
+Series for individual values, mimics a pl.Series
+'''
+class Series():
+    def __init__(self, series:pl.Series, stype:hqlt.HqlType):
+        self.series = series
+        self.type = stype
+
+'''
+Table for a structure of data, includes schema definition.
+Mimics a pl.DataFrame
+'''
 class Table():
     def __init__(
             self,
             df:pl.DataFrame=None,
+            series:Series=None,
             init_data:list[dict]=None,
             schema:Schema=None,
             name:str=None
         ):
         
+        if hasattr(df, 'is_empty'):
+            self.df = df
+        else:
+            self.df = pl.DataFrame()
+        
         self.name = name
-        self.df = None
+        self.series = None
         self.schema = None
 
-        if init_data and not schema:
+        if series:
+            self.series = series
+
+        elif init_data and not schema:
             self.schema = Schema(init_data)
             init_data = self.schema.adjust_mv(init_data)
             schema = self.schema.gen_pl_schema()
-            # print(json.dumps(init_data[0], indent=2, default=2))
-            # print(json.dumps(schema, indent=2, default=repr))
             self.df = pl.from_dicts(init_data, schema=schema)
         
         elif init_data and schema:
             self.schema = schema
             self.df = pl.from_dicts(init_data, schema=schema.to_pl_schema())
         
-        elif not df.is_empty() and schema:
+        elif not self.df.is_empty() and schema:
             self.schema = schema
-            self.df = schema.apply(df)
+            # print(schema.schema)
+            # print(self.df)
+            self.df = schema.apply(self.df)
 
-        elif not df.is_empty() and not schema:
-            self.df = df
-            self.schema = Schema(data=df)
+        elif not self.df.is_empty() and not schema:
+            self.schema = Schema(data=self.df)
 
         elif schema:
+            logging.warning('Schema defined in table without data')
             self.schema = schema
 
+        else:
+            self.schema = Schema()
+
     def __len__(self):
-        return len(self.df)
+        if hasattr(self.df, '__len__'):
+            return len(self.df)
+        return 0
 
     def to_dicts(self):
-        return self.df.to_dicts()
+        human = self.schema.present_complex(self.df)
+        return human.to_dicts()
 
     def get_schema(self):
         return self.schema.schema
@@ -246,87 +280,247 @@ class Table():
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, fields=path)
 
-    def merge(tables:list[Table]=None, schema:Schema=None):
+    def merge(tables:list[Table]):
+        max_cols = 100
+        
         if not tables:
             return Table()
         
-        name = tables[0].name if not name else None
+        name = tables[0].name
         
-        # gen schema
-        if not schema:
-            schemas = []
-            for table in tables:
-                schemas.append(table.schema)
+        schemas = []
+        for table in tables:
+            schemas.append(table.schema)
+            
+        schema = Schema.merge(schemas).schema
                 
-            schema = Schema.merge(schemas)
-        
         # generate col groups
-        col_groups = {}
+        col_groups = dict()
         for table in tables:
             # skip empty dataframes
             if isinstance(table.df, type(None)) or table.df.is_empty():
                 continue
-            
+
             for col in table.df:
                 if col.name not in col_groups:
                     col_groups[col.name] = []
                     
                 col_groups[col.name].append(col)
         
-        cols = {}
-        for col in col_groups:
-            if len(col_groups[col]) == 1:
-                cols[col] = col_groups[col][0]
-                continue
-            
-            if isinstance(schema[col], dict):
-                ...
+        new = dict()
+        for key in col_groups:
+            for col in col_groups[key]:
+                if key not in new:
+                    new[key] = col
+                    continue
                 
-        # df = pltools.merge(dfs)
-        
-        df = pl.DataFrame(cols)
+                # Canon conflict
+                if new[key].dtype == pl.Struct and col.dtype == pl.Struct:
+                    l = Table(df=new[key].struct.unnest(), name=name)
+                    r = Table(df=col.struct.unnest(), name=name)
+                    
+                    new[key] = Table.merge([l, r]).df.to_struct()
+                    continue
+                
+                for i in range(max_cols):
+                    name = f'{key}_{i}'
+                    
+                    if name not in new:
+                        new[name] = col
+                        break
+                    
+                    if i == max_cols - 1:
+                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
+                        logging.critical(f'Applicable field: {key}')
+                        raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
+
+        df = pl.DataFrame(new)
+        schema = Schema(schema=schema)
         
         return Table(df=df, schema=schema, name=name)
 
     '''
-    Takes in a list of paths
-    [['foo', 'bar'], ['client', 'ip', 'src']]
-    Returns a Table with the subset of the data
+    Takes in a list of path parts
+    client.ip.src
+    ['client', 'ip', 'src']
+    Returns a Table with just the data of that path
+    If not found then it returns an empty table with the parent name.
     '''
-    def subset(self, fields:list[list[str]]):
-        fields = self.assert_fields(fields)
-
-        dfs = []
-        for field in fields:
-            df = pltools.get_element(self.df, field)
-            if not df.is_empty():
-                dfs.append(df)
-
-        if dfs:
-            df = pltools.merge(dfs)
-        else:
-            df = pl.DataFrame()
-
-        schema = self.schema.subset(fields)
+    def select(self, field:list[str]):
+        if not self.assert_field(field):
+            return Table(name=self.name)
+        
+        df = pltools.get_element(self.df, field)
+        schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)
     
-    def assert_fields(self, fields:list[list[str]]):
-        asserted_fields = []
-        for field in fields:
-            afield = self.assert_field(field)
-            if afield:
-                asserted_fields.append(afield)
-        return asserted_fields
-
-    def assert_field(self, field:list[str]):
-        return pltools.assert_field(self.df, field)
-    
-    def cast_in_place(self, field:list[str], cast_type:hqlt.HqlType):
+    def unnest(self, field:list[str]):
         if not self.assert_field(field):
+            raise QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
+        
+        df = self.get_value(field)
+        
+        if isinstance(df, pl.Series):
+            return Series(df, self.schema.unnest(field))            
+            
+        else:
+            schema = Schema(schema=self.schema.unnest(field))
+            return Table(df=df, schema=schema, name=self.name)
+
+    '''
+    Returns the deep stripped value of a DataFrame with a single value.
+    So {'destination': {'ip': hqlt.ip4}} would just return hqlt.ip4.
+    A more complex case is:
+
+    {
+        'destination': {
+            'ip': hqlt.ip4,
+            'port': hqlt.short
+        }
+    }
+
+    Which would just return:
+
+    {
+        'ip': hqlt.ip4,
+        'port': hqlt.short
+    }
+
+    The idea here is if you want to extract the value of a function, this does it.
+    '''
+    def strip(self):
+        cur = self.df
+        while isinstance(cur, pl.DataFrame) and len(cur.columns) == 1:
+            key = cur.columns[0]
+            cur = pltools.get_element_value(cur, [key])
+        return cur
+
+    def rename(self, src:list[str], dest:list[str]):
+        if not self.assert_field(src):
+            raise QueryException('Attempting to rename a non-existing field')
+        
+        if self.assert_field(dest):
+            raise QueryException('Attempting to rename field into an existing field')
+        
+        value = self.pop(src).unnest(src)
+        if value.series:
+            schema = value.series.type
+            value = value.series.series
+        else:
+            schema = value.schema.schema
+            value = value.df
+        
+        self.insert(dest, value, schema)
+    
+    # Inserts a peice of data at a given name
+    def insert(
+            self,
+            name:list[str],
+            value:Union[pl.DataFrame, pl.Series],
+            vtype:Union[CompilerType, dict],
+            cur_df:pl.DataFrame=None,
+            idx:int=0
+        ):
+        if not hasattr(cur_df, 'is_null'):
+            cur_df = self.df
+            
+        split = name[idx]
+                
+        # Endpoint
+        if idx == len(name) - 1:
+            # Find a unique name
+            if split in cur_df:
+                i = 0
+                while f'{split}_{i}' in cur_df:
+                    i += 1
+                split = f'{split}_{i}'
+                name[idx] = split
+                        
+            self.schema.set(name, vtype)
+            new = pl.DataFrame({name[-1]: value})
+        
+        # Not the end, but we're now free to do whatever we want
+        elif split not in cur_df:
+            recurse = self.insert(name, value, vtype, cur_df=pl.DataFrame(), idx=idx + 1)
+            new = pl.DataFrame({split: recurse.to_struct()})
+        
+        # Recurse up a nested object
+        elif cur_df[split].dtype == pl.Struct:        
+            recurse = self.insert(name, value, vtype, cur_df=cur_df.select(split).unnest(split), idx=idx + 1)
+            cur_df = cur_df.remove(split)
+            new = pl.DataFrame({split: recurse})
+        
+        # Conflict, a base type is where we're trying to put a struct
+        else:
+            i = 0
+            while f'{split}_{i}' in cur_df:
+                # Merging case
+                if cur_df[f'{split}_{i}'].dtype == pl.Struct:
+                    break
+                i += 1
+            split = f'{split}_{i}'
+            name[idx] = split
+         
+            if cur_df[split].dtype == pl.Struct:
+                recurse = self.insert(name, value, vtype, cur_df=cur_df.select(split).unnest(split), idx=idx + 1)
+            else:
+                recurse = self.insert(name, value, vtype, cur_df=pl.DataFrame(), idx=idx + 1)
+            
+            new = pl.DataFrame({split: recurse})
+        
+        new = pl.concat([new, cur_df], how='horizontal')
+        
+        if idx == 0:
+            self.df = new
+        
+        return new
+
+    def remove(self, name:list[str], cur_df:pl.DataFrame=None, idx:int=0):
+        if not hasattr(cur_df, 'is_null'):
+            cur_df = self.df
+            
+        if idx == 0 and not self.assert_field(name):
+            return cur_df
+            
+        split = name[idx]
+        mask = cur_df.remove(split)
+        
+        if idx == len(name) - 1:
+            return mask
+        
+        if cur_df[split].dtype == pl.Struct:
+            recurse = self.remove(name, cur_df=cur_df.unnest(split), idx=idx + 1)
+            
+            if not recurse.is_empty():
+                recurse = pl.DataFrame({split: recurse})
+                merged = pl.concat([mask, recurse], how='horizontal')
+            else:
+                merged = mask
+        else:
+            merged = mask
+
+        return merged
+            
+    def pop(self, name:list[str]):
+        if not self.assert_field(name):
+            raise QueryException('Attempting to pop a non-existing field')
+        
+        # Schema is tracked through the select
+        value = self.select(name)
+        self.schema.pop(name)
+        self.remove(name)
+        
+        return value
+                
+    def assert_field(self, field:list[str]):
+        return self.schema.assert_field(field)
+    
+    def cast_in_place(self, path:list[str], cast_type:hqlt.HqlType):
+        if not self.assert_field(path):
             return None
         
-        self.schema.set(field=field, htype=cast_type)
+        self.schema.set(path, cast_type)
         self.df = self.schema.apply(self.df)
 
         return self
@@ -342,7 +536,12 @@ class Schema():
         self.schema = dict()
 
         if schema:
-            self.schema = schema
+            if isinstance(schema, Schema):
+                self.schema = schema.schema
+            else:
+                self.schema = schema
+            
+            self.schema = Schema.normalize(self.schema)
         elif isinstance(data, list):
             sample = data[:sample_size] if sample_size > 0 else data
             self.schema = Schema.from_json(sample)
@@ -352,47 +551,186 @@ class Schema():
             self.schema = Schema.from_df(data)
         elif data:
             raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
-        
+                              
         # Immediately convert to hql schema
-        self.schema = self.convert_schema(target='hql')
-                
+        # Except empty schema
+        if len(self.schema):
+            self.schema = self.convert_schema(target='hql')
+    
+    def __len__(self):
+        return len(self.schema)
+    
     def merge(schemata:list):
-        new = dict()
-        for idx, i in enumerate(schemata):
-            if isinstance(i, Schema):
-                i = i.schema
-
-            for j in i:
-                if j in new:
-                    key = f'{j}.{idx - 1}'
-                    new[key] = new.pop(j)
-                    key = f'{j}.{idx}'
+        max_cols = 100
+        
+        # Gen keygroups
+        keygroups = dict()
+        for schema in schemata:
+            if isinstance(schema, Schema):
+                schema = schema.schema
+            
+            for key in schema:
+                if key not in keygroups:
+                    keygroups[key] = [schema[key]]
                 else:
-                    key = j
-
-                if isinstance(i[j], dict):
-                    new[key] = Schema.merge([i[j]])
-
-                new[key] = i[j]
+                    keygroups[key].append(schema[key])
+        
+        new = dict()
+        for key in keygroups:
+            for schema in keygroups[key]:
+                if key not in new:
+                    new[key] = schema
+                    continue
+            
+                # Canon conflict
+                if isinstance(new[key], dict) and isinstance(schema, dict):
+                    new[key] = Schema.merge([new[key], schema]).schema
+                    continue
+                
+                # Find a free name
+                for j in range(max_cols):
+                    name = f'{key}_{j + 1}'
+                    
+                    # This is the case that all previous cols were conflicting
+                    if name not in new:
+                        new[name] = schema
+                        break
+                    
+                    if j == max_cols - 1:
+                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
+                        logging.critical(f'Applicable field: {key}')
+                        raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}')
 
         return Schema(schema=new)
+
+    '''
+    Created to solve the problem of nested Schema objects in a schema dict.
+    Just unnests them such that we have a pure dict structure.
+    '''
+    def normalize(node):
+        if isinstance(node, dict):
+            new = dict()
+            for key in node:
+                new[key] = Schema.normalize(node[key])
+            return new
+        
+        elif isinstance(node, Schema):
+            return node.schema
+        
+        else:
+            return node
 
     # Extract the schema for a given set of fields
-    def subset(self, fields:list[list[str]], schema:dict=None):
-        schema = schema if schema else self.schema
+    def select(self, field:list[str]):
+        cur = self.unnest(field)
+        for part in field[::-1]:
+            cur = {part: cur}
+        return Schema(schema=cur)
+    
+    def unnest(self, field:list[str]):
+        cur = self.schema
+        for part in field:
+            if part not in cur:
+                return None
+            cur = cur[part]
+            
+        if isinstance(cur, dict):
+            return Schema(schema=cur)
+        else:
+            return cur
 
-        new = dict()
-        for field in fields:
-            if len(field) == 1:
-                new[field[0]] = schema[field[0]]
-                continue
+    '''
+    Returns the deep stripped value of a dict with a single value.
+    So {'destination': {'ip': hqlt.ip4}} would just return hqlt.ip4.
+    A more complex case is:
 
-            new[field[0]] = self.subset([field[1:]], schema=schema[field[0]]).schema
+    {
+        'destination': {
+            'ip': hqlt.ip4,
+            'port': hqlt.short
+        }
+    }
 
-        return Schema(schema=new)
+    Which would just return:
 
-    # Generates a schema with types replaced with their polars primatives
-    # schema parameter required for recursion
+    {
+        'ip': hqlt.ip4,
+        'port': hqlt.short
+    }
+
+    The idea here is if you want to extract the value of a function, this does it.
+
+    Doesn't return a schema object as it might be a type or a dict
+    Typically this is called with a named expression, so it's gonna build the schema anyways.
+    '''
+    def strip(self):
+        cur = self.schema
+        while isinstance(cur, dict) and len(cur) == 1:
+            key = list(cur.keys())[0]
+            cur = cur[key]
+        return cur
+    
+    def rename(self, src:list[str], dest:list[str]):
+        if not self.assert_field(src):
+            raise QueryException('Attempting to rename a non-existing field')
+        
+        if self.assert_field(dest):
+            raise QueryException('Attempting to rename field into an existing field')
+        
+        src_type = self.pop(src)
+        
+        cur = self.schema
+        for idx, i in enumerate(dest):
+            if idx == len(dest) - 1:
+                cur[i] = src_type
+            else:
+                cur = cur[i]
+                
+    def pop(self, name:list[str]):
+        if not self.assert_field(name):
+            raise QueryException('Attempting to pop a non-existing field')
+        
+        cur = self.schema
+        for idx, i in enumerate(name):
+            if idx == len(name) - 1:
+                src_type = cur.pop(i)
+            else:
+                cur = cur[i]
+                
+        return src_type
+    
+    '''
+    Set a field to a specific type in the schema
+    apply is then expected to be ran
+    '''
+    def set(self, path:list[str], htype:Union[hqlt.HqlType, Schema, dict], schema:Union[dict, Schema]=None, idx:int=0):
+        if isinstance(htype, Schema):
+            htype = htype.schema
+        
+        schema = schema if schema != None else self.schema
+        if isinstance(schema, Schema):
+            schema = schema.schema
+
+        split = path[idx]
+
+        if idx == len(path) - 1:
+            schema[split] = htype
+            return schema
+
+        if split in schema:
+            schema[split] = self.set(path, htype, schema=schema[split], idx=idx+1)
+        else:
+            schema[split] = self.set(path, htype, {}, idx=idx+1)
+
+        if idx == 0:
+            self.schema = schema
+        else:
+            return schema
+
+    '''
+    Generates a schema with types replaced with their polars primatives
+    schema parameter required for recursion
+    '''
     def convert_schema(self, schema:dict=None, target:str='hql'):
         supported = ('hql', 'polars')
         
@@ -403,9 +741,9 @@ class Schema():
         
         if not schema:
             schema = self.schema
-            
+                    
         if not isinstance(schema, dict):
-            return schema
+            raise CompilerException('Attempting to convert non-dict schema')
 
         # Base case, create empty object/struct
         if len(schema) == 0:
@@ -551,76 +889,36 @@ class Schema():
         return data
     
     '''
-    Set a field to a specific type in the schema
-    apply is then expected to be ran
-    '''
-    def set(self, path:list[str], htype:hqlt.HqlType):
-        schema = self.schema
-        
-        for idx, field in enumerate(path):
-            if field in schema:
-                if isinstance(schema[field], dict):
-                    schema = schema[field]
-                    continue
-                elif idx == len(path) - 1:
-                    schema = htype
-                    return True
-            
-            return False
-        
-        return False
-    
-    '''
     Applies a schema to a dataset
     '''
-    def apply(self, df:pl.DataFrame, schema:dict=None):
-        newdf = {}
-        schema = schema if schema else self.schema
-                
-        if schema == None:
-            return pl.DataFrame()
+    def apply(self, df:pl.DataFrame, schema:dict=None):        
+        if df.is_empty():
+            raise CompilerException('Attempting to apply a schema to an empty dataframe!')
 
+        return df.cast(self.gen_pl_schema())
+    
+    def assert_field(self, field:list[str]):
+        if self.unnest(field) == None:
+            return False
+        else:
+            return True
+        
+    def present_complex(self, df:pl.DataFrame, schema:dict=None):
+        schema = schema if schema != None else self.schema
+
+        newdf = {}
         for col in df:
-            # Base case, we don't specify anything in the target schema
-            # so pass through, and fill out the missing schema value
             if col.name not in schema:
                 newdf[col.name] = col
+                continue
 
-            # Case to recurse on a nested object
-            elif col.dtype == pl.Struct and not isinstance(schema[col.name], hqlt.object):
-                subdata = pl.DataFrame(
-                    df.select(col.name).unnest(col.name)
-                )
-                
-                newdf[col.name] = self.apply(
-                    subdata, 
-                    schema=schema[col.name]
-                )
-                
+            if isinstance(schema[col.name], dict):
+                newdf[col.name] = self.present_complex(col.struct.unnest(), schema[col.name])
+                continue
+
+            if schema[col.name].complex:
+                newdf[col.name] = schema[col.name].human(col)
             else:
-                # print(schema)
-                # print(col.name)
-                # print(col)
-                newdf[col.name] = schema[col.name].cast(col)
+                newdf[col.name] = col
 
         return pl.DataFrame(newdf)
-
-    '''
-    Gets the type of a given path in the schema
-    '''
-    def get_type(self, path:list[str]):
-        schema = self.schema
-
-        for idx, field in enumerate(path):
-            if field in schema:
-                if isinstance(schema[field], dict):
-                    schema = schema[field]
-                    continue
-                elif idx == len(path) - 1:
-                    return schema[field]
-                else:
-                    return None
-            
-            return None
-        
-        return schema
