@@ -1,13 +1,21 @@
 {
-    "DEFAULT_DB": "json",
+    "DEFAULT_DB": "dbname",
     "databases": {
-        "json": {
-            "BASE_PATH": "https://hql.dev/datasets/",
-            "TYPE": "JSON"
+        "dbname": {
+            "HOSTS": [
+                "http://10.0.0.2:9200"
+            ],
+            "USER": "username",
+            "PASS": "password",
+            "VALIDATE_CERTS": false,
+            "SCROLL_TIME": "1m",
+            "SCROLL_SIZE": 10000,
+            "TIMEOUT": 10,
+            "TYPE": "Elasticsearch"
         },
-        "csv": {
-            "BASE_PATH": "https://hql.dev/datasets/",
-            "TYPE": "CSV"
+        "json": {
+            "BASE_PATH": ".",
+            "TYPE": "JSON"
         }
     },
     "DEBUG": false

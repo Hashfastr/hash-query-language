@@ -931,8 +931,8 @@ def serializedATN():
         1,0,0,0,2164,2162,1,0,0,0,2165,2166,3,374,187,0,2166,357,1,0,0,0,
         2167,2168,5,256,0,0,2168,2170,3,382,191,0,2169,2171,3,360,180,0,
         2170,2169,1,0,0,0,2170,2171,1,0,0,0,2171,359,1,0,0,0,2172,2181,5,
-        187,0,0,2173,2178,3,530,265,0,2174,2175,5,9,0,0,2175,2177,3,530,
-        265,0,2176,2174,1,0,0,0,2177,2180,1,0,0,0,2178,2176,1,0,0,0,2178,
+        187,0,0,2173,2178,3,382,191,0,2174,2175,5,9,0,0,2175,2177,3,382,
+        191,0,2176,2174,1,0,0,0,2177,2180,1,0,0,0,2178,2176,1,0,0,0,2178,
         2179,1,0,0,0,2179,2182,1,0,0,0,2180,2178,1,0,0,0,2181,2173,1,0,0,
         0,2181,2182,1,0,0,0,2182,361,1,0,0,0,2183,2186,3,80,40,0,2184,2186,
         3,364,182,0,2185,2183,1,0,0,0,2185,2184,1,0,0,0,2186,363,1,0,0,0,
@@ -17184,17 +17184,17 @@ class HqlParser ( Parser ):
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
-            self._tableNameReference = None # TableNameReferenceContext
-            self.Expressions = list() # of TableNameReferenceContexts
+            self._unnamedExpression = None # UnnamedExpressionContext
+            self.Expressions = list() # of UnnamedExpressionContexts
 
         def ON(self):
             return self.getToken(HqlParser.ON, 0)
 
-        def tableNameReference(self, i:int=None):
+        def unnamedExpression(self, i:int=None):
             if i is None:
-                return self.getTypedRuleContexts(HqlParser.TableNameReferenceContext)
+                return self.getTypedRuleContexts(HqlParser.UnnamedExpressionContext)
             else:
-                return self.getTypedRuleContext(HqlParser.TableNameReferenceContext,i)
+                return self.getTypedRuleContext(HqlParser.UnnamedExpressionContext,i)
 
 
         def COMMA(self, i:int=None):
@@ -17235,10 +17235,10 @@ class HqlParser ( Parser ):
             self.state = 2181
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 7684416123978121218) != 0) or ((((_la - 66)) & ~0x3f) == 0 and ((1 << (_la - 66)) & -1729240968798725271) != 0) or ((((_la - 131)) & ~0x3f) == 0 and ((1 << (_la - 131)) & 7196752211023416333) != 0) or ((((_la - 195)) & ~0x3f) == 0 and ((1 << (_la - 195)) & -3749008268648248231) != 0) or ((((_la - 259)) & ~0x3f) == 0 and ((1 << (_la - 259)) & 576460753385551887) != 0):
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630631754434562) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458483037203454253) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8250594491267141615) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3171135605373407585) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & 4034099371619377199) != 0):
                 self.state = 2173
-                localctx._tableNameReference = self.tableNameReference()
-                localctx.Expressions.append(localctx._tableNameReference)
+                localctx._unnamedExpression = self.unnamedExpression()
+                localctx.Expressions.append(localctx._unnamedExpression)
                 self.state = 2178
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
@@ -17246,8 +17246,8 @@ class HqlParser ( Parser ):
                     self.state = 2174
                     self.match(HqlParser.COMMA)
                     self.state = 2175
-                    localctx._tableNameReference = self.tableNameReference()
-                    localctx.Expressions.append(localctx._tableNameReference)
+                    localctx._unnamedExpression = self.unnamedExpression()
+                    localctx.Expressions.append(localctx._unnamedExpression)
                     self.state = 2180
                     self._errHandler.sync(self)
                     _la = self._input.LA(1)

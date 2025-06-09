@@ -163,10 +163,6 @@ class Data():
     # Returns the tables where it does exists
     def assert_field(self, field:list[str]):
         exists = []
-        
-        if not self.tables:
-            return exists
-        
         for i in self.tables:
             if self.tables[i].assert_field(field):
                 exists.append(self.tables[i])
@@ -232,8 +228,6 @@ class Table():
         
         elif not self.df.is_empty() and schema:
             self.schema = schema
-            # print(schema.schema)
-            # print(self.df)
             self.df = schema.apply(self.df)
 
         elif not self.df.is_empty() and not schema:
@@ -279,63 +273,65 @@ class Table():
         
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, fields=path)
+    
+    '''
+    Unused, might use later
+    '''
+    def deconflict_path(self, path:list[str]):
+        cur = self.df
+        for idx, part in enumerate(path):
+            if part not in cur:
+                return path
+            
+            if idx != len(path) - 1 and cur[part].dtype == pl.Struct:
+                cur = cur.unnest(part)
+                continue
+            
+            i = 0
+            while f'{part}.{i}' in self.df:
+                i += 1
+            part = f'{part}.{i}'
+            path[idx] = part
 
-    def merge(tables:list[Table]):
-        max_cols = 100
-        
+    def merge(tables:list[Table]=None, schema:Schema=None):
         if not tables:
             return Table()
         
         name = tables[0].name
         
-        schemas = []
-        for table in tables:
-            schemas.append(table.schema)
-            
-        schema = Schema.merge(schemas).schema
+        # gen schema
+        if not schema:
+            schemas = []
+            for table in tables:
+                schemas.append(table.schema)
                 
+            schema = Schema.merge(schemas)
+        
         # generate col groups
-        col_groups = dict()
+        col_groups = {}
         for table in tables:
             # skip empty dataframes
             if isinstance(table.df, type(None)) or table.df.is_empty():
                 continue
-
+            
             for col in table.df:
                 if col.name not in col_groups:
                     col_groups[col.name] = []
                     
                 col_groups[col.name].append(col)
         
-        new = dict()
-        for key in col_groups:
-            for col in col_groups[key]:
-                if key not in new:
-                    new[key] = col
-                    continue
+        cols = {}
+        for col in col_groups:
+            if len(col_groups[col]) == 1:
+                cols[col] = col_groups[col][0]
+                continue
+            
+            if isinstance(schema.schema.get(col, None), dict):
+                ...
                 
-                # Canon conflict
-                if new[key].dtype == pl.Struct and col.dtype == pl.Struct:
-                    l = Table(df=new[key].struct.unnest(), name=name)
-                    r = Table(df=col.struct.unnest(), name=name)
-                    
-                    new[key] = Table.merge([l, r]).df.to_struct()
-                    continue
-                
-                for i in range(max_cols):
-                    name = f'{key}_{i}'
-                    
-                    if name not in new:
-                        new[name] = col
-                        break
-                    
-                    if i == max_cols - 1:
-                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
-                        logging.critical(f'Applicable field: {key}')
-                        raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
-
-        df = pl.DataFrame(new)
-        schema = Schema(schema=schema)
+        # df = pltools.merge(dfs)
+        
+        df = pl.DataFrame(cols)
         
         return Table(df=df, schema=schema, name=name)
 
@@ -432,18 +428,18 @@ class Table():
             # Find a unique name
             if split in cur_df:
                 i = 0
-                while f'{split}_{i}' in cur_df:
+                while f'{split}.{i}' in cur_df:
                     i += 1
-                split = f'{split}_{i}'
+                split = f'{split}.{i}'
                 name[idx] = split
-                        
+
             self.schema.set(name, vtype)
             new = pl.DataFrame({name[-1]: value})
         
         # Not the end, but we're now free to do whatever we want
         elif split not in cur_df:
             recurse = self.insert(name, value, vtype, cur_df=pl.DataFrame(), idx=idx + 1)
-            new = pl.DataFrame({split: recurse.to_struct()})
+            new = pl.DataFrame({split: recurse})
         
         # Recurse up a nested object
         elif cur_df[split].dtype == pl.Struct:        
@@ -454,12 +450,12 @@ class Table():
         # Conflict, a base type is where we're trying to put a struct
         else:
             i = 0
-            while f'{split}_{i}' in cur_df:
+            while f'{split}.{i}' in cur_df:
                 # Merging case
-                if cur_df[f'{split}_{i}'].dtype == pl.Struct:
+                if cur_df[f'{split}.{i}'].dtype == pl.Struct:
                     break
                 i += 1
-            split = f'{split}_{i}'
+            split = f'{split}.{i}'
             name[idx] = split
          
             if cur_df[split].dtype == pl.Struct:
@@ -561,48 +557,26 @@ class Schema():
         return len(self.schema)
     
     def merge(schemata:list):
-        max_cols = 100
-        
-        # Gen keygroups
-        keygroups = dict()
-        for schema in schemata:
-            if isinstance(schema, Schema):
-                schema = schema.schema
-            
-            for key in schema:
-                if key not in keygroups:
-                    keygroups[key] = [schema[key]]
-                else:
-                    keygroups[key].append(schema[key])
-        
         new = dict()
-        for key in keygroups:
-            for schema in keygroups[key]:
-                if key not in new:
-                    new[key] = schema
-                    continue
-            
-                # Canon conflict
-                if isinstance(new[key], dict) and isinstance(schema, dict):
-                    new[key] = Schema.merge([new[key], schema]).schema
-                    continue
-                
-                # Find a free name
-                for j in range(max_cols):
-                    name = f'{key}_{j + 1}'
-                    
-                    # This is the case that all previous cols were conflicting
-                    if name not in new:
-                        new[name] = schema
-                        break
-                    
-                    if j == max_cols - 1:
-                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
-                        logging.critical(f'Applicable field: {key}')
-                        raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}')
+        for idx, i in enumerate(schemata):
+            if isinstance(i, Schema):
+                i = i.schema
+
+            for j in i:
+                if j in new:
+                    key = f'{j}.{idx - 1}'
+                    new[key] = new.pop(j)
+                    key = f'{j}.{idx}'
+                else:
+                    key = j
+
+                if isinstance(i[j], dict):
+                    new[key] = Schema.merge([i[j]])
+
+                new[key] = i[j]
 
         return Schema(schema=new)
-
+    
     '''
     Created to solve the problem of nested Schema objects in a schema dict.
     Just unnests them such that we have a pure dict structure.
@@ -891,10 +865,10 @@ class Schema():
     '''
     Applies a schema to a dataset
     '''
-    def apply(self, df:pl.DataFrame, schema:dict=None):        
-        if df.is_empty():
+    def apply(self, df:pl.DataFrame, schema:dict=None):
+        if not hasattr(df, 'cast'):
             raise CompilerException('Attempting to apply a schema to an empty dataframe!')
-
+        
         return df.cast(self.gen_pl_schema())
     
     def assert_field(self, field:list[str]):
@@ -913,7 +887,7 @@ class Schema():
                 continue
 
             if isinstance(schema[col.name], dict):
-                newdf[col.name] = self.present_complex(col.struct.unnest(), schema[col.name])
+                newdf[col.name] = self.present_complex(pl.DataFrame(col), schema[col.name])
                 continue
 
             if schema[col.name].complex:

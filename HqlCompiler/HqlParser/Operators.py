@@ -73,7 +73,7 @@ class Operators(HqlVisitor):
 
     def visitUnnestOperator(self, ctx: HqlParser.UnnestOperatorContext):
         field = self.visit(ctx.Field)
-        tables = self.visit(ctx.OnClause) if ctx.OnClause else [Expr.Wildcard('*')]
+        tables = self.visit(ctx.OnClause)
         
         return Ops.Unnest(field, tables)
     
