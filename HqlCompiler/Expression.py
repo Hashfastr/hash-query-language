@@ -278,6 +278,12 @@ class FuncExpr(Expression):
     
     # Evals to function objects
     def eval(self, ctx:Context, **kwargs):
+        if kwargs.get('as_list', False):
+            return self.name.eval(ctx, as_list=True)
+        
+        if kwargs.get('as_str', False):
+            return self.name.eval(ctx, as_str=True)
+        
         func = ctx.get_func(self.name.eval(ctx, as_str=True))
         logging.debug(f'Resolved func {func}')
 
@@ -293,11 +299,24 @@ class DotCompositeFunction(Expression):
             'type': self.type,
             'funcs': [x.to_dict() for x in self.funcs]
         }
+        
+    def gen_list(self, ctx:Context):
+        func_list = []
+        for i in self.funcs:
+            func_list.append(i.eval(ctx, as_str=True))
+            
+        return func_list
 
     # Evals to the function objects that can be executed
     def eval(self, ctx:Context, **kwargs):
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
+        
+        if kwargs.get('as_list', False):
+            return self.gen_list(ctx)
+        
+        if kwargs.get('as_str', False):
+            return '.'.join(self.gen_list(ctx))
         
         func_list = []
         for i in self.funcs:

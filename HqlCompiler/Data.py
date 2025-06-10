@@ -638,6 +638,17 @@ class Schema():
             return Schema(schema=cur)
         else:
             return cur
+        
+    '''
+    Like unnest but returns an appropriate hqlt.object on a dict reference
+    '''
+    def get_type(self, field:list[str]):
+        dtype = self.unnest(field)
+       
+        if isinstance(dtype, dict):
+            dtype = hqlt.object(list(dtype.keys()))
+           
+        return dtype
 
     '''
     Returns the deep stripped value of a dict with a single value.
