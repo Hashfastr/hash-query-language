@@ -45,7 +45,7 @@ class make_mv(Function):
                     top_dtype = dtype
                 
                 # Cast to the top dtype
-                table_series.append(series)
+                table_series.append(series.rename(''))
                 
             cast_series = []
             for series in table_series:
