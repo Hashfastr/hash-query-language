@@ -216,7 +216,7 @@ class Table():
         else:
             self.df = pl.DataFrame()
         
-        self.name = name
+        self.name = name if name else ''
         self.series = None
         self.schema = None
 

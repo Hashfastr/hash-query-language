@@ -1,5 +1,6 @@
 from .Operator import Operator
-from HqlCompiler.Data import Data
+from HqlCompiler.Data import Data, Table, Schema
+from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Expression import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_op, Context
@@ -34,7 +35,7 @@ class Range(Operator):
         }
         
     def eval(self, ctx:Context, **kwargs):
-        name = self.name.eval(ctx, as_str=True)
+        name = self.name.eval(ctx, as_list=True)
         start = self.start.eval(ctx)
         end = self.end.eval(ctx)
         step = self.step.eval(ctx)
@@ -47,10 +48,13 @@ class Range(Operator):
         
         if type(step) not in (int, float):
             raise CompilerException(f'Range given invalid step value type {type(step)}')
-        
-        series = pl.Series(name, np.arange(start, end, step))
+                
+        series = pl.Series(np.arange(start, end, step))
         # This handles the inclusive case as arange does not
         if (end - start) % step == 0:
-            pl.concat([series, pl.Series([end])])
+            series = pl.concat([series, pl.Series([end])])
+        
+        df = pltools.build_element(name, series)
+        table = Table(df=df, name='range')
          
-        return pl.DataFrame({name: series})
+        return Data(tables_list=[table])
