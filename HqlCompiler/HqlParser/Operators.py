@@ -97,3 +97,24 @@ class Operators(HqlVisitor):
             exprs.append(self.visit(i))
         
         return Expr.ByExpression(exprs)
+
+    def visitDataTableExpression(self, ctx: HqlParser.DataTableExpressionContext):
+        schema = self.visit(ctx.Schema)
+        values = []
+        for i in ctx.Values:
+            values.append(self.visit(i))
+        
+        return Ops.Datatable(schema, values)
+    
+    def visitRowSchema(self, ctx: HqlParser.RowSchemaContext):
+        schema = []
+        for i in ctx.Columns:
+            schema.append(self.visit(i))
+        
+        return schema
+    
+    def visitRowSchemaColumnDeclaration(self, ctx: HqlParser.RowSchemaColumnDeclarationContext):
+        name = self.visit(ctx.Name)
+        t = self.visit(ctx.Type)
+        
+        return [name, t]

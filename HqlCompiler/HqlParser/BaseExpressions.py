@@ -2,6 +2,7 @@ from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
 import HqlCompiler.Expression as Expr
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 from HqlCompiler.Exceptions import *
 
@@ -126,5 +127,5 @@ class BaseExpressions(HqlVisitor):
         expr = Expr.OrderedExpression(order=order, nulls=nulls)
         return expr
 
-    # def visitTableNameReference(self, ctx: HqlParser.TableNameReferenceContext):
-    #     return 
+    def visitScalarType(self, ctx: HqlParser.ScalarTypeContext):
+        return hqlt.from_name(ctx.Token.text)()
