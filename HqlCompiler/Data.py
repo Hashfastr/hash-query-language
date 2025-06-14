@@ -14,6 +14,9 @@ import json
 class Data():
     ...
 
+class Series():
+    ...
+
 class Table():
     ...
 
@@ -354,7 +357,7 @@ class Table():
         schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)
-    
+
     def unnest(self, field:list[str]):
         if not self.assert_field(field):
             raise QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
@@ -785,6 +788,16 @@ class Schema():
                 
         return target_schema
 
+    def gen_pl_list_schema(self, schema:Union[dict, list, hqlt.HqlType]):
+        if isinstance(schema, dict):
+            return self.gen_pl_schema(schema)
+        
+        elif isinstance(schema, list):
+            return [self.gen_pl_list_schema(schema[0])]
+        
+        else:
+            return schema.pl_schema()
+        
     '''
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
@@ -799,10 +812,12 @@ class Schema():
                     new_schema[key] = pl.Struct(self.gen_pl_schema(schema=schema[key]))
                 else:
                     new_schema[key] = pl.Struct([])
-                    
-                continue
-            
-            new_schema[key] = schema[key].pl_schema()
+
+            elif isinstance(schema[key], list):
+                new_schema[key] = self.gen_pl_list_schema(schema[key])
+                
+            else:
+                new_schema[key] = schema[key].pl_schema()
     
         return new_schema
 

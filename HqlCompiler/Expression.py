@@ -9,6 +9,7 @@ from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
 from HqlCompiler.Data import Data, Table, Schema
 from enum import Enum
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -478,3 +479,54 @@ class OrderedExpression(Expression):
             'order': self.order,
             'nulls': self.nulls
         }
+
+class ByExpression(Expression):
+    def __init__(self, exprs:list[Expression], bin:Expression=None):
+        super().__init__()
+        self.exprs = exprs
+        self.bin = bin
+    
+    def group(self, table:Table):
+        schema = table.series.dtype if table.series else table.schema
+        data = table.series.series if table.series else table.df
+        
+        schema = {
+            'hash': hqlt.long(),
+            'rows': [schema]
+        }
+
+        # Make a dataframe
+        # Does nothing if already a dataframe
+        data = pl.DataFrame(data)
+        hashes = pl.DataFrame(data.hash_rows())
+        data = pl.concat([hashes, data], how='horizontal')
+        
+    def create_group_by_field(self, table):
+        ...
+        
+    '''
+    1. Move group data to special base level fields
+    2. Group by
+    3. Remove special grouping field
+    
+    Need to ensure that if you merge tables with series it makes it into a df
+    '''
+    def eval(self, ctx:Context, **kwargs):
+        # Get the aggregate subset
+        data = []
+        for expr in self.exprs:
+            data.append(expr.eval(ctx))
+            for table in data[-1].tables:
+                print(data[-1].tables[table].series.series.name)
+        data = Data.merge(data)
+        
+        return data
+        
+        # tables = []
+        # for name in data.tables:
+        #     table = data.tables[name]
+        #     new = self.group(table)
+        #     tables.append(new)
+            
+        # return Data(tables=tables)
+            

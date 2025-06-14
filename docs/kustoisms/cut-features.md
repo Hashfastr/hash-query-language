@@ -102,6 +102,20 @@ But the cut `as` clause would've probably worked like this:
 Where T1 would've been a table given the counts.
 Within the grammar this is a island non-terminal token, not used anywhere, and is not valid in ADX.
 
+#### NOTE
+Some time between me initially writing this and now they've implemented it.
+The documentation has not been caught up but the as clause is now implemented.
+It will rename the count field from 'Count' to whatever you'd like.
+Unsure why this is really needed but whatever.
+
+I assume since count is an alias to 
+
+```
+| summarize Count=count()
+```
+
+It's just changing the name assignment
+
 ### In Hql
 I've reintroduced this as Hql works well with multiple tables.
 I think it's helpful to have the option to not wipe everything and replace with counts.

@@ -79,3 +79,21 @@ class Operators(HqlVisitor):
     
     def visitUnnestOperatorOnClause(self, ctx: HqlParser.UnnestOperatorOnClauseContext):
         return [self.visit(x) for x in ctx.Expressions]
+
+    def visitSummarizeOperator(self, ctx: HqlParser.SummarizeOperatorContext):
+        by = None
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        if ctx.ByClause:
+            by = self.visit(ctx.ByClause)
+        
+        return Ops.Summarize(exprs, by)
+    
+    def visitSummarizeOperatorByClause(self, ctx: HqlParser.SummarizeOperatorByClauseContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        return Expr.ByExpression(exprs)
