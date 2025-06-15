@@ -189,6 +189,9 @@ class NamedReference(Expression):
 
         # Ensure we have the right field
         if not receiver.assert_field([self.name]):
+            if self.name in ctx.symbol_table:
+                return ctx.symbol_table[self.name]
+            
             raise QueryException(f"Referenced field {self.name} not found")
         
         # If we're operating on a dataset
