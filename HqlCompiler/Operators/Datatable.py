@@ -28,7 +28,6 @@ class Datatable(Operator):
     def eval(self, ctx:Context, **kwargs):
         width = len(self.schema)
         nvalues = len(self.values)
-        print(self.values)
         
         schema = dict()
         for i in self.schema:
