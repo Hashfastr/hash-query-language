@@ -189,6 +189,16 @@ class Data():
 
         return self
 
+    def join(self, right:Data, on:str, kind:str='inner'):
+        new = []
+        for lname in self.tables:
+            lt = self.tables[lname]
+            for rname in right.tables:
+                rt = right.tables[rname]
+                new.append(lt.join(rt, on, kind))
+                
+        return Data(tables_list=new)
+        
 '''
 Series for individual values, mimics a pl.Series
 '''
@@ -527,6 +537,12 @@ class Table():
         self.df = self.schema.apply(self.df)
 
         return self
+    
+    def join(self, right:Table, on:str, kind:str):
+        schema = self.schema.join(right.schema, on, kind)
+        df = self.df.join(right.df, on=on, how=kind)
+        
+        return Table(df=df, schema=schema, name=self.name)
 
 class Schema():
     def __init__(
@@ -948,3 +964,10 @@ class Schema():
                 newdf[col.name] = col
 
         return pl.DataFrame(newdf)
+
+    def join(self, right:Schema, on:str, kind:str):
+        if kind == 'inner':
+            right.schema.pop(on)
+            right = right.schema
+            
+            return Schema.merge([self.schema, right])

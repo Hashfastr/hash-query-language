@@ -118,3 +118,28 @@ class Operators(HqlVisitor):
         t = self.visit(ctx.Type)
         
         return [name, t]
+
+    def visitJoinOperator(self, ctx: HqlParser.JoinOperatorContext):
+        table = self.visit(ctx.Table)
+        
+        params = []
+        for i in ctx.Parameters:
+            params.append(self.visit(i))
+        
+        if ctx.OnClause:
+            clause = self.visit(ctx.OnClause)
+        
+        if ctx.WhereClause:
+            clause = self.visit(ctx.WhereClause)
+        
+        return Ops.Join(table, params, clause=clause)
+    
+    def visitJoinOperatorOnClause(self, ctx: HqlParser.JoinOperatorOnClauseContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+            
+        return exprs
+            
+    def visitJoinOperatorWhereClause(self, ctx: HqlParser.JoinOperatorWhereClauseContext):
+        return self.visit(ctx.Predicate)

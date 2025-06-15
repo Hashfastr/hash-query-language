@@ -28,7 +28,7 @@ class CompilerSet():
     
     def eval(self, ctx:Context, **kwargs):
         seti = 0
-        ctx = Context(None)
+        ctx = Context(None, ctx.symbol_table)
         
         for i in self.exprs:
             start = time.perf_counter()

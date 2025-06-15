@@ -25,3 +25,4 @@ from .Top import Top
 from .Unnest import Unnest
 from .Summarize import Summarize
 from .Datatable import Datatable
+from .Join import Join

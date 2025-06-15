@@ -172,6 +172,12 @@ class NamedReference(Expression):
             'name': self.name,
             'scope': self.scope,
         }
+        
+    def get_symbol(ctx:Context, name:str):
+        if name not in ctx.symbol_table:
+            return None
+        
+        return ctx.symbol_table[name]
     
     def eval(self, ctx:Context, **kwargs):
         if kwargs.get('as_pl', False):
@@ -188,7 +194,7 @@ class NamedReference(Expression):
         receiver = receiver if receiver else ctx.data
 
         # Ensure we have the right field
-        if not receiver.assert_field([self.name]):
+        if receiver == None or not receiver.assert_field([self.name]):
             if self.name in ctx.symbol_table:
                 return ctx.symbol_table[self.name]
             
@@ -244,6 +250,20 @@ class Integer(Expression):
         super().__init__()
         self.value = int(value)
     
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'value': self.value
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        return self.value
+
+class Float(Expression):
+    def __init__(self, value:str):
+        Expression.__init__(self)
+        self.value = float(value)
+        
     def to_dict(self):
         return {
             'type': self.type,

@@ -1,20 +1,14 @@
-let shapes = datatable (name: string, sideCount: int)
+let left = datatable (foo: int, bar: double, ham: string)
 [
-    "triangle", 3,
-    "square", 4,
-    "rectangle", 4,
-    "pentagon", 5,
-    "hexagon", 6,
-    "heptagon", 7,
-    "octagon", 8,
-    "nonagon", 9,
-    "decagon", 10
+    1, 6.0, 'a',
+    2, 7.0, 'b',
+    3, 8.0, 'c'
 ];
-let special_numbers = datatable (num: int)
+let right = datatable (ham: string, apple: string)
 [
-    4,
-    7,
-    10
+    'a', 'x',
+    'b', 'y',
+    'c', 'z'
 ];
-shapes
-| join kind=rightouter special_numbers on $left.sideCount == $right.num
+left
+| join kind=inner right on ham

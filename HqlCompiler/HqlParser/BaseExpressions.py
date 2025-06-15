@@ -105,6 +105,9 @@ class BaseExpressions(HqlVisitor):
     def visitBooleanLiteralExpression(self, ctx: HqlParser.BooleanLiteralExpressionContext):
         return Expr.Bool(ctx.Token.text)
 
+    def visitRealLiteralExpression(self, ctx: HqlParser.RealLiteralExpressionContext):
+        return Expr.Float(ctx.Token.text)
+
     def visitOrderedExpression(self, ctx: HqlParser.OrderedExpressionContext):
         expr = self.visit(ctx.Ordering)
         expr.name = self.visit(ctx.Expression)
