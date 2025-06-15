@@ -74,11 +74,13 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data) -> None:
+    def __init__(self, data, symbol_table:dict=None) -> None:
         self.dbs = copy.copy(database_registry)
         self.ops = copy.copy(op_registry)
         self.funcs = copy.copy(func_registry)
         self.data = data
+        self.symbol_table = symbol_table if symbol_table else dict()
+        self.root = None
 
     def get_db(self, name:str):
         if name in self.dbs:

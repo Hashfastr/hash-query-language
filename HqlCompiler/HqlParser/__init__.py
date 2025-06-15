@@ -55,10 +55,8 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
     def visitQuery(self, ctx: HqlParser.QueryContext):
         query = Query()
         
-        # -1 to handle EOF node
-        for i in range(ctx.getChildCount() - 1):
-            child = ctx.getChild(i)
-            query.statements.append(self.visit(child))
+        for i in ctx.Statements:
+            query.statements.append(self.visit(i))
                 
         return query
     

@@ -529,4 +529,24 @@ class ByExpression(Expression):
         #     tables.append(new)
             
         # return Data(tables=tables)
-            
+
+class LetExpression(Expression):
+    def __init__(self, name:Expression, value:Expression):
+        Expression.__init__(self)
+        self.name = name
+        self.value = value
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'name': self.name.to_dict(),
+            'value': self.value.to_dict()
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        name = self.name.eval(ctx, as_str=True)
+                
+        if kwargs.get('no_exec', False):
+            ctx.symbol_table[name] = self.value
+        else:
+            ctx.symbol_table[name] = self.value.eval(ctx)

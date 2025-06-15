@@ -129,3 +129,8 @@ class BaseExpressions(HqlVisitor):
 
     def visitScalarType(self, ctx: HqlParser.ScalarTypeContext):
         return hqlt.from_name(ctx.Token.text)()
+
+    def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
+        name = self.visit(ctx.Name)
+        value = self.visit(ctx.Expression)
+        return Expr.LetExpression(name, value)

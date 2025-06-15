@@ -1,4 +1,4 @@
-datatable (name: string, sideCount: int)
+let shapes = datatable (name: string, sideCount: int)
 [
     "triangle", 3,
     "square", 4,
@@ -9,4 +9,6 @@ datatable (name: string, sideCount: int)
     "octagon", 8,
     "nonagon", 9,
     "decagon", 10
-]
+];
+shapes
+| count
