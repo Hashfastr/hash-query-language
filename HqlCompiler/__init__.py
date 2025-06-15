@@ -75,7 +75,7 @@ class Compiler():
                 
         statement = self.query.statements
         
-        for statement in self.query.statements:
+        for statement in self.query.statements:            
             compiled = []
             op_sets = []
             
@@ -95,28 +95,34 @@ class Compiler():
                 pipes = root.pipes
                 
             op = prepipe.eval(ctx, tabular=True)
-            compiled.append(op)
-            op_sets.append([op.type])
+            
+            if isinstance(op, CompilerSet):
+                compiled = op.exprs
+                op_sets = op.op_sets
+            
+            else:
+                compiled.append(op)
+                op_sets.append([op.type])
             
             for op in pipes:
                 # This is an attempt at optimizing cases where a take can be placed higher
                 i = -1
-                while i >= -len(self.compiled):
-                    nonconseq = self.compiled[i].non_consequential(op.type)
-                    integrate = self.compiled[i].can_integrate(op.type)
+                while i >= -len(compiled):
+                    nonconseq = compiled[i].non_consequential(op.type)
+                    integrate = compiled[i].can_integrate(op.type)
                     
                     if nonconseq and not integrate:
-                        logging.debug(f'Can optimize {op.type} passing {self.compiled[i].type}')
+                        logging.debug(f'Can optimize {op.type} passing {compiled[i].type}')
                         i -= 1
                     if integrate:
-                        logging.debug(f'Integrating {op.type} into {self.compiled[i].type}')
-                        self.compiled[i].add_op(op)
-                        self.op_sets[i].append(op.type)
+                        logging.debug(f'Integrating {op.type} into {compiled[i].type}')
+                        compiled[i].add_op(op)
+                        op_sets[i].append(op.type)
                         break
                     elif not nonconseq and not integrate:
                         logging.debug(f'As high as we can go for type {op.type}')
-                        self.compiled.append(op)
-                        self.op_sets.append([op.type])
+                        compiled.append(op)
+                        op_sets.append([op.type])
                         break
                     
             cs = CompilerSet(compiled, op_sets)

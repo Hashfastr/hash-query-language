@@ -11,4 +11,3 @@ let shapes = datatable (name: string, sideCount: int)
     "decagon", 10
 ];
 shapes
-| count
