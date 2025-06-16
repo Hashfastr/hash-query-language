@@ -15,6 +15,16 @@ class Operators(HqlVisitor):
         value = self.visit(ctx.NameValue) if ctx.NameValue else self.visit(ctx.LiteralValue)
         
         return Expr.OpParameter(name, value)
+
+    def visitRelaxedQueryOperatorParameter(self, ctx: HqlParser.RelaxedQueryOperatorParameterContext):
+        name = ctx.NameToken.text
+
+        if ctx.NameValue:
+            value = self.visit(ctx.NameValue)
+        else:
+            value = self.visit(ctx.LiteralValue)
+        
+        return Expr.OpParameter(name, value)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
         predicate = self.visit(ctx.Predicate)

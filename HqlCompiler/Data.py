@@ -189,15 +189,18 @@ class Data():
 
         return self
 
-    def join(self, right:Data, on:str, kind:str='inner'):
-        new = []
+    def join(self, right:Data, on:str, kind:str='innerunique'):
+        tables = []
         for lname in self.tables:
+            new = []
             lt = self.tables[lname]
             for rname in right.tables:
                 rt = right.tables[rname]
                 new.append(lt.join(rt, on, kind))
-                
-        return Data(tables_list=new)
+
+            tables.append(Table.concat(new))
+        
+        return Data(tables_list=tables)
         
 '''
 Series for individual values, mimics a pl.Series
@@ -350,6 +353,13 @@ class Table():
         df = pl.DataFrame(new)
         schema = Schema(schema=schema)
         
+        return Table(df=df, schema=schema, name=name)
+    
+    def concat(tables:list[Table]):
+        df = pl.concat([x.df for x in tables])
+        schema = tables[0].schema
+        name = tables[0].name
+
         return Table(df=df, schema=schema, name=name)
 
     '''
@@ -540,7 +550,38 @@ class Table():
     
     def join(self, right:Table, on:str, kind:str):
         schema = self.schema.join(right.schema, on, kind)
-        df = self.df.join(right.df, on=on, how=kind)
+
+        if kind == 'inner':
+            df = self.df.join(right.df, on=on, how='inner')
+        
+        elif kind == 'leftsemi':
+            df = self.df.join(right.df, on=on, how='semi')
+
+        elif kind == 'rightsemi':
+            df = right.df.join(self.df, on=on, how='semi')
+
+        elif kind == 'leftouter':
+            df = self.df.join(right.df, on=on, how='left')
+
+        elif kind == 'rightouter':
+            df = right.df.join(self.df, on=on, how='left')
+
+        elif kind == 'fullouter':
+            df = self.df.join(right.df, on=on, how='full')
+
+        elif kind == 'leftanti':
+            df = self.df.join(right.df, on=on, how='anti')
+
+        elif kind == 'rightanti':
+            df = right.df.join(right.df, on=on, how='anti')
+
+        elif kind == 'innerunique':
+            left = self.df.unique(subset=[on])
+            df = left.join(right.df, on=on, how='inner')
+
+        else:
+            raise QueryException(f'Invalid join kind {kind} used')
+
         
         return Table(df=df, schema=schema, name=self.name)
 
@@ -966,8 +1007,22 @@ class Schema():
         return pl.DataFrame(newdf)
 
     def join(self, right:Schema, on:str, kind:str):
-        if kind == 'inner':
+        # all of these are semantically the same schema wise
+        if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter'):
             right.schema.pop(on)
-            right = right.schema
+            return Schema.merge([self.schema, right.schema])
+        
+        elif kind == 'fullouter':
+            right.schema[f'{on}_right'] = right.schema.pop(on)
+            return Schema.merge([self.schema, right.schema])
+
+
+        elif kind == 'leftanti':
+            return self
+
+        elif kind == 'rightanti':
+            return right
+
+        else:
+            raise QueryException(f'Invalid join kind {kind} used')
             
-            return Schema.merge([self.schema, right])

@@ -11,4 +11,4 @@ let right = datatable (ham: string, apple: string)
     'c', 'z'
 ];
 left
-| join kind=inner right on ham
+| join kind=fullouter right on ham

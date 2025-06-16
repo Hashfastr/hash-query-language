@@ -9,6 +9,7 @@ from HqlCompiler.Context import register_op, Context
 class Join(Operator):
     def __init__(self, dataset, params, clause:Expression=None):
         super().__init__()
+        self.kind = 'inner'
         self.dataset = dataset
         self.params = params
         self.clause = clause
@@ -31,10 +32,14 @@ class Join(Operator):
         
 
     def eval(self, ctx:Context, **kwargs):
+        for i in self.params:
+            if i.name == 'kind':
+                self.kind = i.value.eval(ctx, as_str=True)
+
         left = ctx.data
         right = self.get_right(ctx)
         clause = self.clause[0].eval(ctx, as_str=True)
         
-        data = left.join(right, clause)
+        data = left.join(right, clause, kind=self.kind)
         
         return data
