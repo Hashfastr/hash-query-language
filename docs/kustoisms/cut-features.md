@@ -174,3 +174,27 @@ Is valid grammar, but is semantically invalid.
 ### In Hql
 Not implemented, the `namedExpression` grammar is replaced with `unnamedExpression`.
 Will be changed again when I optimize the grammar.
+
+## Join
+Valid kusto, but undocumented, shows that you can have a where clause instead of 'on'.
+When you use it, it basically acts as a prefilter for the right-hand side.
+
+```
+| join kind=inner right where ham == 'a'
+
+// Is the same as
+
+| join kind=inner (right | where ham == 'a')
+```
+
+The real difference between the two is that you can actually use the on clause on the second one.
+
+```
+// invalid
+| join kind=inner right where ham == 'a' on ham
+
+// valid
+| join kind=inner (right | where ham == 'a') on ham
+```
+
+So, I'm considering just nuking this, or just doing a where passthrough to the right compilerset.

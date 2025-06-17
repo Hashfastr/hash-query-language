@@ -4,11 +4,11 @@ let left = datatable (foo: int, bar: double, ham: string)
     2, 7.0, 'b',
     3, 8.0, 'd'
 ];
-let right = datatable (ham: string, apple: string)
+let right = datatable (pork: string, apple: string)
 [
     'a', 'x',
     'b', 'y',
     'c', 'z'
 ];
 left
-| join kind=fullouter right on ham
+| join kind=fullouter right on $left.ham == $right.pork

@@ -131,18 +131,20 @@ class Operators(HqlVisitor):
 
     def visitJoinOperator(self, ctx: HqlParser.JoinOperatorContext):
         table = self.visit(ctx.Table)
+        on = None
+        where = None
         
         params = []
         for i in ctx.Parameters:
             params.append(self.visit(i))
         
         if ctx.OnClause:
-            clause = self.visit(ctx.OnClause)
+            on = self.visit(ctx.OnClause)
         
         if ctx.WhereClause:
-            clause = self.visit(ctx.WhereClause)
+            where = self.visit(ctx.WhereClause)
         
-        return Ops.Join(table, params, clause=clause)
+        return Ops.Join(table, params, on=on, where=where)
     
     def visitJoinOperatorOnClause(self, ctx: HqlParser.JoinOperatorOnClauseContext):
         exprs = []

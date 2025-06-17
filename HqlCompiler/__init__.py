@@ -14,6 +14,7 @@ from HqlCompiler.Functions import *
 from HqlCompiler.Operators.Database import Database as Database
 from HqlCompiler.Operators.Database import get_database
 import HqlCompiler.Expression as Expr
+import HqlCompiler.Operators as Ops
 from HqlCompiler.Context import Context
 import logging
 
@@ -21,27 +22,64 @@ class CompilerException(Exception):
     ...
 
 class CompilerSet():
-    def __init__(self, exprs:list[Expr.Expression], op_sets:list[str]):
+    def __init__(self, ops:list[Ops.Operator]):
         self.type = self.__class__.__name__
-        self.exprs = exprs
-        self.op_sets = op_sets
+        self.ops = ops
+        
+    def compile(self):
+        compiled = [self.ops[0]]
+        
+        logging.debug('Optimizing the following operators in a compilerset:')
+        for op in self.ops:
+            logging.debug(f'    {op.id}: {op.type}')
+        
+        for op in self.ops[1:]:
+            # This is an attempt at optimizing cases where a take can be placed higher
+            i = -1
+            while i >= -len(compiled):
+                nonconseq = compiled[i].non_consequential(op.type)
+                integrate = compiled[i].can_integrate(op.type)
+                
+                if nonconseq and not integrate:
+                    logging.debug(f'Can optimize {op.id} passing {compiled[i].id}')
+                    i -= 1
+                if integrate:
+                    logging.debug(f'Integrating {op.id} into {compiled[i].id}')
+                    compiled[i].add_op(op)
+                    break
+                elif not nonconseq and not integrate:
+                    logging.debug(f'As high as we can go for {op.id}')
+                    compiled.append(op)
+                    break
+                
+        logging.debug('Final compiled set:')
+        for op in compiled:
+            logging.debug(f'    {op.id}: {op.type}')
+            
+        self.ops = compiled
+    
+
+    def add_ops(self, ops:list[Ops.Operator]):
+        self.ops += ops
+        self.compile()
+        
+    
+    def add_op(self, op:Ops.Operator):
+        self.add_ops([op])
+        
     
     def eval(self, ctx:Context, **kwargs):
-        seti = 0
         ctx = Context(None, ctx.symbol_table)
         
-        for i in self.exprs:
+        for i in self.ops:
             start = time.perf_counter()
-            
-            logging.debug(f'Executing opset {self.op_sets[seti]}')
+            logging.debug(f'Executing {i.type}: {i.id}')
             
             data = i.eval(ctx)
             ctx.data = data
                         
             end = time.perf_counter()
-            logging.debug(f"{self.op_sets[seti]} - {end - start}")
-            
-            seti += 1
+            logging.debug(f"{i.id} - {end - start}")
             
         return ctx.data
 
@@ -75,10 +113,7 @@ class Compiler():
                 
         statement = self.query.statements
         
-        for statement in self.query.statements:            
-            compiled = []
-            op_sets = []
-            
+        for statement in self.query.statements:
             if statement.type == "LetExpression":
                 logging.debug('Letting let expression')
                 root = statement.value
@@ -97,36 +132,13 @@ class Compiler():
             op = prepipe.eval(ctx, tabular=True)
             
             if isinstance(op, CompilerSet):
-                compiled = op.exprs
-                op_sets = op.op_sets
-            
+                cs = op
+                cs.add_ops(pipes) # This recompiles automatically
+                
             else:
-                compiled.append(op)
-                op_sets.append([op.type])
-            
-            for op in pipes:
-                # This is an attempt at optimizing cases where a take can be placed higher
-                i = -1
-                while i >= -len(compiled):
-                    nonconseq = compiled[i].non_consequential(op.type)
-                    integrate = compiled[i].can_integrate(op.type)
-                    
-                    if nonconseq and not integrate:
-                        logging.debug(f'Can optimize {op.type} passing {compiled[i].type}')
-                        i -= 1
-                    if integrate:
-                        logging.debug(f'Integrating {op.type} into {compiled[i].type}')
-                        compiled[i].add_op(op)
-                        op_sets[i].append(op.type)
-                        break
-                    elif not nonconseq and not integrate:
-                        logging.debug(f'As high as we can go for type {op.type}')
-                        compiled.append(op)
-                        op_sets.append([op.type])
-                        break
-                    
-            cs = CompilerSet(compiled, op_sets)
-            
+                cs = CompilerSet([op] + pipes)
+                cs.compile()
+                                
             if statement.type == "LetExpression":
                 name = statement.name.eval(ctx, as_str=True)
                 ctx.symbol_table[name] = cs
