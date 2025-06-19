@@ -522,21 +522,23 @@ class ByExpression(Expression):
         self.exprs = exprs
         
     def build_table_agg(self, ctx:Context, table:Table):
-        fields = []
+        pl_exprs = []
         schema = []
         for expr in self.exprs:
-            field = expr.eval(ctx, as_pl=True)
+            pl_expr = expr.eval(ctx, as_pl=True)
             path = expr.eval(ctx, as_list=True)
             
             if not table.assert_field(path):
                 continue
 
-            fields.append(field)
+            pl_exprs.append(pl_expr)
             schema.append(table.schema.select(path))
-            
-        table.agg = table.df.group_by(fields)
-        table.agg_cols = fields
+        
+        # Groups and coelesces the schemas together for each field    
+        table.agg = table.df.group_by(pl_exprs)
+        table.agg_cols = pl_exprs
         table.agg_schema = Schema.merge(schema)
+        
         return table
     
     def eval(self, ctx:Context, **kwargs):
