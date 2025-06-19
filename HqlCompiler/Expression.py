@@ -371,11 +371,7 @@ class Path(Expression):
         except Exception as e:
             logging.debug(self.path)
             logging.debug(e)
-
-    def lint(self, ctx:Context):
-        plf = self.eval(ctx, as_pl=True)
-        # ctx.data.
-
+    
     def eval(self, ctx:Context, **kwargs):
         as_list = kwargs.get('as_list', False)
         as_pl = kwargs.get('as_pl', False)
@@ -395,18 +391,25 @@ class Path(Expression):
             return '.'.join(list)
                 
         receiver = ctx.data
-        static = []
+        consumed = []
         for i in self.path:
             if i.type == "DotCompositeFunction":
-                if static:
-                    receiver = receiver.unnest(static)
-                    
-                receiver = i.eval(ctx, receiver=receiver, as_value=True)
-            else:
-                static.append(i.eval(ctx, receiver=receiver, as_str=True))
+                if consumed:
+                    # Get the value of the path elements consumed so far
+                    receiver = receiver.unnest(consumed)
                 
-        if static:
-            receiver = receiver.unnest(static) if as_value else receiver.select(static)
+                # Evalute the function
+                receiver = i.eval(ctx, receiver=receiver)
+                
+                # Reset consumed since we're now operating with function'd data
+                consumed = []
+            else:
+                # Append another path element that we've consumed
+                consumed.append(i.eval(ctx, receiver=receiver, as_str=True))
+        
+        # If we have static elements we need to evaluate on the current receiver
+        if consumed:
+            receiver = receiver.unnest(consumed) if as_value else receiver.select(consumed)
                  
         return receiver
     
