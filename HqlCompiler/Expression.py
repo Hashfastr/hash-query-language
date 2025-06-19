@@ -458,9 +458,10 @@ class NamedExpression(Expression):
         
     def eval(self, ctx:Context, **kwargs):
         insert = kwargs.get('insert', True)
-        value = self.value.eval(ctx, as_value=True)
+        value = self.value.eval(ctx)
         
         # Chose which dataset to insert on
+        # If set to false it'll create it's own blank dataset
         if insert:
             data = ctx.data
         else:
@@ -468,22 +469,28 @@ class NamedExpression(Expression):
         
         # loop through value tables as those are the only ones we can vouch for
         for table in value.tables:
+            # Need this if we're creating a new dataset instead of inserting
             if table not in data.tables:
                 data.add_table(Table(name=table))
-                
+            
+            # We can assign to multiple names
             for path in self.paths:
                 path = path.eval(ctx, as_list=True)
                 
                 cur = value.tables[table]
                 
                 if cur.series:
+                    # Get the series and set the type
                     schema = cur.series.type
                     cur = cur.series.series
+                    
                 else:
+                    # Get the value of the dataframe and schema
                     cur = cur.strip()
                     schema = cur.schema
                     cur = cur.df
                 
+                # Insert properly
                 data.tables[table].insert(path, cur, schema)
 
         return data
