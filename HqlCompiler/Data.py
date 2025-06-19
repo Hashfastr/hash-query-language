@@ -581,6 +581,8 @@ class Table():
 
         else:
             raise QueryException(f'Invalid join kind {kind} used')
+        
+        print(df[0].to_dicts())
 
         
         return Table(df=df, schema=schema, name=self.name)
@@ -1007,15 +1009,16 @@ class Schema():
         return pl.DataFrame(newdf)
 
     def join(self, right:Schema, on:str, kind:str):
-        # all of these are semantically the same schema wise
-        if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter'):
-            right.schema.pop(on)
-            return Schema.merge([self.schema, right.schema])
+        import copy
         
-        elif kind == 'fullouter':
-            right.schema[f'{on}_right'] = right.schema.pop(on)
-            return Schema.merge([self.schema, right.schema])
-
+        # all of these are semantically the same schema wise
+        if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter', 'fullouter'):
+            new = copy.deepcopy(self.schema)
+            for i in right.schema:
+                if i in new and i != on:
+                    new[f'{i}_right'] = new[i]
+            
+            return Schema(schema=new)
 
         elif kind == 'leftanti':
             return self
