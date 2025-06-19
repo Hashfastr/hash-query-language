@@ -5,6 +5,7 @@ let Males = database('csv').http('student_habits_performance.csv')
 | where gender == "Male"
 ;
 Females
-| join kind=anti Males on age
-| project student_id, tostring(age), diet_quality
+| join Males on age
+| project age, diet_quality
+| summarize dq=make_list(diet_quality) by age
 | take 10

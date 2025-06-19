@@ -107,12 +107,14 @@ class pltools():
         return pl.DataFrame({name[0]: new.to_struct()})
 
     def path_to_expr(path:list[str]):
-        expr = pl
-        for idx, i in enumerate(path):
-            if idx == 0:
-                expr = expr.col(i)
-            else:
-                expr = expr.struct.field(i)
+        # build selector
+        expr = pl.col(path[0])
+        for i in path[1:]:
+            expr = expr.struct.field(i)
+            
+        # rebuild object
+        for i in path[1:][::-1]:
+            expr = pl.struct(expr).alias(i)
 
         return expr
 

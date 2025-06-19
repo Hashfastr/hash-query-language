@@ -11,26 +11,33 @@ class count(Function):
         self.aggregate = True
         self.count_name = 'count_'
         
+    def get_count_name(self, agg):
+        name = self.count_name
+        
+        # Unsure if this is a performant solution
+        # Does .agg compute? or does it just output what already has?
+        i = 0
+        while name in agg.agg():
+            i += 1
+            
+        if i > 0:
+            name = f'{name}{i}'
+            
+        return name
+        
     def eval(self, ctx:Context, **kwargs):
         tables = []
-        for i in ctx.data.tables:
-            table = ctx.data.tables[i]
-            if not table.aggregation:
+        for name in ctx.data.tables:
+            table = ctx.data.tables[name]
+            if not table.agg:
                 tables.append(table)
                 
-            agg = table.aggregation
+            cname = self.get_count_name(table.agg)
+
+            df = table.agg.len(name=cname)
+            df = df.drop(table.agg_cols)
             
-            # Unsure if this is a performant solution
-            # Does .agg compute? or does it just output what already has?
-            i = 0
-            while self.count_name in agg.agg():
-                i += 1
-            if i > 0:
-                self.count_name = f'{self.count_name}{i}'
-            
-            df = agg.len(name=self.count_name)
-            
-            new = Table(df=df, schema=table.agg_schema, name=table.name)
+            new = Table(df=df, name=table.name)
             tables.append(new)
         
         return Data(tables_list=tables)

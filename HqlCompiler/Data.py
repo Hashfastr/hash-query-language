@@ -171,6 +171,7 @@ class Data():
             return exists
         
         for i in self.tables:
+            print(self.tables[i].df)
             if self.tables[i].assert_field(field):
                 exists.append(self.tables[i])
 
@@ -201,6 +202,13 @@ class Data():
             tables.append(Table.concat(new))
         
         return Data(tables_list=tables)
+    
+    def strip(self):
+        new = []
+        for i in self.tables:
+            table = self.tables[i]
+            new.append(table.strip())
+        return Data(tables_list=new)
         
 '''
 Series for individual values, mimics a pl.Series
@@ -230,7 +238,8 @@ class Table():
             self.df = pl.DataFrame()
         
         self.name = name if name else ''
-        self.aggregation = None
+        self.agg = None
+        self.agg_cols = None
         self.agg_schema = None
         self.series = None
         self.schema = None
@@ -416,10 +425,16 @@ class Table():
     '''
     def strip(self):
         cur = self.df
+        path = []
         while isinstance(cur, pl.DataFrame) and len(cur.columns) == 1:
             key = cur.columns[0]
             cur = pltools.get_element_value(cur, [key])
-        return cur
+            path.append(key)
+        
+        # Using this instead of strip to ensure we're sync
+        schema = self.schema.unnest(path)
+            
+        return Table(df=cur, schema=schema, name=self.name)
 
     def rename(self, src:list[str], dest:list[str]):
         if not self.assert_field(src):
@@ -584,9 +599,6 @@ class Table():
         else:
             raise QueryException(f'Invalid join kind {kind} used')
         
-        print(df[0].to_dicts())
-
-        
         return Table(df=df, schema=schema, name=self.name)
 
 class Schema():
@@ -615,14 +627,20 @@ class Schema():
             self.schema = Schema.from_df(data)
         elif data:
             raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
-                              
-        # Immediately convert to hql schema
-        # Except empty schema
-        if len(self.schema):
+        
+        # Pass through empty case else we get an hqlt.object([])
+        if isinstance(self.schema, dict) and len(self.schema):
             self.schema = self.convert_schema(target='hql')
     
     def __len__(self):
-        return len(self.schema)
+        if hasattr(self.schema, 'len'):
+            return len(self.schema)
+        
+        elif self.schema != None:
+            return 1
+        
+        else:
+            return 0
     
     def merge(schemata:list):
         max_cols = 100
@@ -690,18 +708,22 @@ class Schema():
         for part in field[::-1]:
             cur = {part: cur}
         return Schema(schema=cur)
+
+    def select_many(self, fields:list[list[str]]):
+        schemas = []
+        for field in fields:
+            schemas.append(self.select(field))
+        return Schema.merge(schemas)
     
     def unnest(self, field:list[str]):
         cur = self.schema
         for part in field:
             if part not in cur:
                 return None
-            cur = cur[part]
-            
-        if isinstance(cur, dict):
-            return Schema(schema=cur)
-        else:
-            return cur
+            else:
+                cur = cur[part]
+                
+        return Schema(schema=cur)
         
     '''
     Like unnest but returns an appropriate hqlt.object on a dict reference
@@ -806,7 +828,7 @@ class Schema():
     Generates a schema with types replaced with their polars primatives
     schema parameter required for recursion
     '''
-    def convert_schema(self, schema:dict=None, target:str='hql'):
+    def convert_schema(self, schema:Union[dict, type]=None, target:str='hql'):
         supported = ('hql', 'polars')
         
         if target not in supported:
@@ -816,37 +838,27 @@ class Schema():
         
         if not schema:
             schema = self.schema
-                    
+        
         if not isinstance(schema, dict):
-            raise CompilerException('Attempting to convert non-dict schema')
+            if hasattr(schema, 'hql_schema') and target == 'hql':
+                return schema.hql_schema()
+            
+            if hasattr(schema, 'pl_schema') and target == 'pl':
+                return schema.pl_schema()
+            
+            raise CompilerException(f'Unsupported type to convert {schema}')
 
         # Base case, create empty object/struct
-        if len(schema) == 0:
+        if len(schema) == 0:            
             if target == 'hql':
                 return hqlt.object([])
             elif target == 'polars':
                 return plt.Struct([])
 
         target_schema = dict()
-        for key in schema:            
-            element = schema[key]
+        for key in schema:
+            target_schema[key] = self.convert_schema(schema=schema[key], target=target)
             
-            if element == {}:
-                if target == 'hql':
-                    target_schema[key] = hqlt.null()
-                elif target == 'polars':
-                    target_schema[key] = pl.Null()
-
-            # Recurse case
-            elif isinstance(element, dict):
-                target_schema[key] = self.convert_schema(schema=element, target=target)
-
-            else:
-                if target == 'hql':
-                    target_schema[key] = element.hql_schema()
-                elif target == 'polars':
-                    target_schema[key] = element.pl_schema()
-                
         return target_schema
 
     def gen_pl_list_schema(self, schema:Union[dict, list, hqlt.HqlType]):
@@ -865,6 +877,9 @@ class Schema():
     '''
     def gen_pl_schema(self, schema:dict=None):
         schema = schema if schema else self.schema
+        
+        if not isinstance(schema, dict):
+            return schema.pl_schema()
         
         new_schema = {}
         for key in schema:

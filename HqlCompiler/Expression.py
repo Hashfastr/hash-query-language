@@ -439,21 +439,21 @@ class OpParameter(Expression):
         }
 
 class NamedExpression(Expression):
-    def __init__(self, name:Expression, value:Expression):
+    def __init__(self, paths:list[Expression], value:Expression):
         super().__init__()
-        self.name = name
+        self.paths = paths
         self.value = value
         
     def to_dict(self):        
         return {
             'type': self.type,
-            'name': self.name.to_dict(),
+            'name': [x.to_dict() for x in self.paths],
             'value': self.value.to_dict()
         }
         
     def eval(self, ctx:Context, **kwargs):
         insert = kwargs.get('insert', True)
-        value = self.value.eval(ctx)
+        value = self.value.eval(ctx, as_value=True)
         
         # Chose which dataset to insert on
         if insert:
@@ -464,10 +464,10 @@ class NamedExpression(Expression):
         # loop through value tables as those are the only ones we can vouch for
         for table in value.tables:
             if table not in data.tables:
-                data.tables[table] = Table(name=table)
-            
-            for name in self.name:
-                path = name.eval(ctx, as_list=True)
+                data.add_table(Table(name=table))
+                
+            for path in self.paths:
+                path = path.eval(ctx, as_list=True)
                 
                 cur = value.tables[table]
                 
@@ -475,9 +475,10 @@ class NamedExpression(Expression):
                     schema = cur.series.type
                     cur = cur.series.series
                 else:
-                    schema = cur.schema.strip()
                     cur = cur.strip()
-                                
+                    schema = cur.schema
+                    cur = cur.df
+                
                 data.tables[table].insert(path, cur, schema)
 
         return data
@@ -512,23 +513,17 @@ class ByExpression(Expression):
         fields = []
         schema = []
         for expr in self.exprs:
+            field = expr.eval(ctx, as_pl=True)
             path = expr.eval(ctx, as_list=True)
+            
             if not table.assert_field(path):
                 continue
-            
-            # build selector
-            field = pl.col(path[0])
-            for i in path[1:]:
-                field = field.struct.field(i)
-             
-            # rebuild object
-            for i in path[1:][::-1]:
-                field = pl.struct(field).alias(i)
-                
+
             fields.append(field)
             schema.append(table.schema.select(path))
             
-        table.aggregation = table.df.group_by(fields)
+        table.agg = table.df.group_by(fields)
+        table.agg_cols = fields
         table.agg_schema = Schema.merge(schema)
         return table
     
