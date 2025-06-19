@@ -179,9 +179,13 @@ class HqlTypes():
             c = d << 8
             b = c << 8
             a = b << 8
-
+            
             ips = []
             for i in data:
+                if i == None:
+                    ips.append(None)
+                    continue
+                
                 ips.append(f'{(i & a) >> 24}.{(i & b) >> 16}.{(i & c) >> 8}.{i & d}')
 
             return pl.Series(ips, dtype=pl.String)                

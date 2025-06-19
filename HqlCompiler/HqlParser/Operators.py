@@ -95,7 +95,7 @@ class Operators(HqlVisitor):
         exprs = []
         for i in ctx.Expressions:
             exprs.append(self.visit(i))
-        
+                
         if ctx.ByClause:
             by = self.visit(ctx.ByClause)
         

@@ -230,6 +230,8 @@ class Table():
             self.df = pl.DataFrame()
         
         self.name = name if name else ''
+        self.aggregation = None
+        self.agg_schema = None
         self.series = None
         self.schema = None
 

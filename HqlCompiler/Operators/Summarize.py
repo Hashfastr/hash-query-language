@@ -10,11 +10,12 @@ class Summarize(Operator):
         super().__init__()
         self.aggregate_exprs = aggregate_exprs
         self.by_expr = by_expr
-        
+
     def eval(self, ctx:Context, **kwargs):
-        data = self.by_expr.eval(ctx)
-        for table in data.tables:
-            df = data.tables[table].df
-            print(df)
+        ctx.data = self.by_expr.eval(ctx)
         
-        return Data()
+        data = []
+        for expr in self.aggregate_exprs:
+            data.append(expr.eval(ctx))
+        
+        return Data.merge(data)
