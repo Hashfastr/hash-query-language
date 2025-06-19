@@ -740,7 +740,7 @@ summarizeOperator:
     SUMMARIZE (Parameters+=strictQueryOperatorParameter)* (Expressions+=namedExpression (',' Expressions+=namedExpression)*)? (ByClause=summarizeOperatorByClause)?;
 
 summarizeOperatorByClause:
-    BY Expressions+=namedExpression (',' Expressions+=namedExpression) (BinClause=summarizeOperatorLegacyBinClause)?;
+    BY Expressions+=namedExpression (',' Expressions+=namedExpression)* (BinClause=summarizeOperatorLegacyBinClause)?;
 
 summarizeOperatorLegacyBinClause:
     BIN '=' Expression=numberLikeLiteralExpression;
