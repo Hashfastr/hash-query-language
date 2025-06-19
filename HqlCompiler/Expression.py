@@ -195,6 +195,8 @@ class NamedReference(Expression):
 
         # Ensure we have the right field
         if receiver == None or not receiver.assert_field([self.name]):
+            # Symbol table lookup
+            # Named search or static value or the like
             if self.name in ctx.symbol_table:
                 return ctx.symbol_table[self.name]
             
@@ -204,8 +206,8 @@ class NamedReference(Expression):
         elif isinstance(receiver, Data):
             return receiver.unnest([self.name]) if as_value else receiver.select([self.name])
         
-        # If we're operating on a database
-        elif issubclass(type(receiver), Database):
+        # If we're operating on something that support variables
+        elif hasattr(receiver, 'get_variable'):
             return receiver.get_variable(self.name)
         
         # Not implemented, or bug

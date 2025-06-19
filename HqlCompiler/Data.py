@@ -171,12 +171,12 @@ class Data():
             return exists
         
         for i in self.tables:
-            print(self.tables[i].df)
             if self.tables[i].assert_field(field):
                 exists.append(self.tables[i])
 
         if not len(exists):
-            logging.warning(f"Invalid field {'.'.join(field)} in table {i}")
+            logging.warning(f"Could not find {'.'.join(field)} in any tables in the dataset")
+            logging.warning(', '.join([x for x in self.tables]))
         
         return exists
     
@@ -552,7 +552,9 @@ class Table():
         self.remove(name)
         
         return value
-                
+    
+    # Asserts by checking against schema
+    # Schema should always be sync'd with the table data
     def assert_field(self, field:list[str]):
         return self.schema.assert_field(field)
     
@@ -690,14 +692,14 @@ class Schema():
     Just unnests them such that we have a pure dict structure.
     '''
     def normalize(node):
+        if isinstance(node, Schema):
+            node = node.schema
+        
         if isinstance(node, dict):
             new = dict()
             for key in node:
                 new[key] = Schema.normalize(node[key])
             return new
-        
-        elif isinstance(node, Schema):
-            return node.schema
         
         else:
             return node
@@ -839,6 +841,8 @@ class Schema():
         if not schema:
             schema = self.schema
         
+        # Endpoint in the tree
+        # Expected to be a type we can convert
         if not isinstance(schema, dict):
             if hasattr(schema, 'hql_schema') and target == 'hql':
                 return schema.hql_schema()
@@ -855,10 +859,11 @@ class Schema():
             elif target == 'polars':
                 return plt.Struct([])
 
+        # Recurse on a populated dict
         target_schema = dict()
         for key in schema:
             target_schema[key] = self.convert_schema(schema=schema[key], target=target)
-            
+        
         return target_schema
 
     def gen_pl_list_schema(self, schema:Union[dict, list, hqlt.HqlType]):
@@ -999,6 +1004,7 @@ class Schema():
 
         return df.cast(self.gen_pl_schema())
     
+    # Asserts by attempting to retrieve the field's value
     def assert_field(self, field:list[str]):
         if self.unnest(field) == None:
             return False
