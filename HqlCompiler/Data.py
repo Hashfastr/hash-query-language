@@ -384,7 +384,8 @@ class Table():
         if not self.assert_field(field):
             return Table(name=self.name)
         
-        df = pltools.get_element(self.df, field)
+        expr = pltools.path_to_expr(field)
+        df = self.df.select(expr)
         schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)

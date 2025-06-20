@@ -7,6 +7,7 @@ from HqlCompiler.Types.Polars import PolarsTypes
 import polars as pl
 import logging
 
+'''
 @register_func('make_mv')
 class make_mv(Function):
     def __init__(self, args:list):
@@ -69,3 +70,4 @@ class make_mv(Function):
             tables.append(table)
 
         return Data(tables_list=tables)
+'''

@@ -6,7 +6,8 @@ from HqlCompiler.Data import Data, Series, Table, Schema
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 @register_func('make_list')
-class make_list(Function):
+@register_func('make_mv')
+class make_mv(Function):
     def __init__(self, args:list):
         super().__init__(args, 1, -1)
         self.args = args

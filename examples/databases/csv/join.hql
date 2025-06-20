@@ -1,11 +1,6 @@
-let Females = database('csv').http('student_habits_performance.csv')
-| where gender == "Female"
-;
-let Males = database('csv').http('student_habits_performance.csv')
-| where gender == "Male"
-;
+let Females = database('csv').http('student_habits_performance.csv');
+let Males = database('csv').http('student_habits_performance.csv');
 Females
-| join Males on age
 | project age, diet_quality
-| summarize dq=make_list(diet_quality) by age
-| take 10
+| summarize make_mv(diet_quality) by age
+| project age, dq=len(diet_quality)

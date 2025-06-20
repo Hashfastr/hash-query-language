@@ -22,10 +22,5 @@ class Summarize(Operator):
             table = ctx.data.tables[name]
             table = Table(table.agg.agg(), schema=table.agg_schema, name=name)
             data.append(Data(tables_list=[table]))
-            
-        for i in data:
-            for j in i.tables:
-                print(j)
-                print(i.tables[j].df)
         
         return Data.merge(data)
