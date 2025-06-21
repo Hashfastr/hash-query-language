@@ -16,7 +16,7 @@ class HqlTypes():
                 
             self.complex = False
             self.priority = 0
-            self.super = (HqlTypes.string, HqlTypes.multivalue)
+            self.super = [HqlTypes.string, HqlTypes.multivalue]
 
         def pl_schema(self):
             return self.proto()
@@ -81,7 +81,7 @@ class HqlTypes():
             pl.Float32.__init__(self)
             
             self.priority = 3
-            self.super = (HqlTypes.string, HqlTypes.multivalue)
+            self.super = [HqlTypes.string, HqlTypes.multivalue]
 
     @register_type('hql_double')
     class double(HqlType, pl.Float64):
@@ -102,7 +102,7 @@ class HqlTypes():
             pl.Int32.__init__(self)
             
             self.priority = 2
-            self.super = (HqlTypes.float, HqlTypes.string, HqlTypes.multivalue)
+            self.super = [HqlTypes.float, HqlTypes.string, HqlTypes.multivalue]
     
     @register_type('hql_long') 
     class long(HqlType, pl.Int64):
@@ -233,7 +233,7 @@ class HqlTypes():
             pl.String.__init__(self)
             
             self.priority = 4
-            self.super = (HqlTypes.multivalue)
+            self.super = [HqlTypes.multivalue]
         
     @register_type('hql_enum') 
     class enum(HqlType, pl.Enum):
@@ -250,7 +250,7 @@ class HqlTypes():
             pl.Boolean.__init__(self)
             
             self.priority = 1
-            self.super = (HqlTypes.int, HqlTypes.string, HqlTypes.multivalue)
+            self.super = [HqlTypes.int, HqlTypes.string, HqlTypes.multivalue]
 
     '''
     This is a generic object, unspecified the contents
@@ -280,7 +280,7 @@ class HqlTypes():
             pl.Null.__init__(self)
             
             self.priority = 0
-            self.super = (HqlTypes.bool, HqlTypes.int, HqlTypes.float, HqlTypes.string, HqlTypes.multivalue)
+            self.super = [HqlTypes.bool, HqlTypes.int, HqlTypes.float, HqlTypes.string, HqlTypes.multivalue]
         
     @register_type('hql_unknown')
     class unknown(HqlType, pl.Unknown):

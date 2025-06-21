@@ -100,6 +100,10 @@ class Data():
                 
         return tables
     
+    def table_by_index(self, idx:int):
+        key = list(self.tables.keys())[idx]
+        return self.tables[key]
+    
     def add_table(self, table:Table):
         if table.name in self.tables:
             raise QueryException(f'Table {table.name} already exists')
@@ -1004,9 +1008,6 @@ class Schema():
         if df.is_empty():
             raise CompilerException('Attempting to apply a schema to an empty dataframe!')
 
-        if 'ip' in df:
-            print(df)
-            print(df.unnest('ip'))
         return df.cast(self.gen_pl_schema())
     
     # Asserts by attempting to retrieve the field's value

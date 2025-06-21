@@ -24,10 +24,8 @@ class Project(Operator):
         ]
         
     def eval(self, ctx:Context, **kwargs):
-        as_value = kwargs.get('as_value', False)
-        
         datasets = []
         for i in self.exprs:
-            datasets.append(i.eval(ctx, as_value=as_value))
-             
+            datasets.append(i.eval(ctx, as_value=False))
+                
         return Data.merge(datasets)
