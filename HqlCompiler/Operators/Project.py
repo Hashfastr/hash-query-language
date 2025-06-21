@@ -24,18 +24,10 @@ class Project(Operator):
         ]
         
     def eval(self, ctx:Context, **kwargs):
+        as_value = kwargs.get('as_value', False)
+        
         datasets = []
         for i in self.exprs:
-            if i.type in ("NamedReference", "Identifier", "EscapedNamedReference", "Wildcard", "Path"):
-                datasets.append(i.eval(ctx, as_value=False))
-
-            elif i.type == "DotCompositeFunction":
-                datasets.append(i.eval(ctx, as_value=False))
-                
-            elif i.type == "NamedExpression":
-                datasets.append(i.eval(ctx, insert=False))
-                
-            else:
-                raise CompilerException(f'Unhandled project expression {i.type}')
-        
+            datasets.append(i.eval(ctx, as_value=as_value))
+             
         return Data.merge(datasets)

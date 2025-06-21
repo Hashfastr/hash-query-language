@@ -61,11 +61,6 @@ class Data():
 
         # Merge table groups
         for name in table_groups:
-            # no need to merge, unique table
-            if len(table_groups[name]) == 1:
-                self.tables[name] = table_groups[name][0]
-                continue
-            
             self.tables[name] = Table.merge(tables=table_groups[name])
             
     def __len__(self):
@@ -155,6 +150,9 @@ class Data():
         return dataset
     
     def merge(data:list[Data]):
+        if len(data) == 1:
+            return data[0]
+        
         tables = []
         for datum in data:
             for name in datum.tables:
@@ -259,8 +257,6 @@ class Table():
         
         elif not self.df.is_empty() and schema:
             self.schema = schema
-            # print(schema.schema)
-            # print(self.df)
             self.df = schema.apply(self.df)
 
         elif not self.df.is_empty() and not schema:
@@ -305,7 +301,7 @@ class Table():
             raise QueryException(e.args[0])
         
     def get_value(self, path:list[str]):
-        return pltools.get_element_value(self.df, fields=path)
+        return pltools.get_element_value(self.df, path)
 
     def merge(tables:list[Table]):
         max_cols = 100
@@ -313,12 +309,15 @@ class Table():
         if not tables:
             return Table()
         
+        # Quick short circuit
+        if len(tables) == 1:
+            return tables[0]
+        
         name = tables[0].name
         
         schemas = []
         for table in tables:
             schemas.append(table.schema)
-            
         schema = Schema.merge(schemas).schema
                 
         # generate col groups
@@ -333,7 +332,7 @@ class Table():
                     col_groups[col.name] = []
                     
                 col_groups[col.name].append(col)
-        
+
         new = dict()
         for key in col_groups:
             for col in col_groups[key]:
@@ -360,10 +359,10 @@ class Table():
                         logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
                         logging.critical(f'Applicable field: {key}')
                         raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
-
+                
         df = pl.DataFrame(new)
         schema = Schema(schema=schema)
-        
+                
         return Table(df=df, schema=schema, name=name)
     
     def concat(tables:list[Table]):
@@ -384,8 +383,7 @@ class Table():
         if not self.assert_field(field):
             return Table(name=self.name)
         
-        expr = pltools.path_to_expr(field)
-        df = self.df.select(expr)
+        df = pltools.get_element(self.df, field)
         schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)
@@ -646,6 +644,9 @@ class Schema():
             return 0
     
     def merge(schemata:list):
+        if len(schemata) == 1:
+            return schemata[0]
+        
         max_cols = 100
         
         # Gen keygroups
@@ -1003,6 +1004,9 @@ class Schema():
         if df.is_empty():
             raise CompilerException('Attempting to apply a schema to an empty dataframe!')
 
+        if 'ip' in df:
+            print(df)
+            print(df.unnest('ip'))
         return df.cast(self.gen_pl_schema())
     
     # Asserts by attempting to retrieve the field's value
@@ -1020,9 +1024,9 @@ class Schema():
             if col.name not in schema:
                 newdf[col.name] = col
                 continue
-
+            
             if isinstance(schema[col.name], dict):
-                newdf[col.name] = self.present_complex(col.struct.unnest(), schema[col.name])
+                newdf[col.name] = self.present_complex(col.struct.unnest(), schema[col.name]).to_struct()
                 continue
 
             if schema[col.name].complex:

@@ -389,9 +389,26 @@ class Path(Expression):
         
         if as_str:
             return '.'.join(list)
-                
-        receiver = ctx.data
+        
+        '''
+        Quick note on this.
+        If we have a path that looks like this:
+        
+        field1.field2.somefunc().field3
+        
+        We split and eval the first two path segments, then eval somefunc,
+        then eval field3 as a path element of somefunc's output
+        
+        So in this case we would eval
+        
+        consumed = ['field1', 'field2']
+        # eval consumed then some func, reset consumed
+        consumed = ['field3']
+        # eval new consumed on the output of somefunc
+        '''        
         consumed = []
+        
+        receiver = ctx.data
         for i in self.path:
             if i.type == "DotCompositeFunction":
                 if consumed:
@@ -406,11 +423,11 @@ class Path(Expression):
             else:
                 # Append another path element that we've consumed
                 consumed.append(i.eval(ctx, receiver=receiver, as_str=True))
-        
+              
         # If we have static elements we need to evaluate on the current receiver
         if consumed:
             receiver = receiver.unnest(consumed) if as_value else receiver.select(consumed)
-                 
+           
         return receiver
     
 class BinaryLogic(Expression):
@@ -458,7 +475,11 @@ class NamedExpression(Expression):
         
     def eval(self, ctx:Context, **kwargs):
         insert = kwargs.get('insert', True)
+        as_value = kwargs.get('as_value', False)
         value = self.value.eval(ctx)
+        
+        if as_value:
+            return value
         
         # Chose which dataset to insert on
         # If set to false it'll create it's own blank dataset
