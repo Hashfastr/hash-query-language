@@ -13,6 +13,8 @@ class HqlTypes():
                 self.proto = type(self).__bases__[-1]
             else:
                 self.proto = None
+
+            self.name = self.__class__.__name__
                 
             self.complex = False
             self.priority = 0

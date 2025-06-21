@@ -427,7 +427,7 @@ class Path(Expression):
         # If we have static elements we need to evaluate on the current receiver
         if consumed:
             receiver = receiver.unnest(consumed) if as_value else receiver.select(consumed)
-           
+            
         return receiver
     
 class BinaryLogic(Expression):
@@ -543,19 +543,26 @@ class ByExpression(Expression):
         self.exprs = exprs
         
     def build_table_agg(self, ctx:Context, table:Table):
-        pl_exprs = []
         paths = []
         schema = []
         for expr in self.exprs:
-            pl_expr = expr.eval(ctx, as_pl=True)
             path = expr.eval(ctx, as_list=True)
+            ptype = table.schema.get_type(path)
+            
+            # if isinstance(ptype, hqlt.multivalue):
+                
+            
+            paths.append(path)
+            schema.append(table.schema.select(path))
+        
+        pl_exprs = []
+        for expr in self.exprs:
+            pl_expr = expr.eval(ctx, as_pl=True)
             
             if not table.assert_field(path):
                 continue
 
             pl_exprs.append(pl_expr)
-            paths.append(path)
-            schema.append(table.schema.select(path))
         
         # Groups and coelesces the schemas together for each field
         # Probably need to rework and change maintain_order here in the future
@@ -594,3 +601,40 @@ class LetExpression(Expression):
             ctx.symbol_table[name] = self.value
         else:
             ctx.symbol_table[name] = self.value.eval(ctx)
+
+class TypeExpression(Expression):
+    def __init__(self, type:str):
+        Expression.__init__(self)
+        self.type = type
+        
+    def eval(self):
+        return hqlt.from_name(self.type)
+
+class ToExpression(Expression):
+    def __init__(self, expr:Expression, to:hqlt.HqlType):
+        Expression.__init__(self)
+        self.expr = expr
+        self.to = to
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'expr': self.expr.to_dict(),
+            'to': self.to.name
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        as_list = kwargs.get('as_list', False)
+        as_str = kwargs.get('as_str', False)
+        
+        if as_list or as_str:
+            return self.expr.eval(ctx, as_list=as_list, as_str=as_str)
+        
+        path = self.expr.eval(ctx, as_path=True)
+        
+        new = []
+        for name in ctx.data.tables:
+            table = ctx.data.tables[name].cast_in_place(path, self.to)
+            new.append(table)
+        
+        return Data(tables_list=new)

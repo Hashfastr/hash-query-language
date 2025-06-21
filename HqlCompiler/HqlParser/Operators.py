@@ -155,3 +155,31 @@ class Operators(HqlVisitor):
             
     def visitJoinOperatorWhereClause(self, ctx: HqlParser.JoinOperatorWhereClauseContext):
         return self.visit(ctx.Predicate)
+
+    def visitMvexpandOperator(self, ctx: HqlParser.MvexpandOperatorContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        if ctx.LimitClause:
+            limit = self.visit(ctx.LimitClause)
+        else:
+            limit = Expr.Integer('2147483647')
+        
+        return Ops.MvExpand(exprs, limit)
+    
+    def visitMvexpandOperatorExpression(self, ctx: HqlParser.MvexpandOperatorExpressionContext):
+        expr = self.visit(ctx.Expression)
+        
+        if ctx.ToClause:
+            to = self.visit(ctx.ToClause)
+        else:
+            to = None
+
+        return Expr.ToExpression(expr, to)
+    
+    def visitMvapplyOperatorExpressionToClause(self, ctx: HqlParser.MvapplyOperatorExpressionToClauseContext):
+        return self.visit(ctx.Type)
+    
+    def visitMvapplyOperatorLimitClause(self, ctx: HqlParser.MvapplyOperatorLimitClauseContext):
+        return self.visit(ctx.LimitValue)

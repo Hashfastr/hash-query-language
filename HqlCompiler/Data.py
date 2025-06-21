@@ -120,11 +120,11 @@ class Data():
         
         return schemata
 
-    # Given a list of string paths, get a dataset containing only those fields
-    def select(self, fields:list[str]):
+    # Given a path, select just the data at that path
+    def select(self, path:list[str]):
         tables = []
         for i in self.tables:
-            tables.append(self.tables[i].select(fields))
+            tables.append(self.tables[i].select(path))
 
         return Data(tables_list=tables)
     
@@ -1091,12 +1091,42 @@ class Schema():
     
     '''
     Applies a schema to a dataset
+    If a col is not defined in the schema, then it just skips over it
+    Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:pl.DataFrame, schema:dict=None):        
-        if df.is_empty():
-            raise CompilerException('Attempting to apply a schema to an empty dataframe!')
-
-        return df.cast(self.gen_pl_schema())
+    def apply(self, df:pl.DataFrame, schema:dict=None):
+        if isinstance(schema, Schema):
+            schema = schema.schema
+        
+        if schema == None:
+            schema = self.schema
+        
+        # Single value schema    
+        if not isinstance(schema, dict):
+            return schema.cast(df)
+        
+        # Check the schema doesn't map to missing cols
+        for key in schema:
+            if key not in df:
+                logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}")
+                raise CompilerException('Attempting to apply a schema to a mismatched dataframe!')
+        
+        new = {}
+        for col in df:
+            key = col.name
+            
+            # Handle undefined types, don't have to worry about them, carry on.
+            if key not in schema:
+                new[key] = col
+                continue
+            
+            if isinstance(schema[key], dict):
+                new[key] = self.apply(pl.DataFrame(col).unnest(key), schema[key]).to_struct()
+                continue
+            
+            new[key] = schema[key].cast(col)
+            
+        return pl.DataFrame(new)
     
     # Asserts by attempting to retrieve the field's value
     def assert_field(self, field:list[str]):
