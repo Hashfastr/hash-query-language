@@ -1,4 +1,5 @@
 from antlr4 import *
+from antlr4.error.ErrorListener import ErrorListener
 from HqlCompiler.Exceptions import *
 from HqlCompiler.grammar.HqlLexer import HqlLexer
 from HqlCompiler.grammar.HqlParser import HqlParser
@@ -16,8 +17,18 @@ import HqlCompiler.Operators as Ops
 import time
 import logging
 
+class HqlErrorListener(ErrorListener):
+    def __init__(self):
+        ErrorListener.__init__(self)
+        self.errors = []
+
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        estr = f'Syntax Error: {line}:{column}: {msg}, offending symbol {offendingSymbol.text}'
+        self.errors.append(estr)
+
 class Parser():
     def __init__(self, filename:str):
+        self.err_listener = HqlErrorListener()
         self.tree = self.parse_file(filename)
     
     def parse_file(self, filename:str) -> CommonTokenStream:
@@ -33,11 +44,20 @@ class Parser():
         token_stream = CommonTokenStream(lexer)
         parser = HqlParser(token_stream)
         
+        parser.removeErrorListeners()
+        parser.addErrorListener(self.err_listener)
+         
         return parser.query()
 
     def assemble(self):
         visitor = Visitor()
         self.assembly = visitor.visit(self.tree)
+        
+        if self.err_listener.errors:
+            for error in self.err_listener.errors:
+                logging.critical(error)
+                
+            raise QueryException('Syntax error occurred')
         
         if self.assembly == None:
             logging.error("Compiler error!")

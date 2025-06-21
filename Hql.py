@@ -70,8 +70,13 @@ def main():
     logging.debug('Parsing...')
     start = time.perf_counter()
 
-    parser = Parser(args.file)
-    parser.assemble()
+    try:
+        parser = Parser(args.file)
+        parser.assemble()
+    except Exception as e:
+        logging.critical('Exception caught when assembling')
+        logging.critical(e)
+        return -1
     
     if args.asm_show:
         # Use print to give a raw output
