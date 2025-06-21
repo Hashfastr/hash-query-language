@@ -211,6 +211,19 @@ class Data():
             table = self.tables[i]
             new.append(table.strip())
         return Data(tables_list=new)
+
+    def drop_many(self, paths:list[list[str]]):
+        cur = self
+        for path in paths:
+            cur = cur.drop(path)
+        return cur
+
+    def drop(self, path:list[str]):
+        new = []
+        for i in self.tables:
+            table = self.tables[i].drop(path)
+            new.append(table)
+        return Data(tables_list=new)
         
 '''
 Series for individual values, mimics a pl.Series
@@ -241,7 +254,7 @@ class Table():
         
         self.name = name if name else ''
         self.agg = None
-        self.agg_cols = None
+        self.agg_paths = None
         self.agg_schema = None
         self.series = None
         self.schema = None
@@ -288,6 +301,39 @@ class Table():
     def set_schema(self, schema:Schema):
         self.df = schema.apply(self.df)
         self.schema = schema
+
+    def drop(self, path:list[str], df:pl.DataFrame=None, idx:int=0):
+        if idx == 0:
+            self.schema.drop(path)
+            df = self.df
+        
+        new = {}
+        for col in df:
+            if col.name == path[idx]:
+                if len(path) == 1:
+                    # silent drop
+                    continue
+                
+                if col.dtype == pl.Struct:
+                    rec = self.drop(path, df=pl.DataFrame(col), idx=idx+1)
+                    if not rec.is_empty():
+                        new[col.name] = rec
+                
+            # Not dropping
+            else:
+                new[col.name] = col
+        
+        # end of recursion
+        if idx == 0:
+            self.df = pl.DataFrame(new)
+            return self
+            
+        return pl.DataFrame(new)
+    
+    def drop_many(self, paths:list[list[str]]):
+        for path in paths:
+            self.drop(path)
+        return self
         
     '''
     Truncates the dataset to a given amount
@@ -323,7 +369,7 @@ class Table():
         for table in tables:
             schemas.append(table.schema)
         schema = Schema.merge(schemas).schema
-                
+        
         # generate col groups
         col_groups = dict()
         for table in tables:
@@ -664,7 +710,7 @@ class Schema():
                     keygroups[key] = [schema[key]]
                 else:
                     keygroups[key].append(schema[key])
-        
+
         new = dict()
         for key in keygroups:
             for schema in keygroups[key]:
@@ -679,7 +725,7 @@ class Schema():
                 
                 # Find a free name
                 for j in range(max_cols):
-                    name = f'{key}_{j + 1}'
+                    name = f'{key}_{j}'
                     
                     # This is the case that all previous cols were conflicting
                     if name not in new:
@@ -803,6 +849,32 @@ class Schema():
                 cur = cur[i]
                 
         return src_type
+
+    def drop(self, path:list[str], schema:dict=None, idx:int=0):
+        if idx == 0:
+            schema = self.schema
+        
+        new = {}
+        for key in schema:
+            if key == path[idx]:
+                if len(path) == 1:
+                    # Silent drop
+                    continue
+                
+                if isinstance(schema[key], dict):
+                    rec = self.drop(path, schema=schema, idx=idx+1)
+                    if rec:
+                        new[key] = rec
+            
+            # Don't have to do anything
+            else:
+                new[key] = schema[key]
+        
+        if idx == 0:
+            self.schema = schema
+            return self
+            
+        return schema
     
     '''
     Set a field to a specific type in the schema
@@ -972,8 +1044,12 @@ class Schema():
         
         for col in df:
             if isinstance(col.dtype, pl.Struct):
-                schema[col.name] = Schema.from_df(pl.DataFrame(col))
-                
+                schema[col.name] = Schema.from_df(pl.DataFrame(col).unnest(col.name))
+                continue
+            
+            if col.dtype == pl.Object:
+                raise Exception('poop')
+
             schema[col.name] = plt.from_pure_polars(col.dtype)
             
         return schema

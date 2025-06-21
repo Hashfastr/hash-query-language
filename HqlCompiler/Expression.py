@@ -544,6 +544,7 @@ class ByExpression(Expression):
         
     def build_table_agg(self, ctx:Context, table:Table):
         pl_exprs = []
+        paths = []
         schema = []
         for expr in self.exprs:
             pl_expr = expr.eval(ctx, as_pl=True)
@@ -553,11 +554,12 @@ class ByExpression(Expression):
                 continue
 
             pl_exprs.append(pl_expr)
+            paths.append(path)
             schema.append(table.schema.select(path))
         
         # Groups and coelesces the schemas together for each field    
         table.agg = table.df.group_by(pl_exprs)
-        table.agg_cols = pl_exprs
+        table.agg_paths = paths
         table.agg_schema = Schema.merge(schema)
         
         return table

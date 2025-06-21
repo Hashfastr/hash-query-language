@@ -6,10 +6,9 @@ from HqlCompiler.Data import Data, Series, Table, Schema
 
 @register_func('count')
 class count(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, name:str='count_'):
         super().__init__(args, 0, 0)
-        self.aggregate = True
-        self.count_name = 'count_'
+        self.count_name = name
         
     def get_count_name(self, agg):
         name = self.count_name
@@ -31,13 +30,17 @@ class count(Function):
             table = ctx.data.tables[name]
             if not table.agg:
                 tables.append(table)
-                
-            cname = self.get_count_name(table.agg)
-
-            df = table.agg.len(name=cname)
-            df = df.drop(table.agg_cols)
+                continue
             
+            cname = self.get_count_name(table.agg)
+            
+            df = table.agg.len(name=cname)
+            schema = table.schema
             new = Table(df=df, name=table.name)
+            #print(df)
+            #print(new.schema.schema)
+            new = new.drop_many(table.agg_paths)
+                        
             tables.append(new)
         
         return Data(tables_list=tables)
