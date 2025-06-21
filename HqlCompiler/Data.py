@@ -251,6 +251,9 @@ class Table():
             self.df = df
         else:
             self.df = pl.DataFrame()
+            
+        if isinstance(schema, dict):
+            schema = Schema(schema=schema)
         
         self.name = name if name else ''
         self.agg = None
@@ -310,12 +313,12 @@ class Table():
         new = {}
         for col in df:
             if col.name == path[idx]:
-                if len(path) == 1:
+                if idx == len(path) - 1:
                     # silent drop
                     continue
                 
                 if col.dtype == pl.Struct:
-                    rec = self.drop(path, df=pl.DataFrame(col), idx=idx+1)
+                    rec = self.drop(path, df=pl.DataFrame(col).unnest(col.name), idx=idx+1)
                     if not rec.is_empty():
                         new[col.name] = rec
                 
@@ -778,6 +781,10 @@ class Schema():
                 cur = cur[part]
                 
         return Schema(schema=cur)
+    
+    def copy(self):
+        from copy import deepcopy
+        return Schema(schema=deepcopy(self.schema))
         
     '''
     Like unnest but returns an appropriate hqlt.object on a dict reference
@@ -857,24 +864,29 @@ class Schema():
         new = {}
         for key in schema:
             if key == path[idx]:
-                if len(path) == 1:
+                if idx == len(path) - 1:
                     # Silent drop
                     continue
                 
                 if isinstance(schema[key], dict):
-                    rec = self.drop(path, schema=schema, idx=idx+1)
+                    rec = self.drop(path, schema=schema[key], idx=idx+1)
                     if rec:
                         new[key] = rec
             
             # Don't have to do anything
             else:
                 new[key] = schema[key]
-        
+                
         if idx == 0:
-            self.schema = schema
+            self.schema = new
             return self
             
-        return schema
+        return new
+    
+    def drop_many(self, paths:list[list[str]]):
+        for path in paths:
+            self.drop(path)
+        return self
     
     '''
     Set a field to a specific type in the schema

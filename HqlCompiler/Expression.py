@@ -557,8 +557,10 @@ class ByExpression(Expression):
             paths.append(path)
             schema.append(table.schema.select(path))
         
-        # Groups and coelesces the schemas together for each field    
-        table.agg = table.df.group_by(pl_exprs)
+        # Groups and coelesces the schemas together for each field
+        # Probably need to rework and change maintain_order here in the future
+        # Without it, it fucks up the aggregation functions but is much faster
+        table.agg = table.df.group_by(pl_exprs, maintain_order=True)
         table.agg_paths = paths
         table.agg_schema = Schema.merge(schema)
         

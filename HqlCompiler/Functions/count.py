@@ -3,12 +3,14 @@ from HqlCompiler.Context import register_func, Context
 import logging
 from .__proto__ import Function
 from HqlCompiler.Data import Data, Series, Table, Schema
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 @register_func('count')
 class count(Function):
     def __init__(self, args:list, name:str='count_'):
         super().__init__(args, 0, 0)
         self.count_name = name
+        self.count_type = hqlt.uint()
         
     def get_count_name(self, agg):
         name = self.count_name
@@ -18,8 +20,6 @@ class count(Function):
         i = 0
         while name in agg.agg():
             i += 1
-            
-        if i > 0:
             name = f'{name}{i}'
             
         return name
@@ -35,10 +35,8 @@ class count(Function):
             cname = self.get_count_name(table.agg)
             
             df = table.agg.len(name=cname)
-            schema = table.schema
-            new = Table(df=df, name=table.name)
-            #print(df)
-            #print(new.schema.schema)
+            schema = table.agg_schema.copy().set([cname], self.count_type)
+            new = Table(df=df, schema=schema, name=table.name)
             new = new.drop_many(table.agg_paths)
                         
             tables.append(new)
