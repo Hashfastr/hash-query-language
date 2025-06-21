@@ -9,8 +9,8 @@ query:
     Statements+=statement (';' Statements+=statement)* (';')? EOF;
 
 statement:
-      AliasDatabase=aliasDatabaseStatement
-    | DeclarePattern=declarePatternStatement
+    //   AliasDatabase=aliasDatabaseStatement
+    DeclarePattern=declarePatternStatement
     | DeclareQueryParameters=declareQueryParametersStatement
     | Let=letStatement
     | Query=queryStatement
@@ -18,8 +18,9 @@ statement:
     | Set=setStatement
 ;
 
-aliasDatabaseStatement:
-    ALIAS DATABASE Name=identifierOrKeywordOrEscapedName '=' Expression=unnamedExpression;
+// Might just nuke this, replaced by the 'let' statement effectively.
+// aliasDatabaseStatement:
+//     ALIAS DATABASE Name=identifierOrKeywordOrEscapedName '=' Expression=unnamedExpression;
 
 letStatement:
       Function=letFunctionDeclaration
@@ -30,22 +31,22 @@ letStatement:
     ;
 
 letVariableDeclaration:
-    LET Name=identifierOrKeywordOrEscapedName '=' Expression=expression;
+    LET Name=simpleNameReference '=' Expression=expression;
 
 letFunctionDeclaration:
-    LET Name=identifierOrKeywordOrEscapedName '=' '(' (ParameterList=letFunctionParameterList)? ')' Body=letFunctionBody;
+    LET Name=simpleNameReference '=' '(' (ParameterList=letFunctionParameterList)? ')' Body=letFunctionBody;
 
 letViewDeclaration:
-    LET Name=identifierOrKeywordOrEscapedName '=' VIEW '(' (ParameterList=letViewParameterList)? ')' Body=letFunctionBody;
+    LET Name=simpleNameReference '=' VIEW '(' (ParameterList=letViewParameterList)? ')' Body=letFunctionBody;
 
 letViewParameterList:
     Parameters+=scalarParameter (',' Parameters+=scalarParameter)*;
 
 letMaterializeDeclaration:
-    LET Name=identifierOrKeywordOrEscapedName '=' MATERIALIZE '(' Expression=pipeExpression ')';
+    LET Name=simpleNameReference '=' MATERIALIZE '(' Expression=pipeExpression ')';
 
 letEntityGroupDeclaration:
-    LET Name=identifierOrKeywordOrEscapedName '=' entityGroupExpression;
+    LET Name=simpleNameReference '=' entityGroupExpression;
 
 
 letFunctionParameterList:
@@ -119,10 +120,10 @@ restrictAccessStatementEntity:
     ;
 
 setStatement:
-    SET Name=identifierOrKeywordName ('=' Value=setStatementOptionValue)?;
+    SET Name=simpleNameReference ('=' Value=setStatementOptionValue)?;
 
 setStatementOptionValue:
-      Name=identifierOrKeywordName
+      Name=simpleNameReference
     | Literal=literalExpression
     ;
 
@@ -247,7 +248,7 @@ forkPipeOperator:
     ;
 
 asOperator:
-    AS (Parameters+=relaxedQueryOperatorParameter)* Name=identifierOrKeywordOrEscapedName;
+    AS (Parameters+=relaxedQueryOperatorParameter)* Name=simpleNameReference;
 
 assertSchemaOperator:
     ASSERTSCHEMA Schema=rowSchema;
@@ -354,7 +355,7 @@ forkOperatorFork:
     (Name=forkOperatorExpressionName)? '(' Expression=forkOperatorExpression ')';
 
 forkOperatorExpressionName:
-    Name=identifierOrKeywordOrEscapedName '=';
+    Name=simpleNameReference '=';
 
 forkOperatorExpression:
     Operator=forkPipeOperator (PipedOperators+=forkOperatorPipedOperator)*;
@@ -382,14 +383,14 @@ graphMatchPattern:
     | NamedEdge=graphMatchPatternNamedEdge;
 
 graphMatchPatternNode:
-    '(' Name=identifierOrKeywordOrEscapedName ')';
+    '(' Name=simpleNameReference ')';
 
 graphMatchPatternUnnamedEdge:
     Direction=(DASHDASH_GREATERTHAN | LESSTHAN_DASHDASH | DASHDASH);
 
 graphMatchPatternNamedEdge:
     OpenBracket=(DASH_OPENBRACKET | LESSTHAN_DASH_OPENBRACKET)
-    Name=identifierOrKeywordOrEscapedName
+    Name=simpleNameReference
     (Range=graphMatchPatternRange)?
     CloseBracket=(CLOSEBRACKET_DASH_GREATERTHAN | CLOSEBRACKET_DASH)
     ;
@@ -413,7 +414,7 @@ graphToTableOutput:
     Keyword=(NODES | EDGES) (AsClause=graphToTableAsClause)? (Parameters+=relaxedQueryOperatorParameter)*;
 
 graphToTableAsClause:
-    AS Name=identifierOrKeywordOrEscapedName;
+    AS Name=simpleNameReference;
 
 graphShortestPathsOperator:
     GRAPHSHORTESTPATHS
@@ -443,7 +444,7 @@ macroExpandOperator:
     MACROEXPAND 
     (Parameters+=relaxedQueryOperatorParameter)*
     EntityGroup=macroExpandEntityGroup 
-    AS ScopeName=identifierOrKeywordOrEscapedName
+    AS ScopeName=simpleNameReference
     '(' Statements+=statement (';' Statements+=statement)* (';')? ')';
 
 macroExpandEntityGroup:
@@ -466,7 +467,7 @@ makeGraphOperator:
     ;
 
 makeGraphIdClause:
-    WITH_NODE_ID '=' Name=identifierOrKeywordOrEscapedName;
+    WITH_NODE_ID '=' Name=simpleNameReference;
 
 makeGraphTablesAndKeysClause:
     WITH Table=invocationExpression ON Column=simpleNameReference;
@@ -585,10 +586,10 @@ printOperator:
     PRINT Expressions+=namedExpression (',' Expressions+=namedExpression)*;
 
 projectAwayOperator:
-    PROJECTAWAY (Columns+=simpleOrWildcardedNameReference (',' Columns+=simpleOrWildcardedNameReference)*)?;
+    PROJECTAWAY (Columns+=pathReference (',' Columns+=pathReference)*)?;
 
 projectKeepOperator:
-    PROJECTKEEP Columns+=simpleOrWildcardedNameReference (',' Columns+=simpleOrWildcardedNameReference)*;
+    PROJECTKEEP Columns+=pathReference (',' Columns+=pathReference)*;
 
 projectOperator:
     PROJECT (Expressions+=namedExpression (',' Expressions+=namedExpression)*)?;
@@ -600,7 +601,7 @@ projectReorderOperator:
     PROJECTREORDER (Expressions+=projectReorderExpression (',' Expressions+=projectReorderExpression)*)?;
 
 projectReorderExpression:
-    Expression=simpleOrWildcardedNameReference (Order=(ASC | DESC | GRANNYASC | GRANNYDESC))?;
+    Expression=pathReference (Order=(ASC | DESC | GRANNYASC | GRANNYDESC))?;
 
 
 reduceByOperator:
@@ -830,7 +831,7 @@ strictQueryOperatorParameter:
         | WITHNOSOURCE__
         | GLOBAL
         )
-    '=' (NameValue=identifierOrKeywordName | LiteralValue=literalExpression)
+    '=' (NameValue=simpleNameReference | LiteralValue=literalExpression)
     ;
 
 // allows any identifier
@@ -867,11 +868,11 @@ relaxedQueryOperatorParameter:
         | WITH_SOURCE
         | WITHNOSOURCE__
         )
-    '=' (NameValue=identifierOrKeywordName | LiteralValue=literalExpression)
+    '=' (NameValue=simpleNameReference | LiteralValue=literalExpression)
     ;
 
 queryOperatorProperty:
-    Name=IDENTIFIER '=' (NameValue=identifierOrKeywordName | LiteralValue=literalExpression);
+    Name=IDENTIFIER '=' (NameValue=simpleNameReference | LiteralValue=literalExpression);
 
 
 // Non-query expressions
@@ -880,10 +881,10 @@ namedExpression:
     (Name=namedExpressionNameClause)? Expression=unnamedExpression;
 
 namedExpressionNameClause:
-    (Name=identifierOrExtendedKeywordOrEscapedName | NameList=namedExpressionNameList) '=';    
+    (Name=extendedNameReference | NameList=namedExpressionNameList) '=';    
 
 namedExpressionNameList:
-    '(' Names+=identifierOrExtendedKeywordOrEscapedName (',' Names+=identifierOrExtendedKeywordOrEscapedName)* ')';
+    '(' Names+=extendedNameReference (',' Names+=extendedNameReference)* ')';
  
 scopedFunctionCallExpression:
     Scope=simpleNameReference '.' FunctionCall=functionCallExpression;
@@ -1016,7 +1017,7 @@ functionCallOrPathOperation:
     ;
 
 functionalCallOrPathPathOperation:
-    '.' Name=identifierOrKeywordOrEscapedName;
+    '.' Name=simpleNameReference;
 
 functionCallOrPathElementOperation:
     '[' Element=unnamedExpression ']';
@@ -1108,7 +1109,7 @@ legacyEntityPathElementOperator:
 
 entityName:
     ATSIGN=atSignName 
-    | Name=identifierOrExtendedKeywordOrEscapedName 
+    | Name=simpleNameReference 
     | ExtendedName=extendedPathName;
 
 entityNameReference:
@@ -1201,7 +1202,6 @@ scalarType:
         | UNIQUEID
         | IP4
         | IP6
-        | IP
     );
 
 extendedScalarType:
@@ -1234,20 +1234,24 @@ extendedScalarType:
         | UNIQUEID
         | IP4
         | IP6
-        | IP
     );
 
 parameterName:
-    Name=identifierOrExtendedKeywordOrEscapedName;
+    Name=extendedNameReference;
 
 ///////////////////////////////////////
 // name reference expressions
 
 simpleNameReference:
-    Name=identifierOrKeywordOrEscapedName;
+      Identifier=identifierName
+    | KeywordName=keywordName
+    | EscapedName=escapedName
+    ;
 
 extendedNameReference:
-    Name=identifierOrExtendedKeywordOrEscapedName;
+      ExtendedKeywordName=extendedKeywordName
+    | Name=simpleNameReference
+    ;
 
 wildcardedNameReference:
     Name=wildcardedName;
@@ -1255,6 +1259,16 @@ wildcardedNameReference:
 simpleOrWildcardedNameReference:
       SimpleName=simpleNameReference
     | WildcardedName=wildcardedNameReference
+    ;
+
+pathReference:
+    Part=simpleOrWildcardedNameReference
+    ('.' simpleOrWildcardedNameReference)*
+    ;
+
+simpleOrPathNameReference:
+      SimpleName=simpleNameReference
+    | Path=pathReference
     ;
 
 tableNameReference:
@@ -1392,29 +1406,40 @@ extendedKeywordName:
 escapedName:
     '[' StringLiteral=stringLiteralExpression ']';
 
-identifierOrKeywordName:
-      Identifier=identifierName
+pathOrKeyword:
+      Path=pathReference
     | Keyword=keywordName
     ;
 
-identifierOrKeywordOrEscapedName:
-      Identifier=identifierName
-    | Keyword=keywordName
-    | Escaped=escapedName
-    ;
-
-identifierOrExtendedKeywordOrEscapedName:
-      Identifier=identifierName
-    | Keyword=keywordName
-    | ExtendedKeyword=extendedKeywordName
-    | Escaped=escapedName
-    ;
-
-identifierOrExtendedKeywordName:
-      Identifier=identifierName
+pathOrExtendedKeyword:
+      Path=pathReference
     | Keyword=keywordName
     | ExtendedKeyword=extendedKeywordName
     ;
+
+// identifierOrKeywordName:
+//       Identifier=identifierName
+//     | Keyword=keywordName
+//     ;
+
+// identifierOrKeywordOrEscapedName:
+//       Identifier=identifierName
+//     | Keyword=keywordName
+//     | Escaped=escapedName
+//     ;
+
+// identifierOrExtendedKeywordOrEscapedName:
+//       Identifier=identifierName
+//     | Keyword=keywordName
+//     | ExtendedKeyword=extendedKeywordName
+//     | Escaped=escapedName
+//     ;
+
+// identifierOrExtendedKeywordName:
+//       Identifier=identifierName
+//     | Keyword=keywordName
+//     | ExtendedKeyword=extendedKeywordName
+//     ;
 
 wildcardedName:
     (Prefix=wildcardedNamePrefix)? '*' (Segments+=wildcardedNameSegment)*;

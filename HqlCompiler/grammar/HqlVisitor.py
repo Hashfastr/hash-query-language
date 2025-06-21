@@ -24,11 +24,6 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#aliasDatabaseStatement.
-    def visitAliasDatabaseStatement(self, ctx:HqlParser.AliasDatabaseStatementContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by HqlParser#letStatement.
     def visitLetStatement(self, ctx:HqlParser.LetStatementContext):
         return self.visitChildren(ctx)
@@ -1334,6 +1329,16 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#pathReference.
+    def visitPathReference(self, ctx:HqlParser.PathReferenceContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#simpleOrPathNameReference.
+    def visitSimpleOrPathNameReference(self, ctx:HqlParser.SimpleOrPathNameReferenceContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#tableNameReference.
     def visitTableNameReference(self, ctx:HqlParser.TableNameReferenceContext):
         return self.visitChildren(ctx)
@@ -1359,23 +1364,13 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#identifierOrKeywordName.
-    def visitIdentifierOrKeywordName(self, ctx:HqlParser.IdentifierOrKeywordNameContext):
+    # Visit a parse tree produced by HqlParser#pathOrKeyword.
+    def visitPathOrKeyword(self, ctx:HqlParser.PathOrKeywordContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#identifierOrKeywordOrEscapedName.
-    def visitIdentifierOrKeywordOrEscapedName(self, ctx:HqlParser.IdentifierOrKeywordOrEscapedNameContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#identifierOrExtendedKeywordOrEscapedName.
-    def visitIdentifierOrExtendedKeywordOrEscapedName(self, ctx:HqlParser.IdentifierOrExtendedKeywordOrEscapedNameContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#identifierOrExtendedKeywordName.
-    def visitIdentifierOrExtendedKeywordName(self, ctx:HqlParser.IdentifierOrExtendedKeywordNameContext):
+    # Visit a parse tree produced by HqlParser#pathOrExtendedKeyword.
+    def visitPathOrExtendedKeyword(self, ctx:HqlParser.PathOrExtendedKeywordContext):
         return self.visitChildren(ctx)
 
 
