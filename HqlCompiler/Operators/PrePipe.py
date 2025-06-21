@@ -38,7 +38,13 @@ class PrePipe(Operator):
             funcs += path_funcs
         
         # Tabular expression just giving a database name, e.g. ['tf11-elastic']
+        # Could also be a variable reference in the symbol table
         elif len(path) == 1:
+            name = path[0].eval(ctx, as_str=True)
+            
+            if name in ctx.symbol_table:
+                return [ctx.symbol_table[name]]
+
             funcs.append(ctx.get_func('database')([]))
             funcs.append(ctx.get_func('index')(path))
         
@@ -66,6 +72,8 @@ class PrePipe(Operator):
         return funcs
         
     def eval(self, ctx:Context, **kwargs):
+        from HqlCompiler import CompilerSet
+        
         tabular = kwargs.get('tabular', False)
         receiver = None
         
@@ -73,8 +81,13 @@ class PrePipe(Operator):
             return self.expr
         
         if tabular:
-            funcs = self.resolve_tabular_path(ctx, self.expr)
-            for i in funcs:
+            table = self.resolve_tabular_path(ctx, self.expr)
+            
+            if isinstance(table[0], CompilerSet):
+                return table[0]
+            
+            # Figure out database functions
+            for i in table:
                 receiver = i.eval(ctx, receiver=receiver)
             return receiver
         

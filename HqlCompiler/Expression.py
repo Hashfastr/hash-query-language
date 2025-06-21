@@ -9,6 +9,7 @@ from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
 from HqlCompiler.Data import Data, Table, Schema
 from enum import Enum
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -171,6 +172,12 @@ class NamedReference(Expression):
             'name': self.name,
             'scope': self.scope,
         }
+        
+    def get_symbol(ctx:Context, name:str):
+        if name not in ctx.symbol_table:
+            return None
+        
+        return ctx.symbol_table[name]
     
     def eval(self, ctx:Context, **kwargs):
         if kwargs.get('as_pl', False):
@@ -187,15 +194,20 @@ class NamedReference(Expression):
         receiver = receiver if receiver else ctx.data
 
         # Ensure we have the right field
-        if not receiver.assert_field([self.name]):
+        if receiver == None or not receiver.assert_field([self.name]):
+            # Symbol table lookup
+            # Named search or static value or the like
+            if self.name in ctx.symbol_table:
+                return ctx.symbol_table[self.name]
+            
             raise QueryException(f"Referenced field {self.name} not found")
         
         # If we're operating on a dataset
         elif isinstance(receiver, Data):
             return receiver.unnest([self.name]) if as_value else receiver.select([self.name])
         
-        # If we're operating on a database
-        elif issubclass(type(receiver), Database):
+        # If we're operating on something that support variables
+        elif hasattr(receiver, 'get_variable'):
             return receiver.get_variable(self.name)
         
         # Not implemented, or bug
@@ -249,6 +261,20 @@ class Integer(Expression):
     def eval(self, ctx:Context, **kwargs):
         return self.value
 
+class Float(Expression):
+    def __init__(self, value:str):
+        Expression.__init__(self)
+        self.value = float(value)
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'value': self.value
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        return self.value
+
 class Bool(Expression):
     def __init__(self, value:str):
         super().__init__()
@@ -278,6 +304,12 @@ class FuncExpr(Expression):
     
     # Evals to function objects
     def eval(self, ctx:Context, **kwargs):
+        if kwargs.get('as_list', False):
+            return self.name.eval(ctx, as_list=True)
+        
+        if kwargs.get('as_str', False):
+            return self.name.eval(ctx, as_str=True)
+        
         func = ctx.get_func(self.name.eval(ctx, as_str=True))
         logging.debug(f'Resolved func {func}')
 
@@ -293,12 +325,25 @@ class DotCompositeFunction(Expression):
             'type': self.type,
             'funcs': [x.to_dict() for x in self.funcs]
         }
+        
+    def gen_list(self, ctx:Context):
+        func_list = []
+        for i in self.funcs:
+            func_list.append(i.eval(ctx, as_str=True))
+            
+        return func_list
 
     # Evals to the function objects that can be executed
     def eval(self, ctx:Context, **kwargs):
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
         
+        if kwargs.get('as_list', False):
+            return self.gen_list(ctx)
+        
+        if kwargs.get('as_str', False):
+            return '.'.join(self.gen_list(ctx))
+
         func_list = []
         for i in self.funcs:
             func = i.eval(ctx)
@@ -326,11 +371,7 @@ class Path(Expression):
         except Exception as e:
             logging.debug(self.path)
             logging.debug(e)
-
-    def lint(self, ctx:Context):
-        plf = self.eval(ctx, as_pl=True)
-        # ctx.data.
-
+    
     def eval(self, ctx:Context, **kwargs):
         as_list = kwargs.get('as_list', False)
         as_pl = kwargs.get('as_pl', False)
@@ -348,21 +389,45 @@ class Path(Expression):
         
         if as_str:
             return '.'.join(list)
-                
+        
+        '''
+        Quick note on this.
+        If we have a path that looks like this:
+        
+        field1.field2.somefunc().field3
+        
+        We split and eval the first two path segments, then eval somefunc,
+        then eval field3 as a path element of somefunc's output
+        
+        So in this case we would eval
+        
+        consumed = ['field1', 'field2']
+        # eval consumed then some func, reset consumed
+        consumed = ['field3']
+        # eval new consumed on the output of somefunc
+        '''        
+        consumed = []
+        
         receiver = ctx.data
-        static = []
         for i in self.path:
             if i.type == "DotCompositeFunction":
-                if static:
-                    receiver = receiver.unnest(static)
-                    
-                receiver = i.eval(ctx, receiver=receiver, as_value=True)
-            else:
-                static.append(i.eval(ctx, receiver=receiver, as_str=True))
+                if consumed:
+                    # Get the value of the path elements consumed so far
+                    receiver = receiver.unnest(consumed)
                 
-        if static:
-            receiver = receiver.unnest(static) if as_value else receiver.select(static)
-                 
+                # Evalute the function
+                receiver = i.eval(ctx, receiver=receiver)
+                
+                # Reset consumed since we're now operating with function'd data
+                consumed = []
+            else:
+                # Append another path element that we've consumed
+                consumed.append(i.eval(ctx, receiver=receiver, as_str=True))
+              
+        # If we have static elements we need to evaluate on the current receiver
+        if consumed:
+            receiver = receiver.unnest(consumed) if as_value else receiver.select(consumed)
+            
         return receiver
     
 class BinaryLogic(Expression):
@@ -396,23 +461,28 @@ class OpParameter(Expression):
         }
 
 class NamedExpression(Expression):
-    def __init__(self, name:Expression, value:Expression):
+    def __init__(self, paths:list[Expression], value:Expression):
         super().__init__()
-        self.name = name
+        self.paths = paths
         self.value = value
         
     def to_dict(self):        
         return {
             'type': self.type,
-            'name': self.name.to_dict(),
+            'name': [x.to_dict() for x in self.paths],
             'value': self.value.to_dict()
         }
         
     def eval(self, ctx:Context, **kwargs):
         insert = kwargs.get('insert', True)
+        as_value = kwargs.get('as_value', False)
         value = self.value.eval(ctx)
         
+        if as_value:
+            return value
+        
         # Chose which dataset to insert on
+        # If set to false it'll create it's own blank dataset
         if insert:
             data = ctx.data
         else:
@@ -420,21 +490,28 @@ class NamedExpression(Expression):
         
         # loop through value tables as those are the only ones we can vouch for
         for table in value.tables:
+            # Need this if we're creating a new dataset instead of inserting
             if table not in data.tables:
-                data.tables[table] = Table(name=table)
+                data.add_table(Table(name=table))
             
-            for name in self.name:
-                path = name.eval(ctx, as_list=True)
+            # We can assign to multiple names
+            for path in self.paths:
+                path = path.eval(ctx, as_list=True)
                 
                 cur = value.tables[table]
                 
                 if cur.series:
+                    # Get the series and set the type
                     schema = cur.series.type
                     cur = cur.series.series
+                    
                 else:
-                    schema = cur.schema.strip()
+                    # Get the value of the dataframe and schema
                     cur = cur.strip()
-                                
+                    schema = cur.schema
+                    cur = cur.df
+                
+                # Insert properly
                 data.tables[table].insert(path, cur, schema)
 
         return data
@@ -459,3 +536,105 @@ class OrderedExpression(Expression):
             'order': self.order,
             'nulls': self.nulls
         }
+
+class ByExpression(Expression):
+    def __init__(self, exprs:list[Expression]):
+        super().__init__()
+        self.exprs = exprs
+        
+    def build_table_agg(self, ctx:Context, table:Table):
+        paths = []
+        schema = []
+        for expr in self.exprs:
+            path = expr.eval(ctx, as_list=True)
+            ptype = table.schema.get_type(path)
+            
+            # if isinstance(ptype, hqlt.multivalue):
+                
+            
+            paths.append(path)
+            schema.append(table.schema.select(path))
+        
+        pl_exprs = []
+        for expr in self.exprs:
+            pl_expr = expr.eval(ctx, as_pl=True)
+            
+            if not table.assert_field(path):
+                continue
+
+            pl_exprs.append(pl_expr)
+        
+        # Groups and coelesces the schemas together for each field
+        # Probably need to rework and change maintain_order here in the future
+        # Without it, it fucks up the aggregation functions but is much faster
+        table.agg = table.df.group_by(pl_exprs, maintain_order=True)
+        table.agg_paths = paths
+        table.agg_schema = Schema.merge(schema)
+        
+        return table
+    
+    def eval(self, ctx:Context, **kwargs):
+        new = []
+        
+        for table in ctx.data.tables:
+            new.append(self.build_table_agg(ctx, ctx.data.tables[table]))
+            
+        return Data(tables_list=new)
+
+class LetExpression(Expression):
+    def __init__(self, name:Expression, value:Expression):
+        Expression.__init__(self)
+        self.name = name
+        self.value = value
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'name': self.name.to_dict(),
+            'value': self.value.to_dict()
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        name = self.name.eval(ctx, as_str=True)
+                
+        if kwargs.get('no_exec', False):
+            ctx.symbol_table[name] = self.value
+        else:
+            ctx.symbol_table[name] = self.value.eval(ctx)
+
+class TypeExpression(Expression):
+    def __init__(self, type:str):
+        Expression.__init__(self)
+        self.type = type
+        
+    def eval(self):
+        return hqlt.from_name(self.type)
+
+class ToExpression(Expression):
+    def __init__(self, expr:Expression, to:hqlt.HqlType):
+        Expression.__init__(self)
+        self.expr = expr
+        self.to = to
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'expr': self.expr.to_dict(),
+            'to': self.to.name
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        as_list = kwargs.get('as_list', False)
+        as_str = kwargs.get('as_str', False)
+        
+        if as_list or as_str:
+            return self.expr.eval(ctx, as_list=as_list, as_str=as_str)
+        
+        path = self.expr.eval(ctx, as_path=True)
+        
+        new = []
+        for name in ctx.data.tables:
+            table = ctx.data.tables[name].cast_in_place(path, self.to)
+            new.append(table)
+        
+        return Data(tables_list=new)

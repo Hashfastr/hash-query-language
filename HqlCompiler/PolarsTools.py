@@ -41,63 +41,21 @@ class pltools():
     # Fields is a list of the given path names.
     # host.name -> ['host', 'name']
     # Returns a df representation of that field, maintains nested-ness
-    def get_element(data:pl.DataFrame, fields:list[str], index:int=0):
-        if index == len(fields):
-            return pl.DataFrame({fields[index-1]: data.to_struct()})
-        
-        split = fields[index]
-    
-        if split not in data:
-            return pl.DataFrame({})
+    def get_element(df:pl.DataFrame, path:list[str], index:int=0):
+        expr = pltools.path_to_expr(path)
+        return df.select(expr)
 
-        new = data.select(split)
-        
-        if len(fields) == 1:
-            return new
-            
-        if isinstance(new[split].dtype, pl.Struct):
-            new = new.unnest(split)
-        else:
-            return pl.DataFrame({fields[index-1]: new.to_struct()})
-            
-        rec_data = pltools.get_element(new, fields, index + 1)
-        
-        if index == 0:
-            return rec_data
-        else:
-            return pl.DataFrame({fields[index-1]: rec_data.to_struct()})
-    
     # Gets the value of an element, does not preserve df structure
     # Just returns the value
     # So for a base value, a series, and for a field that's a struct, a struct dataframe.
-    def get_element_value(data:pl.DataFrame, fields:list[str], index:int=0):
-        # if not fields:
-        #     split = data.columns[0]
-        # else:
-        #     split = fields[index]
-                
-        split = fields[index]
-
-        if split not in data:
-            if index == 0:
-                raise Exception(f"Invalid field referenced {split}")
-            else:
-                raise Exception(f"Invalid field {split} in path {'.'.join(fields)}")
+    def get_element_value(df:pl.DataFrame, path:list[str]):
+        expr = pltools.path_to_expr_value(path)
+        data = df.select(expr)
         
-        new = data.select(split)
-        
-        if fields and len(fields) == 1:
-            if new[split].dtype == pl.Struct:
-                return pl.DataFrame(new.unnest(split))
-            
-            return new.to_series()
-        
-        if isinstance(new[split].dtype, pl.Struct):
-            new = new.unnest(split)
+        if isinstance(data.dtypes[0], pl.Struct):
+            return data.unnest(path[-1])
         else:
-            return new.to_series()
-        
-        return pltools.get_element_value(new, fields, index + 1)
+            return data.to_series()
     
     def build_element(name:list[str], data):
         if len(name) == 1:
@@ -106,13 +64,22 @@ class pltools():
         new = pltools.build_element(name[1:], data)
         return pl.DataFrame({name[0]: new.to_struct()})
 
+    def path_to_expr_value(path:list[str]):
+        # build selector
+        expr = pl.col(path[0])
+        for i in path[1:]:
+            expr = expr.struct.field(i)
+            
+        return expr
+
     def path_to_expr(path:list[str]):
-        expr = pl
-        for idx, i in enumerate(path):
-            if idx == 0:
-                expr = expr.col(i)
-            else:
-                expr = expr.struct.field(i)
+        expr = pltools.path_to_expr_value(path)
+        expr_str = 'pl.col(a).struct.field(c)'
+        
+        # rebuild object
+        for i in path[::-1][1:]:
+            expr = pl.struct(expr).alias(i)
+            expr_str = f'pl.struct({expr_str}).alias({i})'
 
         return expr
 

@@ -2,6 +2,7 @@ from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
 import HqlCompiler.Expression as Expr
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 from HqlCompiler.Exceptions import *
 
@@ -104,6 +105,9 @@ class BaseExpressions(HqlVisitor):
     def visitBooleanLiteralExpression(self, ctx: HqlParser.BooleanLiteralExpressionContext):
         return Expr.Bool(ctx.Token.text)
 
+    def visitRealLiteralExpression(self, ctx: HqlParser.RealLiteralExpressionContext):
+        return Expr.Float(ctx.Token.text)
+
     def visitOrderedExpression(self, ctx: HqlParser.OrderedExpressionContext):
         expr = self.visit(ctx.Ordering)
         expr.name = self.visit(ctx.Expression)
@@ -126,5 +130,10 @@ class BaseExpressions(HqlVisitor):
         expr = Expr.OrderedExpression(order=order, nulls=nulls)
         return expr
 
-    # def visitTableNameReference(self, ctx: HqlParser.TableNameReferenceContext):
-    #     return 
+    def visitScalarType(self, ctx: HqlParser.ScalarTypeContext):
+        return hqlt.from_name(ctx.Token.text)()
+
+    def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
+        name = self.visit(ctx.Name)
+        value = self.visit(ctx.Expression)
+        return Expr.LetExpression(name, value)

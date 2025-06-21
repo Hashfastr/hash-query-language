@@ -510,7 +510,7 @@ mvapplyOperator:
     ON '(' OnExpression=contextualSubExpression ')';
 
 mvapplyOperatorLimitClause:
-    LIMIT LimitValue=LONGLITERAL;
+    LIMIT LimitValue=longLiteralExpression;
 
 mvapplyOperatorIdClause:
     ID IdValue=GUIDLITERAL;
@@ -519,7 +519,7 @@ mvapplyOperatorExpression:
     Expression=namedExpression (ToClause=mvapplyOperatorExpressionToClause)?;
 
 mvapplyOperatorExpressionToClause:
-    TO Type=TYPELITERAL;
+    TO Type=scalarType;
 
 
 mvexpandOperator:
@@ -740,7 +740,7 @@ summarizeOperator:
     SUMMARIZE (Parameters+=strictQueryOperatorParameter)* (Expressions+=namedExpression (',' Expressions+=namedExpression)*)? (ByClause=summarizeOperatorByClause)?;
 
 summarizeOperatorByClause:
-    BY Expressions+=namedExpression (',' Expressions+=namedExpression) (BinClause=summarizeOperatorLegacyBinClause)?;
+    BY Expressions+=namedExpression (',' Expressions+=namedExpression)* (BinClause=summarizeOperatorLegacyBinClause)?;
 
 summarizeOperatorLegacyBinClause:
     BIN '=' Expression=numberLikeLiteralExpression;
@@ -1199,6 +1199,9 @@ scalarType:
         | TIME
         | TIMESPAN
         | UNIQUEID
+        | IP4
+        | IP6
+        | IP
     );
 
 extendedScalarType:
@@ -1229,6 +1232,9 @@ extendedScalarType:
         | UINT8
         | ULONG
         | UNIQUEID
+        | IP4
+        | IP6
+        | IP
     );
 
 parameterName:

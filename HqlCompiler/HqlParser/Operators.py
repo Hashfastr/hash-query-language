@@ -15,6 +15,16 @@ class Operators(HqlVisitor):
         value = self.visit(ctx.NameValue) if ctx.NameValue else self.visit(ctx.LiteralValue)
         
         return Expr.OpParameter(name, value)
+
+    def visitRelaxedQueryOperatorParameter(self, ctx: HqlParser.RelaxedQueryOperatorParameterContext):
+        name = ctx.NameToken.text
+
+        if ctx.NameValue:
+            value = self.visit(ctx.NameValue)
+        else:
+            value = self.visit(ctx.LiteralValue)
+        
+        return Expr.OpParameter(name, value)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
         predicate = self.visit(ctx.Predicate)
@@ -79,3 +89,97 @@ class Operators(HqlVisitor):
     
     def visitUnnestOperatorOnClause(self, ctx: HqlParser.UnnestOperatorOnClauseContext):
         return [self.visit(x) for x in ctx.Expressions]
+
+    def visitSummarizeOperator(self, ctx: HqlParser.SummarizeOperatorContext):
+        by = None
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+                
+        if ctx.ByClause:
+            by = self.visit(ctx.ByClause)
+        
+        return Ops.Summarize(exprs, by)
+    
+    def visitSummarizeOperatorByClause(self, ctx: HqlParser.SummarizeOperatorByClauseContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        return Expr.ByExpression(exprs)
+
+    def visitDataTableExpression(self, ctx: HqlParser.DataTableExpressionContext):
+        schema = self.visit(ctx.Schema)
+        values = []
+        for i in ctx.Values:
+            values.append(self.visit(i))
+        
+        return Ops.Datatable(schema, values)
+    
+    def visitRowSchema(self, ctx: HqlParser.RowSchemaContext):
+        schema = []
+        for i in ctx.Columns:
+            schema.append(self.visit(i))
+        
+        return schema
+    
+    def visitRowSchemaColumnDeclaration(self, ctx: HqlParser.RowSchemaColumnDeclarationContext):
+        name = self.visit(ctx.Name)
+        t = self.visit(ctx.Type)
+        
+        return [name, t]
+
+    def visitJoinOperator(self, ctx: HqlParser.JoinOperatorContext):
+        table = self.visit(ctx.Table)
+        on = None
+        where = None
+        
+        params = []
+        for i in ctx.Parameters:
+            params.append(self.visit(i))
+        
+        if ctx.OnClause:
+            on = self.visit(ctx.OnClause)
+        
+        if ctx.WhereClause:
+            where = self.visit(ctx.WhereClause)
+        
+        return Ops.Join(table, params, on=on, where=where)
+    
+    def visitJoinOperatorOnClause(self, ctx: HqlParser.JoinOperatorOnClauseContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+            
+        return exprs
+            
+    def visitJoinOperatorWhereClause(self, ctx: HqlParser.JoinOperatorWhereClauseContext):
+        return self.visit(ctx.Predicate)
+
+    def visitMvexpandOperator(self, ctx: HqlParser.MvexpandOperatorContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        if ctx.LimitClause:
+            limit = self.visit(ctx.LimitClause)
+        else:
+            limit = Expr.Integer('2147483647')
+        
+        return Ops.MvExpand(exprs, limit)
+    
+    def visitMvexpandOperatorExpression(self, ctx: HqlParser.MvexpandOperatorExpressionContext):
+        expr = self.visit(ctx.Expression)
+        
+        if ctx.ToClause:
+            to = self.visit(ctx.ToClause)
+        else:
+            to = None
+
+        return Expr.ToExpression(expr, to)
+    
+    def visitMvapplyOperatorExpressionToClause(self, ctx: HqlParser.MvapplyOperatorExpressionToClauseContext):
+        return self.visit(ctx.Type)
+    
+    def visitMvapplyOperatorLimitClause(self, ctx: HqlParser.MvapplyOperatorLimitClauseContext):
+        return self.visit(ctx.LimitValue)

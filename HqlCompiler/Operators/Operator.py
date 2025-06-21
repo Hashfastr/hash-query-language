@@ -21,6 +21,8 @@ from HqlCompiler.Context import register_op, Context
 @register_op('Operator')
 class Operator():
     def __init__(self):
+        import random
+        
         self.type = self.__class__.__name__
         self.expr = None
         self.exprs = None
@@ -29,6 +31,7 @@ class Operator():
         self.methods = []
         self.variables = []
         self.tabular = False
+        self.id = '%08x' % random.getrandbits(32)
     
     def to_dict(self):
         if self.expr:

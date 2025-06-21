@@ -14,6 +14,9 @@ import json
 class Data():
     ...
 
+class Series():
+    ...
+
 class Table():
     ...
 
@@ -58,11 +61,6 @@ class Data():
 
         # Merge table groups
         for name in table_groups:
-            # no need to merge, unique table
-            if len(table_groups[name]) == 1:
-                self.tables[name] = table_groups[name][0]
-                continue
-            
             self.tables[name] = Table.merge(tables=table_groups[name])
             
     def __len__(self):
@@ -102,6 +100,10 @@ class Data():
                 
         return tables
     
+    def table_by_index(self, idx:int):
+        key = list(self.tables.keys())[idx]
+        return self.tables[key]
+    
     def add_table(self, table:Table):
         if table.name in self.tables:
             raise QueryException(f'Table {table.name} already exists')
@@ -118,11 +120,11 @@ class Data():
         
         return schemata
 
-    # Given a list of string paths, get a dataset containing only those fields
-    def select(self, fields:list[str]):
+    # Given a path, select just the data at that path
+    def select(self, path:list[str]):
         tables = []
         for i in self.tables:
-            tables.append(self.tables[i].select(fields))
+            tables.append(self.tables[i].select(path))
 
         return Data(tables_list=tables)
     
@@ -152,6 +154,9 @@ class Data():
         return dataset
     
     def merge(data:list[Data]):
+        if len(data) == 1:
+            return data[0]
+        
         tables = []
         for datum in data:
             for name in datum.tables:
@@ -172,7 +177,8 @@ class Data():
                 exists.append(self.tables[i])
 
         if not len(exists):
-            logging.warning(f"Invalid field {'.'.join(field)} in table {i}")
+            logging.warning(f"Could not find {'.'.join(field)} in any tables in the dataset")
+            logging.warning(', '.join([x for x in self.tables]))
         
         return exists
     
@@ -186,6 +192,39 @@ class Data():
 
         return self
 
+    def join(self, right:Data, on:str, kind:str='innerunique'):
+        tables = []
+        for lname in self.tables:
+            new = []
+            lt = self.tables[lname]
+            for rname in right.tables:
+                rt = right.tables[rname]
+                new.append(lt.join(rt, on, kind))
+
+            tables.append(Table.concat(new))
+        
+        return Data(tables_list=tables)
+    
+    def strip(self):
+        new = []
+        for i in self.tables:
+            table = self.tables[i]
+            new.append(table.strip())
+        return Data(tables_list=new)
+
+    def drop_many(self, paths:list[list[str]]):
+        cur = self
+        for path in paths:
+            cur = cur.drop(path)
+        return cur
+
+    def drop(self, path:list[str]):
+        new = []
+        for i in self.tables:
+            table = self.tables[i].drop(path)
+            new.append(table)
+        return Data(tables_list=new)
+        
 '''
 Series for individual values, mimics a pl.Series
 '''
@@ -212,8 +251,14 @@ class Table():
             self.df = df
         else:
             self.df = pl.DataFrame()
+            
+        if isinstance(schema, dict):
+            schema = Schema(schema=schema)
         
-        self.name = name
+        self.name = name if name else ''
+        self.agg = None
+        self.agg_paths = None
+        self.agg_schema = None
         self.series = None
         self.schema = None
 
@@ -232,8 +277,6 @@ class Table():
         
         elif not self.df.is_empty() and schema:
             self.schema = schema
-            # print(schema.schema)
-            # print(self.df)
             self.df = schema.apply(self.df)
 
         elif not self.df.is_empty() and not schema:
@@ -261,6 +304,39 @@ class Table():
     def set_schema(self, schema:Schema):
         self.df = schema.apply(self.df)
         self.schema = schema
+
+    def drop(self, path:list[str], df:pl.DataFrame=None, idx:int=0):
+        if idx == 0:
+            self.schema.drop(path)
+            df = self.df
+        
+        new = {}
+        for col in df:
+            if col.name == path[idx]:
+                if idx == len(path) - 1:
+                    # silent drop
+                    continue
+                
+                if col.dtype == pl.Struct:
+                    rec = self.drop(path, df=pl.DataFrame(col).unnest(col.name), idx=idx+1)
+                    if not rec.is_empty():
+                        new[col.name] = rec
+                
+            # Not dropping
+            else:
+                new[col.name] = col
+        
+        # end of recursion
+        if idx == 0:
+            self.df = pl.DataFrame(new)
+            return self
+            
+        return pl.DataFrame(new)
+    
+    def drop_many(self, paths:list[list[str]]):
+        for path in paths:
+            self.drop(path)
+        return self
         
     '''
     Truncates the dataset to a given amount
@@ -278,7 +354,7 @@ class Table():
             raise QueryException(e.args[0])
         
     def get_value(self, path:list[str]):
-        return pltools.get_element_value(self.df, fields=path)
+        return pltools.get_element_value(self.df, path)
 
     def merge(tables:list[Table]):
         max_cols = 100
@@ -286,14 +362,17 @@ class Table():
         if not tables:
             return Table()
         
+        # Quick short circuit
+        if len(tables) == 1:
+            return tables[0]
+        
         name = tables[0].name
         
         schemas = []
         for table in tables:
             schemas.append(table.schema)
-            
         schema = Schema.merge(schemas).schema
-                
+        
         # generate col groups
         col_groups = dict()
         for table in tables:
@@ -306,7 +385,7 @@ class Table():
                     col_groups[col.name] = []
                     
                 col_groups[col.name].append(col)
-        
+
         new = dict()
         for key in col_groups:
             for col in col_groups[key]:
@@ -333,10 +412,17 @@ class Table():
                         logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
                         logging.critical(f'Applicable field: {key}')
                         raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
-
+                
         df = pl.DataFrame(new)
         schema = Schema(schema=schema)
-        
+                
+        return Table(df=df, schema=schema, name=name)
+    
+    def concat(tables:list[Table]):
+        df = pl.concat([x.df for x in tables])
+        schema = tables[0].schema
+        name = tables[0].name
+
         return Table(df=df, schema=schema, name=name)
 
     '''
@@ -354,7 +440,7 @@ class Table():
         schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)
-    
+
     def unnest(self, field:list[str]):
         if not self.assert_field(field):
             raise QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
@@ -391,10 +477,16 @@ class Table():
     '''
     def strip(self):
         cur = self.df
+        path = []
         while isinstance(cur, pl.DataFrame) and len(cur.columns) == 1:
             key = cur.columns[0]
             cur = pltools.get_element_value(cur, [key])
-        return cur
+            path.append(key)
+        
+        # Using this instead of strip to ensure we're sync
+        schema = self.schema.unnest(path)
+            
+        return Table(df=cur, schema=schema, name=self.name)
 
     def rename(self, src:list[str], dest:list[str]):
         if not self.assert_field(src):
@@ -512,7 +604,9 @@ class Table():
         self.remove(name)
         
         return value
-                
+    
+    # Asserts by checking against schema
+    # Schema should always be sync'd with the table data
     def assert_field(self, field:list[str]):
         return self.schema.assert_field(field)
     
@@ -524,6 +618,42 @@ class Table():
         self.df = self.schema.apply(self.df)
 
         return self
+    
+    def join(self, right:Table, on:str, kind:str):
+        schema = self.schema.join(right.schema, on, kind)
+
+        if kind == 'inner':
+            df = self.df.join(right.df, on=on, how='inner')
+        
+        elif kind == 'leftsemi':
+            df = self.df.join(right.df, on=on, how='semi')
+
+        elif kind == 'rightsemi':
+            df = right.df.join(self.df, on=on, how='semi')
+
+        elif kind == 'leftouter':
+            df = self.df.join(right.df, on=on, how='left')
+
+        elif kind == 'rightouter':
+            df = right.df.join(self.df, on=on, how='left')
+
+        elif kind == 'fullouter':
+            df = self.df.join(right.df, on=on, how='full')
+
+        elif kind == 'leftanti':
+            df = self.df.join(right.df, on=on, how='anti')
+
+        elif kind == 'rightanti':
+            df = right.df.join(right.df, on=on, how='anti')
+
+        elif kind == 'innerunique':
+            left = self.df.unique(subset=[on])
+            df = left.join(right.df, on=on, how='inner')
+
+        else:
+            raise QueryException(f'Invalid join kind {kind} used')
+        
+        return Table(df=df, schema=schema, name=self.name)
 
 class Schema():
     def __init__(
@@ -551,16 +681,25 @@ class Schema():
             self.schema = Schema.from_df(data)
         elif data:
             raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
-                              
-        # Immediately convert to hql schema
-        # Except empty schema
-        if len(self.schema):
+        
+        # Pass through empty case else we get an hqlt.object([])
+        if isinstance(self.schema, dict) and len(self.schema):
             self.schema = self.convert_schema(target='hql')
     
     def __len__(self):
-        return len(self.schema)
+        if hasattr(self.schema, 'len'):
+            return len(self.schema)
+        
+        elif self.schema != None:
+            return 1
+        
+        else:
+            return 0
     
     def merge(schemata:list):
+        if len(schemata) == 1:
+            return schemata[0]
+        
         max_cols = 100
         
         # Gen keygroups
@@ -574,7 +713,7 @@ class Schema():
                     keygroups[key] = [schema[key]]
                 else:
                     keygroups[key].append(schema[key])
-        
+
         new = dict()
         for key in keygroups:
             for schema in keygroups[key]:
@@ -589,7 +728,7 @@ class Schema():
                 
                 # Find a free name
                 for j in range(max_cols):
-                    name = f'{key}_{j + 1}'
+                    name = f'{key}_{j}'
                     
                     # This is the case that all previous cols were conflicting
                     if name not in new:
@@ -608,14 +747,14 @@ class Schema():
     Just unnests them such that we have a pure dict structure.
     '''
     def normalize(node):
+        if isinstance(node, Schema):
+            node = node.schema
+        
         if isinstance(node, dict):
             new = dict()
             for key in node:
                 new[key] = Schema.normalize(node[key])
             return new
-        
-        elif isinstance(node, Schema):
-            return node.schema
         
         else:
             return node
@@ -626,18 +765,37 @@ class Schema():
         for part in field[::-1]:
             cur = {part: cur}
         return Schema(schema=cur)
+
+    def select_many(self, fields:list[list[str]]):
+        schemas = []
+        for field in fields:
+            schemas.append(self.select(field))
+        return Schema.merge(schemas)
     
     def unnest(self, field:list[str]):
         cur = self.schema
         for part in field:
             if part not in cur:
                 return None
-            cur = cur[part]
-            
-        if isinstance(cur, dict):
-            return Schema(schema=cur)
-        else:
-            return cur
+            else:
+                cur = cur[part]
+                
+        return Schema(schema=cur)
+    
+    def copy(self):
+        from copy import deepcopy
+        return Schema(schema=deepcopy(self.schema))
+        
+    '''
+    Like unnest but returns an appropriate hqlt.object on a dict reference
+    '''
+    def get_type(self, field:list[str]):
+        dtype = self.unnest(field)
+       
+        if isinstance(dtype, dict):
+            dtype = hqlt.object(list(dtype.keys()))
+           
+        return dtype
 
     '''
     Returns the deep stripped value of a dict with a single value.
@@ -698,6 +856,37 @@ class Schema():
                 cur = cur[i]
                 
         return src_type
+
+    def drop(self, path:list[str], schema:dict=None, idx:int=0):
+        if idx == 0:
+            schema = self.schema
+        
+        new = {}
+        for key in schema:
+            if key == path[idx]:
+                if idx == len(path) - 1:
+                    # Silent drop
+                    continue
+                
+                if isinstance(schema[key], dict):
+                    rec = self.drop(path, schema=schema[key], idx=idx+1)
+                    if rec:
+                        new[key] = rec
+            
+            # Don't have to do anything
+            else:
+                new[key] = schema[key]
+                
+        if idx == 0:
+            self.schema = new
+            return self
+            
+        return new
+    
+    def drop_many(self, paths:list[list[str]]):
+        for path in paths:
+            self.drop(path)
+        return self
     
     '''
     Set a field to a specific type in the schema
@@ -731,7 +920,7 @@ class Schema():
     Generates a schema with types replaced with their polars primatives
     schema parameter required for recursion
     '''
-    def convert_schema(self, schema:dict=None, target:str='hql'):
+    def convert_schema(self, schema:Union[dict, type]=None, target:str='hql'):
         supported = ('hql', 'polars')
         
         if target not in supported:
@@ -741,45 +930,51 @@ class Schema():
         
         if not schema:
             schema = self.schema
-                    
+        
+        # Endpoint in the tree
+        # Expected to be a type we can convert
         if not isinstance(schema, dict):
-            raise CompilerException('Attempting to convert non-dict schema')
+            if hasattr(schema, 'hql_schema') and target == 'hql':
+                return schema.hql_schema()
+            
+            if hasattr(schema, 'pl_schema') and target == 'pl':
+                return schema.pl_schema()
+            
+            raise CompilerException(f'Unsupported type to convert {schema}')
 
         # Base case, create empty object/struct
-        if len(schema) == 0:
+        if len(schema) == 0:            
             if target == 'hql':
                 return hqlt.object([])
             elif target == 'polars':
                 return plt.Struct([])
 
+        # Recurse on a populated dict
         target_schema = dict()
-        for key in schema:            
-            element = schema[key]
-            
-            if element == {}:
-                if target == 'hql':
-                    target_schema[key] = hqlt.null()
-                elif target == 'polars':
-                    target_schema[key] = pl.Null()
-
-            # Recurse case
-            elif isinstance(element, dict):
-                target_schema[key] = self.convert_schema(schema=element, target=target)
-
-            else:
-                if target == 'hql':
-                    target_schema[key] = element.hql_schema()
-                elif target == 'polars':
-                    target_schema[key] = element.pl_schema()
-                
+        for key in schema:
+            target_schema[key] = self.convert_schema(schema=schema[key], target=target)
+        
         return target_schema
 
+    def gen_pl_list_schema(self, schema:Union[dict, list, hqlt.HqlType]):
+        if isinstance(schema, dict):
+            return self.gen_pl_schema(schema)
+        
+        elif isinstance(schema, list):
+            return [self.gen_pl_list_schema(schema[0])]
+        
+        else:
+            return schema.pl_schema()
+        
     '''
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
     '''
     def gen_pl_schema(self, schema:dict=None):
         schema = schema if schema else self.schema
+        
+        if not isinstance(schema, dict):
+            return schema.pl_schema()
         
         new_schema = {}
         for key in schema:
@@ -788,10 +983,12 @@ class Schema():
                     new_schema[key] = pl.Struct(self.gen_pl_schema(schema=schema[key]))
                 else:
                     new_schema[key] = pl.Struct([])
-                    
-                continue
-            
-            new_schema[key] = schema[key].pl_schema()
+
+            elif isinstance(schema[key], list):
+                new_schema[key] = self.gen_pl_list_schema(schema[key])
+                
+            else:
+                new_schema[key] = schema[key].pl_schema()
     
         return new_schema
 
@@ -859,8 +1056,12 @@ class Schema():
         
         for col in df:
             if isinstance(col.dtype, pl.Struct):
-                schema[col.name] = Schema.from_df(pl.DataFrame(col))
-                
+                schema[col.name] = Schema.from_df(pl.DataFrame(col).unnest(col.name))
+                continue
+            
+            if col.dtype == pl.Object:
+                raise Exception('poop')
+
             schema[col.name] = plt.from_pure_polars(col.dtype)
             
         return schema
@@ -890,13 +1091,44 @@ class Schema():
     
     '''
     Applies a schema to a dataset
+    If a col is not defined in the schema, then it just skips over it
+    Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:pl.DataFrame, schema:dict=None):        
-        if df.is_empty():
-            raise CompilerException('Attempting to apply a schema to an empty dataframe!')
-
-        return df.cast(self.gen_pl_schema())
+    def apply(self, df:pl.DataFrame, schema:dict=None):
+        if isinstance(schema, Schema):
+            schema = schema.schema
+        
+        if schema == None:
+            schema = self.schema
+        
+        # Single value schema    
+        if not isinstance(schema, dict):
+            return schema.cast(df)
+        
+        # Check the schema doesn't map to missing cols
+        for key in schema:
+            if key not in df:
+                logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}")
+                raise CompilerException('Attempting to apply a schema to a mismatched dataframe!')
+        
+        new = {}
+        for col in df:
+            key = col.name
+            
+            # Handle undefined types, don't have to worry about them, carry on.
+            if key not in schema:
+                new[key] = col
+                continue
+            
+            if isinstance(schema[key], dict):
+                new[key] = self.apply(pl.DataFrame(col).unnest(key), schema[key]).to_struct()
+                continue
+            
+            new[key] = schema[key].cast(col)
+            
+        return pl.DataFrame(new)
     
+    # Asserts by attempting to retrieve the field's value
     def assert_field(self, field:list[str]):
         if self.unnest(field) == None:
             return False
@@ -911,9 +1143,9 @@ class Schema():
             if col.name not in schema:
                 newdf[col.name] = col
                 continue
-
+            
             if isinstance(schema[col.name], dict):
-                newdf[col.name] = self.present_complex(col.struct.unnest(), schema[col.name])
+                newdf[col.name] = self.present_complex(col.struct.unnest(), schema[col.name]).to_struct()
                 continue
 
             if schema[col.name].complex:
@@ -922,3 +1154,25 @@ class Schema():
                 newdf[col.name] = col
 
         return pl.DataFrame(newdf)
+
+    def join(self, right:Schema, on:str, kind:str):
+        import copy
+        
+        # all of these are semantically the same schema wise
+        if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter', 'fullouter'):
+            new = copy.deepcopy(self.schema)
+            for i in right.schema:
+                if i in new and i != on:
+                    new[f'{i}_right'] = new[i]
+            
+            return Schema(schema=new)
+
+        elif kind == 'leftanti':
+            return self
+
+        elif kind == 'rightanti':
+            return right
+
+        else:
+            raise QueryException(f'Invalid join kind {kind} used')
+            

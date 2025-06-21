@@ -332,6 +332,9 @@ UINT32: 'uint32';
 UINT64: 'uint64';
 ULONG: 'ulong';
 UNIQUEID: 'uniqueid';
+IP4: 'ip4';
+IP6: 'ip6';
+IP: 'ip';
 
 fragment LparenGooRparen:
     '(' (~')')* ')';

@@ -46,3 +46,8 @@ class Functions(HqlVisitor):
             funcs.append(self.visit(i))
         
         return Expr.DotCompositeFunction(funcs)
+    
+    def visitCountExpression(self, ctx: HqlParser.CountExpressionContext):
+        name = Expr.Identifier('count')
+        
+        return Expr.FuncExpr(name, args=[])
