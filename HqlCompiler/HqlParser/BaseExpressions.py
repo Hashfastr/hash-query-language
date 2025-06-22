@@ -145,3 +145,8 @@ class BaseExpressions(HqlVisitor):
         name = self.visit(ctx.Name)
         value = self.visit(ctx.Expression)
         return Expr.LetExpression(name, value)
+
+    def visitStaticNamedExpression(self, ctx: HqlParser.StaticNamedExpressionContext):
+        name = self.visit(ctx.Name)
+        value = self.visit(ctx.Value)
+        return Expr.NamedExpression([name], value)

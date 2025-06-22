@@ -793,8 +793,8 @@ class Schema():
     def get_type(self, field:list[str]):
         dtype = self.unnest(field)
        
-        if isinstance(dtype, dict):
-            dtype = hqlt.object(list(dtype.keys()))
+        #if isinstance(dtype, dict):
+        #    dtype = hqlt.object(list(dtype.keys()))
            
         return dtype
 

@@ -462,7 +462,7 @@ class OpParameter(Expression):
 
 class NamedExpression(Expression):
     def __init__(self, paths:list[Expression], value:Expression):
-        super().__init__()
+        Expression.__init__(self)
         self.paths = paths
         self.value = value
         

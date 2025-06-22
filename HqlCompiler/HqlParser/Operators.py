@@ -208,6 +208,6 @@ class Operators(HqlVisitor):
     
     def visitMvapplyOperatorExpressionToClause(self, ctx: HqlParser.MvapplyOperatorExpressionToClauseContext):
         return self.visit(ctx.Type)
-    
+
     def visitMvapplyOperatorLimitClause(self, ctx: HqlParser.MvapplyOperatorLimitClauseContext):
         return self.visit(ctx.LimitValue)

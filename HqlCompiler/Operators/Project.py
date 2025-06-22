@@ -93,10 +93,23 @@ class ProjectRename(Operator):
         self.non_conseq = [
             'Take'
         ]
+
+    def rename(self, ctx:Context, table:Table):
+        for i in self.exprs:
+            vpath = i.value.eval(ctx, as_list=True)
+            value = table.get_value(vpath)
+            vtype = table.schema.get_type(vpath)
+
+            table.drop(vpath)
+
+            for j in i.paths:
+                dest = j.eval(ctx, as_list=True)
+                table.insert(dest, value, vtype)
+
+        return table
         
     def eval(self, ctx:Context, **kwargs):
-        datasets = []
-        for i in self.exprs:
-            datasets.append(i.eval(ctx, as_value=False))
-                
-        return Data.merge(datasets)
+        for table in ctx.data:
+            self.rename(ctx, table)
+
+        return ctx.data

@@ -595,7 +595,7 @@ projectOperator:
     PROJECT (Expressions+=namedExpression (',' Expressions+=namedExpression)*)?;
 
 projectRenameOperator:
-    PROJECTRENAME (Expressions+=namedExpression (',' Expressions+=namedExpression)*)?;
+    PROJECTRENAME (Expressions+=staticNamedExpression (',' Expressions+=staticNamedExpression)*)?;
 
 projectReorderOperator:
     PROJECTREORDER (Expressions+=projectReorderExpression (',' Expressions+=projectReorderExpression)*)?;
@@ -879,6 +879,9 @@ queryOperatorProperty:
 
 namedExpression:
     (Name=namedExpressionNameClause)? Expression=unnamedExpression;
+
+staticNamedExpression:
+    Name=pathReference '=' Value=pathReference;
 
 namedExpressionNameClause:
     (Name=extendedNameReference | NameList=namedExpressionNameList) '=';    

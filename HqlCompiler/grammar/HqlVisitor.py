@@ -944,6 +944,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#staticNamedExpression.
+    def visitStaticNamedExpression(self, ctx:HqlParser.StaticNamedExpressionContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#namedExpressionNameClause.
     def visitNamedExpressionNameClause(self, ctx:HqlParser.NamedExpressionNameClauseContext):
         return self.visitChildren(ctx)
