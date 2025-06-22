@@ -884,10 +884,10 @@ staticNamedExpression:
     Name=pathReference '=' Value=pathReference;
 
 namedExpressionNameClause:
-    (Name=extendedNameReference | NameList=namedExpressionNameList) '=';    
+    (Name=pathReference | NameList=namedExpressionNameList) '=';    
 
 namedExpressionNameList:
-    '(' Names+=extendedNameReference (',' Names+=extendedNameReference)* ')';
+    '(' Names+=pathReference (',' Names+=pathReference)* ')';
  
 scopedFunctionCallExpression:
     Scope=simpleNameReference '.' FunctionCall=functionCallExpression;

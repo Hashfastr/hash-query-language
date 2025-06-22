@@ -948,10 +948,10 @@ def serializedATN():
         1,0,0,0,2210,2209,1,0,0,0,2211,371,1,0,0,0,2212,2214,3,376,188,0,
         2213,2212,1,0,0,0,2213,2214,1,0,0,0,2214,2215,1,0,0,0,2215,2216,
         3,382,191,0,2216,373,1,0,0,0,2217,2218,3,530,265,0,2218,2219,5,17,
-        0,0,2219,2220,3,530,265,0,2220,375,1,0,0,0,2221,2224,3,524,262,0,
+        0,0,2219,2220,3,530,265,0,2220,375,1,0,0,0,2221,2224,3,530,265,0,
         2222,2224,3,378,189,0,2223,2221,1,0,0,0,2223,2222,1,0,0,0,2224,2225,
         1,0,0,0,2225,2226,5,17,0,0,2226,377,1,0,0,0,2227,2228,5,31,0,0,2228,
-        2233,3,524,262,0,2229,2230,5,9,0,0,2230,2232,3,524,262,0,2231,2229,
+        2233,3,530,265,0,2229,2230,5,9,0,0,2230,2232,3,530,265,0,2231,2229,
         1,0,0,0,2232,2235,1,0,0,0,2233,2231,1,0,0,0,2233,2234,1,0,0,0,2234,
         2236,1,0,0,0,2235,2233,1,0,0,0,2236,2237,5,8,0,0,2237,379,1,0,0,
         0,2238,2239,3,522,261,0,2239,2240,5,15,0,0,2240,2241,3,448,224,0,
@@ -13114,7 +13114,7 @@ class HqlParser ( Parser ):
             self.state = 1704
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 7684416134715541506) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458481937589061933) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8106479303057002443) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3450710999116558693) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809025) != 0):
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630631754434562) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458483037203454253) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8250594491267141615) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3171135605373407585) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809041) != 0):
                 self.state = 1696
                 localctx._namedExpression = self.namedExpression()
                 localctx.Expressions.append(localctx._namedExpression)
@@ -16015,8 +16015,8 @@ class HqlParser ( Parser ):
 
             self.state = 2049
             self._errHandler.sync(self)
-            la_ = self._interp.adaptivePredict(self._input,171,self._ctx)
-            if la_ == 1:
+            _la = self._input.LA(1)
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630631754434562) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458483037203454253) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8250594491267141615) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3171135605373407585) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809041) != 0):
                 self.state = 2041
                 localctx._namedExpression = self.namedExpression()
                 localctx.Expressions.append(localctx._namedExpression)
@@ -16690,8 +16690,8 @@ class HqlParser ( Parser ):
             self.match(HqlParser.TOP_NESTED)
             self.state = 2120
             self._errHandler.sync(self)
-            la_ = self._interp.adaptivePredict(self._input,181,self._ctx)
-            if la_ == 1:
+            _la = self._input.LA(1)
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630631754434562) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458483037203454253) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8250594491267141615) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3171135605373407585) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809041) != 0):
                 self.state = 2119
                 localctx.Expression = self.namedExpression()
 
@@ -17934,14 +17934,14 @@ class HqlParser ( Parser ):
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
-            self.Name = None # ExtendedNameReferenceContext
+            self.Name = None # PathReferenceContext
             self.NameList = None # NamedExpressionNameListContext
 
         def EQUAL(self):
             return self.getToken(HqlParser.EQUAL, 0)
 
-        def extendedNameReference(self):
-            return self.getTypedRuleContext(HqlParser.ExtendedNameReferenceContext,0)
+        def pathReference(self):
+            return self.getTypedRuleContext(HqlParser.PathReferenceContext,0)
 
 
         def namedExpressionNameList(self):
@@ -17977,9 +17977,9 @@ class HqlParser ( Parser ):
             self.state = 2223
             self._errHandler.sync(self)
             token = self._input.LA(1)
-            if token in [30, 38, 39, 40, 41, 42, 47, 50, 53, 55, 57, 59, 61, 62, 66, 69, 71, 72, 74, 75, 77, 78, 82, 83, 86, 87, 89, 90, 91, 94, 95, 105, 113, 125, 127, 128, 129, 131, 133, 134, 141, 142, 145, 146, 148, 149, 150, 154, 156, 162, 163, 184, 185, 186, 187, 188, 192, 193, 195, 198, 199, 201, 205, 206, 214, 215, 216, 219, 220, 221, 222, 223, 224, 226, 227, 228, 229, 231, 233, 234, 238, 239, 241, 242, 246, 247, 248, 249, 250, 251, 252, 254, 257, 258, 259, 260, 261, 262, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 289, 320]:
+            if token in [30, 38, 40, 41, 42, 50, 53, 55, 59, 69, 72, 74, 75, 78, 82, 83, 89, 94, 95, 113, 125, 127, 128, 129, 133, 141, 142, 146, 148, 149, 150, 154, 162, 163, 184, 185, 187, 188, 192, 193, 198, 199, 201, 205, 214, 215, 216, 219, 220, 221, 228, 233, 234, 238, 242, 254, 257, 258, 259, 260, 262, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 289, 320]:
                 self.state = 2221
-                localctx.Name = self.extendedNameReference()
+                localctx.Name = self.pathReference()
                 pass
             elif token in [31]:
                 self.state = 2222
@@ -18005,8 +18005,8 @@ class HqlParser ( Parser ):
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
-            self._extendedNameReference = None # ExtendedNameReferenceContext
-            self.Names = list() # of ExtendedNameReferenceContexts
+            self._pathReference = None # PathReferenceContext
+            self.Names = list() # of PathReferenceContexts
 
         def OPENPAREN(self):
             return self.getToken(HqlParser.OPENPAREN, 0)
@@ -18014,11 +18014,11 @@ class HqlParser ( Parser ):
         def CLOSEPAREN(self):
             return self.getToken(HqlParser.CLOSEPAREN, 0)
 
-        def extendedNameReference(self, i:int=None):
+        def pathReference(self, i:int=None):
             if i is None:
-                return self.getTypedRuleContexts(HqlParser.ExtendedNameReferenceContext)
+                return self.getTypedRuleContexts(HqlParser.PathReferenceContext)
             else:
-                return self.getTypedRuleContext(HqlParser.ExtendedNameReferenceContext,i)
+                return self.getTypedRuleContext(HqlParser.PathReferenceContext,i)
 
 
         def COMMA(self, i:int=None):
@@ -18057,8 +18057,8 @@ class HqlParser ( Parser ):
             self.state = 2227
             self.match(HqlParser.OPENPAREN)
             self.state = 2228
-            localctx._extendedNameReference = self.extendedNameReference()
-            localctx.Names.append(localctx._extendedNameReference)
+            localctx._pathReference = self.pathReference()
+            localctx.Names.append(localctx._pathReference)
             self.state = 2233
             self._errHandler.sync(self)
             _la = self._input.LA(1)
@@ -18066,8 +18066,8 @@ class HqlParser ( Parser ):
                 self.state = 2229
                 self.match(HqlParser.COMMA)
                 self.state = 2230
-                localctx._extendedNameReference = self.extendedNameReference()
-                localctx.Names.append(localctx._extendedNameReference)
+                localctx._pathReference = self.pathReference()
+                localctx.Names.append(localctx._pathReference)
                 self.state = 2235
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
@@ -20672,7 +20672,7 @@ class HqlParser ( Parser ):
             self.state = 2430
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 7684416134715541506) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458481937589061933) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8106479303057002443) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3450710999116558693) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809025) != 0):
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630631754434562) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458483037203454253) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8250594491267141615) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3171135605373407585) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809041) != 0):
                 self.state = 2422
                 localctx._argumentExpression = self.argumentExpression()
                 localctx.Arguments.append(localctx._argumentExpression)
@@ -20822,7 +20822,7 @@ class HqlParser ( Parser ):
             self.state = 2441
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 7684416134715541506) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458481937589061933) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8106479303057002443) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3450710999116558693) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809025) != 0):
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630631754434562) != 0) or ((((_la - 65)) & ~0x3f) == 0 and ((1 << (_la - 65)) & -3458483037203454253) != 0) or ((((_la - 129)) & ~0x3f) == 0 and ((1 << (_la - 129)) & -8250594491267141615) != 0) or ((((_la - 193)) & ~0x3f) == 0 and ((1 << (_la - 193)) & 3171135605373407585) != 0) or ((((_la - 257)) & ~0x3f) == 0 and ((1 << (_la - 257)) & -2310346603438809041) != 0):
                 self.state = 2440
                 localctx.Expression = self.namedExpression()
 
