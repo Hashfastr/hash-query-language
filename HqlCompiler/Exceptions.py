@@ -19,6 +19,15 @@ class ArgumentException(FunctionException):
     def __init__(self, message:str="Function argument error has occurred"):
         super().__init__(f"{message}")
 
+class LexerException(HqlException):
+    def __init__(self, message:str, text:str, line:int, col:int, offsym:str, filename:str=''):
+        self.text = text
+        self.line = line
+        self.col = col
+        self.filename = filename
+        
+        HqlException.__init__(self, f'{message}: line {self.line}:{self.col}')
+
 class ParseException(HqlException):
     def __init__(self, message, ctx, filename:str=''):
         self.ctx = ctx

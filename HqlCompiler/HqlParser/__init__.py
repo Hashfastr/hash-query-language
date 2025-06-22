@@ -18,17 +18,17 @@ import time
 import logging
 
 class HqlErrorListener(ErrorListener):
-    def __init__(self):
+    def __init__(self, text:str, filename:str):
         ErrorListener.__init__(self)
-        self.errors = []
+        self.text = text
+        self.filename = filename
 
-    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        estr = f'Syntax Error: {line}:{column}: {msg}, offending symbol {offendingSymbol.text}'
-        self.errors.append(estr)
-
+    def syntaxError(self, recognizer:HqlParser, offendingSymbol, line, column, msg, e):
+        e = LexerException(msg, self.text, line, column, offendingSymbol, filename=self.filename)
+        Parser.handleException(recognizer, e)
+        
 class Parser():
     def __init__(self, filename:str):
-        self.err_listener = HqlErrorListener()
         self.filename = filename
         self.tree = self.parse_file()
     
@@ -40,6 +40,8 @@ class Parser():
             logging.error(f"Failed to open file {self.filename}")
             logging.error(str(e))
             raise e
+        
+        self.err_listener = HqlErrorListener(text, self.filename)
         
         lexer = HqlLexer(InputStream(text))
         token_stream = CommonTokenStream(lexer)
@@ -75,7 +77,15 @@ class Parser():
     
     def handleException(ctx, e:ParseException):
         logging.critical(f'Failed to parse query {e.filename}')
-        logging.critical(Parser.getText(ctx))
+        
+        if isinstance(e, LexerException):
+            text = e.text
+            text = text.split('\n')[e.line - 1]
+            
+        else:
+            text = Parser.getText(ctx)
+        
+        logging.critical(text)
         marker = (' ' * e.col) + '^'
         logging.critical(marker)
         raise e
