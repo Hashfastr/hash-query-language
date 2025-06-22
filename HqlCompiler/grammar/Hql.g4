@@ -919,10 +919,20 @@ equalsEqualityExpression:
     Left=relationalExpression OperatorToken=('==' | '<>' | '!=') Right=relationalExpression;
 
 listEqualityExpression:
-    Left=relationalExpression OperatorToken=(IN | NOT_IN | IN_CI | NOT_IN_CI | HAS_ANY | HAS_ALL) '(' Expressions+=invocationExpression (',' Expressions+=invocationExpression)* ')';
+    Left=relationalExpression OperatorToken=(IN | NOT_IN | IN_CI | NOT_IN_CI | HAS_ANY | HAS_ALL) ;
+
+inExpression:
+      ('(' Expressions+=invocationExpression (',' Expressions+=invocationExpression)* ')')
+    | Subnet+=ip4SubnetExpression
+    ;
 
 betweenEqualityExpression:
-    Left=relationalExpression OperatorToken=(BETWEEN | NOT_BETWEEN) '(' StartExpression=invocationExpression '..' EndExpression=invocationExpression ')';
+    Left=relationalExpression OperatorToken=(BETWEEN | NOT_BETWEEN) betweenRangeExpression;
+
+betweenRangeExpression:
+      ('(' Expressions+=invocationExpression '..' Expressions+=invocationExpression ')')
+    | Subnet=ip4SubnetExpression
+    ;
 
 starEqualityExpression:
     '*' '==' Expression=relationalExpression;
@@ -1463,6 +1473,10 @@ wildcardedNameSegment:
 
 ///////////////////////////////////////
 // Literals
+
+ip4SubnetExpression:
+    A=intLiteralExpression '.' B=intLiteralExpression '.' C=intLiteralExpression '.' D=intLiteralExpression '/' Mask=intLiteralExpression
+    ;
 
 // all literals including with a sign prefix
 literalExpression:

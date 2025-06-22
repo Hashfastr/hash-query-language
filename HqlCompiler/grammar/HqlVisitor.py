@@ -1004,8 +1004,18 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#inExpression.
+    def visitInExpression(self, ctx:HqlParser.InExpressionContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#betweenEqualityExpression.
     def visitBetweenEqualityExpression(self, ctx:HqlParser.BetweenEqualityExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#betweenRangeExpression.
+    def visitBetweenRangeExpression(self, ctx:HqlParser.BetweenRangeExpressionContext):
         return self.visitChildren(ctx)
 
 
@@ -1391,6 +1401,11 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#wildcardedNameSegment.
     def visitWildcardedNameSegment(self, ctx:HqlParser.WildcardedNameSegmentContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#ip4SubnetExpression.
+    def visitIp4SubnetExpression(self, ctx:HqlParser.Ip4SubnetExpressionContext):
         return self.visitChildren(ctx)
 
 

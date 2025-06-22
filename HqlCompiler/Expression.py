@@ -103,9 +103,18 @@ class Equality(Expression):
             'rh': self.rh.to_dict()
         }
     
-    # # Generates a polars filter
-    # def eval(self, **kwargs):
-    #     lh = 
+    # Generates a polars filter
+    def eval(self, ctx:Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+        
+        lh = self.lh.eval(ctx, as_pl=True)
+        rh = self.lh.eval(ctx, as_pl=True)
+        
+        if as_pl:
+            return (lh == rh)
+        
+        else:
+            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # List equality
 # Essenitally a filter stating that a field should have any value in a tuple.
@@ -129,7 +138,26 @@ class ListEquality(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
-
+        
+    def eval(self, ctx:Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+        
+        lh = self.lh.eval(ctx, as_pl=True)
+        
+        filts = []
+        for rh in self.rh:
+            filt = (lh == rh.eval(ctx, as_pl=True))
+            filts.append(filt)
+            
+        filt = filts[0]
+        for i in filts[1:]:
+            filt = filt or i
+        
+        if as_pl:
+            return filt
+        
+        else:
+            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # Data range functionality
 # Left hand side is the expression to evaluate in being between two values.
@@ -157,6 +185,56 @@ class BetweenEquality(Expression):
                 'end': self.end.to_dict()
             }
         }
+    
+    def eval(self, ctx:Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+        
+        lh = self.lh.eval(ctx, as_pl=True)
+        start = self.start.eval(ctx, as_pl=True)
+        end = self.end.eval(ctx, as_pl=True)
+        
+        filt = lh.is_between(start, end)
+        
+        if self.negate:
+            filt = filt.not_()
+        
+        if as_pl:
+            return filt
+        
+        else:
+            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        
+    
+class BinaryLogic(Expression):
+    def __init__(self, lh:Expression, rh:list[Expression], type:str):
+        super().__init__()
+        self.bitype = type.lower()
+        self.lh = lh
+        self.rh = rh
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'bitype': self.bitype,
+            'lh': self.lh.to_dict(),
+            'rh': [x.to_dict() for x in self.rh]
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        lh = self.lh.eval(ctx, as_pl=True)
+        
+        rh = []
+        for i in self.rh:
+            rh.append(i.eval(ctx, as_pl=True))    
+        
+        filt = lh
+        for i in rh:
+            if self.bitype == 'and':
+                filt = filt and i
+            else:
+                filt = filt or i
+                
+        return filt
 
 # A named reference, can be scoped
 # Scopes are not implemented yet.
@@ -429,24 +507,6 @@ class Path(Expression):
             receiver = receiver.unnest(consumed) if as_value else receiver.select(consumed)
             
         return receiver
-    
-class BinaryLogic(Expression):
-    def __init__(self, lh:Expression, rh:list[Expression], type:str):
-        super().__init__()
-        self.bitype = type.lower()
-        self.lh = lh
-        self.rh = rh
-        
-    def to_dict(self):
-        return {
-            'type': self.type,
-            'bitype': self.bitype,
-            'lh': self.lh.to_dict(),
-            'rh': [x.to_dict() for x in self.rh]
-        }
-        
-    # def eval(self, ctx:Context, **kwargs):
-        
 
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
@@ -646,4 +706,26 @@ class ReorderExpression(Expression):
         self.order = order
         
     def eval(self, ctx: Context, **kwargs):
+        return ctx.data
+
+class SubnetExpression(Expression):
+    def __init__(self, address:str, mask:int):
+        Expression.__init__(self)
+        self.address = address
+        self.mask = mask
+        
+    def eval(self, ctx: Context, **kwargs):
+        # Get the integer representation that'll be used backend
+        addr = pl.Series([self.address])
+        addr = hqlt.ip4().cast(addr)[0]
+        
+        # Create the mask
+        FF = 0xFFFFFFFF
+        mask = FF - ((1 << self.mask) - 1)
+        
+        lower = addr & mask
+        upper = addr | (mask ^ FF)
+        
+        # tf do I do now?
+        
         return ctx.data

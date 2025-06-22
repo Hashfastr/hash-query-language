@@ -968,7 +968,7 @@ class Schema():
         
         if not schema:
             schema = self.schema
-        
+
         # Endpoint in the tree
         # Expected to be a type we can convert
         if not isinstance(schema, dict):
@@ -990,6 +990,10 @@ class Schema():
         # Recurse on a populated dict
         target_schema = dict()
         for key in schema:
+            if not schema[key]:
+                target_schema[key] = hqlt.null()
+                continue
+            
             target_schema[key] = self.convert_schema(schema=schema[key], target=target)
         
         return target_schema
