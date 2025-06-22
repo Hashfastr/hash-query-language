@@ -13,11 +13,9 @@ import logging
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
 @register_op('Where')
 class Where(Operator):
+    # Pass in the parser context here for helpful debugging
     def __init__(self, expr:Expression, params:list=None):
-        super().__init__()
-        if expr == None:
-            raise ParseException('Where instanciated with None type predicate')
-        
+        Operator.__init__(self)
         self.parameters = params if params else []
         self.expr = expr
 

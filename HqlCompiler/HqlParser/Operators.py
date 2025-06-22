@@ -32,6 +32,9 @@ class Operators(HqlVisitor):
         params = []
         for i in ctx.Parameters:
             params.append(self.visit(i))
+        
+        if not predicate:
+            raise ParseException('Where instanciated with None type predicate', ctx)
             
         return Ops.Where(predicate, params)
 
