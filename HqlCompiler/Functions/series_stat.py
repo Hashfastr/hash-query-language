@@ -90,9 +90,9 @@ class series_stats(Function):
 
         serieses = []
         tables = []
-        for table in data.tables:
-            s = data.tables[table].series.series
-            stype = data.tables[table].series.type.pl_schema()
+        for table in data:
+            s = table.series.series
+            stype = table.series.type.pl_schema()
             serieses.append(s)
 
             min, min_idx = self.cal_min(s)
@@ -122,7 +122,7 @@ class series_stats(Function):
             # will be marked as null and would suck
             df = df.select(pl.all().repeat_by(len(s))).explode(pl.all())
 
-            tables.append(Table(df=df, name=table))
+            tables.append(Table(df=df, name=table.name))
        
         min, min_idx = self.cal_min(serieses)
         max, max_idx = self.cal_max(serieses)

@@ -42,8 +42,7 @@ class MvExpand(Operator):
         self.limit = self.limit.eval(ctx)
 
         new = []
-        for name in ctx.data.tables:
-            table = ctx.data.tables[name]
+        for table in ctx.data:
             new.append(self.explode_table(ctx, table))
         
         return Data(tables_list=new)

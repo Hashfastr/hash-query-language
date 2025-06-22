@@ -29,9 +29,7 @@ class Where(Operator):
         pl_filter = pltools.build_filter(ctx, self.expr)
 
         tables = []
-        for name in ctx.data.tables:
-            table = ctx.data.tables[name]
-
+        for table in ctx.data:
             try:
                 table.filter(pl_filter)
                 tables.append(table)

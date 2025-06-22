@@ -16,21 +16,6 @@ class Take(Operator):
         self.limit = limit
         self.tables = tables
     
-    def get_limits(self, ctx:Context):
-        n_rows = self.limit.eval(ctx)
-        tables = []
-        for i in self.tables:
-            table = i.eval(ctx, as_str=True)
-            tables.append(table)
-            
-        if not tables:
-            tables.append('*')
-        
-        if not isinstance(n_rows, int):
-            raise QueryException(f'Take operator passed non-int type {n_rows}')
-        
-        return (n_rows, tables)
-    
     '''
     Takes only so many results for each table.
 

@@ -489,16 +489,16 @@ class NamedExpression(Expression):
             data = Data()
         
         # loop through value tables as those are the only ones we can vouch for
-        for table in value.tables:
+        for table in value:
             # Need this if we're creating a new dataset instead of inserting
-            if table not in data.tables:
-                data.add_table(Table(name=table))
+            if table.name not in data.tables:
+                data.add_table(Table(name=table.name))
             
             # We can assign to multiple names
             for path in self.paths:
                 path = path.eval(ctx, as_list=True)
                 
-                cur = value.tables[table]
+                cur = table
                 
                 if cur.series:
                     # Get the series and set the type
@@ -512,7 +512,7 @@ class NamedExpression(Expression):
                     cur = cur.df
                 
                 # Insert properly
-                data.tables[table].insert(path, cur, schema)
+                data.tables[table.name].insert(path, cur, schema)
 
         return data
 
@@ -576,8 +576,8 @@ class ByExpression(Expression):
     def eval(self, ctx:Context, **kwargs):
         new = []
         
-        for table in ctx.data.tables:
-            new.append(self.build_table_agg(ctx, ctx.data.tables[table]))
+        for table in ctx.data:
+            new.append(self.build_table_agg(ctx, table))
             
         return Data(tables_list=new)
 
@@ -633,8 +633,8 @@ class ToExpression(Expression):
         path = self.expr.eval(ctx, as_path=True)
         
         new = []
-        for name in ctx.data.tables:
-            table = ctx.data.tables[name].cast_in_place(path, self.to)
+        for table in ctx.data:
+            table = table.cast_in_place(path, self.to)
             new.append(table)
         
         return Data(tables_list=new)

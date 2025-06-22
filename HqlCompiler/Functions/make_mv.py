@@ -77,9 +77,7 @@ class make_mv(Function):
         as_value = kwargs.get('as_value', False)
         
         new = []
-        for name in ctx.data.tables:
-            table = ctx.data.tables[name]
-            
+        for table in ctx.data:
             if isinstance(table.agg, group_by.GroupBy):
                 new.append(self.aggregate(ctx, table))
                 continue
@@ -87,12 +85,12 @@ class make_mv(Function):
             series = self.normal(ctx, table)
             
             if as_value:
-                new.append(Table(series=series, name=name))
+                new.append(Table(series=series, name=table.name))
                 continue
             
             df = pl.DataFrame({'mv': series.series})
             schema = {'mv': series.type}
 
-            new.append(Table(df=df, schema=Schema(schema=schema), name=name))
+            new.append(Table(df=df, schema=Schema(schema=schema), name=table.name))
         
         return Data(tables_list=new)

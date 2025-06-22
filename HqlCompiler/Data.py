@@ -65,10 +65,17 @@ class Data():
             
     def __len__(self):
         length = 0
-        for i in self.tables:
-            length += len(self.tables[i])
+        for table in self:
+            length += len(table)
             
         return length
+
+    def __iter__(self):
+        tables = []
+        for name in self.tables:
+            tables.append(self.tables[name])
+            
+        return iter(tables)
 
     '''
     Gets tables relevant to a given table pattern
@@ -94,9 +101,9 @@ class Data():
         prefix = name.split('*')[0]
         
         tables = []
-        for table in self.tables:
-            if table.startswith(prefix):
-                tables.append(self.tables[table])
+        for table in self:
+            if table.name.startswith(prefix):
+                tables.append(table)
                 
         return tables
     
@@ -115,26 +122,26 @@ class Data():
         
     def get_schema(self):
         schemata = {}
-        for name in self.tables:
-            schemata[name] = self.tables[name].get_schema()
+        for table in self:
+            schemata[table.name] = table.get_schema()
         
         return schemata
 
     # Given a path, select just the data at that path
     def select(self, path:list[str]):
         tables = []
-        for i in self.tables:
-            tables.append(self.tables[i].select(path))
+        for table in self:
+            tables.append(table.select(path))
 
         return Data(tables_list=tables)
     
     def unnest(self, field:list[str]):
         tables = []
-        for i in self.tables:
-            new = self.tables[i].unnest(field)
+        for table in self:
+            new = table.unnest(field)
             
             if isinstance(new, Series):
-                new = Table(series=new, name=i)
+                new = Table(series=new, name=table.name)
             
             tables.append(new)
         
@@ -144,12 +151,10 @@ class Data():
         dataset = dict()
         
         dataset['data'] = {}
-        for i in self.tables:
-            dataset['data'][i] = self.tables[i].to_dicts()
+        for table in self:
+            dataset['data'][table.name] = table.to_dicts()
             
-        dataset['schema'] = {}
-        for i in self.tables:
-            dataset['schema'][i] = self.tables[i].get_schema()
+        dataset['schema'] = self.get_schema()
 
         return dataset
     
@@ -159,8 +164,8 @@ class Data():
         
         tables = []
         for datum in data:
-            for name in datum.tables:
-                tables.append(datum.tables[name])
+            for table in datum:
+                tables.append(table)
 
         return Data(tables_list=tables)
 
@@ -172,13 +177,13 @@ class Data():
         if not self.tables:
             return exists
         
-        for i in self.tables:
-            if self.tables[i].assert_field(field):
-                exists.append(self.tables[i])
+        for table in self:
+            if table.assert_field(field):
+                exists.append(table)
 
         if not len(exists):
             logging.warning(f"Could not find {'.'.join(field)} in any tables in the dataset")
-            logging.warning(', '.join([x for x in self.tables]))
+            logging.warning(', '.join([x.name for x in self]))
         
         return exists
     
@@ -194,11 +199,9 @@ class Data():
 
     def join(self, right:Data, on:str, kind:str='innerunique'):
         tables = []
-        for lname in self.tables:
+        for lt in self:
             new = []
-            lt = self.tables[lname]
-            for rname in right.tables:
-                rt = right.tables[rname]
+            for rt in right:
                 new.append(lt.join(rt, on, kind))
 
             tables.append(Table.concat(new))
@@ -207,8 +210,7 @@ class Data():
     
     def strip(self):
         new = []
-        for i in self.tables:
-            table = self.tables[i]
+        for table in self:
             new.append(table.strip())
         return Data(tables_list=new)
 
@@ -220,9 +222,8 @@ class Data():
 
     def drop(self, path:list[str]):
         new = []
-        for i in self.tables:
-            table = self.tables[i].drop(path)
-            new.append(table)
+        for table in self:
+            new.append(table.drop(path))
         return Data(tables_list=new)
         
 '''
