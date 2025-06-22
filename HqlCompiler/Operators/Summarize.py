@@ -18,9 +18,9 @@ class Summarize(Operator):
         for expr in self.aggregate_exprs:
             data.append(expr.eval(ctx, insert=False))
         
-        for name in ctx.data.tables:
-            table = ctx.data.tables[name]
-            table = Table(table.agg.agg(), schema=table.agg_schema, name=name)
-            data.append(Data(tables_list=[table]))
+        new = []
+        for table in ctx.data:
+            table = Table(table.agg.agg(), schema=table.agg_schema, name=table.name)
+            new.append(table)
         
-        return Data.merge(data)
+        return Data(tables_list=new)

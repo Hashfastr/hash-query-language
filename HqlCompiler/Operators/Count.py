@@ -23,8 +23,8 @@ class Count(Operator):
         name = self.name.eval(ctx, as_str=True) if self.name else None
         
         counts = dict()
-        for table in ctx.data.tables:
-            counts[table] = len(ctx.data.tables[table])
+        for table in ctx.data:
+            counts[table.name] = len(table)
             
         # cast count to a field
         if name:

@@ -215,10 +215,10 @@ class Elasticsearch(Database):
             table = Table(init_data=result_sets[i], name=i)
             tables.append(table)
 
-        dataset = Data(tables_list=tables)
+        data = Data(tables_list=tables)
 
-        for i in dataset.tables:
+        for table in data:
             eschema = Schema(schema=self.gen_elastic_schema(index[i]['mappings']['properties']))
-            dataset.tables[i].change_schema(eschema)
+            table.change_schema(eschema)
 
-        return dataset
+        return data

@@ -49,17 +49,14 @@ class toip4(Typecast):
 
     def eval(self, ctx:Context, **kwargs):
         path = self.src.eval(ctx, as_list=True)
-        data = ctx.data.select(path)
-
-        dtype = hqlt.ip4()
+        data = ctx.data.select(path).strip()
 
         tables = []
-        for table in data.tables:
-            df = data.tables[table].strip()
-            series = dtype.cast(df)
+        for table in data:
+            series = self.cast_type.cast(table.df)
 
             new = Table(name=table)
-            new.insert(path, series, dtype)
+            new.insert(path, series, self.cast_type)
             tables.append(new)
 
         return Data(tables_list=tables)

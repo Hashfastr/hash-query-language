@@ -334,7 +334,6 @@ ULONG: 'ulong';
 UNIQUEID: 'uniqueid';
 IP4: 'ip4';
 IP6: 'ip6';
-IP: 'ip';
 
 fragment LparenGooRparen:
     '(' (~')')* ')';

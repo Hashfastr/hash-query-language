@@ -18,21 +18,19 @@ class hql_len(Function):
         filter = self.args[0].eval(ctx, as_pl=True)
         
         new = []
-        for name in ctx.data.tables:
-            table = ctx.data.tables[name]
-            
+        for table in ctx.data:            
             if not table.assert_field(path):
-                new.append(Table(name=name))
+                new.append(Table(name=table.name))
                 continue
             
             if not isinstance(table.schema.get_type(path).schema, hqlt.multivalue):
-                logging.warning(f"Skipping over evaluating length of {'.'.join(path)} in {name}")
-                new.append(Table(name=name))
+                logging.warning(f"Skipping over evaluating length of {'.'.join(path)} in {table.name}")
+                new.append(Table(name=table.name))
                 continue
             
             count = table.df.with_columns(filter.list.len())
             schema = Schema().set(path, self.count_type)
             
-            new.append(Table(df=count, schema=Schema(schema=schema), name=name))
+            new.append(Table(df=count, schema=Schema(schema=schema), name=table.name))
             
         return Data(tables_list=new)

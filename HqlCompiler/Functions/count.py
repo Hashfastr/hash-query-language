@@ -26,8 +26,7 @@ class count(Function):
         
     def eval(self, ctx:Context, **kwargs):
         tables = []
-        for name in ctx.data.tables:
-            table = ctx.data.tables[name]
+        for table in ctx.data:
             if not table.agg:
                 tables.append(table)
                 continue
