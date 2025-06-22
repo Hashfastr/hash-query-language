@@ -3,6 +3,7 @@ from HqlCompiler.Data import Schema, Data, Table
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
+import polars as pl
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.
@@ -67,13 +68,22 @@ class ProjectReorder(Operator):
         self.non_conseq = [
             'Take'
         ]
-        
+    
+    '''
+    Gonna take out the specific bits and move them to the front
+    '''
     def eval(self, ctx:Context, **kwargs):
-        datasets = []
-        for i in self.exprs:
-            datasets.append(i.eval(ctx, as_value=False))
-                
-        return Data.merge(datasets)
+        new = []
+        cur = ctx.data
+        
+        for expr in self.exprs:
+            path = expr.eval(ctx, as_list=True)
+            new.append(cur.select(path))
+            cur = cur.drop(path)
+        
+        new.append(cur)
+        
+        return Data.merge(new)
 
 @register_op('ProjectRename')
 class ProjectRename(Operator):
