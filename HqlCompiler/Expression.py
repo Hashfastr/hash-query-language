@@ -517,9 +517,9 @@ class NamedExpression(Expression):
         return data
 
 class OrderedExpression(Expression):
-    def __init__(self, name:Expression=None, order:str='desc', nulls:str=''):
+    def __init__(self, expr:Expression=None, order:str='desc', nulls:str=''):
         super().__init__()
-        self.name = name
+        self.expr = expr
         self.order = order
         
         if nulls == '':
@@ -532,7 +532,7 @@ class OrderedExpression(Expression):
         
     def to_dict(self):
         return {
-            'name': self.name.to_dict(),
+            'name': self.expr.to_dict(),
             'order': self.order,
             'nulls': self.nulls
         }
