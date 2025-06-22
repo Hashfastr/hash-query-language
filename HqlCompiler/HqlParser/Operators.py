@@ -211,3 +211,10 @@ class Operators(HqlVisitor):
 
     def visitMvapplyOperatorLimitClause(self, ctx: HqlParser.MvapplyOperatorLimitClauseContext):
         return self.visit(ctx.LimitValue)
+    
+    def visitSortOperator(self, ctx: HqlParser.SortOperatorContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        return Ops.Sort(exprs)

@@ -118,7 +118,7 @@ class BaseExpressions(HqlVisitor):
 
     def visitOrderedExpression(self, ctx: HqlParser.OrderedExpressionContext):
         expr = self.visit(ctx.Ordering)
-        expr.name = self.visit(ctx.Expression)
+        expr.expr = self.visit(ctx.Expression)
         return expr
     
     '''

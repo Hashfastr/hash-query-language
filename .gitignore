@@ -187,3 +187,5 @@ index_debug.json
 big.json
 
 *.ipynb
+
+*swp

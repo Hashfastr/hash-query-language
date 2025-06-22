@@ -8,7 +8,7 @@ from HqlCompiler.Context import register_op, Context
 @register_op('Template')
 class Template(Operator):
     def __init__(self):
-        super().__init__()
+        Operator.__init__(self)
 
     def eval(self, ctx:Context, **kwargs):
         return ctx.data

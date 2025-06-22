@@ -656,6 +656,43 @@ class Table():
         
         return Table(df=df, schema=schema, name=self.name)
 
+    '''
+    Sorts by expression, if they exist
+    '''
+    def sort(self, exprs:list[pl.Expr], orders:list[bool]=None, nulls:list[bool]=None):
+        orders = [True for x in exprs] if orders is None else orders
+        nulls = [x for x in orders] if nulls is None else nulls
+        exprs = exprs if isinstance(exprs, list) else [exprs]
+        
+        if len(orders) < len(exprs):
+            logging.warning('Passing incomplete list of orders to table sort, defaulting to desc for missing values')
+            for i in range(len(exprs) - len(orders)):
+                orders.append(True)
+                
+        if len(nulls) < len(exprs):
+            logging.warning('Passing incomplete list of nulls to table sort, defaulting to last for missing values')
+            for i in range(len(exprs) - len(nulls)):
+                nulls.append(True)
+        
+        texprs = []
+        torders = []
+        tnulls = []
+        for idx, expr in enumerate(exprs):
+            try:
+                self.df.select(expr)
+                texprs.append(exprs[idx])
+                torders.append(orders[idx])
+                tnulls.append(nulls[idx])
+            except:
+                continue
+
+        # No applicable sort
+        if not len(texprs):
+            return self
+        
+        self.df = self.df.sort(by=texprs, descending=torders, nulls_last=tnulls)
+        return self
+
 class Schema():
     def __init__(
             self,
