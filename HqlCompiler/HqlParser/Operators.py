@@ -56,6 +56,34 @@ class Operators(HqlVisitor):
         
         return Ops.Project(exprs)
 
+    def visitProjectAwayOperator(self, ctx: HqlParser.ProjectAwayOperatorContext):
+        exprs = []
+        for i in ctx.Columns:
+            exprs.append(self.visit(i))
+        
+        return Ops.ProjectAway(exprs)
+    
+    def visitProjectKeepOperator(self, ctx: HqlParser.ProjectKeepOperatorContext):
+        exprs = []
+        for i in ctx.Columns:
+            exprs.append(self.visit(i))
+        
+        return Ops.ProjectKeep(exprs)
+
+    def visitProjectRenameOperator(self, ctx: HqlParser.ProjectRenameOperatorContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        return Ops.ProjectRename(exprs)
+    
+    def visitProjectReorderOperator(self, ctx: HqlParser.ProjectReorderOperatorContext):
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        return Ops.ProjectReorder(exprs)
+        
     def visitExtendOperator(self, ctx: HqlParser.ExtendOperatorContext):
         exprs = []
         for i in ctx.Expressions:

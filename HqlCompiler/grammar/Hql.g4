@@ -1262,8 +1262,8 @@ simpleOrWildcardedNameReference:
     ;
 
 pathReference:
-    Part=simpleOrWildcardedNameReference
-    ('.' simpleOrWildcardedNameReference)*
+    Parts+=simpleNameReference
+    ('.' Parts+=simpleNameReference)*
     ;
 
 simpleOrPathNameReference:

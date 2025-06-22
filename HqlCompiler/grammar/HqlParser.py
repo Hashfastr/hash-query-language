@@ -1095,8 +1095,8 @@ def serializedATN():
         2652,3,538,269,0,2650,2652,3,520,260,0,2651,2649,1,0,0,0,2651,2650,
         1,0,0,0,2652,523,1,0,0,0,2653,2654,3,546,273,0,2654,525,1,0,0,0,
         2655,2658,3,520,260,0,2656,2658,3,524,262,0,2657,2655,1,0,0,0,2657,
-        2656,1,0,0,0,2658,527,1,0,0,0,2659,2664,3,526,263,0,2660,2661,5,
-        15,0,0,2661,2663,3,526,263,0,2662,2660,1,0,0,0,2663,2666,1,0,0,0,
+        2656,1,0,0,0,2658,527,1,0,0,0,2659,2664,3,520,260,0,2660,2661,5,
+        15,0,0,2661,2663,3,520,260,0,2662,2660,1,0,0,0,2663,2666,1,0,0,0,
         2664,2662,1,0,0,0,2664,2665,1,0,0,0,2665,529,1,0,0,0,2666,2664,1,
         0,0,0,2667,2670,3,520,260,0,2668,2670,3,528,264,0,2669,2667,1,0,
         0,0,2669,2668,1,0,0,0,2670,531,1,0,0,0,2671,2675,3,546,273,0,2672,
@@ -12947,7 +12947,7 @@ class HqlParser ( Parser ):
             self.state = 1682
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 7684416123978121218) != 0) or ((((_la - 66)) & ~0x3f) == 0 and ((1 << (_la - 66)) & -1729240968798725271) != 0) or ((((_la - 131)) & ~0x3f) == 0 and ((1 << (_la - 131)) & 7196752211023416333) != 0) or ((((_la - 195)) & ~0x3f) == 0 and ((1 << (_la - 195)) & -3749008268648248231) != 0) or ((((_la - 259)) & ~0x3f) == 0 and ((1 << (_la - 259)) & 2305843010295822351) != 0):
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630621017014272) != 0) or ((((_la - 69)) & ~0x3f) == 0 and ((1 << (_la - 69)) & 2089687819387691625) != 0) or ((((_la - 133)) & ~0x3f) == 0 and ((1 << (_la - 133)) & 1790180853492720385) != 0) or ((((_la - 198)) & ~0x3f) == 0 and ((1 << (_la - 198)) & 8718987674455048331) != 0) or ((((_la - 262)) & ~0x3f) == 0 and ((1 << (_la - 262)) & 288230376286977793) != 0):
                 self.state = 1674
                 localctx._pathReference = self.pathReference()
                 localctx.Columns.append(localctx._pathReference)
@@ -13281,7 +13281,7 @@ class HqlParser ( Parser ):
             self.state = 1724
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 7684416123978121218) != 0) or ((((_la - 66)) & ~0x3f) == 0 and ((1 << (_la - 66)) & -1729240968798725271) != 0) or ((((_la - 131)) & ~0x3f) == 0 and ((1 << (_la - 131)) & 7196752211023416333) != 0) or ((((_la - 195)) & ~0x3f) == 0 and ((1 << (_la - 195)) & -3749008268648248231) != 0) or ((((_la - 259)) & ~0x3f) == 0 and ((1 << (_la - 259)) & 2305843010295822351) != 0):
+            if (((_la) & ~0x3f) == 0 and ((1 << _la) & 622630621017014272) != 0) or ((((_la - 69)) & ~0x3f) == 0 and ((1 << (_la - 69)) & 2089687819387691625) != 0) or ((((_la - 133)) & ~0x3f) == 0 and ((1 << (_la - 133)) & 1790180853492720385) != 0) or ((((_la - 198)) & ~0x3f) == 0 and ((1 << (_la - 198)) & 8718987674455048331) != 0) or ((((_la - 262)) & ~0x3f) == 0 and ((1 << (_la - 262)) & 288230376286977793) != 0):
                 self.state = 1716
                 localctx._projectReorderExpression = self.projectReorderExpression()
                 localctx.Expressions.append(localctx._projectReorderExpression)
@@ -23574,13 +23574,14 @@ class HqlParser ( Parser ):
         def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
             super().__init__(parent, invokingState)
             self.parser = parser
-            self.Part = None # SimpleOrWildcardedNameReferenceContext
+            self._simpleNameReference = None # SimpleNameReferenceContext
+            self.Parts = list() # of SimpleNameReferenceContexts
 
-        def simpleOrWildcardedNameReference(self, i:int=None):
+        def simpleNameReference(self, i:int=None):
             if i is None:
-                return self.getTypedRuleContexts(HqlParser.SimpleOrWildcardedNameReferenceContext)
+                return self.getTypedRuleContexts(HqlParser.SimpleNameReferenceContext)
             else:
-                return self.getTypedRuleContext(HqlParser.SimpleOrWildcardedNameReferenceContext,i)
+                return self.getTypedRuleContext(HqlParser.SimpleNameReferenceContext,i)
 
 
         def DOT(self, i:int=None):
@@ -23617,7 +23618,8 @@ class HqlParser ( Parser ):
         try:
             self.enterOuterAlt(localctx, 1)
             self.state = 2659
-            localctx.Part = self.simpleOrWildcardedNameReference()
+            localctx._simpleNameReference = self.simpleNameReference()
+            localctx.Parts.append(localctx._simpleNameReference)
             self.state = 2664
             self._errHandler.sync(self)
             _la = self._input.LA(1)
@@ -23625,7 +23627,8 @@ class HqlParser ( Parser ):
                 self.state = 2660
                 self.match(HqlParser.DOT)
                 self.state = 2661
-                self.simpleOrWildcardedNameReference()
+                localctx._simpleNameReference = self.simpleNameReference()
+                localctx.Parts.append(localctx._simpleNameReference)
                 self.state = 2666
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)

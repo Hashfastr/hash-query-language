@@ -79,6 +79,14 @@ class BaseExpressions(HqlVisitor):
             names.append(self.visit(name))
             
         return names
+    
+    def visitPathReference(self, ctx: HqlParser.PathReferenceContext):
+        parts = []
+        
+        for i in ctx.Parts:
+            parts.append(self.visit(i))
+        
+        return Expr.Path(parts)
 
     '''
     Individual constant values

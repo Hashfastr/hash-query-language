@@ -29,3 +29,67 @@ class Project(Operator):
             datasets.append(i.eval(ctx, as_value=False))
                 
         return Data.merge(datasets)
+
+@register_op('ProjectAway')
+class ProjectAway(Operator):
+    def __init__(self, exprs:list[Expression]):
+        super().__init__()
+        self.exprs = exprs
+        self.non_conseq = [
+            'Take'
+        ]
+        
+    def eval(self, ctx:Context, **kwargs):
+        paths = []
+        for i in self.exprs:
+            paths.append(i.eval(ctx, as_list=True))
+            
+        return ctx.data.drop_many(paths)
+
+@register_op('ProjectKeep')
+class ProjectKeep(Operator):
+    def __init__(self, exprs:list[Expression]):
+        super().__init__()
+        self.exprs = exprs
+        self.non_conseq = [
+            'Take'
+        ]
+        
+    def eval(self, ctx:Context, **kwargs):
+        datasets = []
+        for i in self.exprs:
+            datasets.append(i.eval(ctx, as_value=False))
+                
+        return Data.merge(datasets)
+
+@register_op('ProjectReorder')
+class ProjectReorder(Operator):
+    def __init__(self, exprs:list[Expression]):
+        super().__init__()
+        self.exprs = exprs
+        self.non_conseq = [
+            'Take'
+        ]
+        
+    def eval(self, ctx:Context, **kwargs):
+        datasets = []
+        for i in self.exprs:
+            datasets.append(i.eval(ctx, as_value=False))
+                
+        return Data.merge(datasets)
+
+@register_op('ProjectRename')
+class ProjectRename(Operator):
+    def __init__(self, exprs:list[Expression]):
+        super().__init__()
+        self.exprs = exprs
+        self.non_conseq = [
+            'Take'
+        ]
+        
+    def eval(self, ctx:Context, **kwargs):
+        datasets = []
+        for i in self.exprs:
+            datasets.append(i.eval(ctx, as_value=False))
+                
+        return Data.merge(datasets)

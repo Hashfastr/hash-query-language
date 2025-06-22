@@ -15,7 +15,7 @@ from .Operator import Operator
 
 from . import Database
 from .Where import Where
-from .Project import Project
+from .Project import Project, ProjectAway, ProjectKeep, ProjectReorder, ProjectRename
 from .Take import Take
 from .Count import Count
 from .Extend import Extend

@@ -638,3 +638,12 @@ class ToExpression(Expression):
             new.append(table)
         
         return Data(tables_list=new)
+
+class ReorderExpression(Expression):
+    def __init__(self, expr:Expression, order:str):
+        Expression.__init__(self)
+        self.expr = expr
+        self.order = order
+        
+    def eval(self, ctx: Context, **kwargs):
+        return ctx.data
