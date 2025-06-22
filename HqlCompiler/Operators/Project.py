@@ -56,11 +56,8 @@ class ProjectKeep(Operator):
         ]
         
     def eval(self, ctx:Context, **kwargs):
-        datasets = []
-        for i in self.exprs:
-            datasets.append(i.eval(ctx, as_value=False))
-                
-        return Data.merge(datasets)
+        op = Project(self.exprs)
+        return op.eval(ctx)
 
 @register_op('ProjectReorder')
 class ProjectReorder(Operator):
