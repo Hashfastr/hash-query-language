@@ -19,6 +19,7 @@ class Expression():
     def __init__(self):
         self.type = self.__class__.__name__
         self.escaped = False
+        self.literal = False
         self.name = []
     
     def to_dict(self):
@@ -103,9 +104,18 @@ class Equality(Expression):
             'rh': self.rh.to_dict()
         }
     
-    # # Generates a polars filter
-    # def eval(self, **kwargs):
-    #     lh = 
+    # Generates a polars filter
+    def eval(self, ctx:Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+        
+        lh = self.lh.eval(ctx, as_pl=True)
+        rh = self.lh.eval(ctx, as_pl=True)
+        
+        if as_pl:
+            return (lh == rh)
+        
+        else:
+            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # List equality
 # Essenitally a filter stating that a field should have any value in a tuple.
@@ -118,9 +128,10 @@ class Equality(Expression):
 #
 # But is much easier to write and read
 class ListEquality(Expression):
-    def __init__(self, lh:Expression, rh:list[Expression]):
+    def __init__(self, lh:Expression, type:str, rh:list[Expression]):
         super().__init__()
         self.lh = lh
+        self.type = type
         self.rh = rh
     
     def to_dict(self):
@@ -129,7 +140,36 @@ class ListEquality(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
-
+        
+    def eval(self, ctx:Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+        
+        lh = self.lh.eval(ctx, as_list=True)
+        lh = pltools.path_to_expr_value(lh)
+        
+        filts = []
+        for rh in self.rh:
+            if not rh.literal:
+                rh = rh.eval(ctx, as_list=True)
+            
+            if hasattr(rh, 'gen_filter'):
+                filt = rh.gen_filter(lh)
+                
+            elif rh.literal:
+                filt = (lh == rh.value)
+                
+            else:
+                filt = (lh == pltools.path_to_expr_value(rh))
+                
+            filts.append(filt)
+            
+        final = filts[0].or_(*filts[1:])
+                
+        if as_pl:
+            return final
+        
+        else:
+            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # Data range functionality
 # Left hand side is the expression to evaluate in being between two values.
@@ -157,6 +197,55 @@ class BetweenEquality(Expression):
                 'end': self.end.to_dict()
             }
         }
+    
+    def eval(self, ctx:Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+        
+        lh = self.lh.eval(ctx, as_pl=True)
+        start = self.start.eval(ctx, as_pl=True)
+        end = self.end.eval(ctx, as_pl=True)
+        
+        filt = lh.is_between(start, end)
+        
+        if self.negate:
+            filt = filt.not_()
+        
+        if as_pl:
+            return filt
+        
+        else:
+            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        
+class BinaryLogic(Expression):
+    def __init__(self, lh:Expression, rh:list[Expression], type:str):
+        super().__init__()
+        self.bitype = type.lower()
+        self.lh = lh
+        self.rh = rh
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'bitype': self.bitype,
+            'lh': self.lh.to_dict(),
+            'rh': [x.to_dict() for x in self.rh]
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        lh = self.lh.eval(ctx, as_pl=True)
+        
+        rh = []
+        for i in self.rh:
+            rh.append(i.eval(ctx, as_pl=True))    
+        
+        filt = lh
+        for i in rh:
+            if self.bitype == 'and':
+                filt = filt and i
+            else:
+                filt = filt or i
+                
+        return filt
 
 # A named reference, can be scoped
 # Scopes are not implemented yet.
@@ -231,7 +320,8 @@ class Wildcard(NamedReference):
 # we strip off quotes when constructing as the parser doesn't remove them for us.
 class StringLiteral(Expression):
     def __init__(self, value:str):
-        super().__init__()
+        Expression.__init__(self)
+        self.literal = True
         self.value = value.strip('"').strip("'")
     
     def to_dict(self):
@@ -249,7 +339,8 @@ class StringLiteral(Expression):
 # unreal, not real
 class Integer(Expression):
     def __init__(self, value:str):
-        super().__init__()
+        Expression.__init__(self)
+        self.literal = True
         self.value = int(value)
     
     def to_dict(self):
@@ -261,9 +352,28 @@ class Integer(Expression):
     def eval(self, ctx:Context, **kwargs):
         return self.value
 
+class IP4(Expression):
+    def __init__(self, value:int):
+        Expression.__init__(self)
+        self.literal = True
+        self.value = value
+        
+    def to_dict(self):
+        s = pl.Series([self.value])
+        human = hqlt.ip4().human(s)
+        
+        return {
+            'type': self.type,
+            'value': human
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        return self.value
+
 class Float(Expression):
     def __init__(self, value:str):
         Expression.__init__(self)
+        self.literal = True
         self.value = float(value)
         
     def to_dict(self):
@@ -277,7 +387,8 @@ class Float(Expression):
 
 class Bool(Expression):
     def __init__(self, value:str):
-        super().__init__()
+        Expression.__init__(self)
+        self.literal = True
         self.value = value.lower() == 'true'
         
     def to_dict(self):
@@ -291,7 +402,7 @@ class Bool(Expression):
 
 class FuncExpr(Expression):
     def __init__(self, name:Expression, args:list=None):
-        super().__init__()
+        Expression.__init__(self)
         self.name = name
         self.args = args if args else []
     
@@ -304,11 +415,14 @@ class FuncExpr(Expression):
     
     # Evals to function objects
     def eval(self, ctx:Context, **kwargs):
+        # Do we need this? Provides no functional use
+        '''
         if kwargs.get('as_list', False):
             return self.name.eval(ctx, as_list=True)
         
         if kwargs.get('as_str', False):
             return self.name.eval(ctx, as_str=True)
+        '''
         
         func = ctx.get_func(self.name.eval(ctx, as_str=True))
         logging.debug(f'Resolved func {func}')
@@ -338,11 +452,14 @@ class DotCompositeFunction(Expression):
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
         
+        # Do we even need this? Doesn't make any sense.
+        '''
         if kwargs.get('as_list', False):
             return self.gen_list(ctx)
         
         if kwargs.get('as_str', False):
             return '.'.join(self.gen_list(ctx))
+        '''
 
         func_list = []
         for i in self.funcs:
@@ -429,24 +546,6 @@ class Path(Expression):
             receiver = receiver.unnest(consumed) if as_value else receiver.select(consumed)
             
         return receiver
-    
-class BinaryLogic(Expression):
-    def __init__(self, lh:Expression, rh:list[Expression], type:str):
-        super().__init__()
-        self.bitype = type.lower()
-        self.lh = lh
-        self.rh = rh
-        
-    def to_dict(self):
-        return {
-            'type': self.type,
-            'bitype': self.bitype,
-            'lh': self.lh.to_dict(),
-            'rh': [x.to_dict() for x in self.rh]
-        }
-        
-    # def eval(self, ctx:Context, **kwargs):
-        
 
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
@@ -647,3 +746,12 @@ class ReorderExpression(Expression):
         
     def eval(self, ctx: Context, **kwargs):
         return ctx.data
+
+class BasicRange(Expression):
+    def __init__(self, start, end):
+        Expression.__init__(self)
+        self.start = start
+        self.end = end
+        
+    def gen_filter(self, lh:pl.Expr):
+        return (lh > self.start).and_(lh < self.end)

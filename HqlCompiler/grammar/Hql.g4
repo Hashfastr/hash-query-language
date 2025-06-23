@@ -884,10 +884,10 @@ staticNamedExpression:
     Name=pathReference '=' Value=pathReference;
 
 namedExpressionNameClause:
-    (Name=extendedNameReference | NameList=namedExpressionNameList) '=';    
+    (Name=pathReference | NameList=namedExpressionNameList) '=';    
 
 namedExpressionNameList:
-    '(' Names+=extendedNameReference (',' Names+=extendedNameReference)* ')';
+    '(' Names+=pathReference (',' Names+=pathReference)* ')';
  
 scopedFunctionCallExpression:
     Scope=simpleNameReference '.' FunctionCall=functionCallExpression;
@@ -922,7 +922,7 @@ listEqualityExpression:
     Left=relationalExpression OperatorToken=(IN | NOT_IN | IN_CI | NOT_IN_CI | HAS_ANY | HAS_ALL) '(' Expressions+=invocationExpression (',' Expressions+=invocationExpression)* ')';
 
 betweenEqualityExpression:
-    Left=relationalExpression OperatorToken=(BETWEEN | NOT_BETWEEN) '(' StartExpression=invocationExpression '..' EndExpression=invocationExpression ')';
+    Left=relationalExpression OperatorToken=(BETWEEN | NOT_BETWEEN) '(' Expressions+=invocationExpression '..' Expressions+=invocationExpression ')';
 
 starEqualityExpression:
     '*' '==' Expression=relationalExpression;

@@ -18,27 +18,30 @@ import time
 import logging
 
 class HqlErrorListener(ErrorListener):
-    def __init__(self):
+    def __init__(self, text:str, filename:str):
         ErrorListener.__init__(self)
-        self.errors = []
+        self.text = text
+        self.filename = filename
 
-    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        estr = f'Syntax Error: {line}:{column}: {msg}, offending symbol {offendingSymbol.text}'
-        self.errors.append(estr)
-
+    def syntaxError(self, recognizer:HqlParser, offendingSymbol, line, column, msg, e):
+        e = LexerException(msg, self.text, line, column, offendingSymbol, filename=self.filename)
+        Parser.handleException(recognizer, e)
+        
 class Parser():
     def __init__(self, filename:str):
-        self.err_listener = HqlErrorListener()
-        self.tree = self.parse_file(filename)
+        self.filename = filename
+        self.tree = self.parse_file()
     
-    def parse_file(self, filename:str) -> CommonTokenStream:
+    def parse_file(self) -> CommonTokenStream:
         try:
-            with open(filename, 'r') as f:
+            with open(self.filename, 'r') as f:
                 text = f.read()
         except Exception as e:
-            logging.error(f"Failed to open file {filename}")
+            logging.error(f"Failed to open file {self.filename}")
             logging.error(str(e))
             raise e
+        
+        self.err_listener = HqlErrorListener(text, self.filename)
         
         lexer = HqlLexer(InputStream(text))
         token_stream = CommonTokenStream(lexer)
@@ -50,14 +53,8 @@ class Parser():
         return parser.query()
 
     def assemble(self):
-        visitor = Visitor()
+        visitor = Visitor(self.filename)
         self.assembly = visitor.visit(self.tree)
-        
-        if self.err_listener.errors:
-            for error in self.err_listener.errors:
-                logging.critical(error)
-                
-            raise QueryException('Syntax error occurred')
         
         if self.assembly == None:
             logging.error("Compiler error!")
@@ -65,12 +62,33 @@ class Parser():
             logging.error("Import error?")
             raise Exception("Compiler error, visitor returned None")
         
+    def getText(ctx):
+        stream = ctx.parser.getTokenStream()
+        start = ctx.start.tokenIndex
+        stop = ctx.stop.tokenIndex
+
+        return stream.getText(start, stop)
+    
+    def handleException(ctx, e:ParseException):
+        logging.critical(f'Failed to parse query {e.filename}')
+        
+        if isinstance(e, LexerException):
+            text = e.text
+            text = text.split('\n')[e.line - 1]
+            
+        else:
+            text = Parser.getText(ctx)
+        
+        logging.critical(text)
+        marker = (' ' * e.col) + '^'
+        logging.critical(marker)
+        raise e
 
 # Overrides the HqlVisitor templates
 # If not defined here, each node only returns its children.
 class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
-    def __init__(self):
-        pass
+    def __init__(self, filename:str):
+        self.filename = filename
     
     def visitQuery(self, ctx: HqlParser.QueryContext):
         query = Query()
@@ -99,6 +117,10 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
         
         pipes = []
         for i in ctx.PipedOperators:
-            pipes.append(self.visit(i))
+            try:
+                pipes.append(self.visit(i))
+            except ParseException as e:
+                e.filename = self.filename
+                Parser.handleException(i, e)
         
         return Expr.PipeExpression(prepipe=prepipe, pipes=pipes)

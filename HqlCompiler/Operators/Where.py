@@ -13,11 +13,9 @@ import logging
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
 @register_op('Where')
 class Where(Operator):
+    # Pass in the parser context here for helpful debugging
     def __init__(self, expr:Expression, params:list=None):
-        super().__init__()
-        if expr == None:
-            raise ParseException('Where instanciated with None type predicate')
-        
+        Operator.__init__(self)
         self.parameters = params if params else []
         self.expr = expr
 
@@ -26,14 +24,12 @@ class Where(Operator):
     Adds an additional meta * table for the total count of all tables.
     '''
     def eval(self, ctx:Context, **kwargs):
-        pl_filter = pltools.build_filter(ctx, self.expr)
+        pl_filter = self.expr.eval(ctx, as_pl=True)
 
-        tables = []
         for table in ctx.data:
             try:
                 table.filter(pl_filter)
-                tables.append(table)
             except QueryException as e:
                 logging.warning(e)
 
-        return Data(tables_list=tables)
+        return ctx.data

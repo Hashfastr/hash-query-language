@@ -74,3 +74,13 @@ class Logic(HqlVisitor):
 
     def visitParenthesizedExpression(self, ctx: HqlParser.ParenthesizedExpressionContext):
         return self.visit(ctx.Expression)
+
+    def visitListEqualityExpression(self, ctx: HqlParser.ListEqualityExpressionContext):
+        lh = self.visit(ctx.Left)
+        token = ctx.OperatorToken.text
+        
+        exprs = []
+        for i in ctx.Expressions:
+            exprs.append(self.visit(i))
+        
+        return Expr.ListEquality(lh, token, exprs)

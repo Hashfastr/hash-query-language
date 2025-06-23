@@ -73,7 +73,7 @@ def main():
     try:
         parser = Parser(args.file)
         parser.assemble()
-    except Exception as e:
+    except HqlException as e:
         logging.critical('Exception caught when assembling')
         logging.critical(e)
         return -1

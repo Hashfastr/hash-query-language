@@ -82,15 +82,3 @@ class pltools():
             expr_str = f'pl.struct({expr_str}).alias({i})'
 
         return expr
-
-    def build_filter(ctx, expr):
-        if expr.type == 'Equality':
-            lh = expr.lh.eval(ctx, as_pl=True)    
-            rh = expr.rh.eval(ctx, as_pl=True)
-
-            if expr.eqtype == '==':
-                return (lh == rh)
-            elif expr.eqtype == '!=':
-                return (lh != rh)
-        else:
-            logging.warning(f'Unimplemented filter expression type {expr.type}')

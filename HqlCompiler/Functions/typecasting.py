@@ -3,11 +3,17 @@ from HqlCompiler.Context import register_func, Context
 from HqlCompiler.Data import Data, Table, Series, Schema
 from .__proto__ import Function
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
+import polars as pl
+import HqlCompiler.Expression as Expr
 
 class Typecast(Function):
     def __init__(self, args:list):
         Function.__init__(self, args, 1, 1)
         self.src = args[0]
+        
+        if self.src.literal:
+            self.src = pl.Series([self.src.value])
+        
         # default cast type
         self.cast_type = hqlt.string()
         
@@ -48,6 +54,11 @@ class toip4(Typecast):
         self.cast_type = hqlt.ip4()
 
     def eval(self, ctx:Context, **kwargs):
+        # Just the literal example
+        if isinstance(self.src, pl.Series):
+            new = self.cast_type.cast(self.src)
+            return Expr.IP4(new[0])
+        
         path = self.src.eval(ctx, as_list=True)
         data = ctx.data.select(path).strip()
 
@@ -55,7 +66,7 @@ class toip4(Typecast):
         for table in data:
             series = self.cast_type.cast(table.df)
 
-            new = Table(name=table)
+            new = Table(name=table.name)
             new.insert(path, series, self.cast_type)
             tables.append(new)
 
