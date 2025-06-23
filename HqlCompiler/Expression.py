@@ -19,6 +19,7 @@ class Expression():
     def __init__(self):
         self.type = self.__class__.__name__
         self.escaped = False
+        self.literal = False
         self.name = []
     
     def to_dict(self):
@@ -148,10 +149,14 @@ class ListEquality(Expression):
         
         filts = []
         for rh in self.rh:
-            rh = rh.eval(ctx, as_list=True)
+            if not rh.literal:
+                rh = rh.eval(ctx, as_list=True)
             
             if hasattr(rh, 'gen_filter'):
                 filt = rh.gen_filter(lh)
+                
+            elif rh.literal:
+                filt = (lh == rh.value)
                 
             else:
                 filt = (lh == pltools.path_to_expr_value(rh))
@@ -315,7 +320,8 @@ class Wildcard(NamedReference):
 # we strip off quotes when constructing as the parser doesn't remove them for us.
 class StringLiteral(Expression):
     def __init__(self, value:str):
-        super().__init__()
+        Expression.__init__(self)
+        self.literal = True
         self.value = value.strip('"').strip("'")
     
     def to_dict(self):
@@ -333,7 +339,8 @@ class StringLiteral(Expression):
 # unreal, not real
 class Integer(Expression):
     def __init__(self, value:str):
-        super().__init__()
+        Expression.__init__(self)
+        self.literal = True
         self.value = int(value)
     
     def to_dict(self):
@@ -345,9 +352,28 @@ class Integer(Expression):
     def eval(self, ctx:Context, **kwargs):
         return self.value
 
+class IP4(Expression):
+    def __init__(self, value:int):
+        Expression.__init__(self)
+        self.literal = True
+        self.value = value
+        
+    def to_dict(self):
+        s = pl.Series([self.value])
+        human = hqlt.ip4().human(s)
+        
+        return {
+            'type': self.type,
+            'value': human
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        return self.value
+
 class Float(Expression):
     def __init__(self, value:str):
         Expression.__init__(self)
+        self.literal = True
         self.value = float(value)
         
     def to_dict(self):
@@ -361,7 +387,8 @@ class Float(Expression):
 
 class Bool(Expression):
     def __init__(self, value:str):
-        super().__init__()
+        Expression.__init__(self)
+        self.literal = True
         self.value = value.lower() == 'true'
         
     def to_dict(self):
@@ -375,7 +402,7 @@ class Bool(Expression):
 
 class FuncExpr(Expression):
     def __init__(self, name:Expression, args:list=None):
-        super().__init__()
+        Expression.__init__(self)
         self.name = name
         self.args = args if args else []
     
@@ -388,11 +415,14 @@ class FuncExpr(Expression):
     
     # Evals to function objects
     def eval(self, ctx:Context, **kwargs):
+        # Do we need this? Provides no functional use
+        '''
         if kwargs.get('as_list', False):
             return self.name.eval(ctx, as_list=True)
         
         if kwargs.get('as_str', False):
             return self.name.eval(ctx, as_str=True)
+        '''
         
         func = ctx.get_func(self.name.eval(ctx, as_str=True))
         logging.debug(f'Resolved func {func}')
