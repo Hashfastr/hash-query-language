@@ -127,9 +127,10 @@ class Equality(Expression):
 #
 # But is much easier to write and read
 class ListEquality(Expression):
-    def __init__(self, lh:Expression, rh:list[Expression]):
+    def __init__(self, lh:Expression, type:str, rh:list[Expression]):
         super().__init__()
         self.lh = lh
+        self.type = type
         self.rh = rh
     
     def to_dict(self):
@@ -142,19 +143,25 @@ class ListEquality(Expression):
     def eval(self, ctx:Context, **kwargs):
         as_pl = kwargs.get('as_pl', True)
         
-        lh = self.lh.eval(ctx, as_pl=True)
+        lh = self.lh.eval(ctx, as_list=True)
+        lh = pltools.path_to_expr_value(lh)
         
         filts = []
         for rh in self.rh:
-            filt = (lh == rh.eval(ctx, as_pl=True))
+            rh = rh.eval(ctx, as_list=True)
+            
+            if hasattr(rh, 'gen_filter'):
+                filt = rh.gen_filter(lh)
+                
+            else:
+                filt = (lh == pltools.path_to_expr_value(rh))
+                
             filts.append(filt)
             
-        filt = filts[0]
-        for i in filts[1:]:
-            filt = filt or i
-        
+        final = filts[0].or_(*filts[1:])
+                
         if as_pl:
-            return filt
+            return final
         
         else:
             raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
@@ -204,7 +211,6 @@ class BetweenEquality(Expression):
         else:
             raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
         
-    
 class BinaryLogic(Expression):
     def __init__(self, lh:Expression, rh:list[Expression], type:str):
         super().__init__()
@@ -416,11 +422,14 @@ class DotCompositeFunction(Expression):
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
         
+        # Do we even need this? Doesn't make any sense.
+        '''
         if kwargs.get('as_list', False):
             return self.gen_list(ctx)
         
         if kwargs.get('as_str', False):
             return '.'.join(self.gen_list(ctx))
+        '''
 
         func_list = []
         for i in self.funcs:
@@ -708,24 +717,11 @@ class ReorderExpression(Expression):
     def eval(self, ctx: Context, **kwargs):
         return ctx.data
 
-class SubnetExpression(Expression):
-    def __init__(self, address:str, mask:int):
+class BasicRange(Expression):
+    def __init__(self, start, end):
         Expression.__init__(self)
-        self.address = address
-        self.mask = mask
+        self.start = start
+        self.end = end
         
-    def eval(self, ctx: Context, **kwargs):
-        # Get the integer representation that'll be used backend
-        addr = pl.Series([self.address])
-        addr = hqlt.ip4().cast(addr)[0]
-        
-        # Create the mask
-        FF = 0xFFFFFFFF
-        mask = FF - ((1 << self.mask) - 1)
-        
-        lower = addr & mask
-        upper = addr | (mask ^ FF)
-        
-        # tf do I do now?
-        
-        return ctx.data
+    def gen_filter(self, lh:pl.Expr):
+        return (lh > self.start).and_(lh < self.end)

@@ -55,7 +55,7 @@ class toip4(Typecast):
         for table in data:
             series = self.cast_type.cast(table.df)
 
-            new = Table(name=table)
+            new = Table(name=table.name)
             new.insert(path, series, self.cast_type)
             tables.append(new)
 

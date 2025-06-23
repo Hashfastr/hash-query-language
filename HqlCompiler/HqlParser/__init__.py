@@ -56,12 +56,6 @@ class Parser():
         visitor = Visitor(self.filename)
         self.assembly = visitor.visit(self.tree)
         
-        if self.err_listener.errors:
-            for error in self.err_listener.errors:
-                logging.critical(error)
-                
-            raise QueryException('Syntax error occurred')
-        
         if self.assembly == None:
             logging.error("Compiler error!")
             logging.error("Parser returned None instead of valid assembly")
