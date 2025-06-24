@@ -1,6 +1,6 @@
 # DaC Plan
 
-Example using the sigma here: [https://github.com/SigmaHQ/sigma/blob/master/rules/linux/file_event/file_event_lnx_persistence_cron_files.yml](Persistence Via Cron Files)
+Example using the sigma here: [Persistence Via Cron Files](https://github.com/SigmaHQ/sigma/blob/master/rules/linux/file_event/file_event_lnx_persistence_cron_files.yml)
 
 ```
 /**
