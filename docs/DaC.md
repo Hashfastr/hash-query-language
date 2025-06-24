@@ -1,6 +1,21 @@
 # DaC Plan
+The idea for Hql DaC is essentially the detection metadata is carried with the code and the code is carried with the metadata.
+By doing this, compared to Sigma, you can run and test Hql detections in the query editor while always keeping the metadata and docs with it.
+Another comparison is FalconForce, and [their version](https://github.com/FalconForceTeam/FalconFriday/blob/main/0xFF-0001-Ingress_Tool_Transfer_Certutil_abuse-Win.md?plain=1)
+is essentially markdown with the detection in a code block.
 
-Example using the sigma here: [Persistence Via Cron Files](https://github.com/SigmaHQ/sigma/blob/master/rules/linux/file_event/file_event_lnx_persistence_cron_files.yml)
+Problem is is that I have to do some man handling to carry the docs with it, or to even run the thing.
+
+It takes after C/Javadoc/many others style doxygen comment conventions.
+Each @ specifies a field, and all content between that and other field are ingested.
+This can be Markdown, lists, etc.
+This can also be easily converted to Markdown or other formats if needed.
+
+This aims to achieve a big goal of this project, plain better DaC.
+Providing the sharability of SIGMA while putting in capabilities unknown to it.
+
+## Example
+Using the sigma here: [Persistence Via Cron Files](https://github.com/SigmaHQ/sigma/blob/master/rules/linux/file_event/file_event_lnx_persistence_cron_files.yml)
 
 ```
 /**
@@ -64,7 +79,7 @@ Also the query is has portions split out over multiple lines for readability.
 Should I remove these, and my change log entry, we get 33 lines ironically.
 Although these are necessary for readability, usability, etc.
 
-## Breaking down the DaC Example
+### Breaking down the DaC Example
 We do a lot of let calls here, mostly for config management and readability.
 You could collapse it down to something like this:
 
@@ -90,7 +105,7 @@ The above assumes a lot and strips away the ability to be easily shared.
 - Assume we know the fieldname always, across elastic/splunk/kusto.
 - Assumes we know the fields we'd like to project to look nicer.
 
-## Breaking past the sigma barrier
+### Breaking past the sigma barrier
 We can add a bunch of optimizations to the query to help the thrunter.
 For example we can add a project to remove unnecessary fields.
 
@@ -152,7 +167,7 @@ This now looks for processes that have created these Cron files, then looks them
 up in VT and if those VT reports say it's malware, then join that processes other
 events onto us, adding them to the report.
 
-## Final Result
+### Final Result
 ```
 /**
  * @title  Persistence Via Cron Files
