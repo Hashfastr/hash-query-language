@@ -5,6 +5,10 @@ Another comparison is FalconForce, and [their version](https://github.com/Falcon
 is essentially markdown with the detection in a code block.
 
 Problem is is that I have to do some man handling to carry the docs with it, or to even run the thing.
+If it's stored in JSON or yaml, you got to make sure indentation or formatting is right.
+If it's in markdown you have to manually lift it out of the documentation and put it where you need it.
+
+Hql solves this by carrying the documentation in a formatted comment block at the top.
 
 It takes after C/Javadoc/many others style doxygen comment conventions.
 Each @ specifies a field, and all content between that and other field are ingested.
@@ -13,6 +17,8 @@ This can also be easily converted to Markdown or other formats if needed.
 
 This aims to achieve a big goal of this project, plain better DaC.
 Providing the sharability of SIGMA while putting in capabilities unknown to it.
+Hql DaC can be piped directly into the engine, an editor, etc and be next to the code every time it runs.
+A change happens and someone can update the docs right there, or even automatically updated if an analyst clicks a 'save detection button'.
 
 ## Example
 Using the sigma here: [Persistence Via Cron Files](https://github.com/SigmaHQ/sigma/blob/master/rules/linux/file_event/file_event_lnx_persistence_cron_files.yml)
