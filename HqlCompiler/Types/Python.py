@@ -1,10 +1,6 @@
-import logging
-
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_type, get_type
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
-# from HqlCompiler.Types.Compiler import CompilerType
-
 
 class PythonTypes():
     class PythonType():
@@ -13,13 +9,21 @@ class PythonTypes():
                 self.HqlType = type(self).__bases__[-1]
             else:
                 self.HqlType = hqlt.null
+
+            self.priority = 0
+            self.super = ()
         
         def hql_schema(self):
             return self.HqlType()
         
         def pl_schema(self):
             return self.hql_schema().pl_schema()
-    
+        
+    @staticmethod
+    def from_name(name:str):
+        return get_type(f'python_{name}')
+
+    @staticmethod
     def resolve_conflict(types:list[PythonType]):
         if len(types) == 1:
             return types[0]
@@ -59,7 +63,8 @@ class PythonTypes():
             return PythonTypes.list(l)
         else:
             return l
-    
+
+    @staticmethod
     def resolve_mv(mv:list):
         mvset = set()
         for i in mv:
@@ -70,9 +75,6 @@ class PythonTypes():
                 mvset.add(PythonTypes.from_name(type(i).__name__))
                 
         return PythonTypes.resolve_conflict(list(mvset))
-    
-    def from_name(name:str):
-        return get_type(f'python_{name}')
             
     @register_type('python_int')
     class int(PythonType, hqlt.int):
@@ -132,6 +134,8 @@ class PythonTypes():
         def __init__(self, inner):
             PythonTypes.PythonType.__init__(self)
             hqlt.multivalue.__init__(self, inner)
+
+            self.HqlType = hqlt.multivalue
             
             self.priority = 5
             self.super = ()
@@ -139,11 +143,13 @@ class PythonTypes():
         def hql_schema(self):
             return self.HqlType(self.inner)
 
-    @register_type('dict')
+    @register_type('python_dict')
     class dict(PythonType, hqlt.object):
         def __init__(self, keys:list[str]):
             PythonTypes.PythonType.__init__(self)
             hqlt.object.__init__(self, keys)
+            
+            self.HqlType = hqlt.object
             self.keys = keys
             
         def hql_schema(self):
