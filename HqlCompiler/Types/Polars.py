@@ -6,7 +6,7 @@ from HqlCompiler.Context import register_type, get_type
 # from HqlCompiler.Types.Compiler import CompilerType
 
 class PolarsTypes():
-    from .Hql import HqlTypes as Hql
+    from .Hql import HqlTypes as hqlt
     
     class PolarsType():
         def __init__(self):
@@ -40,106 +40,106 @@ class PolarsTypes():
             return resolved()
             
     @register_type('polars_Decimal')
-    class Decimal(PolarsType, Hql.decimal):
+    class Decimal(PolarsType, hqlt.decimal):
         ...
 
     @register_type('polars_Float32')
-    class Float32(PolarsType, Hql.float):
+    class Float32(PolarsType, hqlt.float):
         ...
     
     @register_type('polars_Float64') 
-    class Float64(PolarsType, Hql.double):
+    class Float64(PolarsType, hqlt.double):
         ...
         
     @register_type('polars_Int8')
-    class Int8(PolarsType, Hql.byte):
+    class Int8(PolarsType, hqlt.byte):
         ...
     
     @register_type('polars_Int16') 
-    class Int16(PolarsType, Hql.short):
+    class Int16(PolarsType, hqlt.short):
         ...
     
     @register_type('polars_Int32') 
-    class Int32(PolarsType, Hql.int):
+    class Int32(PolarsType, hqlt.int):
         ...
     
     @register_type('polars_Int64') 
-    class Int64(PolarsType, Hql.long):
+    class Int64(PolarsType, hqlt.long):
         ...
     
     @register_type('polars_Int128') 
-    class Int128(PolarsType, Hql.xlong):
+    class Int128(PolarsType, hqlt.xlong):
         ...
     
     @register_type('polars_UInt8') 
-    class UInt8(PolarsType, Hql.ubyte):
+    class UInt8(PolarsType, hqlt.ubyte):
         ...
     
     @register_type('polars_UInt16') 
-    class UInt16(PolarsType, Hql.ushort):
+    class UInt16(PolarsType, hqlt.ushort):
         ...
         
     @register_type('polars_UInt32')
-    class UInt32(PolarsType, Hql.uint):
+    class UInt32(PolarsType, hqlt.uint):
         ...
     
     @register_type('polars_UInt64') 
-    class UInt64(PolarsType, Hql.ulong):
+    class UInt64(PolarsType, hqlt.ulong):
         ...
     
     @register_type('polars_Date') 
-    class Date(PolarsType, Hql.datetime):
+    class Date(PolarsType, hqlt.datetime):
         ...
     
     @register_type('polars_Duration') 
-    class Duration(PolarsType, Hql.duration):
+    class Duration(PolarsType, hqlt.duration):
         ...
     
     @register_type('polars_Time') 
-    class Time(PolarsType, Hql.time):
+    class Time(PolarsType, hqlt.time):
         ...
     
     @register_type('polars_Array') 
-    class Array(PolarsType, Hql.matrix):
+    class Array(PolarsType, hqlt.matrix):
         ...
     
     @register_type('polars_List') 
-    class List(PolarsType, Hql.multivalue):
+    class List(PolarsType, hqlt.multivalue):
         ...
     
     @register_type('polars_String') 
-    class String(PolarsType, Hql.string):
+    class String(PolarsType, hqlt.string):
         ...
         
     @register_type('polars_Enum')
-    class Enum(PolarsType, Hql.enum):
+    class Enum(PolarsType, hqlt.enum):
         ...
     
     @register_type('polars_Utf8') 
-    class Utf8(PolarsType, Hql.string):
+    class Utf8(PolarsType, hqlt.string):
         ...
         
     @register_type('polars_Binary')
-    class Binary(PolarsType, Hql.binary):
+    class Binary(PolarsType, hqlt.binary):
         ...
         
     @register_type('polars_Boolean')
-    class Boolean(PolarsType, Hql.bool):
+    class Boolean(PolarsType, hqlt.bool):
         ...
         
     @register_type('polars_Null') 
-    class Null(PolarsType, Hql.null):
+    class Null(PolarsType, hqlt.null):
         ...
         
     @register_type('polars_Object')   
-    class Object(PolarsType, Hql.object):
+    class Object(PolarsType, hqlt.object):
         ...
 
     @register_type('polars_Struct')   
-    class Struct(PolarsType, Hql.object):
+    class Struct(PolarsType, hqlt.object):
         def __init__(self, fields:list[str]):
             super().__init__()
         
     @register_type('polars_Unknown')
-    class Unknown(PolarsType, Hql.unknown):
+    class Unknown(PolarsType, hqlt.unknown):
         ...

@@ -40,4 +40,4 @@ class count(Function):
                         
             tables.append(new)
         
-        return Data(tables_list=tables)
+        return Data(tables=tables)

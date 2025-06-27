@@ -70,4 +70,4 @@ class toip4(Typecast):
             new.insert(path, series, self.cast_type)
             tables.append(new)
 
-        return Data(tables_list=tables)
+        return Data(tables=tables)

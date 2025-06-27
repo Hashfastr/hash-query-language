@@ -7,7 +7,7 @@ import logging
 import argparse, sys
 import cProfile, pstats, time
 
-def config_logging(level:str):
+def config_logging(level:int):
     logging.basicConfig(
         stream=sys.stderr,
         format="%(levelname)s - %(filename)s:%(lineno)d - %(message)s"

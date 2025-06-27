@@ -215,7 +215,7 @@ class Elasticsearch(Database):
             table = Table(init_data=result_sets[i], name=i)
             tables.append(table)
 
-        data = Data(tables_list=tables)
+        data = Data(tables=tables)
 
         for table in data:
             eschema = Schema(schema=self.gen_elastic_schema(index[i]['mappings']['properties']))

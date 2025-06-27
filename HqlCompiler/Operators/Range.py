@@ -57,4 +57,4 @@ class Range(Operator):
         df = pltools.build_element(name, series)
         table = Table(df=df, name='range')
          
-        return Data(tables_list=[table])
+        return Data(tables=[table])

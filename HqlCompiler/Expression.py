@@ -8,7 +8,6 @@ from HqlCompiler.Context import Context
 from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
 from HqlCompiler.Data import Data, Table, Schema
-from enum import Enum
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 # An expression is any grouping of other expressions
@@ -16,26 +15,28 @@ from HqlCompiler.Types.Hql import HqlTypes as hqlt
 # Such as a subsearch, which is an expression, and contains operators
 # All other expressions are children of this one
 class Expression():
-    def __init__(self):
+    def __init__(self)-> None:
         self.type = self.__class__.__name__
         self.escaped = False
         self.literal = False
-        self.name = []
+        self.name:list[str] = []
     
     def to_dict(self):
-        return {}
+        return {
+            'type': self.type
+        }
     
     # List of strings, mainly showing a path for nested names
     def get_name(self) -> list[str]:
         return self.name
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:Context, **kwargs) -> None:
         return None
     
-    def is_escaped(self):
+    def is_escaped(self)-> bool:
         return self.escaped
     
-    def __str__(self):
+    def __str__(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
     
     def __repr__(self) -> str:
@@ -44,8 +45,8 @@ class Expression():
 class PipeExpression(Expression):
     def __init__(self, prepipe:Expression=None, pipes:list[Operator]=None):
         super().__init__()
-        self.prepipe = prepipe
-        self.pipes = pipes if pipes else []
+        self.prepipe:Expression = prepipe
+        self.pipes:list[Operator] = pipes if pipes else []
         self.compiled = []
         self.op_sets = []
         
@@ -678,7 +679,7 @@ class ByExpression(Expression):
         for table in ctx.data:
             new.append(self.build_table_agg(ctx, table))
             
-        return Data(tables_list=new)
+        return Data(tables=new)
 
 class LetExpression(Expression):
     def __init__(self, name:Expression, value:Expression):
@@ -736,7 +737,7 @@ class ToExpression(Expression):
             table = table.cast_in_place(path, self.to)
             new.append(table)
         
-        return Data(tables_list=new)
+        return Data(tables=new)
 
 class ReorderExpression(Expression):
     def __init__(self, expr:Expression, order:str):

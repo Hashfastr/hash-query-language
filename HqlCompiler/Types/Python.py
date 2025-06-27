@@ -2,7 +2,7 @@ import logging
 
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_type, get_type
-from HqlCompiler.Types.Hql import HqlTypes as Hql
+from HqlCompiler.Types.Hql import HqlTypes as hqlt
 # from HqlCompiler.Types.Compiler import CompilerType
 
 
@@ -12,7 +12,7 @@ class PythonTypes():
             if len(type(self).__bases__):
                 self.HqlType = type(self).__bases__[-1]
             else:
-                self.HqlType = None
+                self.HqlType = hqlt.null
         
         def hql_schema(self):
             return self.HqlType()
@@ -75,62 +75,63 @@ class PythonTypes():
         return get_type(f'python_{name}')
             
     @register_type('python_int')
-    class int(PythonType, Hql.int):
+    class int(PythonType, hqlt.int):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            Hql.int.__init__(self)
+            hqlt.int.__init__(self)
             
             self.priority = 2
             self.super = (PythonTypes.float, PythonTypes.str, PythonTypes.list) 
 
     @register_type('python_float')
-    class float(PythonType, Hql.float):
+    class float(PythonType, hqlt.float):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            Hql.float.__init__(self)
+            hqlt.float.__init__(self)
             
             self.priority = 3
             self.super = (PythonTypes.str, PythonTypes.list)
+
     @register_type('python_complex') 
-    class complex(PythonType, Hql.string):
+    class complex(PythonType, hqlt.string):
         ...
         
     @register_type('python_str')
-    class str(PythonType, Hql.string):
+    class str(PythonType, hqlt.string):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            Hql.string.__init__(self)
+            hqlt.string.__init__(self)
             
             self.priority = 4
             self.super = (PythonTypes.list)
 
     @register_type('python_bytes')
-    class bytes(PythonType, Hql.binary):
+    class bytes(PythonType, hqlt.binary):
         ...
     
     @register_type('python_bool') 
-    class bool(PythonType, Hql.bool):
+    class bool(PythonType, hqlt.bool):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            Hql.bool.__init__(self)
+            hqlt.bool.__init__(self)
             
             self.priority = 1
             self.super = (PythonTypes.int, PythonTypes.str, PythonTypes.list)
         
     @register_type('python_NoneType')
-    class NoneType(PythonType, Hql.null):
+    class NoneType(PythonType, hqlt.null):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            Hql.null.__init__(self)
+            hqlt.null.__init__(self)
             
             self.priority = 0
             self.super = (PythonTypes.bool, PythonTypes.int, PythonTypes.float, PythonTypes.str, PythonTypes.list)
 
     @register_type('python_list')
-    class list(PythonType, Hql.multivalue):
+    class list(PythonType, hqlt.multivalue):
         def __init__(self, inner):
             PythonTypes.PythonType.__init__(self)
-            Hql.multivalue.__init__(self, inner)
+            hqlt.multivalue.__init__(self, inner)
             
             self.priority = 5
             self.super = ()
@@ -139,10 +140,10 @@ class PythonTypes():
             return self.HqlType(self.inner)
 
     @register_type('dict')
-    class dict(PythonType, Hql.object):
+    class dict(PythonType, hqlt.object):
         def __init__(self, keys:list[str]):
             PythonTypes.PythonType.__init__(self)
-            Hql.object.__init__(self, keys)
+            hqlt.object.__init__(self, keys)
             self.keys = keys
             
         def hql_schema(self):

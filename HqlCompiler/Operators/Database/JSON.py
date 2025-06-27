@@ -77,4 +77,4 @@ class JSON(Database):
                 name = url.split('/')[-1]
                 tables.append(Table(init_data=self.from_url(url), name=name))
                 
-        return Data(tables_list=tables)
+        return Data(tables=tables)

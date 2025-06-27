@@ -135,4 +135,4 @@ class CSV(Database):
             limit = self.limit(url.split('/')[-1])
             tables.append(self.from_url(url, limit=limit))
                 
-        return Data(tables_list=tables)
+        return Data(tables=tables)

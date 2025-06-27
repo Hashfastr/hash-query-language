@@ -58,7 +58,7 @@ class make_mv(Function):
     
     def normal(self, ctx:Context, table:Table):
         # Only operate on the single table
-        ctx.data = Data(tables_list=[table])
+        ctx.data = Data(tables=[table])
 
         # Create the data subset and grab the table
         data = Project(self.args).eval(ctx)
@@ -93,4 +93,4 @@ class make_mv(Function):
 
             new.append(Table(df=df, schema=Schema(schema=schema), name=table.name))
         
-        return Data(tables_list=new)
+        return Data(tables=new)

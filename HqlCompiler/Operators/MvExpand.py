@@ -45,4 +45,4 @@ class MvExpand(Operator):
         for table in ctx.data:
             new.append(self.explode_table(ctx, table))
         
-        return Data(tables_list=new)
+        return Data(tables=new)
