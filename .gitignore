@@ -189,3 +189,5 @@ big.json
 *.ipynb
 
 *swp
+
+pyproject.toml
