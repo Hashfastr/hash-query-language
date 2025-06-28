@@ -19,21 +19,31 @@ class Schema():
         if schema:
             self.schema = schema
             self.schema = self.normalize()
+
+        # This is in the case of sample json data
+        # A list of dicts
         elif isinstance(data, list):
             sample = data[:sample_size] if sample_size > 0 else data
             self.schema = Schema.from_json(sample)
+
+        # Instanciate from a single json object
         elif isinstance(data, dict):
             self.schema = Schema.from_json([data])
+
+        # Instanciate from a Polars DataFrame
         elif isinstance(data, pl.DataFrame):
             self.schema = Schema.from_df(data)
+
+        # Whoopsie
         elif data:
             raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
         
         # Pass through empty case else we get an hqlt.object([])
+        # Otherwise immediately convert to HqlTypes
         if isinstance(self.schema, dict) and len(self.schema):
             self.schema = self.convert_schema(target='hql')
     
-    def __len__(self)-> int:
+    def __len__(self) -> int:
         if hasattr(self.schema, '__len__'):
             return len(self.schema)
         
@@ -42,6 +52,11 @@ class Schema():
         
         else:
             return 0
+
+    def __bool__(self) -> bool:
+        if len(self.schema):
+            return True
+        return False
     
     @staticmethod
     def merge(schemata:list):
@@ -263,10 +278,10 @@ class Schema():
             return schema
 
     '''
-    Generates a schema with types replaced with their polars primatives
-    schema parameter required for recursion
+    Generates a schema converted to a given schema target.
+    Default is HqlTypes
     '''
-    def convert_schema(self, schema:Union[dict, type, None]=None, target:str='hql'):
+    def convert_schema(self, schema:Union[dict, type, None]=None, target:str='hql') -> dict:
         supported = ('hql', 'polars')
         
         if target not in supported:
@@ -290,10 +305,7 @@ class Schema():
 
         # Base case, create empty object/struct
         if len(schema) == 0:            
-            if target == 'hql':
-                return hqlt.object([])
-            elif target == 'polars':
-                return plt.Struct([])
+            return {}
 
         # Recurse on a populated dict
         target_schema = dict()
@@ -347,7 +359,7 @@ class Schema():
     Uses python typing
     '''
     @staticmethod
-    def from_json(data:list[dict]):
+    def from_json(data:list[dict])-> dict:
         # get a set of keys to handle
         keyset = set()
         for row in data:
@@ -357,7 +369,7 @@ class Schema():
         
         # if we have no keys then we have an empty dict
         if not len(keyset):
-            return pyt.dict([])
+            return {}
 
         new = dict()
         for key in keyset:
