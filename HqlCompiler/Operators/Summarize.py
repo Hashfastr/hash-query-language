@@ -23,6 +23,6 @@ class Summarize(Operator):
             table = Table(table.agg.agg(), schema=table.agg_schema, name=table.name)
             new.append(table)
             
-        new = Data(tables_list=new)
+        new = Data(tables=new)
         
         return Data.merge([new] + agg_data)

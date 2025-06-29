@@ -23,13 +23,13 @@ class Operator():
     def __init__(self):
         import random
         
-        self.type = self.__class__.__name__
+        self.type:str = self.__class__.__name__
         self.expr = None
-        self.exprs = None
+        self.exprs = []
         self.compatible = []
         self.non_conseq = []
         self.methods = []
-        self.variables = []
+        self.variables:dict = {}
         self.tabular = False
         self.id = '%08x' % random.getrandbits(32)
     

@@ -47,4 +47,4 @@ class Datatable(Operator):
         df = pl.DataFrame(data)
         table = Table(df=df, schema=schema, name='datatable')
         
-        return Data(tables_list=[table])
+        return Data(tables=[table])

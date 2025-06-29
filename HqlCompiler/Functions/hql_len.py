@@ -33,4 +33,4 @@ class hql_len(Function):
             
             new.append(Table(df=count, schema=Schema(schema=schema), name=table.name))
             
-        return Data(tables_list=new)
+        return Data(tables=new)

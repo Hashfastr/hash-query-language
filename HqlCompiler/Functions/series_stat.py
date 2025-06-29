@@ -142,4 +142,4 @@ class series_stats(Function):
 
         tables.append(Table(df=df, name='*'))
         
-        return Data(tables_list=tables)
+        return Data(tables=tables)

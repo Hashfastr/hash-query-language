@@ -488,3 +488,6 @@ WHITESPACE:
 
 COMMENT:
     '//' ~('\n' | '\r' | '\u2028' | '\u2029')* -> channel(HIDDEN);
+
+MULTILINECOMMENT:
+    '/*' .*? '*/' -> channel(HIDDEN);

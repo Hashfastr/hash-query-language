@@ -44,4 +44,4 @@ class Count(Operator):
                 new = [{'Count': counts[count]}]
                 new_tables.append(Table(name=count, init_data=new))
                 
-            return Data(tables_list=new_tables)
+            return Data(tables=new_tables)
