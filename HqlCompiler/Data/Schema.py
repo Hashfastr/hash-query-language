@@ -54,7 +54,6 @@ class Schema():
             return 0
 
     def __bool__(self) -> bool:
-        print(type(self.schema))
         if len(self.schema):
             return True
         return False
