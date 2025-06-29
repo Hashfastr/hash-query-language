@@ -17,14 +17,21 @@ class PolarsTypes():
                 self.HqlType = None
         
         def hql_schema(self):
-            return self.HqlType()
+            if self.HqlType:
+                return self.HqlType()
+            return None
         
         def pl_schema(self):
             return self
+
+        def __len__(self):
+            return 1
         
+    @staticmethod
     def from_name(name:str):
         return get_type(f'polars_{name}')
     
+    @staticmethod
     def from_pure_polars(pltype:pl.DataType):
         if hasattr(pltype, '__name__'):
             name = pltype.__name__

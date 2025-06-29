@@ -1,5 +1,5 @@
 from .Operator import Operator
-from HqlCompiler.Expression import Expression, StringLiteral
+from HqlCompiler.Expressions import Expression, StringLiteral
 import polars as pl
 from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Context import register_op, Context

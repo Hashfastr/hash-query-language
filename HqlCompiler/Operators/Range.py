@@ -1,7 +1,7 @@
 from .Operator import Operator
 from HqlCompiler.Data import Data, Table, Schema
 from HqlCompiler.PolarsTools import pltools
-from HqlCompiler.Expression import Expression
+from HqlCompiler.Expressions import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_op, Context
 import polars as pl

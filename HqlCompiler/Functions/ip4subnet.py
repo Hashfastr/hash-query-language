@@ -6,7 +6,7 @@ from .__proto__ import Function
 from HqlCompiler.Data import Data, Series, Table, Schema
 import polars as pl
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
-from HqlCompiler.Expression import BasicRange
+from HqlCompiler.Expressions import BasicRange
 
 @register_func('ip4subnet')
 class ip4subnet(Function):

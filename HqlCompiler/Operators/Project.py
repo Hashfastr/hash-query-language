@@ -1,4 +1,4 @@
-from HqlCompiler.Expression import Expression
+from HqlCompiler.Expressions import Expression
 from HqlCompiler.Data import Schema, Data, Table
 from HqlCompiler.Context import register_op, Context
 from HqlCompiler.Exceptions import *

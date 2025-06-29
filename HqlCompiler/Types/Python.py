@@ -18,6 +18,9 @@ class PythonTypes():
         
         def pl_schema(self):
             return self.hql_schema().pl_schema()
+
+        def __len__(self):
+            return 1
         
     @staticmethod
     def from_name(name:str):

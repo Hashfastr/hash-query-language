@@ -1,4 +1,4 @@
-from HqlCompiler.Expression import Expression
+from HqlCompiler.Expressions import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 import polars as pl

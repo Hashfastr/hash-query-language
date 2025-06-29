@@ -6,7 +6,7 @@ from HqlCompiler.grammar.HqlParser import HqlParser
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 
 from HqlCompiler.Query import Query, QueryStatement, LetStatement
-import HqlCompiler.Expression as Expr
+import HqlCompiler.Expressions as Expr
 import HqlCompiler.Operators as Ops
 
 from HqlCompiler.HqlParser.BaseExpressions import BaseExpressions

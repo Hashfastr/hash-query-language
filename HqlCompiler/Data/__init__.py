@@ -131,7 +131,8 @@ class Data():
         dataset['schema'] = self.get_schema()
 
         return dataset
-    
+   
+    @staticmethod
     def merge(data:list["Data"]):
         if len(data) == 1:
             return data[0]

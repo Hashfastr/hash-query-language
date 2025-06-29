@@ -1,5 +1,5 @@
 from HqlCompiler.Data import Data, Table
-from HqlCompiler.Expression import Expression
+from HqlCompiler.Expressions import Expression
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Exceptions import *
 import polars as pl
@@ -25,7 +25,7 @@ class Join(Operator):
     
 
     def get_right(self, ctx:Context, where:Expression):
-        from HqlCompiler.Expression import Identifier
+        from HqlCompiler.Expressions import Identifier
         from HqlCompiler.Operators import Where
         compilerset = None
                 

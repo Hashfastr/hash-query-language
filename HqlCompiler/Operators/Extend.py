@@ -1,5 +1,5 @@
 from HqlCompiler.Data import Data
-from HqlCompiler.Expression import Expression
+from HqlCompiler.Expressions import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.PolarsTools import pltools
 from HqlCompiler.Functions import Function
