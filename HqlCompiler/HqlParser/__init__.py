@@ -1,20 +1,19 @@
-from antlr4 import *
+from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
-from HqlCompiler.Exceptions import *
+from HqlCompiler.Exceptions import ParseException, LexerException 
 from HqlCompiler.grammar.HqlLexer import HqlLexer
 from HqlCompiler.grammar.HqlParser import HqlParser
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 
-from HqlCompiler.Query import *
+from HqlCompiler.Query import Query, QueryStatement, LetStatement
 import HqlCompiler.Expression as Expr
-
-from .BaseExpressions import BaseExpressions
-from .Functions import Functions
-from .Operators import Operators
-from .Logic import Logic
 import HqlCompiler.Operators as Ops
 
-import time
+from HqlCompiler.HqlParser.BaseExpressions import BaseExpressions
+from HqlCompiler.HqlParser.Functions import Functions
+from HqlCompiler.HqlParser.Operators import Operators
+from HqlCompiler.HqlParser.Logic import Logic
+
 import logging
 
 class HqlErrorListener(ErrorListener):
@@ -32,7 +31,7 @@ class Parser():
         self.filename = filename
         self.tree = self.parse_file()
     
-    def parse_file(self) -> CommonTokenStream:
+    def parse_file(self) -> HqlParser.QueryContext:
         try:
             with open(self.filename, 'r') as f:
                 text = f.read()
@@ -61,7 +60,8 @@ class Parser():
             logging.error("Parser returned None instead of valid assembly")
             logging.error("Import error?")
             raise Exception("Compiler error, visitor returned None")
-        
+    
+    @staticmethod
     def getText(ctx):
         stream = ctx.parser.getTokenStream()
         start = ctx.start.tokenIndex
@@ -69,6 +69,7 @@ class Parser():
 
         return stream.getText(start, stop)
     
+    @staticmethod
     def handleException(ctx, e:ParseException):
         logging.critical(f'Failed to parse query {e.filename}')
         
@@ -123,4 +124,9 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
                 e.filename = self.filename
                 Parser.handleException(i, e)
         
-        return Expr.PipeExpression(prepipe=prepipe, pipes=pipes)
+        return Expr.PipeExpression(prepipe, pipes)
+
+    def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
+        name = self.visit(ctx.Name)
+        value = self.visit(ctx.Expression)
+        return LetStatement(name, value, 'variable')

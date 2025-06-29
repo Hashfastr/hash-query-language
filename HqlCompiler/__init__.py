@@ -1,25 +1,15 @@
 __all__ = [
-    "Operators",
-    "Exceptions",
-    "Expr",
-    "HqlVisitor",
     "Query",
     "Compiler"
 ]
 
 import time
 import HqlCompiler.Config as Config
-from HqlCompiler.Query import *
-from HqlCompiler.Functions import *
-from HqlCompiler.Operators.Database import Database as Database
-from HqlCompiler.Operators.Database import get_database
-import HqlCompiler.Expression as Expr
+from HqlCompiler.Query import Query
 import HqlCompiler.Operators as Ops
 from HqlCompiler.Context import Context
+from HqlCompiler.Exceptions import CompilerException
 import logging
-
-class CompilerException(Exception):
-    ...
 
 class CompilerSet():
     def __init__(self, ops:list[Ops.Operator]):
@@ -43,10 +33,12 @@ class CompilerSet():
                 if nonconseq and not integrate:
                     logging.debug(f'Can optimize {op.id} passing {compiled[i].id}')
                     i -= 1
-                if integrate:
+
+                elif integrate:
                     logging.debug(f'Integrating {op.id} into {compiled[i].id}')
                     compiled[i].add_op(op)
                     break
+
                 elif not nonconseq and not integrate:
                     logging.debug(f'As high as we can go for {op.id}')
                     compiled.append(op)
@@ -57,6 +49,8 @@ class CompilerSet():
             logging.debug(f'    {op.id}: {op.type}')
             
         self.ops = compiled
+
+        return self
     
 
     def add_ops(self, ops:list[Ops.Operator]):
@@ -92,10 +86,6 @@ class Compiler():
         self.query = query
         Config.HqlConfig = Config.Config(conf_file)
         self.ctx = Context(None)
-    
-    # Not used yet, will probably make sense eventually
-    def is_blocking(self, type:str) -> bool:
-        return self.ruleset['operations'][type]['blocking']
 
     def run(self, ctx:Context=None):
         ctx = ctx if ctx else self.ctx
@@ -114,30 +104,20 @@ class Compiler():
         statement = self.query.statements
         
         for statement in self.query.statements:
+            # let T1 = SigninLogs | project Username;
             if statement.type == "LetExpression":
                 logging.debug('Letting let expression')
                 root = statement.value
                 
-            if statement.type == "QueryStatement":
+            # SigninLogs | project Username
+            elif statement.type == "QueryStatement":
                 logging.debug('Handling QueryStatement')
                 root = statement.root
-            
-            if root.type == "PrePipe":
-                prepipe = root
-                pipes = []
+
             else:
-                prepipe = root.prepipe
-                pipes = root.pipes
-                
-            op = prepipe.eval(ctx, tabular=True)
-            
-            if isinstance(op, CompilerSet):
-                cs = op
-                cs.add_ops(pipes) # This recompiles automatically
-                
-            else:
-                cs = CompilerSet([op] + pipes)
-                cs.compile()
+                raise CompilerException(f'Unhandled statement type {statement.type}')
+
+            cs = root.eval(ctx, no_exec=True)
                                 
             if statement.type == "LetExpression":
                 name = statement.name.eval(ctx, as_str=True)

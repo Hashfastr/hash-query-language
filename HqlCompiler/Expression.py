@@ -10,6 +10,7 @@ from HqlCompiler.Functions import Function
 from HqlCompiler.Data import Data, Table, Schema
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
+
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
 # Such as a subsearch, which is an expression, and contains operators
@@ -19,19 +20,14 @@ class Expression():
         self.type = self.__class__.__name__
         self.escaped = False
         self.literal = False
-        self.name:list[str] = []
     
     def to_dict(self):
         return {
             'type': self.type
         }
     
-    # List of strings, mainly showing a path for nested names
-    def get_name(self) -> list[str]:
-        return self.name
-    
-    def eval(self, ctx:Context, **kwargs) -> None:
-        return None
+    def eval(self, ctx:Context, **kwargs) -> "Expression":
+        return Expression()
     
     def is_escaped(self)-> bool:
         return self.escaped
@@ -42,13 +38,12 @@ class Expression():
     def __repr__(self) -> str:
         return self.__str__()
     
+
 class PipeExpression(Expression):
-    def __init__(self, prepipe:Expression=None, pipes:list[Operator]=None):
-        super().__init__()
-        self.prepipe:Expression = prepipe
-        self.pipes:list[Operator] = pipes if pipes else []
-        self.compiled = []
-        self.op_sets = []
+    def __init__(self, prepipe:Expression, pipes:list[Operator]):
+        Expression.__init__(self)
+        self.prepipe:Expression      = prepipe
+        self.pipes:list[Operator]    = pipes
         
     def to_dict(self):
         return {
@@ -57,36 +52,27 @@ class PipeExpression(Expression):
             'pipes': [x.to_dict() for x in self.pipes]
         }
     
-    # Compiles a pipe expression into a set of optimized Operators
-    # Or alternatively into logic, e.g. (a and b)
-    def eval(self, ctx:Context, **kwargs):        
+    # Takes pipes and puts them into a compiler set
+    def eval(self, ctx:Context, **kwargs):
+        no_exec = kwargs.get('no_exec', False)
+
+        from HqlCompiler import CompilerSet
+
+        # Resolve database references
         prepipe = self.prepipe.eval(ctx.data)
-        self.compiled.append(prepipe)
-        self.op_sets.append([prepipe.type])
         
         # can add more tabular prepipe types here
         if not issubclass(type(prepipe), (Database)) and self.pipes != []:
             raise CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
+
+        ops = [prepipe] + self.pipes
+        cs = CompilerSet(ops).compile()
+
+        if no_exec:
+            return cs
+
+        return cs.eval(ctx)
         
-        for op in self.pipes:
-            i = -1
-            while i >= -len(self.compiled):
-                nonconseq = self.compiled[i].non_consequential(op.type)
-                integrate = self.compiled[i].can_integrate(op.type)
-                    
-                if nonconseq and not integrate:
-                    logging.debug(f'Can optimize {op.type} passing {self.compiled[i].type}')
-                    i -= 1
-                if integrate:
-                    logging.debug(f'Integrating {op.type} into {self.compiled[i].type}')
-                    self.compiled[i].add_op(op)
-                    self.op_sets[i].append(op.type)
-                    break
-                elif not nonconseq and not integrate:
-                    logging.debug(f'As high as we can go for type {op.type}')
-                    self.compiled.append(op)
-                    self.op_sets.append([op.type])
-                    break
 
 # Expression expressing anything with ==, >, <, <=, >=, !=, etc
 # has a left and right hand expression along with it's type.
@@ -252,7 +238,7 @@ class BinaryLogic(Expression):
 # Scopes are not implemented yet.
 class NamedReference(Expression):
     def __init__(self, name:str, scope:str=""):
-        super().__init__()
+        Expression.__init__(self)
         self.name = name
         self.scope = scope
 
@@ -263,7 +249,7 @@ class NamedReference(Expression):
             'scope': self.scope,
         }
         
-    def get_symbol(ctx:Context, name:str):
+    def get_symbol(self, ctx:Context, name:str):
         if name not in ctx.symbol_table:
             return None
         
@@ -680,27 +666,6 @@ class ByExpression(Expression):
             new.append(self.build_table_agg(ctx, table))
             
         return Data(tables=new)
-
-class LetExpression(Expression):
-    def __init__(self, name:Expression, value:Expression):
-        Expression.__init__(self)
-        self.name = name
-        self.value = value
-        
-    def to_dict(self):
-        return {
-            'type': self.type,
-            'name': self.name.to_dict(),
-            'value': self.value.to_dict()
-        }
-        
-    def eval(self, ctx:Context, **kwargs):
-        name = self.name.eval(ctx, as_str=True)
-                
-        if kwargs.get('no_exec', False):
-            ctx.symbol_table[name] = self.value
-        else:
-            ctx.symbol_table[name] = self.value.eval(ctx)
 
 class TypeExpression(Expression):
     def __init__(self, type:str):
