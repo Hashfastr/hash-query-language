@@ -11,8 +11,8 @@ class Equality(Expression):
     def __init__(self, type:str, lh:Expression, rh:Expression):
         super().__init__()
         self.eqtype = type
-        self.lh = lh
-        self.rh = rh
+        self.lh:Expression = lh
+        self.rh:Expression = rh
     
     def to_dict(self):
         return {
@@ -26,14 +26,17 @@ class Equality(Expression):
     def eval(self, ctx:Context, **kwargs):
         as_pl = kwargs.get('as_pl', True)
         
-        lh = self.lh.eval(ctx, as_pl=True)
-        rh = self.lh.eval(ctx, as_pl=True)
+        lh = self.lh.eval(ctx, as_pl=as_pl)
+        rh = self.lh.eval(ctx, as_pl=as_pl)
         
         if as_pl:
-            return (lh == rh)
+            if self.eqtype == '==':
+                return (lh == rh)
+
+            if self.eqtype == '!=' or self.eqtype == '<>':
+                return (lh != rh)
         
-        else:
-            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # List equality
 # Essenitally a filter stating that a field should have any value in a tuple.
@@ -89,6 +92,36 @@ class ListEquality(Expression):
         else:
             raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
+# Handles relational expressions
+# - <
+# - >
+# - <=
+# - >=
+#
+# As per the grammar
+# Takes after the equality expression
+class Relational(Equality):
+    def eval(self, ctx: Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+
+        lh = self.lh.eval(ctx, as_pl=as_pl)
+        rh = self.rh.eval(ctx, as_pl=as_pl)
+
+        if as_pl:
+            if self.eqtype == '<':
+                return (lh < rh)
+            
+            if self.eqtype == '>':
+                return (lh > rh)
+            
+            if self.eqtype == '<=':
+                return (lh <= rh)
+            
+            if self.eqtype == '>=':
+                return (lh >= rh)
+
+        raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+
 # Data range functionality
 # Left hand side is the expression to evaluate in being between two values.
 # The right hand has a start and end expression showing the range of the values.
@@ -133,7 +166,13 @@ class BetweenEquality(Expression):
         
         else:
             raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
-        
+
+# Handles binary logic
+# - and
+# - or
+# Right hand is a list as that's how it's handled
+# If there is 3 items in the right list it is equal to
+# a and b and c and d
 class BinaryLogic(Expression):
     def __init__(self, lh:Expression, rh:list[Expression], type:str):
         super().__init__()

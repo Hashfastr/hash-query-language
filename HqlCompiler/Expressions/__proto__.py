@@ -1,5 +1,7 @@
 import json
 from HqlCompiler.Context import Context
+import polars as pl
+from typing import Union
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -16,11 +18,14 @@ class Expression():
             'type': self.type
         }
     
-    def eval(self, ctx:Context, **kwargs):
-        return None
+    def eval(self, ctx:Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        return pl.Expr()
     
-    def is_escaped(self)-> bool:
+    def is_escaped(self) -> bool:
         return self.escaped
+
+    def gen_filter(self) -> pl.Expr:
+        return pl.Expr()
     
     def __str__(self) -> str:
         return json.dumps(self.to_dict(), indent=2)

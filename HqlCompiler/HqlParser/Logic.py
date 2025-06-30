@@ -19,6 +19,15 @@ class Logic(HqlVisitor):
         )
                 
         return expr
+
+    def visitRelationalExpression(self, ctx: HqlParser.RelationalExpressionContext):
+        expr = Expr.Relational(
+            ctx.OperatorToken.text,
+            self.visit(ctx.Left),
+            self.visit(ctx.Right)
+        )
+
+        return expr
     
     def visitBetweenEqualityExpression(self, ctx: HqlParser.BetweenEqualityExpressionContext):
         expr = Expr.BetweenEquality(
