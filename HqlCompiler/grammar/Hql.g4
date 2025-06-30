@@ -1,3 +1,6 @@
+// Based on the Kql grammar under the Apache 2 license
+// Has since been modified for Hql usage
+
 grammar Hql;
 
 import HqlTokens;
