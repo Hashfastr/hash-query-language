@@ -30,10 +30,13 @@ class Logic(HqlVisitor):
         return expr
     
     def visitBetweenEqualityExpression(self, ctx: HqlParser.BetweenEqualityExpressionContext):
+        start = self.visit(ctx.Expressions[0])
+        end = self.visit(ctx.Expressions[1])
+
         expr = Expr.BetweenEquality(
             self.visit(ctx.Left),
-            self.visit(ctx.StartExpression),
-            self.visit(ctx.EndExpression),
+            start,
+            end,
             ctx.OperatorToken.text
         )
         
