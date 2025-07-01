@@ -202,7 +202,7 @@ class BinaryLogic(Expression):
             else:
                 filt = filt or i
                 
-        return filt
+        return (filt)
 
 class BasicRange(Expression):
     def __init__(self, start, end):
