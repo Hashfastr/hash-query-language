@@ -1,12 +1,10 @@
-from typing import overload
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_func, Context
-import logging
 from .__proto__ import Function
-from HqlCompiler.Data import Data, Series, Table, Schema
 import polars as pl
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
-from HqlCompiler.Expression import BasicRange
+from HqlCompiler.Expressions import BasicRange
+from HqlCompiler.Expressions import Integer
 
 @register_func('ip4subnet')
 class ip4subnet(Function):
@@ -32,5 +30,8 @@ class ip4subnet(Function):
 
         ip_start = ip_int &  mask
         ip_end   = ip_int | (mask ^ 0xFFFFFFFF)
+
+        ip_start = Integer(ip_start)
+        ip_end = Integer(ip_end)
         
         return BasicRange(ip_start, ip_end)

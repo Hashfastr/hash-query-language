@@ -71,3 +71,6 @@ class Operator():
 
     def get_variable(self, name:str):
         return self.variables[name]
+
+    def add_op(self, op:"Operator"):
+        return self

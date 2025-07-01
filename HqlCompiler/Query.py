@@ -1,4 +1,6 @@
 import json
+from HqlCompiler.Expressions import Expression
+from HqlCompiler.Context import Context
 
 # Top most object, a query.
 # Comprised of multiple statements
@@ -28,7 +30,7 @@ class Query():
 
 # Generic for a statement, see children as this can be very diverse
 class Statement():
-    def __init__(self, root=None):
+    def __init__(self, root):
         self.type = self.__class__.__name__
         self.root = root
     
@@ -42,5 +44,27 @@ class Statement():
         return json.dumps(self.to_dict(), indent=2)
 
 class QueryStatement(Statement):
-    def __init__(self, root=None):
-        super().__init__(root)
+    def __init__(self, root):
+        Statement.__init__(self, root)
+
+class LetStatement(Statement):
+    def __init__(self, name:Expression, value:Expression, lettype:str):
+        Statement.__init__(self, value)
+        self.name = name
+        self.lettype = lettype
+        
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'lettype': self.lettype,
+            'name': self.name.to_dict(),
+            'value': self.root.to_dict()
+        }
+        
+    def eval(self, ctx:Context, **kwargs):
+        name = self.name.eval(ctx, as_str=True)
+                
+        if kwargs.get('no_exec', False):
+            ctx.symbol_table[name] = self.root
+        else:
+            ctx.symbol_table[name] = self.root.eval(ctx)

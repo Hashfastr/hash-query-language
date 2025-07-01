@@ -16,7 +16,11 @@ class ESTypes():
         
         def hql_schema(self):
             return self.HqlType
-        
+
+        def __len__(self):
+            return 1
+    
+    @staticmethod
     def from_name(name:str):
         return get_type(f'elasticsearch_{name}')
             

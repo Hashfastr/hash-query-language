@@ -1,7 +1,7 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expression as Expr
+import HqlCompiler.Expressions as Expr
 
 from HqlCompiler.Exceptions import *
 
@@ -12,6 +12,9 @@ class Logic(HqlVisitor):
         pass
     
     def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
         expr = Expr.Equality(
             ctx.OperatorToken.text,
             self.visit(ctx.Left),
@@ -19,12 +22,31 @@ class Logic(HqlVisitor):
         )
                 
         return expr
+
+    def visitRelationalExpression(self, ctx: HqlParser.RelationalExpressionContext):
+        # Pass through in case we're doing stupid shit
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
+        expr = Expr.Relational(
+            ctx.OperatorToken.text,
+            self.visit(ctx.Left),
+            self.visit(ctx.Right)
+        )
+
+        return expr
     
     def visitBetweenEqualityExpression(self, ctx: HqlParser.BetweenEqualityExpressionContext):
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
+        start = self.visit(ctx.Expressions[0])
+        end = self.visit(ctx.Expressions[1])
+
         expr = Expr.BetweenEquality(
             self.visit(ctx.Left),
-            self.visit(ctx.StartExpression),
-            self.visit(ctx.EndExpression),
+            start,
+            end,
             ctx.OperatorToken.text
         )
         
@@ -33,6 +55,9 @@ class Logic(HqlVisitor):
     def visitLogicalOrExpression(self, ctx: HqlParser.LogicalOrExpressionContext):
         left = self.visit(ctx.Left)
         right = []
+
+        if len(ctx.Operations) == 0:
+            return left
         
         for i in ctx.Operations:
             right.append(self.visit(i))
@@ -54,6 +79,9 @@ class Logic(HqlVisitor):
     def visitLogicalAndExpression(self, ctx: HqlParser.LogicalAndExpressionContext):
         left = self.visit(ctx.Left)
         right = []
+
+        if len(ctx.Operations) == 0:
+            return left
         
         for i in ctx.Operations:
             right.append(self.visit(i))
@@ -76,6 +104,9 @@ class Logic(HqlVisitor):
         return self.visit(ctx.Expression)
 
     def visitListEqualityExpression(self, ctx: HqlParser.ListEqualityExpressionContext):
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
         lh = self.visit(ctx.Left)
         token = ctx.OperatorToken.text
         

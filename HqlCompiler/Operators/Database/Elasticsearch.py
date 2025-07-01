@@ -1,4 +1,4 @@
-import HqlCompiler.Expression as Expr
+import HqlCompiler.Expressions as Expr
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Context import *

@@ -131,6 +131,7 @@ class Table():
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, path)
 
+    @staticmethod
     def merge(tables:list["Table"]):
         max_cols = 100
         
@@ -193,6 +194,7 @@ class Table():
                 
         return Table(df=df, schema=schema, name=name)
     
+    @staticmethod
     def concat(tables:list["Table"]):
         df = pl.concat([x.df for x in tables])
         schema = tables[0].schema

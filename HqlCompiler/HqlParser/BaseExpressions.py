@@ -1,7 +1,7 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expression as Expr
+import HqlCompiler.Expressions as Expr
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 from HqlCompiler.Exceptions import *
@@ -140,11 +140,6 @@ class BaseExpressions(HqlVisitor):
 
     def visitScalarType(self, ctx: HqlParser.ScalarTypeContext):
         return hqlt.from_name(ctx.Token.text)()
-
-    def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
-        name = self.visit(ctx.Name)
-        value = self.visit(ctx.Expression)
-        return Expr.LetExpression(name, value)
 
     def visitStaticNamedExpression(self, ctx: HqlParser.StaticNamedExpressionContext):
         name = self.visit(ctx.Name)

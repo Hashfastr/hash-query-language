@@ -1,7 +1,7 @@
 from HqlCompiler.grammar.HqlVisitor import HqlVisitor
 from HqlCompiler.grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expression as Expr
+import HqlCompiler.Expressions as Expr
 
 from HqlCompiler.Exceptions import *
 

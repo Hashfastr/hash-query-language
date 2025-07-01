@@ -21,17 +21,26 @@ class HqlTypes():
             self.super = [HqlTypes.string, HqlTypes.multivalue]
 
         def pl_schema(self):
-            return self.proto()
+            if self.proto:
+                return self.proto()
+
+            else:
+                return None
 
         def cast(self, data:pl.Series):
             return data.cast(self.proto)
         
         def hql_schema(self):
             return self
-        
+
+        def __len__(self):
+            return 1
+    
+    @staticmethod
     def from_name(name:str):
         return get_type(f'hql_{name}')
     
+    @staticmethod
     def resolve_conflict(types:list[HqlType]):
         if len(types) == 1:
             return types[0]

@@ -4,7 +4,7 @@ from HqlCompiler.Data import Data, Table, Series, Schema
 from .__proto__ import Function
 from HqlCompiler.Types.Hql import HqlTypes as hqlt
 import polars as pl
-import HqlCompiler.Expression as Expr
+import HqlCompiler.Expressions as Expr
 
 class Typecast(Function):
     def __init__(self, args:list):

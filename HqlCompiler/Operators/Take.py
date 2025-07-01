@@ -1,6 +1,6 @@
 from HqlCompiler.Operators import Operator
 from HqlCompiler.Data import Data
-from HqlCompiler.Expression import Expression
+from HqlCompiler.Expressions import Expression
 from HqlCompiler.Exceptions import *
 from HqlCompiler.Context import register_op, Context
 
@@ -15,6 +15,24 @@ class Take(Operator):
         super().__init__()
         self.limit = limit
         self.tables = tables
+
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'limit': self.limit.to_dict(),
+            'tables': [x.to_dict() for x in self.tables]
+        }
+
+    def get_limits(self):
+        ctx = Context(Data())
+        limit = self.limit.eval(ctx)
+        tables = [x.eval(ctx, as_str=True) for x in self.tables]
+
+        return {
+            'limit': limit,
+            'tables': tables
+        }
+
     
     '''
     Takes only so many results for each table.
