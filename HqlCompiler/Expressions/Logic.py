@@ -27,7 +27,7 @@ class Equality(Expression):
         as_pl = kwargs.get('as_pl', True)
         
         lh = self.lh.eval(ctx, as_pl=as_pl)
-        rh = self.lh.eval(ctx, as_pl=as_pl)
+        rh = self.rh.eval(ctx, as_pl=as_pl)
         
         if as_pl:
             if self.eqtype == '==':

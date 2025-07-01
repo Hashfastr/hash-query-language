@@ -25,6 +25,7 @@ class Where(Operator):
     '''
     def eval(self, ctx:Context, **kwargs):
         pl_filter = self.expr.eval(ctx, as_pl=True)
+        print(pl_filter)
 
         for table in ctx.data:
             try:
