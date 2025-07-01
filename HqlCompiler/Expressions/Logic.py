@@ -73,11 +73,11 @@ class ListEquality(Expression):
             if not rh.literal:
                 rh = rh.eval(ctx, as_list=True)
             
-            if hasattr(rh, 'gen_filter'):
-                filt = rh.gen_filter(lh)
-                
-            elif rh.literal:
+            if rh.literal:
                 filt = (lh == rh.value)
+                
+            elif hasattr(rh, 'gen_filter'):
+                filt = rh.gen_filter(lh)
                 
             else:
                 filt = (lh == pltools.path_to_expr_value(rh))
