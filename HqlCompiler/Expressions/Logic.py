@@ -1,5 +1,5 @@
 from .__proto__ import Expression
-from .Literals import Literal
+from .Functions import DotCompositeFunction, FuncExpr
 from HqlCompiler.Context import Context
 from HqlCompiler.Exceptions import CompilerException
 from HqlCompiler.PolarsTools import pltools
@@ -88,7 +88,18 @@ class ListEquality(Expression):
         
         filts = []
         for rh in self.rh:
-            if rh.literal:
+            print(rh)
+            if isinstance(rh, FuncExpr) or isinstance(rh, DotCompositeFunction):
+                rh = rh.eval(ctx)
+
+            if rh == None:
+                raise CompilerException('Given rh is NoneType')
+
+            if isinstance(rh, list):
+                rh = pltools.path_to_expr_value(rh)
+                filt = self.comparator(lh, rh=rh)
+
+            elif rh.literal:
                 filt = self.comparator(lh, rh=rh.value)
                 
             elif rh.logic:
@@ -230,13 +241,14 @@ class BasicRange(Expression):
         Expression.__init__(self)
         self.start = start
         self.end = end
+        self.logic = True
     
     def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         lh = kwargs.get('lh', None)
         start = self.start.eval(ctx, as_pl=True)
         end = self.end.eval(ctx, as_pl=True)
 
-        if not lh:
+        if isinstance(lh, type(None)):
             raise CompilerException('BasicRange given a NoneType left-hand expression!')
 
         return (lh > start).and_(lh < end)
