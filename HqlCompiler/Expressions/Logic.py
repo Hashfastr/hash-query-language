@@ -1,7 +1,9 @@
 from .__proto__ import Expression
+from .Literals import Literal
 from HqlCompiler.Context import Context
 from HqlCompiler.Exceptions import CompilerException
 from HqlCompiler.PolarsTools import pltools
+from typing import Union
 
 import polars as pl
 
@@ -13,6 +15,7 @@ class Equality(Expression):
         self.eqtype = type
         self.lh:Expression = lh
         self.rh:Expression = rh
+        self.logic = True
     
     def to_dict(self):
         return {
@@ -49,11 +52,12 @@ class Equality(Expression):
 #
 # But is much easier to write and read
 class ListEquality(Expression):
-    def __init__(self, lh:Expression, type:str, rh:list[Expression]):
+    def __init__(self, lh:Expression, op:str, rh:list[Expression]):
         super().__init__()
         self.lh = lh
-        self.type = type
+        self.op = op
         self.rh = rh
+        self.logic = True
     
     def to_dict(self):
         return {
@@ -61,6 +65,20 @@ class ListEquality(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
+
+    def comparator(self, lh, rh=None):
+        if rh == None:
+            if self.op == 'in':
+                return (lh)
+
+            if self.op == '!in':
+                return (pl.not_(lh))
+
+        if self.op == 'in':
+            return (lh == rh)
+
+        if self.op == '!in':
+            return (lh != rh)
         
     def eval(self, ctx:Context, **kwargs):
         as_pl = kwargs.get('as_pl', True)
@@ -70,21 +88,24 @@ class ListEquality(Expression):
         
         filts = []
         for rh in self.rh:
-            if not rh.literal:
-                rh = rh.eval(ctx, as_list=True)
-            
             if rh.literal:
-                filt = (lh == rh.value)
+                filt = self.comparator(lh, rh=rh.value)
                 
-            elif hasattr(rh, 'gen_filter'):
-                filt = rh.gen_filter(lh)
+            elif rh.logic:
+                filt = self.comparator(rh.eval(ctx, lh=lh))
                 
             else:
-                filt = (lh == pltools.path_to_expr_value(rh))
+                rh = rh.eval(ctx, as_list=True)
+                rh = pltools.path_to_expr_value(rh)
+                filt = self.comparator(lh, rh=rh)
                 
             filts.append(filt)
-            
-        final = filts[0].or_(*filts[1:])
+        
+        if self.op == 'in':
+            final = filts[0].or_(*filts[1:])
+        
+        else:
+            final = filts[0].and_(*filts[1:])
                 
         if as_pl:
             return final
@@ -205,10 +226,17 @@ class BinaryLogic(Expression):
         return (filt)
 
 class BasicRange(Expression):
-    def __init__(self, start, end):
+    def __init__(self, start:Expression, end:Expression):
         Expression.__init__(self)
         self.start = start
         self.end = end
-        
-    def gen_filter(self, lh:pl.Expr):
-        return (lh > self.start).and_(lh < self.end)
+    
+    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        lh = kwargs.get('lh', None)
+        start = self.start.eval(ctx, as_pl=True)
+        end = self.end.eval(ctx, as_pl=True)
+
+        if not lh:
+            raise CompilerException('BasicRange given a NoneType left-hand expression!')
+
+        return (lh > start).and_(lh < end)

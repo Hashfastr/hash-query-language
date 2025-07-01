@@ -13,6 +13,8 @@ class Expression():
         self.type = self.__class__.__name__
         self.escaped = False
         self.literal = False
+        self.logic   = False
+        self.value   = None
     
     def to_dict(self):
         return {
@@ -24,10 +26,6 @@ class Expression():
     
     def is_escaped(self) -> bool:
         return self.escaped
-
-    def gen_filter(self, lh:"Expression") -> pl.Expr:
-        logging.warning(f"Hitting the default gen_filter for Expression {self.type}")
-        return pl.Expr()
     
     def __str__(self) -> str:
         return json.dumps(self.to_dict(), indent=2)

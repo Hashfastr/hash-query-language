@@ -4,9 +4,14 @@ from HqlCompiler.Types.Hql import HqlTypes as hqlt
 
 import polars as pl
 
-class TypeExpression(Expression):
-    def __init__(self, type:str):
+class Literal(Expression):
+    def __init__(self) -> None:
         Expression.__init__(self)
+        self.literal = True
+
+class TypeExpression(Literal):
+    def __init__(self, type:str):
+        Literal.__init__(self)
         self.type = type
         
     def eval(self):
@@ -15,10 +20,9 @@ class TypeExpression(Expression):
 # A string literal
 # literally a string
 # we strip off quotes when constructing as the parser doesn't remove them for us.
-class StringLiteral(Expression):
+class StringLiteral(Literal):
     def __init__(self, value:str):
-        Expression.__init__(self)
-        self.literal = True
+        Literal.__init__(self)
         self.value = value.strip('"').strip("'")
     
     def to_dict(self):
@@ -34,10 +38,9 @@ class StringLiteral(Expression):
 # An integer
 # Z
 # unreal, not real
-class Integer(Expression):
+class Integer(Literal):
     def __init__(self, value:str):
-        Expression.__init__(self)
-        self.literal = True
+        Literal.__init__(self)
         self.value = int(value)
     
     def to_dict(self):
@@ -49,10 +52,9 @@ class Integer(Expression):
     def eval(self, ctx:Context, **kwargs):
         return self.value
 
-class IP4(Expression):
+class IP4(Literal):
     def __init__(self, value:int):
-        Expression.__init__(self)
-        self.literal = True
+        Literal.__init__(self)
         self.value = value
         
     def to_dict(self):
@@ -67,10 +69,9 @@ class IP4(Expression):
     def eval(self, ctx:Context, **kwargs):
         return self.value
 
-class Float(Expression):
+class Float(Literal):
     def __init__(self, value:str):
-        Expression.__init__(self)
-        self.literal = True
+        Literal.__init__(self)
         self.value = float(value)
         
     def to_dict(self):
@@ -82,10 +83,9 @@ class Float(Expression):
     def eval(self, ctx:Context, **kwargs):
         return self.value
 
-class Bool(Expression):
+class Bool(Literal):
     def __init__(self, value:str):
-        Expression.__init__(self)
-        self.literal = True
+        Literal.__init__(self)
         self.value = value.lower() == 'true'
         
     def to_dict(self):

@@ -37,6 +37,9 @@ class Logic(HqlVisitor):
         return expr
     
     def visitBetweenEqualityExpression(self, ctx: HqlParser.BetweenEqualityExpressionContext):
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
         start = self.visit(ctx.Expressions[0])
         end = self.visit(ctx.Expressions[1])
 
@@ -101,6 +104,9 @@ class Logic(HqlVisitor):
         return self.visit(ctx.Expression)
 
     def visitListEqualityExpression(self, ctx: HqlParser.ListEqualityExpressionContext):
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
         lh = self.visit(ctx.Left)
         token = ctx.OperatorToken.text
         
