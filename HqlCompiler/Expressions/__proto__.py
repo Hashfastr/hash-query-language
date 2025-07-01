@@ -2,6 +2,7 @@ import json
 from HqlCompiler.Context import Context
 import polars as pl
 from typing import Union
+import logging
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -24,7 +25,8 @@ class Expression():
     def is_escaped(self) -> bool:
         return self.escaped
 
-    def gen_filter(self) -> pl.Expr:
+    def gen_filter(self, lh:"Expression") -> pl.Expr:
+        logging.warning(f"Hitting the default gen_filter for Expression {self.type}")
         return pl.Expr()
     
     def __str__(self) -> str:
