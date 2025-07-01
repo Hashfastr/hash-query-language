@@ -31,17 +31,14 @@ class CSV(Database):
             'Take'
         ]
         
-        self.take_sets = None
+        self.take_sets = []
     
     def eval_ops(self):
-        if not self.take_sets:
-            self.take_sets = []
-        
         for op in self.ops:
             if op.type == 'Take':
-                self.take_sets.append(op.get_limits(self.ctx))
+                self.take_sets.append(op.get_limits())
     
-    def from_file(self, filename:str, limit:int=None) -> str:
+    def from_file(self, filename:str, limit:int=None) -> Table:
         try:
             base = self.base_path if self.base_path else '.'
             
@@ -53,7 +50,7 @@ class CSV(Database):
                 
         return Table(df=data, name=filename)
         
-    def from_url(self, url:str, limit:int=None) -> str:
+    def from_url(self, url:str, limit:int=None) -> Table:
         try:
             url = f'{self.base_path}/{url}' if self.base_path else url
             
@@ -73,36 +70,22 @@ class CSV(Database):
     def limit(self, name:str):
         min_limit = None
         for take_set in self.take_sets:
-            limit = take_set[0]
-            for table in take_set[1]:
+            limit = take_set['limit']
+
+            # In the case of no tables specified, meaning all tables
+            if len(take_set['tables']) == 0:
+                min_limit = limit
+                continue
+
+            for table in take_set['tables']:
                 if name.startswith(table.split('*')[0]) and not min_limit:
                     min_limit = limit
                 elif limit < min_limit:
                     min_limit = limit
 
         return min_limit
-    
-    def verify_tables(self, names:list[str]):
-        tables = set()
-        for i in self.take_sets:
-            for j in i[1]:
-                tables.add(j)
-
-        unknown_tables = []
-        for table in list(tables):
-            matched = False
-            for name in names:
-                if name.startswith(table.split('*')[0]):
-                    matched = True
-            
-            if not matched:
-                logging.critical(f'Unknown table {table} referenced')
-                unknown_tables.append(table)
                 
-        if unknown_tables:
-            raise QueryException(f"Unknown table(s) {' '.join(unknown_tables)} referenced")
-                
-    def make_query(self) -> dict:
+    def make_query(self) -> Data:
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to CSV database')
@@ -116,15 +99,6 @@ class CSV(Database):
         
         self.files = self.files if self.files else []
         self.urls = self.urls if self.urls else []
-        
-        names = []
-        for file in self.files:
-            names.append(file)
-        for url in self.urls:
-            names.append(url.split('/')[-1])
-        
-        # Ensures that all take tables are real
-        self.verify_tables(names)
         
         tables = []
         for file in self.files:

@@ -12,6 +12,9 @@ class Logic(HqlVisitor):
         pass
     
     def visitEqualsEqualityExpression(self, ctx: HqlParser.EqualsEqualityExpressionContext):
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
         expr = Expr.Equality(
             ctx.OperatorToken.text,
             self.visit(ctx.Left),
@@ -21,6 +24,10 @@ class Logic(HqlVisitor):
         return expr
 
     def visitRelationalExpression(self, ctx: HqlParser.RelationalExpressionContext):
+        # Pass through in case we're doing stupid shit
+        if ctx.OperatorToken == None:
+            return self.visit(ctx.Left)
+
         expr = Expr.Relational(
             ctx.OperatorToken.text,
             self.visit(ctx.Left),
@@ -45,6 +52,9 @@ class Logic(HqlVisitor):
     def visitLogicalOrExpression(self, ctx: HqlParser.LogicalOrExpressionContext):
         left = self.visit(ctx.Left)
         right = []
+
+        if len(ctx.Operations) == 0:
+            return left
         
         for i in ctx.Operations:
             right.append(self.visit(i))
@@ -66,6 +76,9 @@ class Logic(HqlVisitor):
     def visitLogicalAndExpression(self, ctx: HqlParser.LogicalAndExpressionContext):
         left = self.visit(ctx.Left)
         right = []
+
+        if len(ctx.Operations) == 0:
+            return left
         
         for i in ctx.Operations:
             right.append(self.visit(i))
