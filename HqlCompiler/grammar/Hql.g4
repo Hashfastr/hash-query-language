@@ -951,10 +951,7 @@ stringOperatorExpression:
     ;
 
 stringBinaryOperatorExpression:
-    Left=invocationExpression (Operations+=stringBinaryOperation)*;
-
-stringBinaryOperation:
-    (Operator=stringBinaryOperator | HasOperator=':') Right=invocationExpression;
+    Left=invocationExpression ((Operator=stringBinaryOperator | HasOperator=':') Right=invocationExpression)?;
 
 stringBinaryOperator:
     OperatorToken=

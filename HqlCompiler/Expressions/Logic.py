@@ -1,7 +1,8 @@
+from polars.expr.expr import Expr
 from .__proto__ import Expression
 from .Functions import DotCompositeFunction, FuncExpr
 from HqlCompiler.Context import Context
-from HqlCompiler.Exceptions import CompilerException
+from HqlCompiler.Exceptions import CompilerException, QueryException
 from HqlCompiler.PolarsTools import pltools
 from typing import Union
 
@@ -252,3 +253,48 @@ class BasicRange(Expression):
             raise CompilerException('BasicRange given a NoneType left-hand expression!')
 
         return (lh > start).and_(lh < end)
+
+class StringBinary(Expression):
+    def __init__(self, lh:Expression, op:str, rh:Expression) -> None:
+        Expression.__init__(self)
+        self.lh = lh
+        self.op = op
+        self.rh = rh
+        
+        if not self.rh.literal:
+            raise QueryException('Dynamic right hand to StringBinary expression not supported yet')
+
+    def notastring(self):
+        raise QueryException(f'Righthand StringBinary expression is not a string')
+
+    def case_insensitive(self, ctx:Context):
+        lh = self.lh.eval(ctx, as_pl=True)
+        
+        if self.rh.literal:
+            if self.rh.type != "StringLiteral":
+                self.notastring()
+
+            rh = self.rh.value
+
+        else:
+            raise QueryException('Dynamic right hands not supported in StringBinary just yet')
+
+        if not isinstance(lh, pl.Expr):
+            raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+
+        # Case insensitive match
+        return lh.str.contains(f'(?i){rh}')
+
+    def gen_expr(self, ctx:Context):
+        if self.op == '=~':
+            return self.case_insensitive(ctx)
+
+        if self.op == '!~':
+            return pl.not_(self.case_insensitive(ctx))
+
+    def eval(self, ctx: Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+
+        expr = self.gen_expr(ctx)
+        print(expr)
+        return expr

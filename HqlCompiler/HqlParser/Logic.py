@@ -115,3 +115,27 @@ class Logic(HqlVisitor):
             exprs.append(self.visit(i))
         
         return Expr.ListEquality(lh, token, exprs)
+
+    def visitStringBinaryOperator(self, ctx: HqlParser.StringBinaryOperatorContext):
+        if not ctx.OperatorToken:
+            raise CompilerException('String Binary Operator has no Operator, wut')
+
+        return ctx.OperatorToken.text
+
+    def visitStringBinaryOperatorExpression(self, ctx: HqlParser.StringBinaryOperatorExpressionContext):
+        if not ctx.Right:
+            return self.visit(ctx.Left)
+
+        lh = self.visit(ctx.Left)
+        rh = self.visit(ctx.Right)
+
+        if ctx.Operator:
+            op = self.visit(ctx.Operator)
+
+        elif ctx.HasOperator:
+            op = ctx.HasOperator.text
+
+        else:
+            raise ParseException('String Binary Operator has no Operator, wut?', ctx)
+
+        return Expr.StringBinary(lh, op, rh)

@@ -1049,11 +1049,6 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#stringBinaryOperation.
-    def visitStringBinaryOperation(self, ctx:HqlParser.StringBinaryOperationContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by HqlParser#stringBinaryOperator.
     def visitStringBinaryOperator(self, ctx:HqlParser.StringBinaryOperatorContext):
         return self.visitChildren(ctx)
