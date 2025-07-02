@@ -970,10 +970,10 @@ stringBinaryOperator:
         | NOT_HASSUFFIX
         | HASSUFFIX_CS
         | NOT_HASSUFFIX_CS
-        | LIKE
-        | NOTLIKE
-        | LIKECS
-        | NOTLIKECS
+//        | LIKE
+//        | NOTLIKE
+//        | LIKECS
+//        | NOTLIKECS
         | CONTAINS
         | NOTCONTAINS
         | CONTAINSCS
