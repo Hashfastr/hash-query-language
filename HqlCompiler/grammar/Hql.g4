@@ -975,9 +975,9 @@ stringBinaryOperator:
 //        | LIKECS
 //        | NOTLIKECS
         | CONTAINS
-        | NOTCONTAINS
-        | CONTAINSCS
-        | NOTCONTAINSCS
+//        | NOTCONTAINS
+//        | CONTAINSCS
+//        | NOTCONTAINSCS
         | NOT_CONTAINS
         | CONTAINS_CS
         | NOT_CONTAINS_CS

@@ -260,6 +260,17 @@ class StringBinary(Expression):
         self.lh = lh
         self.op = op
         self.rh = rh
+
+        self.term = 'has' in op
+        
+        if op in ('=~', '!~'):
+            self.cs = False
+
+        elif op.endswith('_cs'):
+            self.cs = True
+
+        else:
+            self.cs = False
         
         if not self.rh.literal:
             raise QueryException('Dynamic right hand to StringBinary expression not supported yet')
