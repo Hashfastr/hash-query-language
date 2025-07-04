@@ -5,6 +5,7 @@ from HqlCompiler.Context import Context
 from HqlCompiler.Exceptions import CompilerException, QueryException
 from HqlCompiler.PolarsTools import pltools
 from typing import Union
+import logging
 
 import polars as pl
 
@@ -254,58 +255,87 @@ class BasicRange(Expression):
 
         return (lh > start).and_(lh < end)
 
-class StringBinary(Expression):
+class InsensitiveStringCmp(Expression):
     def __init__(self, lh:Expression, op:str, rh:Expression) -> None:
         Expression.__init__(self)
+        self.cs = False
         self.lh = lh
-        self.op = op
         self.rh = rh
+        self.neq = op == '!~'
 
-        self.term = 'has' in op
-        
-        if op in ('=~', '!~'):
-            self.cs = False
-
-        elif op.endswith('_cs'):
-            self.cs = True
-
-        else:
-            self.cs = False
-        
-        if not self.rh.literal:
-            raise QueryException('Dynamic right hand to StringBinary expression not supported yet')
-
-    def notastring(self):
-        raise QueryException(f'Righthand StringBinary expression is not a string')
-
-    def case_insensitive(self, ctx:Context):
+    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         lh = self.lh.eval(ctx, as_pl=True)
         
         if self.rh.literal:
             if self.rh.type != "StringLiteral":
-                self.notastring()
+                QueryException(f'Righthand {self.type} expression is not a string')
 
             rh = self.rh.value
 
         else:
-            raise QueryException('Dynamic right hands not supported in StringBinary just yet')
+            raise QueryException(f'Dynamic right hands not supported in {self.type} just yet')
 
         if not isinstance(lh, pl.Expr):
             raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
 
         # Case insensitive match
-        return lh.str.contains(f'(?i){rh}')
+        expr = lh.str.contains(f'(?i){rh}')
 
-    def gen_expr(self, ctx:Context):
-        if self.op == '=~':
-            return self.case_insensitive(ctx)
+        if self.neq:
+            expr = pl.not_(expr)
 
-        if self.op == '!~':
-            return pl.not_(self.case_insensitive(ctx))
+        return expr
 
-    def eval(self, ctx: Context, **kwargs):
-        as_pl = kwargs.get('as_pl', True)
+class Contains(Expression):
+    def __init__(self, lh:Expression, op:str, rh:Expression) -> None:
+        Expression.__init__(self)
+        self.lh = lh
+        self.op = op
+        self.rh = rh
+        self.startswith = False
+        self.endswith = False
 
-        expr = self.gen_expr(ctx)
-        print(expr)
+        self.term = 'has' in op
+        self.neq = '!' in op
+        self.cs = '_cs' in op
+
+        if 'startswith' in op or 'prefix' in op:
+            self.startswith = True
+        
+        if 'endswith' in op or 'suffix' in op:
+            self.endswith = True
+
+    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        if self.term:
+            logging.warning('Term matching with using has is not supported in Hql-land')
+            logging.warning('Semantically equivalent to contains, no performance benefits')
+
+        lh = self.lh.eval(ctx, as_pl=True)
+
+        if self.rh.literal:
+            if self.rh.type != "StringLiteral":
+                QueryException(f'Righthand {self.type} expression is not a string')
+
+            rh = self.rh.value
+
+        else:
+            raise QueryException(f'Dynamic right hands not supported in {self.type} just yet')
+
+        if not isinstance(lh, pl.Expr):
+            raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+
+        filt = rh
+
+        if self.startswith:
+            filt = f'^{filt}'
+
+        if self.endswith:
+            filt = f'{filt}$'
+
+        filt = filt if self.cs else f'(?i){filt}'
+        expr = lh.str.contains(filt)
+
+        if self.neq:
+            expr = pl.not_(expr)
+
         return expr

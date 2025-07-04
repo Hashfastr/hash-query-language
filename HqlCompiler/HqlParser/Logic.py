@@ -137,5 +137,8 @@ class Logic(HqlVisitor):
 
         else:
             raise ParseException('String Binary Operator has no Operator, wut?', ctx)
+        
+        if op in ('=~', '!~'):
+            return Expr.InsensitiveStringCmp(lh, op, rh)
 
-        return Expr.StringBinary(lh, op, rh)
+        return Expr.Contains(lh, op, rh)
