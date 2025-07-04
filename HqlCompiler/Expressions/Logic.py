@@ -286,6 +286,29 @@ class InsensitiveStringCmp(Expression):
 
         return expr
 
+class Regex(Expression):
+    def __init__(self, lh:Expression, rh:Expression) -> None:
+        Expression.__init__(self)
+        self.lh = lh
+        self.rh = rh
+
+    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        lh = self.lh.eval(ctx, as_pl=True)
+        
+        if self.rh.literal:
+            if self.rh.type != "StringLiteral":
+                QueryException(f'Righthand {self.type} expression is not a string')
+
+            rh = self.rh.value
+
+        else:
+            raise QueryException(f'Dynamic right hands not supported in {self.type} just yet')
+
+        if not isinstance(lh, pl.Expr):
+            raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+
+        return lh.str.contains(rh)
+
 class Contains(Expression):
     def __init__(self, lh:Expression, op:str, rh:Expression) -> None:
         Expression.__init__(self)
@@ -318,22 +341,27 @@ class Contains(Expression):
 
             rh = self.rh.value
 
+            if rh == None:
+                raise CompilerException(f'Literal value is None for {self.rh.type}')
+
         else:
             raise QueryException(f'Dynamic right hands not supported in {self.type} just yet')
 
         if not isinstance(lh, pl.Expr):
             raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
 
-        filt = rh
+        if not self.cs:
+            rh = rh.lower()
+            lh = lh.str.to_lowercase()
 
         if self.startswith:
-            filt = f'^{filt}'
+            expr = lh.str.starts_with(rh)
 
-        if self.endswith:
-            filt = f'{filt}$'
+        elif self.endswith:
+            expr = lh.str.ends_with(rh)
 
-        filt = filt if self.cs else f'(?i){filt}'
-        expr = lh.str.contains(filt)
+        else:
+            expr = lh.str.contains(rh)
 
         if self.neq:
             expr = pl.not_(expr)
