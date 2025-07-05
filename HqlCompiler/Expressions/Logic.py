@@ -1,4 +1,3 @@
-from polars.expr.expr import Expr
 from .__proto__ import Expression
 from .Functions import DotCompositeFunction, FuncExpr
 from HqlCompiler.Context import Context
@@ -142,6 +141,12 @@ class Relational(Equality):
         rh = self.rh.eval(ctx, as_pl=as_pl)
 
         if as_pl:
+            if not isinstance(lh, pl.Expr):
+                raise CompilerException(f'Relational left hand {self.lh.type} returned non-polars expression')
+            
+            if not isinstance(rh, pl.Expr):
+                raise CompilerException(f'Relational right hand {self.rh.type} returned non-polars expression')
+
             if self.eqtype == '<':
                 return (lh < rh)
             
@@ -189,6 +194,9 @@ class BetweenEquality(Expression):
         lh = self.lh.eval(ctx, as_pl=True)
         start = self.start.eval(ctx, as_pl=True)
         end = self.end.eval(ctx, as_pl=True)
+
+        if not isinstance(lh, pl.Expr):
+            raise CompilerException(f'Between left hand {self.lh.type} returned non-polars expression')
         
         filt = lh.is_between(start, end)
         
@@ -223,6 +231,11 @@ class BinaryLogic(Expression):
         }
         
     def eval(self, ctx:Context, **kwargs):
+        as_pl = kwargs.get('as_pl', True)
+        if not as_pl:
+            logging.critical(f'Odd kwargs passed to Binary Logic {kwargs}')
+            raise CompilerException(f'BinaryLogic expression given as_pl=False in kwargs')
+
         lh = self.lh.eval(ctx, as_pl=True)
         
         rh = []
@@ -264,6 +277,11 @@ class InsensitiveStringCmp(Expression):
         self.neq = op == '!~'
 
     def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        as_pl = kwargs.get('as_pl', True)
+        if not as_pl:
+            logging.critical(f'Odd kwargs passed to InsensitiveStringCmp {kwargs}')
+            raise CompilerException(f'InsensitiveStringCmp expression given as_pl=False in kwargs')
+        
         lh = self.lh.eval(ctx, as_pl=True)
         
         if self.rh.literal:
@@ -293,6 +311,11 @@ class Regex(Expression):
         self.rh = rh
 
     def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        as_pl = kwargs.get('as_pl', True)
+        if not as_pl:
+            logging.critical(f'Odd kwargs passed to Regex {kwargs}')
+            raise CompilerException(f'Regex expression given as_pl=False in kwargs')
+        
         lh = self.lh.eval(ctx, as_pl=True)
         
         if self.rh.literal:
@@ -329,6 +352,11 @@ class Contains(Expression):
             self.endswith = True
 
     def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        as_pl = kwargs.get('as_pl', True)
+        if not as_pl:
+            logging.critical(f'Odd kwargs passed to Contains {kwargs}')
+            raise CompilerException(f'Contains expression given as_pl=False in kwargs')
+        
         if self.term:
             logging.warning('Term matching with using has is not supported in Hql-land')
             logging.warning('Semantically equivalent to contains, no performance benefits')
