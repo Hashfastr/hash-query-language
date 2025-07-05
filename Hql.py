@@ -1,6 +1,8 @@
 from HqlCompiler.HqlParser import Parser
 from HqlCompiler.Exceptions import *
 from HqlCompiler import Compiler
+import HaCEngine.Parser as HaCParser
+import HaCEngine.Exceptions as HaCExceptions
 
 import json
 import logging
@@ -40,6 +42,7 @@ def main():
     parser.add_argument('-co', '--compose-override', help="Override the compose binary found in the path")
     parser.add_argument('-c', '--config', help="Location of the config file")
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
+    parser.add_argument('-hac', '--gen-hac-code', help="Similar to -asm, doesn't execute code, just outputs HaC as json to stdout", action='store_true')
     
     args = parser.parse_args()
     
@@ -62,6 +65,20 @@ def main():
         conf_file = "./conf.json"
     else:
         conf_file = args.config
+        
+    ##################################
+    ## Generate HaC (if applicable) ##
+    ##################################
+    if args.gen_hac_code:
+        try:
+            parser = HaCParser.Parser(filename=args.file)
+        except HaCExceptions.LexerException:
+            logging.critical('hql file does not contain a valid HaC comment!')
+            return -1
+
+        parser.assemble()
+        print(parser.assembly)
+        return
 
     #######################
     ## Generate Assembly ##

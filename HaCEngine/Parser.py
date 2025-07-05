@@ -1,4 +1,4 @@
-from antlr4 import *
+from antlr4 import InputStream, CommonTokenStream
 from antlr4.error.ErrorListener import ErrorListener
 from HaCEngine.grammar.HacLexer import HacLexer
 from HaCEngine.grammar.HacParser import HacParser
@@ -18,22 +18,19 @@ class HqlErrorListener(ErrorListener):
         Parser.handleException(recognizer, e)
         
 class Parser():
-    def __init__(self, filename:str):
+    def __init__(self, text:str='', filename:str=''):
+        if not text and filename:
+            with open(filename, mode='r') as f:
+                text = f.read()
+
+        self.text = text
         self.filename = filename
         self.tree = self.parse_file()
     
     def parse_file(self):
-        try:
-            with open(self.filename, 'r') as f:
-                text = f.read()
-        except Exception as e:
-            logging.error(f"Failed to open file {self.filename}")
-            logging.error(str(e))
-            raise e
+        self.err_listener = HqlErrorListener(self.text, self.filename)
         
-        self.err_listener = HqlErrorListener(text, self.filename)
-        
-        lexer = HacLexer(InputStream(text))
+        lexer = HacLexer(InputStream(self.text))
         token_stream = CommonTokenStream(lexer)
         parser = HacParser(token_stream)
 
