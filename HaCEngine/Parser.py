@@ -138,7 +138,7 @@ class Visitor(HacVisitor):
         return tag
 
     def visitListTag(self, ctx: HacParser.ListTagContext):
-        return ctx.Name.text
+        return ctx.Name.__getattribute__('text')
 
     def visitListLine(self, ctx: HacParser.ListLineContext):
         return self.visit(ctx.Item)
@@ -162,7 +162,7 @@ class Visitor(HacVisitor):
         return tag
 
     def visitTextTag(self, ctx: HacParser.TextTagContext):
-        return ctx.Name.text
+        return ctx.Name.__getattribute__('text')
 
     def visitSingleTextLine(self, ctx: HacParser.SingleTextLineContext):
         return self.visit(ctx.Line)
