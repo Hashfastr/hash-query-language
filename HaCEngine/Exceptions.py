@@ -19,3 +19,8 @@ class LexerException(HacException):
         self.filename = filename
         
         HacException.__init__(self, f'{message}: line {self.line}:{self.col}')
+
+class ActionException(HacException):
+    def __init__(self, conf:dict, message: str = ""):
+        message = f"{conf['action_name']} {message}"
+        HacException.__init__(self, message=message)

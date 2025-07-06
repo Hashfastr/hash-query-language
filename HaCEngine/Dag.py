@@ -1,16 +1,15 @@
 from HaCEngine.Exceptions import *
 from HaCEngine import Hac
 from datetime import datetime
-import logging
 
 class Dag():
     def __init__(self, hac:Hac) -> None:
         self.hac = hac
 
     def gen_dag(self):
-        return self.dag_decorator()
+        return self.dag_header()
 
-    def dag_decorator(self):
+    def dag_header(self):
         filename = self.hac.get('filename')
         schedule = self.hac.get('schedule')
         hql = self.hac.get('hql')
@@ -31,7 +30,7 @@ class Dag():
             raise DagException(name=dagid, message='HaC file contains no detection!!')
 
         # Add this later if needed
-        '''
+        f'''
         doc_md = \'\'\'
         {md}
         \'\'\'
@@ -54,6 +53,7 @@ hql_detection = \'\'\'
     description=description,
     catchup=False
 )
+
 '''
 
         return decorator

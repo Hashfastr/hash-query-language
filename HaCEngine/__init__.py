@@ -1,5 +1,4 @@
 from HaCEngine.Exceptions import *
-import json
 
 class Hac():
     '''

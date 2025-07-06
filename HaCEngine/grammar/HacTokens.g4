@@ -25,6 +25,7 @@ LISTTAG: (
     | 'falsepositives'
     | 'references'
     | 'changelog'
+    | 'actions'
 );
 
 CHAR: ~('\n' | '\r');
