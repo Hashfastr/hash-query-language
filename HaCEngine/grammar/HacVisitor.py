@@ -44,6 +44,16 @@ class HacVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HacParser#textTag.
+    def visitTextTag(self, ctx:HacParser.TextTagContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HacParser#listTag.
+    def visitListTag(self, ctx:HacParser.ListTagContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HacParser#singleTextLine.
     def visitSingleTextLine(self, ctx:HacParser.SingleTextLineContext):
         return self.visitChildren(ctx)
@@ -54,8 +64,23 @@ class HacVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HacParser#preline.
+    def visitPreline(self, ctx:HacParser.PrelineContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HacParser#endline.
+    def visitEndline(self, ctx:HacParser.EndlineContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HacParser#data.
     def visitData(self, ctx:HacParser.DataContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HacParser#allData.
+    def visitAllData(self, ctx:HacParser.AllDataContext):
         return self.visitChildren(ctx)
 
 

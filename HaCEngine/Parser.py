@@ -1,5 +1,6 @@
 from antlr4 import InputStream, CommonTokenStream
 from antlr4.error.ErrorListener import ErrorListener
+from HaCEngine import Hac
 from HaCEngine.grammar.HacLexer import HacLexer
 from HaCEngine.grammar.HacParser import HacParser
 from HaCEngine.grammar.HacVisitor import HacVisitor
@@ -41,15 +42,17 @@ class Parser():
 
     def assemble(self):
         visitor = Visitor(self.filename)
-        self.assembly = visitor.visit(self.tree)
+        assembly = visitor.visit(self.tree)
         
-        if self.assembly == None:
+        if assembly == None:
             logging.error("Compiler error!")
             logging.error("Parser returned None instead of valid assembly")
             logging.error("Import error?")
             raise Exception("Compiler error, visitor returned None")
 
-        return self.assembly
+        self.hac = Hac(assembly, self.filename)
+
+        return self.hac
     
     @staticmethod
     def getText(ctx):
@@ -83,7 +86,7 @@ class ListTag(Tag):
     def __init__(self, name: str) -> None:
         Tag.__init__(self, name)
         self.type = 'list'
-        self.items = list()
+        self.items = []
 
 class TextTag(Tag):
     def __init__(self, name: str) -> None:
@@ -127,11 +130,15 @@ class Visitor(HacVisitor):
         return None
 
     def visitListStart(self, ctx: HacParser.ListStartContext):
-        # Using this instead of regular attribute getting to shut the linter up
-        tag = ListTag(ctx.Name.__getattribute__('text'))
+        name = self.visit(ctx.Name)
+
+        tag = ListTag(name)
         for i in ctx.Items:
             tag.items.append(self.visit(i))
         return tag
+
+    def visitListTag(self, ctx: HacParser.ListTagContext):
+        return ctx.Name.text
 
     def visitListLine(self, ctx: HacParser.ListLineContext):
         return self.visit(ctx.Item)
@@ -140,8 +147,8 @@ class Visitor(HacVisitor):
         return self.visit(ctx.Data)
 
     def visitTextStart(self, ctx: HacParser.TextStartContext):
-        # Using this instead of regular attribute getting to shut the linter up
-        tag = TextTag(ctx.Name.__getattribute__('text'))
+        name = self.visit(ctx.Name)
+        tag = TextTag(name)
 
         if ctx.Root:
             tag.text += self.visit(ctx.Root)
@@ -154,11 +161,14 @@ class Visitor(HacVisitor):
 
         return tag
 
+    def visitTextTag(self, ctx: HacParser.TextTagContext):
+        return ctx.Name.text
+
     def visitSingleTextLine(self, ctx: HacParser.SingleTextLineContext):
         return self.visit(ctx.Line)
 
     def visitTextLine(self, ctx: HacParser.TextLineContext):
-        return self.visit(ctx.Data) if ctx.Data else ''
+        return self.visit(ctx.Line) if ctx.Line else ''
 
     def visitData(self, ctx: HacParser.DataContext):
         data = ''
@@ -166,3 +176,8 @@ class Visitor(HacVisitor):
             data += ctx.getChild(i).getText()
         return data
 
+    def visitAllData(self, ctx: HacParser.DataContext):
+        data = ''
+        for i in range(ctx.getChildCount()):
+            data += ctx.getChild(i).getText()
+        return data

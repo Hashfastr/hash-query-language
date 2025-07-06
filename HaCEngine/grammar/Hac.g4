@@ -12,28 +12,42 @@ tagSection:
     ;
     
 emptyLine:
-      PRELINE NEWLINE
-    | SPACE+ ASTERISK NEWLINE;
+      preline endline;
     
 listStart:
-    PRELINE ATSIGN Name=LISTTAG SPACE* NEWLINE (Items+=listLine)*;
+    preline Name=listTag endline (Items+=listLine)*;
     
 listLine:
-    PRELINE Item=listItem;
+    preline Item=listItem;
     
 listItem:
-    DASH SPACE+ Data=data NEWLINE;
+    DASH SPACE+ Data=data endline;
 
 textStart:
-    PRELINE ATSIGN Name=TEXTTAG
-    (Root=singleTextLine)? NEWLINE (Lines+=textLine)*;
+    preline Name=textTag (Root=singleTextLine | endline) (Lines+=textLine)*;
+    
+textTag:
+    ATSIGN Name=TEXTTAG;
+
+listTag:
+    ATSIGN Name=LISTTAG;
 
 singleTextLine:
-    SPACE+ Line=data;
+    SPACE+ Line=allData endline;
 
 textLine:
-      PRELINE Data=data NEWLINE
+      preline Line=data endline
     | emptyLine;
+    
+preline:
+    SPACE ASTERISK SPACE*;
+
+endline:
+    SPACE* NEWLINE;
 
 data:
-    ~(ATSIGN) (CHAR | DASH | SPACE | ASTERISK | ATSIGN | TEXTTAG | LISTTAG)+;
+    ~(ATSIGN | NEWLINE | SPACE) (CHAR | DASH | SPACE | ASTERISK | ATSIGN | TEXTTAG | LISTTAG)+;
+
+allData:
+    (CHAR | DASH | SPACE | ASTERISK | ATSIGN | TEXTTAG | LISTTAG)+;
+    

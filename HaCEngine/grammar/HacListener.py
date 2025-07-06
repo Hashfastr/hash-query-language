@@ -71,6 +71,24 @@ class HacListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by HacParser#textTag.
+    def enterTextTag(self, ctx:HacParser.TextTagContext):
+        pass
+
+    # Exit a parse tree produced by HacParser#textTag.
+    def exitTextTag(self, ctx:HacParser.TextTagContext):
+        pass
+
+
+    # Enter a parse tree produced by HacParser#listTag.
+    def enterListTag(self, ctx:HacParser.ListTagContext):
+        pass
+
+    # Exit a parse tree produced by HacParser#listTag.
+    def exitListTag(self, ctx:HacParser.ListTagContext):
+        pass
+
+
     # Enter a parse tree produced by HacParser#singleTextLine.
     def enterSingleTextLine(self, ctx:HacParser.SingleTextLineContext):
         pass
@@ -89,12 +107,39 @@ class HacListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by HacParser#preline.
+    def enterPreline(self, ctx:HacParser.PrelineContext):
+        pass
+
+    # Exit a parse tree produced by HacParser#preline.
+    def exitPreline(self, ctx:HacParser.PrelineContext):
+        pass
+
+
+    # Enter a parse tree produced by HacParser#endline.
+    def enterEndline(self, ctx:HacParser.EndlineContext):
+        pass
+
+    # Exit a parse tree produced by HacParser#endline.
+    def exitEndline(self, ctx:HacParser.EndlineContext):
+        pass
+
+
     # Enter a parse tree produced by HacParser#data.
     def enterData(self, ctx:HacParser.DataContext):
         pass
 
     # Exit a parse tree produced by HacParser#data.
     def exitData(self, ctx:HacParser.DataContext):
+        pass
+
+
+    # Enter a parse tree produced by HacParser#allData.
+    def enterAllData(self, ctx:HacParser.AllDataContext):
+        pass
+
+    # Exit a parse tree produced by HacParser#allData.
+    def exitAllData(self, ctx:HacParser.AllDataContext):
         pass
 
 

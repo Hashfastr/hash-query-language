@@ -5,6 +5,7 @@
  * 
  * @status test
  * @level medium
+ * @schedule 0 * * * *
  * @description
  * Detects creation of cron file or files in Cron directories which could
  * indicates potential persistence.

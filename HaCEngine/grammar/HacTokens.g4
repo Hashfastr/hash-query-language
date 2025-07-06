@@ -5,7 +5,6 @@ SPACE: (' ' | '\t');
 NEWLINE: ('\n' | '\r');
 COMMENTSTART: '/' ASTERISK+ NEWLINE;
 COMMENTEND: SPACE+ ASTERISK+ '/';
-PRELINE: SPACE ASTERISK SPACE+;
 ATSIGN: '@';
 DASH: '-';
 
@@ -18,6 +17,7 @@ TEXTTAG: (
     | 'description'
     | 'triage'
     | 'authornotes'
+    | 'schedule'
 );
 
 LISTTAG: (
