@@ -2,7 +2,7 @@ import smtplib
 from email.message import EmailMessage
 import logging
 
-from HqlCompiler.Data import Data, Table, Schema
+from HqlCompiler.Data import Data, Table
 from HaCEngine.Exceptions import *
 
 class EmailAction():
@@ -54,6 +54,8 @@ class EmailAction():
         html += '</html>\n'
         return html
 
+    # Can probably use kwargs later to state style or something
+    # Or just put that into the config
     def eval(self, hac:dict, data:Data, **kwargs):
         self.hac = hac
         self.data = data

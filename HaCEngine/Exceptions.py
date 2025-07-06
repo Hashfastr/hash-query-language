@@ -22,5 +22,5 @@ class LexerException(HacException):
 
 class ActionException(HacException):
     def __init__(self, conf:dict, message: str = ""):
-        message = f"{conf['action_name']} {message}"
+        message = f"{conf.get('action_name', conf['type'])} {message}"
         HacException.__init__(self, message=message)
