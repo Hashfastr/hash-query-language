@@ -84,5 +84,15 @@ class HacVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HacParser#hqlText.
+    def visitHqlText(self, ctx:HacParser.HqlTextContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HacParser#hqlLine.
+    def visitHqlLine(self, ctx:HacParser.HqlLineContext):
+        return self.visitChildren(ctx)
+
+
 
 del HacParser

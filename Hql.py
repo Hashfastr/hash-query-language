@@ -4,6 +4,7 @@ from HqlCompiler import Compiler
 import HaCEngine.Parser as HaCParser
 import HaCEngine.Exceptions as HacExceptions
 
+
 import json
 import logging
 import argparse, sys
@@ -78,7 +79,7 @@ def main():
 
         hac = parser.assemble()
         print(hac.render(args.render_hac))
-        return 
+        return
 
     #######################
     ## Generate Assembly ##

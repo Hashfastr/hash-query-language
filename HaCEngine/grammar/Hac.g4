@@ -3,7 +3,7 @@ grammar Hac;
 import HacTokens;
 
 dacBlock:
-    COMMENTSTART (Tags+=tagSection)+ COMMENTEND;
+    COMMENTSTART (Tags+=tagSection)+ COMMENTEND NEWLINE* (Hql=hqlText)?;
 
 tagSection:
       List=listStart
@@ -51,3 +51,8 @@ data:
 allData:
     (CHAR | DASH | SPACE | ASTERISK | ATSIGN | TEXTTAG | LISTTAG)+;
     
+hqlText:
+    (Lines+=hqlLine)+;
+
+hqlLine:
+    Data=allData NEWLINE;

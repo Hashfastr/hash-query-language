@@ -143,5 +143,23 @@ class HacListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by HacParser#hqlText.
+    def enterHqlText(self, ctx:HacParser.HqlTextContext):
+        pass
+
+    # Exit a parse tree produced by HacParser#hqlText.
+    def exitHqlText(self, ctx:HacParser.HqlTextContext):
+        pass
+
+
+    # Enter a parse tree produced by HacParser#hqlLine.
+    def enterHqlLine(self, ctx:HacParser.HqlLineContext):
+        pass
+
+    # Exit a parse tree produced by HacParser#hqlLine.
+    def exitHqlLine(self, ctx:HacParser.HqlLineContext):
+        pass
+
+
 
 del HacParser

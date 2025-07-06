@@ -118,6 +118,10 @@ class Visitor(HacVisitor):
             elif i.type == 'text':
                 tag_dict[i.name] = i.text
 
+        if ctx.Hql:
+            hql = self.visit(ctx.Hql)
+            tag_dict['hql'] = hql
+
         return tag_dict
 
     def visitTagSection(self, ctx: HacParser.TagSectionContext):
@@ -181,3 +185,12 @@ class Visitor(HacVisitor):
         for i in range(ctx.getChildCount()):
             data += ctx.getChild(i).getText()
         return data
+
+    def visitHqlText(self, ctx: HacParser.HqlTextContext):
+        lines = []
+        for i in ctx.Lines:
+            lines.append(self.visit(i))
+        return '\n'.join(lines)
+
+    def visitHqlLine(self, ctx: HacParser.HqlLineContext):
+        return self.visit(ctx.Data)

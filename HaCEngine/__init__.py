@@ -17,12 +17,14 @@ class Hac():
             'status',
             'schedule',
             'description',
+            'hql'
         ]
 
         self.validate()
 
     def render(self, target:str='md'):
         from HaCEngine.Doc import HacDoc
+        from HaCEngine.Dag import Dag
         hd = HacDoc(self)
         
         if target in ('md', 'markdown'):
@@ -31,8 +33,12 @@ class Hac():
         if target == 'json':
             return hd.json()
 
-        raise HacException(f'Unknown HaC render type {target}')
+        if target == 'dag':
+            dag = Dag(self)
+            return dag.gen_dag()
 
+        raise HacException(f'Unknown HaC render type {target}')
+    
     def get(self, name:str):
         if name == 'src':
             return self.src

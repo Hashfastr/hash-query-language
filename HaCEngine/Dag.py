@@ -1,38 +1,62 @@
 from HaCEngine.Exceptions import *
-from HaCEngine.Doc import HacDoc
+from HaCEngine import Hac
 from datetime import datetime
 import logging
 
 class Dag():
-    def __init__(self, hac:dict, hql:str) -> None:
+    def __init__(self, hac:Hac) -> None:
         self.hac = hac
-        self.hql = hql
+
+    def gen_dag(self):
+        return self.dag_decorator()
 
     def dag_decorator(self):
-        filename = self.hac.get('filename', '')
-        schedule = self.hac.get('schedule', '')
-        if not schedule:
-            raise DagException(filename, f'Schedule not defined in dag')
+        filename = self.hac.get('filename')
+        schedule = self.hac.get('schedule')
+        hql = self.hac.get('hql')
+        title = self.hac.get('title')
 
         tags = []
-        tags += self.hac.get('tags', [])
-        
-        if 'level' not in self.hac:
-            logging.warning(f'level undefined in HaC {filename}')
-        else:
-            tags.append(self.hac['level'])
+        tags += self.hac.get('tags')
+        tag_text = ', '.join([f"'{x}'" for x in tags] + [filename])
 
-        if 'id' not in self.hac:
-            raise DagException(filename, f'id undefined in HaC')
-        dagid = self.hac['id']
+        dagid = self.hac.get('id')
 
         now = datetime.now()
+        md = self.hac.render(target='md')
+
+        description = self.hac.get('description')
+
+        if not hql:
+            raise DagException(name=dagid, message='HaC file contains no detection!!')
+
+        # Add this later if needed
+        '''
+        doc_md = \'\'\'
+        {md}
+        \'\'\'
+        '''
 
         decorator = f'''
-        @dag(
-            dag_id=\'{dagid}\',
-            schedule=\'{schedule}\',
-            start_date=datetime.datetime({now.year}, {now.month}, {now.day}),
-            
-        )
-        '''
+description = \'\'\'
+{description}
+\'\'\'
+hql_detection = \'\'\'
+{hql}
+\'\'\'
+@dag(
+    dag_id=\'{dagid}\',
+    dag_display_name=\'{title}\'
+    schedule=\'{schedule}\',
+    start_date=datetime.datetime({now.year}, {now.month}, {now.day}),
+    doc_md=doc_md,
+    tags=[{tag_text}],
+    description=description,
+    catchup=False
+)
+'''
+
+        return decorator
+
+    def dag_code(self):
+        ...
