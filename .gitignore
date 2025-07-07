@@ -191,24 +191,24 @@ big.json
 *swp
 
 # compiler grammar
-HqlCompiler/grammar/*.class
-HqlCompiler/grammar/*.java
-HqlCompiler/grammar/.antlr
-HqlCompiler/grammar/*.interp
-HqlCompiler/grammar/*.tokens
-HqlCompiler/grammar/HqlListener.py
+Hql/Compiler/grammar/*.class
+Hql/Compiler/grammar/*.java
+Hql/Compiler/grammar/.antlr
+Hql/Compiler/grammar/*.interp
+Hql/Compiler/grammar/*.tokens
+Hql/Compiler/grammar/HqlListener.py
 
 # hac grammar
-HaCEngine/grammar/*.class
-HaCEngine/grammar/*.java
-HaCEngine/grammar/.antlr
-HaCEngine/grammar/*.interp
-HaCEngine/grammar/*.tokens
-HaCEngine/grammar/HaCListener.py
+Hql/HacEngine/grammar/*.class
+Hql/HacEngine/grammar/*.java
+Hql/HacEngine/grammar/.antlr
+Hql/HacEngine/grammar/*.interp
+Hql/HacEngine/grammar/*.tokens
+Hql/HacEngine/grammar/HaCListener.py
 
 # hac containers
-HaCEngine/config
-HaCEngine/dags
-HaCEngine/logs
-HaCEngine/plugins
-HaCEngine/.env
+Hql/HacEngine/config
+Hql/HacEngine/dags
+Hql/HacEngine/logs
+Hql/HacEngine/plugins
+Hql/HacEngine/.env
