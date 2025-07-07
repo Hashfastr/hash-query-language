@@ -1,10 +1,10 @@
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_func, Context
+from ..Exceptions import *
+from ..Context import register_func, Context
 from .__proto__ import Function
 import polars as pl
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
-from HqlCompiler.Expressions import BasicRange
-from HqlCompiler.Expressions import Integer
+from ..Types.Hql import HqlTypes as hqlt
+from ..Expressions import BasicRange
+from ..Expressions import Integer
 
 @register_func('ip4subnet')
 class ip4subnet(Function):

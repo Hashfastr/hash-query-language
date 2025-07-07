@@ -13,6 +13,12 @@ __all__ = [
 
 from .Operator import Operator
 
+from ..Exceptions import *
+from ..Context import Context, register_database, register_op
+from ..Data import Data, Table, Series, Schema
+from .. import Expressions as Expr
+from ..Types import Elasticsearch as ESTypes
+
 from . import Database
 from .Where import Where
 from .Project import Project, ProjectAway, ProjectKeep, ProjectReorder, ProjectRename

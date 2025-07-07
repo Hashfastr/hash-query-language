@@ -1,7 +1,7 @@
 import json
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
 import polars as pl
-from HqlCompiler.Context import Context
+from ..Context import Context
 
 class Function():
     def __init__(self, args:list, min:int, max:int):

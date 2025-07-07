@@ -1,10 +1,10 @@
 import polars as pl
-from HqlCompiler.Data.Schema import Schema
-from HqlCompiler.Data.Series import Series
-from HqlCompiler.Exceptions import *
-from HqlCompiler.PolarsTools import pltools
-from HqlCompiler.Types.Compiler import CompilerType
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from .Schema import Schema
+from .Series import Series
+from ..Exceptions import *
+from ..PolarsTools import pltools
+from ..Types.Compiler import CompilerType
+from ..Types.Hql import HqlTypes as hqlt
 import logging
 from typing import Union
 

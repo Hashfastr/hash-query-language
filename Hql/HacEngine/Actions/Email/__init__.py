@@ -2,8 +2,8 @@ import smtplib
 from email.message import EmailMessage
 import logging
 
-from HqlCompiler.Data import Data, Table
-from HaCEngine.Exceptions import *
+from .. import HqlData
+from .. import ActionException
 
 class EmailAction():
     def __init__(self, conf:dict) -> None:
@@ -23,7 +23,7 @@ class EmailAction():
         html += '</tr>\n'
         return html
 
-    def gen_table(self, table:Table):
+    def gen_table(self, table:HqlData.Table):
         dicts = table.to_dicts()
 
         if table.schema:
@@ -56,7 +56,7 @@ class EmailAction():
 
     # Can probably use kwargs later to state style or something
     # Or just put that into the config
-    def eval(self, hac:dict, data:Data, **kwargs):
+    def eval(self, hac:dict, data:HqlData.Data, **kwargs):
         self.hac = hac
         self.data = data
 

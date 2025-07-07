@@ -1,10 +1,10 @@
-from HqlCompiler.grammar.HqlVisitor import HqlVisitor
-from HqlCompiler.grammar.HqlParser import HqlParser
+from ..grammar.HqlVisitor import HqlVisitor
+from ..grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expressions as Expr
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from .. import Expressions as Expr
+from ..Types.Hql import HqlTypes as hqlt
 
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
 
 import logging
 

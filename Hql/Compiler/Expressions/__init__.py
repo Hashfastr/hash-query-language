@@ -5,8 +5,8 @@ from .Literals import *
 from .Functions import *
 from .Aggregation import *
 
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Operators.Database import Database
+from ..Operators import Operator
+from ..Operators.Database import Database
 
 class PipeExpression(Expression):
     def __init__(self, prepipe:Expression, pipes:list[Operator]):
@@ -25,7 +25,7 @@ class PipeExpression(Expression):
     def eval(self, ctx:Context, **kwargs):
         no_exec = kwargs.get('no_exec', False)
 
-        from HqlCompiler import CompilerSet
+        from .. import CompilerSet
 
         # Resolve database references
         prepipe = self.prepipe.eval(ctx, tabular=True)

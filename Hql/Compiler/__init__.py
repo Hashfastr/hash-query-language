@@ -3,12 +3,14 @@ __all__ = [
     "Compiler"
 ]
 
+from . import Config
+from .Query import Query
+from . import Operators as Ops
+from .Context import Context
+from . import Exceptions
+from .Exceptions import CompilerException
+
 import time
-import HqlCompiler.Config as Config
-from HqlCompiler.Query import Query
-import HqlCompiler.Operators as Ops
-from HqlCompiler.Context import Context
-from HqlCompiler.Exceptions import CompilerException
 import logging
 
 class CompilerSet():
@@ -87,7 +89,7 @@ class Compiler():
         Config.HqlConfig = Config.Config(conf_file)
         self.ctx = Context(None)
 
-    def run(self, ctx:Context=None):
+    def run(self, ctx:Context=Context(None)):
         ctx = ctx if ctx else self.ctx
         
         if not ctx.root:

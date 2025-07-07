@@ -1,5 +1,5 @@
-from HaCEngine.Exceptions import *
-from HaCEngine import Hac
+from .Exceptions import *
+from . import Hac
 from datetime import datetime
 
 class Dag():

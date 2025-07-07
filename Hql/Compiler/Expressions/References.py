@@ -1,8 +1,8 @@
 from .__proto__ import Expression
-from HqlCompiler.Context import Context
-from HqlCompiler.PolarsTools import pltools
-from HqlCompiler.Exceptions import QueryException, CompilerException
-from HqlCompiler.Data import Data, Table
+from ..Context import Context
+from ..PolarsTools import pltools
+from ..Exceptions import QueryException, CompilerException
+from ..Data import Data, Table
 import logging
 
 # A named reference, can be scoped

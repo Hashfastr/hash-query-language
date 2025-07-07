@@ -1,6 +1,6 @@
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Data import Schema, Data, Table
-from HqlCompiler.Context import *
+from . import QueryException, ConfigException 
+from . import Data, Table, Schema
+from . import Context, register_database 
 
 import os
 import json, ndjson
@@ -55,7 +55,7 @@ class JSON(Database):
 
         return jdata
     
-    def make_query(self) -> dict:
+    def make_query(self) -> Data:
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to JSON database')

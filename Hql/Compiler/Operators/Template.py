@@ -1,9 +1,9 @@
-from HqlCompiler.Data import Data, Table
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Exceptions import *
+from ..Data import Data, Table
+from ..Expressions import Expression
+from ..Operators import Operator
+from ..Exceptions import *
 import polars as pl
-from HqlCompiler.Context import register_op, Context
+from ..Context import register_op, Context
 
 @register_op('Template')
 class Template(Operator):

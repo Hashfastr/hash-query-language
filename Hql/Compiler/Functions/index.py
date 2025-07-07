@@ -1,7 +1,7 @@
-from HqlCompiler.Exceptions import *
-import HqlCompiler.Config as Config
-from HqlCompiler.Context import register_func, Context
-from HqlCompiler.Operators.Database import Database
+from ..Exceptions import *
+from .. import Config
+from ..Context import register_func, Context
+from ..Operators.Database import Database
 import logging
 from .__proto__ import Function
 

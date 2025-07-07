@@ -1,9 +1,9 @@
-from HqlCompiler.Data import Data, Table
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Exceptions import *
+from ..Data import Data, Table
+from ..Expressions import Expression
+from ..Operators import Operator
+from ..Exceptions import *
 import polars as pl
-from HqlCompiler.Context import register_op, Context
+from ..Context import register_op, Context
 
 @register_op('Join')
 class Join(Operator):
@@ -25,8 +25,8 @@ class Join(Operator):
     
 
     def get_right(self, ctx:Context, where:Expression):
-        from HqlCompiler.Expressions import Identifier
-        from HqlCompiler.Operators import Where
+        from ..Expressions import Identifier
+        from ..Operators import Where
         compilerset = None
                 
         name = self.dataset.eval(ctx, as_str=True)

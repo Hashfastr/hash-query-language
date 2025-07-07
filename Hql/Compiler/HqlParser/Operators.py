@@ -1,10 +1,10 @@
-from HqlCompiler.grammar.HqlVisitor import HqlVisitor
-from HqlCompiler.grammar.HqlParser import HqlParser
+from ..grammar.HqlVisitor import HqlVisitor
+from ..grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expressions as Expr
-import HqlCompiler.Operators as Ops
+from .. import Expressions as Expr
+from .. import Operators as Ops
 
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
 
 class Operators(HqlVisitor):
     def __init__(self):

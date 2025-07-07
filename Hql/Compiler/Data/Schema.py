@@ -1,10 +1,10 @@
 import logging
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
 from typing import Union
 import polars as pl
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
-from HqlCompiler.Types.Polars import PolarsTypes as plt
-from HqlCompiler.Types.Python import PythonTypes as pyt
+from ..Types.Hql import HqlTypes as hqlt
+from ..Types.Polars import PolarsTypes as plt
+from ..Types.Python import PythonTypes as pyt
 
 class Schema():
     def __init__(

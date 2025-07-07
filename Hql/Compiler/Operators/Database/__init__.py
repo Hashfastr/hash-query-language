@@ -1,5 +1,9 @@
-from HqlCompiler.Context import *
-from HqlCompiler.Exceptions import *
+from .. import Context, register_database 
+from .. import CompilerException, QueryException, ConfigException
+from .. import Data, Table, Schema
+from .. import Operator
+from .. import Expr
+from .. import ESTypes
 import importlib,pkgutil
 from .__proto__ import Database
 

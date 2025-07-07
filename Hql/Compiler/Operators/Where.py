@@ -1,9 +1,9 @@
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_op, Context
-from HqlCompiler.Data import Data, Table, Schema
-from HqlCompiler.PolarsTools import pltools
+from ..Operators import Operator
+from ..Expressions import Expression
+from ..Exceptions import *
+from ..Context import register_op, Context
+from ..Data import Data, Table, Schema
+from ..PolarsTools import pltools
 import logging
 
 # Where operator

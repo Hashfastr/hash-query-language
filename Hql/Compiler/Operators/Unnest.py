@@ -1,10 +1,10 @@
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Operators import Operator
+from ..Expressions import Expression
+from ..Exceptions import *
+from ..Operators import Operator
 import polars as pl
-from HqlCompiler.Context import register_op, Context
+from ..Context import register_op, Context
 
-from HqlCompiler.Data import Data, Table, Schema
+from ..Data import Data, Table, Schema
 
 import logging
 import json

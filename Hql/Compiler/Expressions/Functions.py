@@ -1,5 +1,5 @@
 from .__proto__ import Expression
-from HqlCompiler.Context import Context
+from ..Context import Context
 import logging
 
 class FuncExpr(Expression):

@@ -1,6 +1,6 @@
 from .__proto__ import Expression
-from HqlCompiler.Context import Context
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from ..Context import Context
+from ..Types.Hql import HqlTypes as hqlt
 
 import polars as pl
 

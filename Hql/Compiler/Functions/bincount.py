@@ -1,8 +1,8 @@
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_func, Context
+from ..Exceptions import *
+from ..Context import register_func, Context
 import logging
 from .__proto__ import Function
-from HqlCompiler.Data import Data, Series, Table, Schema
+from ..Data import Data, Series, Table, Schema
 
 @register_func('bincount')
 class bincount(Function):

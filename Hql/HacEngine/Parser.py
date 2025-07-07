@@ -1,12 +1,12 @@
 from antlr4 import InputStream, CommonTokenStream
 from antlr4.error.ErrorListener import ErrorListener
-from HaCEngine import Hac
-from HaCEngine.grammar.HacLexer import HacLexer
-from HaCEngine.grammar.HacParser import HacParser
-from HaCEngine.grammar.HacVisitor import HacVisitor
+from . import Hac
+from .grammar.HacLexer import HacLexer
+from .grammar.HacParser import HacParser
+from .grammar.HacVisitor import HacVisitor
 import logging
 
-from HaCEngine.Exceptions import *
+from .Exceptions import *
 
 class HqlErrorListener(ErrorListener):
     def __init__(self, text:str, filename:str):

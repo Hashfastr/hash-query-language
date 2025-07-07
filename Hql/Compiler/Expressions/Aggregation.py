@@ -1,7 +1,7 @@
 from .__proto__ import Expression
-from HqlCompiler.Context import Context
-from HqlCompiler.Data import Data, Table, Schema
-from HqlCompiler.PolarsTools import pltools
+from ..Context import Context
+from ..Data import Data, Table, Schema
+from ..PolarsTools import pltools
 
 class OrderedExpression(Expression):
     def __init__(self, expr:Expression=None, order:str='desc', nulls:str=''):

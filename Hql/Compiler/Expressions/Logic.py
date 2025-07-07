@@ -1,8 +1,8 @@
 from .__proto__ import Expression
 from .Functions import DotCompositeFunction, FuncExpr
-from HqlCompiler.Context import Context
-from HqlCompiler.Exceptions import CompilerException, QueryException
-from HqlCompiler.PolarsTools import pltools
+from ..Context import Context
+from ..Exceptions import CompilerException, QueryException
+from ..PolarsTools import pltools
 from typing import Union
 import logging
 

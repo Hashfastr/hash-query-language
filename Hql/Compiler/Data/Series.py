@@ -1,6 +1,6 @@
 import polars as pl
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
-from HqlCompiler.Types.Polars import PolarsTypes as plt
+from ..Types.Hql import HqlTypes as hqlt
+from ..Types.Polars import PolarsTypes as plt
 
 '''
 Series for individual values, mimics a pl.Series

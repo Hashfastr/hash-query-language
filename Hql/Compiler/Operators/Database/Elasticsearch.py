@@ -1,9 +1,9 @@
-import HqlCompiler.Expressions as Expr
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Context import *
-from HqlCompiler.Data import Schema, Data, Table
-from HqlCompiler.Types.Elasticsearch import ESTypes
+from . import Expr
+from . import QueryException, CompilerException 
+from . import Operator
+from . import Context, register_database
+from . import Schema, Data, Table
+from . import ESTypes
 
 import requests
 from elasticsearch import Elasticsearch as ES

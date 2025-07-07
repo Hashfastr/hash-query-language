@@ -1,9 +1,9 @@
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_func, Context
+from ..Exceptions import *
+from ..Context import register_func, Context
 import logging
 from .__proto__ import Function
-from HqlCompiler.Data import Data, Series, Table, Schema
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from ..Data import Data, Series, Table, Schema
+from ..Types.Hql import HqlTypes as hqlt
 
 @register_func('len')
 @register_func('array_length')

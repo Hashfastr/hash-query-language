@@ -1,5 +1,5 @@
 import json
-from HqlCompiler.Context import Context
+from ..Context import Context
 import polars as pl
 from typing import Union
 import logging

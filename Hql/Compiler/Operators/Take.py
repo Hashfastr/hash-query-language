@@ -1,8 +1,8 @@
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Data import Data
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_op, Context
+from ..Operators import Operator
+from ..Data import Data
+from ..Expressions import Expression
+from ..Exceptions import *
+from ..Context import register_op, Context
 
 # Take, limits the number of results given an integer
 # Ensures that only integers are given, if not then errors
@@ -45,7 +45,7 @@ class Take(Operator):
         limit = self.limit.eval(ctx)
 
         if not isinstance(limit, int):
-            raise QueryException(f'Take operator passed non-int type {self.n_rows}')
+            raise QueryException(f'Take operator passed non-int type {self.limit}')
         
         table_names = []
         for i in self.tables:

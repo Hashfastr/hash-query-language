@@ -1,10 +1,10 @@
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_func, Context
-from HqlCompiler.Data import Data, Table, Series, Schema
+from ..Exceptions import *
+from ..Context import register_func, Context
+from ..Data import Data, Table, Series, Schema
 from .__proto__ import Function
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from ..Types.Hql import HqlTypes as hqlt
 import polars as pl
-import HqlCompiler.Expressions as Expr
+from .. import Expressions as Expr
 
 class Typecast(Function):
     def __init__(self, args:list):

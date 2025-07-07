@@ -1,14 +1,14 @@
 from .Operator import Operator
-from HqlCompiler.Expressions import Expression, StringLiteral
+from ..Expressions import Expression, StringLiteral
 import polars as pl
-from HqlCompiler.PolarsTools import pltools
-from HqlCompiler.Context import register_op, Context
-from HqlCompiler.Functions import Function
-import HqlCompiler.Config as Config
-from HqlCompiler.Operators import Operator
+from ..PolarsTools import pltools
+from ..Context import register_op, Context
+from ..Functions import Function
+from .. import Config
+from ..Operators import Operator
 
 import logging
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
 
 # Super meta operator, 
 @register_op('PrePipe')
@@ -72,7 +72,7 @@ class PrePipe(Operator):
         return funcs
         
     def eval(self, ctx:Context, **kwargs):
-        from HqlCompiler import CompilerSet
+        from .. import CompilerSet
         
         tabular = kwargs.get('tabular', False)
         receiver = None

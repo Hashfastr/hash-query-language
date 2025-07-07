@@ -1,9 +1,9 @@
-from HqlCompiler.grammar.HqlVisitor import HqlVisitor
-from HqlCompiler.grammar.HqlParser import HqlParser
+from ..grammar.HqlVisitor import HqlVisitor
+from ..grammar.HqlParser import HqlParser
 
-import HqlCompiler.Expressions as Expr
+from .. import Expressions as Expr
 
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
 
 import logging
 

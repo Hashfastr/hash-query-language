@@ -1,18 +1,18 @@
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
-from HqlCompiler.Exceptions import ParseException, LexerException 
-from HqlCompiler.grammar.HqlLexer import HqlLexer
-from HqlCompiler.grammar.HqlParser import HqlParser
-from HqlCompiler.grammar.HqlVisitor import HqlVisitor
+from ..Exceptions import ParseException, LexerException 
+from ..grammar.HqlLexer import HqlLexer
+from ..grammar.HqlParser import HqlParser
+from ..grammar.HqlVisitor import HqlVisitor
 
-from HqlCompiler.Query import Query, QueryStatement, LetStatement
-import HqlCompiler.Expressions as Expr
-import HqlCompiler.Operators as Ops
+from ..Query import Query, QueryStatement, LetStatement
+from .. import Expressions as Expr
+from .. import Operators as Ops
 
-from HqlCompiler.HqlParser.BaseExpressions import BaseExpressions
-from HqlCompiler.HqlParser.Functions import Functions
-from HqlCompiler.HqlParser.Operators import Operators
-from HqlCompiler.HqlParser.Logic import Logic
+from ..HqlParser.BaseExpressions import BaseExpressions
+from ..HqlParser.Functions import Functions
+from ..HqlParser.Operators import Operators
+from ..HqlParser.Logic import Logic
 
 import logging
 

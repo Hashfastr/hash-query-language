@@ -1,14 +1,14 @@
 from .Table import Table
 from .Schema import Schema
 from .Series import Series
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
+from ..Types.Hql import HqlTypes as hqlt
+
 import logging
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from typing import Union
 
 class Data():
-    # tables is a unique list of tables by name
-    # tables is a non-unique list of tables.
-    def __init__(self, tables:list[Table]=None):
+    def __init__(self, tables:Union[list[Table], None]=None):
         self.tables = dict()
 
         # empty base case
@@ -50,6 +50,11 @@ class Data():
             tables.append(self.tables[name])
             
         return iter(tables)
+
+    def __bool__(self):
+        if len(self.tables):
+            return True
+        return False
 
     '''
     Gets tables relevant to a given table pattern

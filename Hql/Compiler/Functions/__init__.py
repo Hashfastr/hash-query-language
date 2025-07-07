@@ -1,5 +1,5 @@
 import importlib, pkgutil
-from HqlCompiler.Exceptions import *
+from ..Exceptions import *
 from .__proto__ import Function
 
 for loader, name, is_pkg in pkgutil.iter_modules(__path__):

@@ -1,9 +1,9 @@
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from .Hql import HqlTypes as hqlt
 import logging
 
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_type, get_type
-# from HqlCompiler.Types.Compiler import CompilerType
+from ..Exceptions import *
+from ..Context import register_type, get_type
+# from ..Types.Compiler import CompilerType
 
 class ESTypes():
     class ESType():

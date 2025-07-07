@@ -1,6 +1,6 @@
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_type, get_type
-from HqlCompiler.Types.Hql import HqlTypes as hqlt
+from ..Exceptions import *
+from ..Context import register_type, get_type
+from .Hql import HqlTypes as hqlt
 
 class PythonTypes():
     class PythonType():

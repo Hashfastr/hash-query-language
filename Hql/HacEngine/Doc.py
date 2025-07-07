@@ -1,4 +1,4 @@
-from HaCEngine import Hac
+from . import Hac
 
 class HacDoc():
     def __init__(self, hac:Hac) -> None:

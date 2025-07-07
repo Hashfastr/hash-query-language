@@ -1,6 +1,6 @@
 import json
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Context import Context
+from .Expressions import Expression
+from .Context import Context
 
 # Top most object, a query.
 # Comprised of multiple statements

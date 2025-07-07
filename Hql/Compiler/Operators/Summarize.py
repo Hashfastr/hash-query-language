@@ -1,8 +1,8 @@
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Data import Schema, Data, Table
-from HqlCompiler.Context import register_op, Context
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Operators import Operator
+from ..Expressions import Expression
+from ..Data import Schema, Data, Table
+from ..Context import register_op, Context
+from ..Exceptions import *
+from ..Operators import Operator
 
 @register_op('Summarize')
 class Summarize(Operator):

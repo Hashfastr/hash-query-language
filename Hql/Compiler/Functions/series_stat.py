@@ -1,13 +1,13 @@
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_func, Context
+from ..Exceptions import *
+from ..Context import register_func, Context
 import logging
 from typing import Tuple
 from .__proto__ import Function
-from HqlCompiler.Data import Data, Table, Schema
+from ..Data import Data, Table, Schema
 from typing import Union
 
 import polars as pl
-from HqlCompiler.PolarsTools import pltools
+from ..PolarsTools import pltools
 
 # This is a meta function resolved while parsing
 @register_func('series_stats')

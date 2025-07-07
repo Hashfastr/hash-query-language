@@ -1,8 +1,8 @@
-from HqlCompiler.Operators import Operator
-from HqlCompiler.Data import Data
-from HqlCompiler.Expressions import Expression
-from HqlCompiler.Exceptions import *
-from HqlCompiler.Context import register_op, Context
+from ..Operators import Operator
+from ..Data import Data
+from ..Expressions import Expression
+from ..Exceptions import *
+from ..Context import register_op, Context
 import polars as pl
 import numpy as np
 
@@ -45,6 +45,4 @@ class Top(Operator):
         order = self.by.order
         nulls = self.by.nulls
         
-        
-         
         return pl.DataFrame({name: series})

@@ -1,4 +1,5 @@
-from HaCEngine.Exceptions import *
+from .Exceptions import *
+from ..Compiler import Data as HqlData
 
 class Hac():
     '''
@@ -22,8 +23,9 @@ class Hac():
         self.validate()
 
     def render(self, target:str='md'):
-        from HaCEngine.Doc import HacDoc
-        from HaCEngine.Dag import Dag
+        from .Doc import HacDoc
+        from .Dag import Dag
+
         hd = HacDoc(self)
         
         if target in ('md', 'markdown'):

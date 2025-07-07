@@ -1,7 +1,7 @@
-from HqlCompiler.Operators.Operator import Operator
-from HqlCompiler.Data import Data
-from HqlCompiler.Context import Context
-from HqlCompiler.Exceptions import *
+from .. import Operator
+from .. import Data
+from .. import Context
+from .. import QueryException, CompilerException
 
 import logging
 

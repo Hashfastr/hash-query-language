@@ -1,7 +1,7 @@
-import HqlCompiler.Config as Config
+from .. import Config
 import logging
-from HqlCompiler.Context import register_func, get_database, Context
-from HqlCompiler.Exceptions import *
+from ..Context import register_func, get_database, Context
+from ..Exceptions import *
 from .__proto__ import Function
 
 # This is a meta function resolved while parsing

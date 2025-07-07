@@ -1,5 +1,7 @@
-from HqlCompiler.Exceptions import *
+from .Exceptions import *
+#from .Data import Data
 import copy
+from typing import Union
 
 database_registry = {}
 
@@ -74,13 +76,16 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data, symbol_table:dict=None) -> None:
+    def __init__(self, data, symbol_table:Union[dict, None]=None) -> None:
         self.dbs = copy.copy(database_registry)
         self.ops = copy.copy(op_registry)
         self.funcs = copy.copy(func_registry)
         self.data = data
         self.symbol_table = symbol_table if symbol_table else dict()
         self.root = None
+
+    def __bool__(self):
+        return self.data.__bool__()
 
     def get_db(self, name:str):
         if name in self.dbs:
