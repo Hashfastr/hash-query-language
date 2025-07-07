@@ -180,7 +180,7 @@ class Visitor(HacVisitor):
             data += ctx.getChild(i).getText()
         return data
 
-    def visitAllData(self, ctx: HacParser.DataContext):
+    def visitAllData(self, ctx: HacParser.AllDataContext):
         data = ''
         for i in range(ctx.getChildCount()):
             data += ctx.getChild(i).getText()

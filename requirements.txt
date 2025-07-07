@@ -4,5 +4,3 @@ elasticsearch
 numpy
 requests
 ndjson
-email
-smtplib

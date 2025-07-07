@@ -1,9 +1,8 @@
-from HqlCompiler.HqlParser import Parser
-from HqlCompiler.Exceptions import *
-from HqlCompiler import Compiler
-import HaCEngine.Parser as HaCParser
-import HaCEngine.Exceptions as HacExceptions
-
+from .HqlCompiler.HqlParser import Parser
+from .HqlCompiler.Exceptions import *
+from .HqlCompiler import Compiler
+from .HaCEngine import Parser as HaCParser
+from .HaCEngine import Exceptions as HacExceptions
 
 import json
 import logging

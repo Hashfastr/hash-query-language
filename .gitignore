@@ -190,4 +190,25 @@ big.json
 
 *swp
 
-pyproject.toml
+# compiler grammar
+HqlCompiler/grammar/*.class
+HqlCompiler/grammar/*.java
+HqlCompiler/grammar/.antlr
+HqlCompiler/grammar/*.interp
+HqlCompiler/grammar/*.tokens
+HqlCompiler/grammar/HqlListener.py
+
+# hac grammar
+HaCEngine/grammar/*.class
+HaCEngine/grammar/*.java
+HaCEngine/grammar/.antlr
+HaCEngine/grammar/*.interp
+HaCEngine/grammar/*.tokens
+HaCEngine/grammar/HaCListener.py
+
+# hac containers
+HaCEngine/config
+HaCEngine/dags
+HaCEngine/logs
+HaCEngine/plugins
+HaCEngine/.env

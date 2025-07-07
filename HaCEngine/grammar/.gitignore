@@ -1,6 +1,0 @@
-*.class
-*.java
-.antlr
-*.interp
-*.tokens
-HaCListener.py

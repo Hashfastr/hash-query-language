@@ -1,0 +1,38 @@
+[project]
+name = "Hql"
+version = "0.0.1"
+authors = [
+    { name="Sylvain Jones", email="sylvainjones+hql@hashfastr.com" },
+]
+maintainers = [
+    { name="Sylvain Jones", email="sylvainjones+hql@hashfastr.com" },
+]
+description = "Hash query language, a universal Query Language"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    #"Intended Audience :: DFIR",
+]
+license = "MIT"
+license-files = ["LICENSE"]
+
+dependencies = [
+    "polars",
+    "antlr4-python3-runtime==4.13.2",
+    "elasticsearch",
+    "numpy",
+    "requests",
+    "ndjson"
+]
+
+[project.urls]
+Homepage = "https://github.com/Hashfastr/hash-query-language"
+Issues = "https://github.com/Hashfastr/hash-query-language/issues"
+
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
