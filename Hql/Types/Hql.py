@@ -1,8 +1,8 @@
 import polars as pl
 import logging
 
-from ..Exceptions import *
-from ..Context import register_type, get_type
+from Hql.Exceptions import *
+from Hql.Context import register_type, get_type
 # from ..Types.Compiler import CompilerType
 
 class HqlTypes():
@@ -28,9 +28,12 @@ class HqlTypes():
                 return None
 
         def cast(self, data:pl.Series):
+            if self.proto == None:
+                raise Exception('Attempting to cast data to type without a prototype')
+
             return data.cast(self.proto)
         
-        def hql_schema(self):
+        def hql_schema(self) -> "HqlTypes.HqlType":
             return self
 
         def __len__(self):

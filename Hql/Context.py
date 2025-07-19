@@ -1,6 +1,4 @@
-from .Exceptions import *
-#from .Data import Data
-import copy
+from Hql.Exceptions import HqlExceptions as hqle
 from typing import Union
 
 database_registry = {}
@@ -15,7 +13,7 @@ def get_database(name:str):
     if name in database_registry:
         return database_registry[name]
     else:
-        raise CompilerException(f"Unknown database type {name}")
+        raise hqle.CompilerException(f"Unknown database type {name}")
     
 func_registry = {}
 
@@ -29,7 +27,7 @@ def get_func(name):
     if name in func_registry:
         return func_registry[name]
     else:
-        raise CompilerException(f"Unknown function {name} referenced")
+        raise hqle.CompilerException(f"Unknown function {name} referenced")
     
 op_registry = {}
 
@@ -43,7 +41,7 @@ def get_op(name):
     if name in op_registry:
         return op_registry[name]
     else:
-        raise CompilerException(f"Unknown operator {name} referenced")
+        raise hqle.CompilerException(f"Unknown operator {name} referenced")
 
 '''
 The naming scheme here is 
@@ -72,14 +70,16 @@ def get_type(name):
     if name in type_registry:
         return type_registry[name]
     else:
-        raise CompilerException(f"Unknown type {name} referenced")
+        raise hqle.CompilerException(f"Unknown type {name} referenced")
 
 # Essentially a scoped context
 class Context():
     def __init__(self, data, symbol_table:Union[dict, None]=None) -> None:
-        self.dbs = copy.copy(database_registry)
-        self.ops = copy.copy(op_registry)
-        self.funcs = copy.copy(func_registry)
+        from copy import copy
+
+        self.dbs = copy(database_registry)
+        self.ops = copy(op_registry)
+        self.funcs = copy(func_registry)
         self.data = data
         self.symbol_table = symbol_table if symbol_table else dict()
         self.root = None
@@ -91,7 +91,7 @@ class Context():
         if name in self.dbs:
             return self.dbs[name]
         else:
-            raise CompilerException(f"Unknown database {name} referenced")
+            raise hqle.CompilerException(f"Unknown database {name} referenced")
 
     def get_db_types(self):
         return list(self.dbs.keys())
@@ -100,10 +100,10 @@ class Context():
         if name in self.funcs:
             return self.funcs[name]
         else:
-            raise CompilerException(f"Unknown function {name} referenced")
+            raise hqle.CompilerException(f"Unknown function {name} referenced")
 
     def get_op(self, name:str):
         if name in self.ops:
             return self.ops[name]
         else:
-            raise CompilerException(f"Unknown operator {name} referenced")
+            raise hqle.CompilerException(f"Unknown operator {name} referenced")

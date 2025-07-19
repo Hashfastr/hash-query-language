@@ -1,8 +1,8 @@
-from .Hql import HqlTypes as hqlt
+from Hql.Types import HqlTypes as hqlt
 import logging
 
-from ..Exceptions import *
-from ..Context import register_type, get_type
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_type, get_type
 # from ..Types.Compiler import CompilerType
 
 class ESTypes():
@@ -108,7 +108,7 @@ class ESTypes():
             ESTypes.ESType.__init__(self)
             
             if ip_type not in (4, 6):
-                raise CompilerException(f"Invalid IP version type {ip_type} passed to Elasticsearch type")
+                raise hqle.CompilerException(f"Invalid IP version type {ip_type} passed to Elasticsearch type")
             
             if ip_type == 4:
                 hqlt.range.__init__(self, type=hqlt.ip4)

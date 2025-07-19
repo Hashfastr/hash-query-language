@@ -15,6 +15,10 @@ class PolarsTypes():
                 self.HqlType = type(self).__bases__[-1]
             else:
                 self.HqlType = None
+
+            # print(type(self).__bases__)
+            # print(self.HqlType)
+            # print('---')
         
         def hql_schema(self):
             if self.HqlType:
@@ -38,7 +42,12 @@ class PolarsTypes():
         else:
             name = type(pltype).__name__
 
+        if name == 'List':
+            print(name)
+
         resolved = PolarsTypes.from_name(name)
+
+        print(type(resolved))
 
         if hasattr(pltype, 'inner'):
             inner = PolarsTypes.from_pure_polars(pltype.inner)
