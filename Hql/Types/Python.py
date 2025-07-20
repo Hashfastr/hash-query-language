@@ -1,20 +1,15 @@
-from ..Exceptions import *
-from ..Context import register_type, get_type
-from .Hql import HqlTypes as hqlt
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_type, get_type
+from Hql.Types.Hql import HqlTypes as hqlt
+from Hql.Types.Compiler import CompilerType
 
 class PythonTypes():
-    class PythonType():
+    class PythonType(CompilerType):
         def __init__(self):
-            if len(type(self).__bases__):
-                self.HqlType = type(self).__bases__[-1]
-            else:
-                self.HqlType = hqlt.null
+            CompilerType.__init__(self)
 
             self.priority = 0
             self.super = ()
-        
-        def hql_schema(self):
-            return self.HqlType()
         
         def pl_schema(self):
             return self.hql_schema().pl_schema()
@@ -144,16 +139,18 @@ class PythonTypes():
             self.super = ()
         
         def hql_schema(self):
-            return self.HqlType(self.inner)
+            return self.hql_schema()(self.inner)
 
     @register_type('python_dict')
     class dict(PythonType, hqlt.object):
         def __init__(self, keys:list[str]):
+            raise hqle.CompilerException('Unimplemented python type object')
+
             PythonTypes.PythonType.__init__(self)
             hqlt.object.__init__(self, keys)
             
             self.HqlType = hqlt.object
             self.keys = keys
             
-        def hql_schema(self):
-            return self.HqlType(self.keys)
+        #def hql_schema(self):
+        #    return self.hql_schema()(self.keys)

@@ -1,53 +1,39 @@
 import logging
 import polars as pl
 
-from ..Exceptions import *
-from ..Context import register_type, get_type
-# from ..Types.Compiler import CompilerType
+from Hql import Exceptions
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_type, get_type
+from Hql.Types.Compiler import CompilerType
 
 class PolarsTypes():
-    from .Hql import HqlTypes as hqlt
+    from Hql.Types.Hql import HqlTypes as hqlt
     
-    class PolarsType():
+    class PolarsType(CompilerType):
         def __init__(self):
-            if len(type(self).__bases__):
-                super().__init__()
-                self.HqlType = type(self).__bases__[-1]
-            else:
-                self.HqlType = None
+            CompilerType.__init__(self)
+            
+            if self.HqlType == None:
+                raise hqle.CompilerException(f'{self.name} is missing a parent polars datatype')
 
-            # print(type(self).__bases__)
-            # print(self.HqlType)
-            # print('---')
-        
-        def hql_schema(self):
-            if self.HqlType:
-                return self.HqlType()
-            return None
-        
+            self.pltype = self.HqlType
+            self.HqlType = None
+
         def pl_schema(self):
-            return self
-
-        def __len__(self):
-            return 1
+            return self.pltype
         
     @staticmethod
     def from_name(name:str):
         return get_type(f'polars_{name}')
     
     @staticmethod
-    def from_pure_polars(pltype:pl.DataType):
+    def from_pure_polars(pltype):
         if hasattr(pltype, '__name__'):
             name = pltype.__name__
         else:
             name = type(pltype).__name__
 
-        if name == 'List':
-            print(name)
-
         resolved = PolarsTypes.from_name(name)
-
-        print(type(resolved))
 
         if hasattr(pltype, 'inner'):
             inner = PolarsTypes.from_pure_polars(pltype.inner)

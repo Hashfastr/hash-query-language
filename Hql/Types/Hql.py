@@ -1,40 +1,35 @@
+from numpy import isin
 import polars as pl
 import logging
+from typing import Union
 
-from Hql.Exceptions import *
+from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
-# from ..Types.Compiler import CompilerType
+from Hql.Types.Compiler import CompilerType
 
 class HqlTypes():
-    class HqlType():
+    class HqlType(CompilerType):
         def __init__(self):
-            # Only init if it's a subclass
-            if len(type(self).__bases__):
-                self.proto = type(self).__bases__[-1]
-            else:
-                self.proto = None
-
-            self.name = self.__class__.__name__
+            CompilerType.__init__(self)
+            
+            self.proto = self.HqlType
+            self.HqlType = None
                 
             self.complex = False
             self.priority = 0
             self.super = [HqlTypes.string, HqlTypes.multivalue]
 
-        def pl_schema(self):
-            if self.proto:
-                return self.proto()
-
+        def pl_schema(self) -> pl.DataType:
+            if self.proto == None:
+                raise hqle.CompilerException(f'{self.name}')
             else:
-                return None
+                return self.proto
 
         def cast(self, data:pl.Series):
             if self.proto == None:
                 raise Exception('Attempting to cast data to type without a prototype')
 
             return data.cast(self.proto)
-        
-        def hql_schema(self) -> "HqlTypes.HqlType":
-            return self
 
         def __len__(self):
             return 1
@@ -158,10 +153,19 @@ class HqlTypes():
 
             self.complex = True
 
+        def pl_schema(self) -> pl.DataType:
+            schema = super().pl_schema()
+
+            if isinstance(schema, dict):
+                raise hqle.CompilerException('Returned a dict schema where ')
+
+            return super().pl_schema()
+
         def cast(self, data:pl.Series):
             # lazy if not string
             if data.dtype != pl.String:
-                return data.cast(self.proto)
+                
+                return data.cast(self.pl_schema())
 
             ips = []
             for i in data:
@@ -187,7 +191,7 @@ class HqlTypes():
         
         def human(self, data:pl.Series):
             if data.dtype != self.proto:
-                raise CompilerException('Attempting to human a non-converted ip4 field')
+                raise hqle.CompilerException('Attempting to human a non-converted ip4 field')
 
             d = 0xFF
             c = d << 8
@@ -220,25 +224,25 @@ class HqlTypes():
     class time(HqlType, pl.Time):
         ...
 
+    # Need to figure this out properly
     @register_type('hql_range')
     class range(HqlType, pl.Struct):
-        def __init__(self, type=None, start=None, end=None):
-            pl.Struct.__init__(self, fields=['start', 'end'])
+        def __init__(self, start, end, dtype):
+            pl.Struct.__init__(self, fields=[pl.Field('start', dtype), pl.Field('end', dtype)])
 
             self.start = start
             # self.start_clusivity = 'gt' if start_clusivity == 'gt' else 'gte'
             self.end = end
             # self.end_clusivity = 'lt' if end_clusivity == 'lt' else 'lte'
-            self.type = type
+            self.type = dtype
 
-        def pl_schema(self):
-            return self.__class__.__bases__[0].__init__({
-                'start': self.start, 'end': self.end, 'type': self.type
-            })
-            
     @register_type('hql_matrix')
     class matrix(HqlType, pl.Array):
-        ...
+        def __init__(self, dtype:"HqlTypes.HqlType"):
+            raise hqle.CompilerException('Unimplemented hql type matrix')
+
+            self.dtype = dtype
+            pl.Array.__init__(self, dtype.pl_schema())
     
     @register_type('hql_string') 
     class string(HqlType, pl.String):
@@ -271,22 +275,15 @@ class HqlTypes():
     '''
     @register_type('hql_object')
     class object(HqlType, pl.Struct):
-        def __init__(self, fields:list[str]=None):
+        def __init__(self, fields:Union[list[str], None]=None):
+            raise hqle.CompilerException('Unimplemented type object')
+
             if not fields:
                 fields = []
                 
             HqlTypes.HqlType.__init__(self)
-            pl.Struct.__init__(self, fields)
+            pl.Struct.__init__(self, [])
             
-        def cast(self, data: pl.Struct):
-            return data
-        
-        def pl_schema(self):
-            return self.proto(self.fields)
-
-        def hql_schema(self):
-            return self
-
     @register_type('hql_null')
     class null(HqlType, pl.Null):
         def __init__(self):
@@ -311,10 +308,11 @@ class HqlTypes():
             if isinstance(inner, type):
                 inner = inner()
                         
-            self.inner = inner
+            self.hql_inner = inner
+            self.inner = inner.pl_schema()
         
         def pl_schema(self):
-            return pl.List(self.inner.pl_schema())
+            return pl.List(self.inner)
         
         # Casts a polars series to List
         def cast(self, data: pl.Series):
