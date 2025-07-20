@@ -1,11 +1,9 @@
-from ..grammar.HqlVisitor import HqlVisitor
-from ..grammar.HqlParser import HqlParser
+from .grammar.HqlVisitor import HqlVisitor
+from .grammar.HqlParser import HqlParser
 
-from .. import Expressions as Expr
+import Hql.Expressions as Expr
 
-from ..Exceptions import *
-
-import logging
+from Hql.Exceptions import HqlExceptions as hqle
 
 class Logic(HqlVisitor):
     def __init__(self):
@@ -118,7 +116,7 @@ class Logic(HqlVisitor):
 
     def visitStringBinaryOperator(self, ctx: HqlParser.StringBinaryOperatorContext):
         if not ctx.OperatorToken:
-            raise CompilerException('String Binary Operator has no Operator, wut')
+            raise hqle.CompilerException('String Binary Operator has no Operator, wut')
 
         return ctx.OperatorToken.text
 
@@ -136,7 +134,7 @@ class Logic(HqlVisitor):
             op = ctx.HasOperator.text
 
         else:
-            raise ParseException('String Binary Operator has no Operator, wut?', ctx)
+            raise hqle.ParseException('String Binary Operator has no Operator, wut?', ctx)
         
         if op in ('=~', '!~'):
             return Expr.InsensitiveStringCmp(lh, op, rh)

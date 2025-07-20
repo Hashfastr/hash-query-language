@@ -1,18 +1,18 @@
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
-from ..Exceptions import ParseException, LexerException 
-from ..grammar.HqlLexer import HqlLexer
-from ..grammar.HqlParser import HqlParser
-from ..grammar.HqlVisitor import HqlVisitor
+from Hql.Exceptions import HqlExceptions as hqle 
+from .grammar.HqlLexer import HqlLexer
+from .grammar.HqlParser import HqlParser
+from .grammar.HqlVisitor import HqlVisitor
 
-from ..Query import Query, QueryStatement, LetStatement
-from .. import Expressions as Expr
-from .. import Operators as Ops
+from Hql.Query import Query, QueryStatement, LetStatement
+import Hql.Expressions as Exprs
+import Hql.Operators as Ops
 
-from ..HqlParser.BaseExpressions import BaseExpressions
-from ..HqlParser.Functions import Functions
-from ..HqlParser.Operators import Operators
-from ..HqlParser.Logic import Logic
+from Hql.Parser.BaseExpressions import BaseExpressions as ParseBaseExpressions
+from Hql.Parser.Functions import Functions as ParseFunctions
+from Hql.Parser.Operators import Operators as ParseOperators
+from Hql.Parser.Logic import Logic as ParseLogic
 
 import logging
 
@@ -23,7 +23,7 @@ class HqlErrorListener(ErrorListener):
         self.filename = filename
 
     def syntaxError(self, recognizer:HqlParser, offendingSymbol, line, column, msg, e):
-        e = LexerException(msg, self.text, line, column, offendingSymbol, filename=self.filename)
+        e = hqle.LexerException(msg, self.text, line, column, offendingSymbol, filename=self.filename)
         Parser.handleException(recognizer, e)
         
 class Parser():
@@ -70,10 +70,10 @@ class Parser():
         return stream.getText(start, stop)
     
     @staticmethod
-    def handleException(ctx, e:ParseException):
+    def handleException(ctx, e:hqle.ParseException):
         logging.critical(f'Failed to parse query {e.filename}')
         
-        if isinstance(e, LexerException):
+        if isinstance(e, hqle.LexerException):
             text = e.text
             text = text.split('\n')[e.line - 1]
             
@@ -87,7 +87,7 @@ class Parser():
 
 # Overrides the HqlVisitor templates
 # If not defined here, each node only returns its children.
-class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
+class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, HqlVisitor):
     def __init__(self, filename:str):
         self.filename = filename
     
@@ -103,7 +103,7 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
         expr = self.visit(ctx.Expression)
         
         if not expr:
-            raise ParseException(
+            raise hqle.ParseException(
                 'Query statement given None',
                 ctx.start.line,
                 ctx.start.column 
@@ -120,11 +120,11 @@ class Visitor(Operators, Functions, Logic, BaseExpressions, HqlVisitor):
         for i in ctx.PipedOperators:
             try:
                 pipes.append(self.visit(i))
-            except ParseException as e:
+            except hqle.ParseException as e:
                 e.filename = self.filename
                 Parser.handleException(i, e)
         
-        return Expr.PipeExpression(prepipe, pipes)
+        return Exprs.PipeExpression(prepipe, pipes)
 
     def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
         name = self.visit(ctx.Name)

@@ -1,22 +1,28 @@
-from ..grammar.HqlVisitor import HqlVisitor
-from ..grammar.HqlParser import HqlParser
+from .grammar.HqlVisitor import HqlVisitor
+from .grammar.HqlParser import HqlParser
 
-from .. import Expressions as Expr
-from .. import Operators as Ops
+import Hql.Expressions as Exprs
+import Hql.Operators as Ops
 
-from ..Exceptions import *
+from Hql.Exceptions import HqlExceptions as hqle
 
 class Operators(HqlVisitor):
     def __init__(self):
         pass
     
     def visitStrictQueryOperatorParameter(self, ctx: HqlParser.StrictQueryOperatorParameterContext):
+        if ctx.NameToken == None:
+            raise hqle.ParseException('QueryParameter NameToken is None!', ctx)
+
         name = ctx.NameToken.text
         value = self.visit(ctx.NameValue) if ctx.NameValue else self.visit(ctx.LiteralValue)
         
-        return Expr.OpParameter(name, value)
+        return Exprs.OpParameter(name, value)
 
     def visitRelaxedQueryOperatorParameter(self, ctx: HqlParser.RelaxedQueryOperatorParameterContext):
+        if ctx.NameToken == None:
+            raise hqle.ParseException('QueryParameter NameToken is None!', ctx)
+
         name = ctx.NameToken.text
 
         if ctx.NameValue:
@@ -24,7 +30,7 @@ class Operators(HqlVisitor):
         else:
             value = self.visit(ctx.LiteralValue)
         
-        return Expr.OpParameter(name, value)
+        return Exprs.OpParameter(name, value)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
         predicate = self.visit(ctx.Predicate)
@@ -34,7 +40,7 @@ class Operators(HqlVisitor):
             params.append(self.visit(i))
         
         if not predicate:
-            raise ParseException('Where instanciated with None type predicate', ctx)
+            raise hqle.ParseException('Where instanciated with None type predicate', ctx)
             
         return Ops.Where(predicate, params)
 
@@ -114,7 +120,7 @@ class Operators(HqlVisitor):
 
     def visitUnnestOperator(self, ctx: HqlParser.UnnestOperatorContext):
         field = self.visit(ctx.Field)
-        tables = self.visit(ctx.OnClause) if ctx.OnClause else [Expr.Wildcard('*')]
+        tables = self.visit(ctx.OnClause) if ctx.OnClause else [Exprs.Wildcard('*')]
         
         return Ops.Unnest(field, tables)
     
@@ -137,7 +143,7 @@ class Operators(HqlVisitor):
         for i in ctx.Expressions:
             exprs.append(self.visit(i))
         
-        return Expr.ByExpression(exprs)
+        return Exprs.ByExpression(exprs)
 
     def visitDataTableExpression(self, ctx: HqlParser.DataTableExpressionContext):
         schema = self.visit(ctx.Schema)
@@ -195,7 +201,7 @@ class Operators(HqlVisitor):
         if ctx.LimitClause:
             limit = self.visit(ctx.LimitClause)
         else:
-            limit = Expr.Integer('2147483647')
+            limit = Exprs.Integer('2147483647')
         
         return Ops.MvExpand(exprs, limit)
     
@@ -207,7 +213,7 @@ class Operators(HqlVisitor):
         else:
             to = None
 
-        return Expr.ToExpression(expr, to)
+        return Exprs.ToExpression(expr, to)
     
     def visitMvapplyOperatorExpressionToClause(self, ctx: HqlParser.MvapplyOperatorExpressionToClauseContext):
         return self.visit(ctx.Type)
