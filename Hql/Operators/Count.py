@@ -6,12 +6,16 @@ from ..Exceptions import *
 import polars as pl
 from ..Context import register_op, Context
 
+from typing import Union
+
+from Hql.Exceptions import HqlExceptions as hqle
+
 # Count simply returns the number of rows given by a record set.
 #
 # https://learn.microsoft.com/en-us/kusto/query/count-operator
 @register_op('Count')
 class Count(Operator):
-    def __init__(self, name:Expression=None):
+    def __init__(self, name:Union[Expression, None]=None):
         super().__init__()
         self.name = name
     
@@ -21,6 +25,9 @@ class Count(Operator):
     '''
     def eval(self, ctx:Context, **kwargs):
         name = self.name.eval(ctx, as_str=True) if self.name else None
+
+        if not isinstance(name, (str, type(None))):
+            raise hqle.CompilerException(f'Name given to count operator is not of [str, None], is {type(name)}')
         
         counts = dict()
         for table in ctx.data:
