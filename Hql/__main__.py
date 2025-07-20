@@ -1,11 +1,10 @@
 import sys    
-print("In module products sys.path[0], __package__ ==", sys.path[0], __package__)
 
-from Compiler.HqlParser import Parser
-from Compiler.Exceptions import *
-from Compiler import Compiler
-from HacEngine import Parser as HaCParser
-from HacEngine import Exceptions as HacExceptions
+from .Compiler.HqlParser import Parser
+from .Compiler.Exceptions import HqlException
+from .Compiler import Compiler
+from .HacEngine import Parser as HaCParser
+from .HacEngine import Exceptions as HacExceptions
 
 import json
 import logging

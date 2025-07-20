@@ -1,0 +1,12 @@
+config
+dags
+logs
+plugins
+.env
+
+grammar/*.class
+grammar/*.java
+grammar/.antlr
+grammar/*.interp
+grammar/*.tokens
+grammar/HqlListener.py

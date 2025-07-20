@@ -1,10 +1,10 @@
 import logging
-from ..Exceptions import *
+from Hql.Exceptions import *
 from typing import Union
 import polars as pl
-from ..Types.Hql import HqlTypes as hqlt
-from ..Types.Polars import PolarsTypes as plt
-from ..Types.Python import PythonTypes as pyt
+from Hql.Types.Hql import HqlTypes as hqlt
+from Hql.Types.Polars import PolarsTypes as plt
+from Hql.Types.Python import PythonTypes as pyt
 
 class Schema():
     def __init__(
@@ -431,7 +431,7 @@ class Schema():
         return schema
 
     # Adjusts json to multivalue
-    def adjust_mv(self, data:list[dict], schema:dict=None) -> list[dict]:
+    def adjust_mv(self, data:list[dict], schema:Union[dict, None]=None) -> list[dict]:
         schema = schema if schema != None else self.schema
         
         # Loop through each defined multivalue field
