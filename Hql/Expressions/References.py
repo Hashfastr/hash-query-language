@@ -1,8 +1,10 @@
 from .__proto__ import Expression
-from ..Context import Context
-from ..PolarsTools import pltools
-from ..Exceptions import QueryException, CompilerException
-from ..Data import Data, Table
+from Hql.Context import Context
+from Hql.PolarsTools import pltools
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Data import Data, Table
+
+from typing import Union
 import logging
 
 # A named reference, can be scoped
@@ -47,7 +49,7 @@ class NamedReference(Expression):
             if self.name in ctx.symbol_table:
                 return ctx.symbol_table[self.name]
             
-            raise QueryException(f"Referenced field {self.name} not found")
+            raise hqle.QueryException(f"Referenced field {self.name} not found")
         
         # If we're operating on a dataset
         elif isinstance(receiver, Data):
@@ -59,7 +61,7 @@ class NamedReference(Expression):
         
         # Not implemented, or bug
         else:
-            raise CompilerException(f'{type(receiver)} cannot have child named references!')
+            raise hqle.CompilerException(f'{type(receiver)} cannot have child named references!')
         
 class EscapedNamedReference(NamedReference):
     ...
@@ -74,8 +76,8 @@ class Wildcard(NamedReference):
     ...
 
 class Path(Expression):
-    def __init__(self, path:list=None):
-        super().__init__()
+    def __init__(self, path:Union[None, list]=None):
+        Expression.__init__(self)
         self.path = path if path else []
       
     def to_dict(self):

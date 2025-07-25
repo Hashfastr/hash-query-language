@@ -1,9 +1,12 @@
 from .__proto__ import Expression
-from ..Context import Context
+from typing import Union
+from Hql.Context import Context
 import logging
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Functions import Function
 
 class FuncExpr(Expression):
-    def __init__(self, name:Expression, args:list=None):
+    def __init__(self, name:Expression, args:Union[None, list[Expression]]=None):
         Expression.__init__(self)
         self.name = name
         self.args = args if args else []
@@ -26,7 +29,11 @@ class FuncExpr(Expression):
             return self.name.eval(ctx, as_str=True)
         '''
         
-        func = ctx.get_func(self.name.eval(ctx, as_str=True))
+        name = self.name.eval(ctx, as_str=True)
+        if not isinstance(name, str):
+            raise hqle.CompilerException(f'Function name expression returned non-string {name}')
+        
+        func = ctx.get_func(name)
         logging.debug(f'Resolved func {func}')
 
         return func(self.args)
@@ -70,7 +77,7 @@ class DotCompositeFunction(Expression):
             
             if not no_exec:
                 receiver = func.eval(ctx, receiver=receiver)
-         
+
         if no_exec:
             return func_list
         else:

@@ -1,6 +1,6 @@
 from .__proto__ import Expression
-from ..Context import Context
-from ..Types.Hql import HqlTypes as hqlt
+from Hql.Context import Context
+from Hql.Types.Hql import HqlTypes as hqlt
 
 import polars as pl
 
@@ -14,7 +14,7 @@ class TypeExpression(Literal):
         Literal.__init__(self)
         self.type = type
         
-    def eval(self):
+    def eval(self, ctx:Context, **kwargs):
         return hqlt.from_name(self.type)
 
 # A string literal

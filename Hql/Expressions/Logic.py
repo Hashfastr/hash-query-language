@@ -1,11 +1,11 @@
 from .__proto__ import Expression
 from .Functions import DotCompositeFunction, FuncExpr
-from ..Context import Context
-from ..Exceptions import CompilerException, QueryException
-from ..PolarsTools import pltools
+from Hql.Context import Context
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.PolarsTools import pltools
+
 from typing import Union
 import logging
-
 import polars as pl
 
 # Expression expressing anything with ==, >, <, <=, >=, !=, etc
@@ -40,7 +40,7 @@ class Equality(Expression):
             if self.eqtype == '!=' or self.eqtype == '<>':
                 return (lh != rh)
         
-        raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # List equality
 # Essenitally a filter stating that a field should have any value in a tuple.
@@ -85,29 +85,40 @@ class ListEquality(Expression):
         as_pl = kwargs.get('as_pl', True)
         
         lh = self.lh.eval(ctx, as_list=True)
+
+        if not (isinstance(lh, list) and lh and isinstance(lh[0], str)):
+            raise hqle.CompilerException(f'List equality lh returns non-list[str]: {lh}')
+
         lh = pltools.path_to_expr_value(lh)
         
         filts = []
         for rh in self.rh:
-            print(rh)
             if isinstance(rh, FuncExpr) or isinstance(rh, DotCompositeFunction):
                 rh = rh.eval(ctx)
 
             if rh == None:
-                raise CompilerException('Given rh is NoneType')
+                raise hqle.CompilerException('Given rh is NoneType')
 
+            # path was returned from a function
             if isinstance(rh, list):
                 rh = pltools.path_to_expr_value(rh)
                 filt = self.comparator(lh, rh=rh)
 
+            # Literal comparator
             elif rh.literal:
                 filt = self.comparator(lh, rh=rh.value)
-                
+            
+            # Logic comparator
             elif rh.logic:
                 filt = self.comparator(rh.eval(ctx, lh=lh))
-                
+            
+            # Expression we need to resolve
             else:
                 rh = rh.eval(ctx, as_list=True)
+
+                if not (isinstance(rh, list) and rh and isinstance(rh[0], str)):
+                    raise hqle.CompilerException(f'List equality rh returns non-list[str]: {rh}')
+
                 rh = pltools.path_to_expr_value(rh)
                 filt = self.comparator(lh, rh=rh)
                 
@@ -123,7 +134,7 @@ class ListEquality(Expression):
             return final
         
         else:
-            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+            raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # Handles relational expressions
 # - <
@@ -142,10 +153,10 @@ class Relational(Equality):
 
         if as_pl:
             if not isinstance(lh, pl.Expr):
-                raise CompilerException(f'Relational left hand {self.lh.type} returned non-polars expression')
+                raise hqle.CompilerException(f'Relational left hand {self.lh.type} returned non-polars expression')
             
             if not isinstance(rh, pl.Expr):
-                raise CompilerException(f'Relational right hand {self.rh.type} returned non-polars expression')
+                raise hqle.CompilerException(f'Relational right hand {self.rh.type} returned non-polars expression')
 
             if self.eqtype == '<':
                 return (lh < rh)
@@ -159,7 +170,7 @@ class Relational(Equality):
             if self.eqtype == '>=':
                 return (lh >= rh)
 
-        raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # Data range functionality
 # Left hand side is the expression to evaluate in being between two values.
@@ -196,7 +207,7 @@ class BetweenEquality(Expression):
         end = self.end.eval(ctx, as_pl=True)
 
         if not isinstance(lh, pl.Expr):
-            raise CompilerException(f'Between left hand {self.lh.type} returned non-polars expression')
+            raise hqle.CompilerException(f'Between left hand {self.lh.type} returned non-polars expression')
         
         filt = lh.is_between(start, end)
         
@@ -207,7 +218,7 @@ class BetweenEquality(Expression):
             return filt
         
         else:
-            raise CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+            raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
 # Handles binary logic
 # - and
@@ -229,12 +240,12 @@ class BinaryLogic(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
-        
+        a
     def eval(self, ctx:Context, **kwargs):
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Binary Logic {kwargs}')
-            raise CompilerException(f'BinaryLogic expression given as_pl=False in kwargs')
+            raise hqle.CompilerException(f'BinaryLogic expression given as_pl=False in kwargs')
 
         lh = self.lh.eval(ctx, as_pl=True)
         
@@ -264,7 +275,7 @@ class BasicRange(Expression):
         end = self.end.eval(ctx, as_pl=True)
 
         if isinstance(lh, type(None)):
-            raise CompilerException('BasicRange given a NoneType left-hand expression!')
+            raise hqle.CompilerException('BasicRange given a NoneType left-hand expression!')
 
         return (lh > start).and_(lh < end)
 
@@ -280,21 +291,21 @@ class InsensitiveStringCmp(Expression):
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to InsensitiveStringCmp {kwargs}')
-            raise CompilerException(f'InsensitiveStringCmp expression given as_pl=False in kwargs')
+            raise hqle.CompilerException(f'InsensitiveStringCmp expression given as_pl=False in kwargs')
         
         lh = self.lh.eval(ctx, as_pl=True)
         
         if self.rh.literal:
             if self.rh.type != "StringLiteral":
-                QueryException(f'Righthand {self.type} expression is not a string')
+                hqle.QueryException(f'Righthand {self.type} expression is not a string')
 
             rh = self.rh.value
 
         else:
-            raise QueryException(f'Dynamic right hands not supported in {self.type} just yet')
+            raise hqle.QueryException(f'Dynamic right hands not supported in {self.type} just yet')
 
         if not isinstance(lh, pl.Expr):
-            raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+            raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
 
         # Case insensitive match
         expr = lh.str.contains(f'(?i){rh}')
@@ -314,21 +325,24 @@ class Regex(Expression):
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Regex {kwargs}')
-            raise CompilerException(f'Regex expression given as_pl=False in kwargs')
+            raise hqle.CompilerException(f'Regex expression given as_pl=False in kwargs')
         
         lh = self.lh.eval(ctx, as_pl=True)
         
         if self.rh.literal:
             if self.rh.type != "StringLiteral":
-                QueryException(f'Righthand {self.type} expression is not a string')
+                hqle.QueryException(f'Righthand {self.type} expression is not a string')
 
             rh = self.rh.value
 
         else:
-            raise QueryException(f'Dynamic right hands not supported in {self.type} just yet')
+            raise hqle.QueryException(f'Dynamic right hands not supported in {self.type} just yet')
 
         if not isinstance(lh, pl.Expr):
-            raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+            raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+
+        if not (isinstance(rh, pl.Expr) and isinstance(rh, str)):
+            raise hqle.CompilerException(f'Passed regex is not a string {rh}')
 
         return lh.str.contains(rh)
 
@@ -355,7 +369,7 @@ class Contains(Expression):
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Contains {kwargs}')
-            raise CompilerException(f'Contains expression given as_pl=False in kwargs')
+            raise hqle.CompilerException(f'Contains expression given as_pl=False in kwargs')
         
         if self.term:
             logging.warning('Term matching with using has is not supported in Hql-land')
@@ -365,18 +379,18 @@ class Contains(Expression):
 
         if self.rh.literal:
             if self.rh.type != "StringLiteral":
-                QueryException(f'Righthand {self.type} expression is not a string')
+                hqle.QueryException(f'Righthand {self.type} expression is not a string')
 
             rh = self.rh.value
 
             if rh == None:
-                raise CompilerException(f'Literal value is None for {self.rh.type}')
+                raise hqle.CompilerException(f'Literal value is None for {self.rh.type}')
 
         else:
-            raise QueryException(f'Dynamic right hands not supported in {self.type} just yet')
+            raise hqle.QueryException(f'Dynamic right hands not supported in {self.type} just yet')
 
         if not isinstance(lh, pl.Expr):
-            raise CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+            raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
 
         if not self.cs:
             rh = rh.lower()

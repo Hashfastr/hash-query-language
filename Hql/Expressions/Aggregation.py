@@ -1,10 +1,13 @@
 from .__proto__ import Expression
-from ..Context import Context
-from ..Data import Data, Table, Schema
-from ..PolarsTools import pltools
+from Hql.Context import Context
+from Hql.Data import Data, Table, Schema
+from Hql.PolarsTools import pltools
+from Hql.Exceptions import HqlExceptions as hqle
+
+from typing import Union
 
 class OrderedExpression(Expression):
-    def __init__(self, expr:Expression=None, order:str='desc', nulls:str=''):
+    def __init__(self, expr:Union[Expression, None]=None, order:str='desc', nulls:str=''):
         super().__init__()
         self.expr = expr
         self.order = order
@@ -18,8 +21,13 @@ class OrderedExpression(Expression):
             self.nulls = nulls
         
     def to_dict(self):
+        if self.expr == None:
+            expr_dict = {}
+        else:
+            expr_dict = self.expr.to_dict()
+
         return {
-            'name': self.expr.to_dict(),
+            'name': expr_dict,
             'order': self.order,
             'nulls': self.nulls
         }
@@ -30,13 +38,21 @@ class ByExpression(Expression):
         self.exprs = exprs
         
     def build_table_agg(self, ctx:Context, table:Table):
+        if table.schema == None:
+           raise hqle.CompilerException(f'Table passed to by expression is not fully initialized, schema == None')
+
         paths = []
         schema = []
         for expr in self.exprs:
             path = expr.eval(ctx, as_list=True)
-            ptype = table.schema.get_type(path)
+            
+            if not isinstance(path, list):
+                raise hqle.CompilerException(f'By path expression returned non-list[str] {type(path)}')
+
+            ptype = table.get_type(path)
 
             # failed get_type returns a empty schema
+            # Might reference a field that exists in another table but not this one.
             if not ptype:
                 continue
 

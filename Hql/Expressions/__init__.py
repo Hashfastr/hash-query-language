@@ -1,3 +1,4 @@
+from numpy import isin
 from .__proto__ import Expression
 from .Logic import *
 from .References import *
@@ -5,13 +6,17 @@ from .Literals import *
 from .Functions import *
 from .Aggregation import *
 
-from ..Operators import Operator
-from ..Operators.Database import Database
+from Hql.Operators import Operator
+from Hql.Operators.Database import Database
+
+from typing import Union
+
+from Hql.Exceptions import HqlExceptions as hqle
 
 class PipeExpression(Expression):
-    def __init__(self, prepipe:Expression, pipes:list[Operator]):
+    def __init__(self, prepipe:Union[Operator, Expression], pipes:list[Operator]):
         Expression.__init__(self)
-        self.prepipe:Expression      = prepipe
+        self.prepipe                 = prepipe
         self.pipes:list[Operator]    = pipes
         
     def to_dict(self):
@@ -25,17 +30,17 @@ class PipeExpression(Expression):
     def eval(self, ctx:Context, **kwargs):
         no_exec = kwargs.get('no_exec', False)
 
-        from .. import CompilerSet
+        from Hql import CompilerSet
 
         # Resolve database references
         prepipe = self.prepipe.eval(ctx, tabular=True)
 
-        if prepipe == None:
+        if isinstance(prepipe, type(None)):
             raise CompilerException(f'Prepipe evaluation returned None')
         
         # can add more tabular prepipe types here
-        if not issubclass(type(prepipe), (Database)) and self.pipes != []:
-            raise CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
+        if not isinstance(prepipe, Database) and self.pipes != []:
+            raise hqle.CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
 
         ops = [prepipe] + self.pipes
         cs = CompilerSet(ops).compile()
