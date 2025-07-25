@@ -5,6 +5,11 @@ database_registry = {}
 
 def register_database(name:str):
     def decorator(cls):
+        from Hql.Operators.Database import Database
+
+        if not issubclass(cls, Database):
+            raise hqle.CompilerException(f'Attempting to register non-database class {name} as a database')
+
         database_registry[name] = cls
         return cls
     return decorator
@@ -19,8 +24,14 @@ func_registry = {}
 
 def register_func(name):
     def decorator(cls):
+        from Hql.Expressions.Functions import FuncExpr
+
+        if not issubclass(cls, FuncExpr):
+            raise hqle.CompilerException(f'Attempting to register non-function class {name} as a function')
+
         func_registry[name] = cls
         return cls
+
     return decorator
 
 def get_func(name):
@@ -33,6 +44,15 @@ op_registry = {}
 
 def register_op(name):
     def decorator(cls):
+        from Hql.Operators import Operator
+        from Hql.Operators.Database import Database
+
+        if not issubclass(cls, Operator):
+            raise hqle.CompilerException(f'Attempting to register non-operator class {name} as an operator')
+
+        if not issubclass(cls, Database):
+            raise hqle.CompilerException(f'Attempting to register database class {name} as an operator, use @register_database')
+
         op_registry[name] = cls
         return cls
     return decorator
