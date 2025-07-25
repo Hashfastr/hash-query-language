@@ -18,7 +18,7 @@ class Expression():
         self.logic   = False
         self.value   = None
     
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Union[None, dict]:
         return {
             'type': self.type
         }

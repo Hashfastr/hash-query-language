@@ -80,7 +80,7 @@ class Path(Expression):
         Expression.__init__(self)
         self.path = path if path else []
       
-    def to_dict(self):
+    def to_dict(self) -> Union[None, dict]:
         try:
             return {
                 'type': self.type,
@@ -166,6 +166,9 @@ class NamedExpression(Expression):
         insert = kwargs.get('insert', True)
         as_value = kwargs.get('as_value', False)
         value = self.value.eval(ctx)
+
+        if not isinstance(value, Data):
+            raise hqle.CompilerException(f'Named expression right hand returned non-Data object {type(value)}')
         
         if as_value:
             return value
