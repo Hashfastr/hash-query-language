@@ -1,4 +1,4 @@
-from .Exceptions import *
+from Hql.Exceptions import HacExceptions as hace
 from . import Hac
 from datetime import datetime
 
@@ -27,7 +27,7 @@ class Dag():
         description = self.hac.get('description')
 
         if not hql:
-            raise DagException(name=dagid, message='HaC file contains no detection!!')
+            raise hace.DagException(name=dagid, message='HaC file contains no detection!!')
 
         # Add this later if needed
         f'''

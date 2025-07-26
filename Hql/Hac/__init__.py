@@ -1,5 +1,5 @@
 from .Exceptions import *
-from ..Compiler import Data as HqlData
+from Hql.Data import Data as HqlData
 
 class Hac():
     '''

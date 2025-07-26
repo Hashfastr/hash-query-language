@@ -6,7 +6,7 @@ from .grammar.HacParser import HacParser
 from .grammar.HacVisitor import HacVisitor
 import logging
 
-from .Exceptions import *
+from Hql.Exceptions import HacExceptions as hace
 
 class HqlErrorListener(ErrorListener):
     def __init__(self, text:str, filename:str):
@@ -15,7 +15,7 @@ class HqlErrorListener(ErrorListener):
         self.filename = filename
 
     def syntaxError(self, recognizer:HacParser, offendingSymbol, line, column, msg, e):
-        e = LexerException(msg, self.text, line, column, offendingSymbol, filename=self.filename)
+        e = hace.LexerException(msg, self.text, line, column, offendingSymbol, filename=self.filename)
         Parser.handleException(recognizer, e)
         
 class Parser():
@@ -66,7 +66,7 @@ class Parser():
     def handleException(ctx, e):
         logging.critical(f'Failed to parse query {e.filename}')
         
-        if isinstance(e, LexerException):
+        if isinstance(e, hace.LexerException):
             text = e.text
             text = text.split('\n')[e.line - 1]
             
