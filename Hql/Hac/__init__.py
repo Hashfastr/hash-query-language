@@ -1,5 +1,5 @@
-from .Exceptions import *
 from Hql.Data import Data as HqlData
+from Hql.Exceptions import HacExceptions as hace
 
 class Hac():
     '''
@@ -38,7 +38,7 @@ class Hac():
             dag = Dag(self)
             return dag.gen_dag()
 
-        raise HacException(f'Unknown HaC render type {target}')
+        raise hace.HacException(f'Unknown HaC render type {target}')
     
     def get(self, name:str):
         if name == 'src':
@@ -48,4 +48,4 @@ class Hac():
     def validate(self):
         for i in self.required:
             if i not in self.asm:
-                raise HacException(f'Missing required field {i} in {self.src}')
+                raise hace.HacException(f'Missing required field {i} in {self.src}')
