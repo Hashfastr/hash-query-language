@@ -1,8 +1,8 @@
 from .Table import Table
 from .Schema import Schema
 from .Series import Series
-from ..Exceptions import *
-from ..Types.Hql import HqlTypes as hqlt
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Types.Hql import HqlTypes as hqlt
 
 import logging
 from typing import Union
@@ -19,7 +19,7 @@ class Data():
 
         for table in tables:
             if not isinstance(table, Table):
-                raise CompilerException('Non-table passed to Data as init data')
+                raise hqle.CompilerException('Non-table passed to Data as init data')
 
         # Give names to names-less tables
         for idx, i in enumerate(tables):
@@ -73,7 +73,7 @@ class Data():
             table = self.tables.get(name, None)
             
             if not table:
-                raise QueryException(f'Unknown table {name} referenced')
+                raise hqle.QueryException(f'Unknown table {name} referenced')
             
             return [table]
         
@@ -92,7 +92,7 @@ class Data():
     
     def add_table(self, table:Table):
         if table.name in self.tables:
-            raise QueryException(f'Table {table.name} already exists')
+            raise hqle.QueryException(f'Table {table.name} already exists')
         
         self.tables[table.name] = table
         

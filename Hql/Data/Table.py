@@ -1,10 +1,13 @@
+from numpy import isin
 import polars as pl
+from polars.dataframe.group_by import GroupBy
+
 from .Schema import Schema
 from .Series import Series
-from ..Exceptions import *
-from ..PolarsTools import pltools
-from ..Types.Compiler import CompilerType
-from ..Types.Hql import HqlTypes as hqlt
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.PolarsTools import pltools
+from Hql.Types.Compiler import CompilerType
+from Hql.Types.Hql import HqlTypes as hqlt
 import logging
 from typing import Union
 
@@ -15,14 +18,14 @@ Mimics a pl.DataFrame
 class Table():
     def __init__(
             self,
-            df:pl.DataFrame=None,
-            series:Series=None,
-            init_data:list[dict]=None,
-            schema:Schema=None,
-            name:str=None
+            df:Union[pl.DataFrame, None]=None,
+            series:Union[Series, None]=None,
+            init_data:Union[list[dict], None]=None,
+            schema:Union[Schema, dict, None]=None,
+            name:Union[str, None]=None
         ):
         
-        if hasattr(df, 'is_empty'):
+        if not isinstance(df, type(None)):
             self.df = df
         else:
             self.df = pl.DataFrame()
@@ -31,11 +34,13 @@ class Table():
             schema = Schema(schema=schema)
         
         self.name = name if name else ''
-        self.agg = None
-        self.agg_paths = None
-        self.agg_schema = None
         self.series = None
-        self.schema = None
+        self.schema = Schema() # safe default
+       
+        # rely on self.agg being None for the existence of an aggregation
+        self.agg:Union[None, GroupBy] = None
+        self.agg_paths:list[list[str]] = []
+        self.agg_schema:Schema = Schema()
 
         if series:
             self.series = series
@@ -43,12 +48,12 @@ class Table():
         elif init_data and not schema:
             self.schema = Schema(init_data)
             init_data = self.schema.adjust_mv(init_data)
-            schema = self.schema.gen_pl_schema()
-            self.df = pl.from_dicts(init_data, schema=schema)
+            pl_schema = self.schema.gen_pl_schema()
+            self.df = pl.from_dicts(init_data, schema=pl_schema)
         
         elif init_data and schema:
             self.schema = schema
-            self.df = pl.from_dicts(init_data, schema=schema.to_pl_schema())
+            self.df = pl.from_dicts(init_data, schema=schema.convert_schema(target='polars'))
         
         elif not self.df.is_empty() and schema:
             self.schema = schema
@@ -80,8 +85,16 @@ class Table():
         self.df = schema.apply(self.df)
         self.schema = schema
 
-    def drop(self, path:list[str], df:pl.DataFrame=None, idx:int=0):
-        if idx == 0:
+    def get_type(self, path:list[str]):
+        if self.schema:
+            return self.schema.get_type(path)
+        return None
+
+    def drop(self, path:list[str], df:Union[pl.DataFrame, None]=None, idx:int=0) -> Union[pl.DataFrame, "Table"]:
+        if isinstance(df, type(None)) and idx != 0:
+            raise hqle.CompilerException('Logic error? Would reinit df with a non-zero index.')
+
+        if isinstance(df, type(None)):
             self.schema.drop(path)
             df = self.df
         
@@ -94,6 +107,10 @@ class Table():
                 
                 if col.dtype == pl.Struct:
                     rec = self.drop(path, df=pl.DataFrame(col).unnest(col.name), idx=idx+1)
+                    
+                    if not isinstance(rec, pl.DataFrame):
+                        raise hqle.CompilerException('Logic error? Final recursion step hit before end.')
+
                     if not rec.is_empty():
                         new[col.name] = rec
                 
@@ -126,7 +143,7 @@ class Table():
         try:
             self.df = self.df.filter(expr)
         except pl.exceptions.ColumnNotFoundError as e:
-            raise QueryException(e.args[0])
+            raise hqle.QueryException(e.args[0])
         
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, path)
@@ -187,7 +204,7 @@ class Table():
                     if i == max_cols - 1:
                         logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
                         logging.critical(f'Applicable field: {key}')
-                        raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
+                        raise hqle.QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
                 
         df = pl.DataFrame(new)
         schema = Schema(schema=schema)
@@ -218,17 +235,24 @@ class Table():
 
         return Table(df=df, schema=schema, name=self.name)
 
-    def unnest(self, field:list[str]):
+    def unnest(self, field:list[str]) -> Union[Series, 'Table']:
+        if not isinstance(self.schema, Schema):
+            raise hqle.CompilerException('Attempting to unnest an uninitalized table object with a None Schema')
+
         if not self.assert_field(field):
-            raise QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
+            raise hqle.QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
         
         df = self.get_value(field)
+        dtype = self.schema.unnest(field).schema
         
         if isinstance(df, pl.Series):
-            return Series(df, self.schema.unnest(field))            
+            if not isinstance(dtype, hqlt.HqlType):
+                raise CompilerException('Attempting to initialize a series with a non-hqlt type')
+
+            return Series(df, stype=dtype)            
             
         else:
-            schema = Schema(schema=self.schema.unnest(field))
+            schema = Schema(schema=dtype)
             return Table(df=df, schema=schema, name=self.name)
 
     '''
@@ -260,22 +284,33 @@ class Table():
             cur = pltools.get_element_value(cur, [key])
             path.append(key)
         
-        # Using this instead of strip to ensure we're sync
-        schema = self.schema.unnest(path)
+        # Using this instead of strip to ensure we're in sync
+        schema = self.schema.unnest(path).schema
+
+        if isinstance(cur, pl.Series):
+            if isinstance(schema, dict):
+                raise hqle.CompilerException('Schema generated for series is a dict!')
+
+            series = Series(cur, stype=schema)
+            return Table(series=series, name=self.name)
             
+        if not isinstance(schema, dict):
+            raise hqle.CompilerException('Schema generated for a dataframe is a non-dict!')
+
         return Table(df=cur, schema=schema, name=self.name)
 
     def rename(self, src:list[str], dest:list[str]):
         if not self.assert_field(src):
-            raise QueryException('Attempting to rename a non-existing field')
+            raise hqle.QueryException('Attempting to rename a non-existing field')
         
-        if self.assert_field(dest):
-            raise QueryException('Attempting to rename field into an existing field')
+        #if self.assert_field(dest):
+        #    raise hqle.QueryException('Attempting to rename field into an existing field')
         
         value = self.pop(src).unnest(src)
         if value.series:
             schema = value.series.type
             value = value.series.series
+
         else:
             schema = value.schema.schema
             value = value.df

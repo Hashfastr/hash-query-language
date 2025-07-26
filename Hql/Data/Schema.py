@@ -125,10 +125,10 @@ class Schema():
         else:
             return node
 
-    # Extract the schema for a given set of fields
-    def select(self, field:list[str]):
-        cur = self.unnest(field).schema
-        for part in field[::-1]:
+    # Isolate the schema at a given path
+    def select(self, path:list[str]):
+        cur = self.unnest(path).schema
+        for part in path[::-1]:
             cur = {part: cur}
         return Schema(schema=cur)
 
@@ -138,9 +138,9 @@ class Schema():
             schemas.append(self.select(field))
         return Schema.merge(schemas)
     
-    def unnest(self, field:list[str])->"Schema":
+    def unnest(self, path:list[str])->"Schema":
         cur = self.schema
-        for part in field:
+        for part in path:
             if part not in cur:
                 return Schema()
             else:
@@ -153,10 +153,10 @@ class Schema():
         return Schema(schema=deepcopy(self.schema))
         
     '''
-    Like unnest but returns an appropriate hqlt.object on a dict reference
+    Descriptive rename of unnest, might remove later
     '''
-    def get_type(self, field:list[str]):
-        return self.unnest(field)
+    def get_type(self, path:list[str]):
+        return self.unnest(path)
 
     '''
     Returns the deep stripped value of a dict with a single value.
