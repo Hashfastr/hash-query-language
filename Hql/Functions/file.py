@@ -1,9 +1,9 @@
-from ..Exceptions import *
-from .. import Config
-from ..Context import register_func, Context
-from ..Operators.Database import Database
-import logging
 from .__proto__ import Function
+
+from Hql import Config
+from Hql.Context import register_func, Context
+from Hql.Operators.Database import Database
+from Hql.Exceptions import HqlExceptions as hqle
 
 # This is a meta function resolved while parsing
 @register_func('file')
@@ -12,7 +12,7 @@ class file(Function):
         super().__init__(args, 1, -1)
 
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):
-            raise ArgumentException(f'Bad database file argument datatype {args[0].type}')
+            raise hqle.ArgumentException(f'Bad database file argument datatype {args[0].type}')
         
     def eval(self, ctx:Context, **kwargs):
         db = kwargs.get('receiver', None)
@@ -25,6 +25,6 @@ class file(Function):
         if db and issubclass(type(db), Database) and db.has_method(self.name):
             db.files = files
         else:
-            raise CompilerException(f'Function {self.name} cannot be called on {type(db)}')
+            raise hqle.CompilerException(f'Function {self.name} cannot be called on {type(db)}')
         
         return db

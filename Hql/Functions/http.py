@@ -1,9 +1,8 @@
-from ..Exceptions import *
-from .. import Config
-from ..Context import register_func, Context
-from ..Operators.Database import Database
-import logging
 from .__proto__ import Function
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql import Config
+from Hql.Context import register_func, Context
+from Hql.Operators.Database import Database
 
 # This is a meta function resolved while parsing
 @register_func('http')
@@ -12,7 +11,7 @@ class http(Function):
         super().__init__(args, 1, -1)
 
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):
-            raise ArgumentException(f'Bad database http argument datatype {args[0].type}')
+            raise hqle.ArgumentException(f'Bad database http argument datatype {args[0].type}')
         
     def eval(self, ctx:Context, **kwargs):
         db = kwargs.get('receiver', None)
@@ -25,6 +24,6 @@ class http(Function):
         if db and issubclass(type(db), Database) and db.has_method(self.name):
             db.urls = urls
         else:
-            raise CompilerException(f'Function {self.name} cannot be called on {type(db)}')
+            raise hqle.CompilerException(f'Function {self.name} cannot be called on {type(db)}')
         
         return db

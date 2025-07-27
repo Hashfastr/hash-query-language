@@ -1,26 +1,29 @@
-from ..Exceptions import *
-from ..Context import register_func, Context
 from .__proto__ import Function
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_func, Context
+from Hql.Types.Hql import HqlTypes as hqlt
+from Hql.Expressions import BasicRange, Integer
+
 import polars as pl
-from ..Types.Hql import HqlTypes as hqlt
-from ..Expressions import BasicRange
-from ..Expressions import Integer
 
 @register_func('ip4subnet')
 class ip4subnet(Function):
     def __init__(self, args:list):
         super().__init__(args, 1, 1)
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:Context, **kwargs) -> BasicRange:
         import re
         subnet_regex = '(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\/(\\d{1,2})'
         
+        if kwargs:
+            print()
+
         subnet_text = self.args[0].eval(ctx, as_str=True)
         ip_text   = re.match(subnet_regex, subnet_text)
         mask_text = re.match(subnet_regex, subnet_text)
 
         if ip_text == None or mask_text == None:
-            raise QueryException(f'Invalid subnet given {subnet_text}')
+            raise hqle.QueryException(f'Invalid subnet given {subnet_text}')
 
         ip_text = ip_text.group(1)
         mask_text = mask_text.group(2)

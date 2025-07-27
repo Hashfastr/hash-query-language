@@ -1,28 +1,27 @@
-from ..Exceptions import *
-from ..Context import register_func, Context
-import logging
-from typing import Tuple
 from .__proto__ import Function
-from ..Data import Data, Table, Schema
+
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_func, Context
+from Hql.Data import Data, Table
 from typing import Union
 
 import polars as pl
-from ..PolarsTools import pltools
+from Hql.PolarsTools import pltools
 
 # This is a meta function resolved while parsing
 @register_func('series_stats')
 class series_stats(Function):
     def __init__(self, args:list):
-        super().__init__(args, 1, 3)
+        Function.__init__(self, args, 1, 3)
         self.ignore_nonfinite = False
         self.src = args[0]
 
         if len(self.args) > 1:
             if self.args[1].type != "Bool":
-                raise ArgumentException(f'{self.name} expected argument type Bool, got {self.args[1].type} for nonfinite')
+                raise hqle.ArgumentException(f'{self.name} expected argument type Bool, got {self.args[1].type} for nonfinite')
             self.ignore_nonfinite = self.args[1].eval()
             
-    def cal_min(self, s:Union[pl.Series, list]) -> Tuple[int, int]:
+    def cal_min(self, s:Union[pl.Series, list]):
         if isinstance(s, list):
             s = pl.concat(s)
             # return like this as it's a union pattern
@@ -39,7 +38,7 @@ class series_stats(Function):
         
         return (min, min_idx)
 
-    def cal_max(self, s:Union[pl.Series, list]) -> Tuple[int, int]:
+    def cal_max(self, s:Union[pl.Series, list]):
         if isinstance(s, list):
             s = pl.concat(s)
             # return like this as it's a union pattern
@@ -56,19 +55,19 @@ class series_stats(Function):
         
         return (max, max_idx)
     
-    def cal_avg(self, s:Union[pl.Series, list]) -> float:
+    def cal_avg(self, s:Union[pl.Series, list]):
         if isinstance(s, list):
             s = pl.concat(s)
 
         return s.mean()
     
-    def cal_stdev(self, s:Union[pl.Series, list]) -> float:
+    def cal_stdev(self, s:Union[pl.Series, list]):
         if isinstance(s, list):
             s = pl.concat(s)
 
         return s.std()
     
-    def cal_vari(self, s:Union[pl.Series, list]) -> float:
+    def cal_vari(self, s:Union[pl.Series, list]):
         if isinstance(s, list):
             s = pl.concat(s)
     

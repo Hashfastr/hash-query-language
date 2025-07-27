@@ -1,7 +1,10 @@
 import json
-from ..Exceptions import *
-import polars as pl
-from ..Context import Context
+from typing import Union
+
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import Context
+from Hql.Data import Data
+from Hql.Expressions import Expression as Expression
 
 class Function():
     def __init__(self, args:list, min:int, max:int):
@@ -12,9 +15,9 @@ class Function():
         self.max = max
         
         if len(args) < min:
-            raise ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
+            raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
         if max != -1 and len(args) > max:
-            raise ArgumentException(f'Function {self.name} got {len(args)} args, expected at most {self.max}')
+            raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at most {self.max}')
         
     def to_dict(self):
         return {
@@ -29,5 +32,5 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, ctx:Context, **kwargs):
-        return pl.DataFrame()
+    def eval(self, ctx:Context, **kwargs) -> Union[Data, Expression]:
+        return Data()
