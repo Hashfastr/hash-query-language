@@ -1,10 +1,10 @@
 import sys    
 
-from .Compiler.HqlParser import Parser
-from .Compiler.Exceptions import HqlException
-from .Compiler import Compiler
-from .HacEngine import Parser as HaCParser
-from .HacEngine import Exceptions as HacExceptions
+from Hql.Parser import Parser
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Exceptions import HacExceptions as hace
+from Hql import Compiler
+from Hql.Hac import Parser as HaCParser
 
 import json
 import logging
@@ -74,7 +74,7 @@ def main():
     if args.render_hac:
         try:
             parser = HaCParser.Parser(filename=args.file)
-        except HacExceptions.LexerException:
+        except hace.LexerException:
             logging.critical('hql file does not contain a valid HaC comment!')
             return -1
 
@@ -92,7 +92,7 @@ def main():
     try:
         parser = Parser(args.file)
         parser.assemble()
-    except HqlException as e:
+    except hqle.HqlException as e:
         logging.critical('Exception caught when assembling')
         logging.critical(e)
         return -1

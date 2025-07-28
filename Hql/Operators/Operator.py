@@ -1,6 +1,5 @@
 import json
-import logging
-from ..Context import register_op, Context
+from Hql.Context import register_op, Context
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).

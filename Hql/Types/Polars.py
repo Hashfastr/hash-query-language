@@ -1,10 +1,8 @@
-import logging
-import polars as pl
-
-from Hql import Exceptions
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
 from Hql.Types.Compiler import CompilerType
+
+import polars as pl
 
 class PolarsTypes():
     from Hql.Types.Hql import HqlTypes as hqlt
@@ -140,7 +138,8 @@ class PolarsTypes():
     @register_type('polars_Struct')   
     class Struct(PolarsType, hqlt.object):
         def __init__(self, fields:list[str]):
-            super().__init__()
+            from Hql.Types.Hql import HqlTypes as hqlt
+            hqlt.object.__init__(self, fields)
         
     @register_type('polars_Unknown')
     class Unknown(PolarsType, hqlt.unknown):

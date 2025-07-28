@@ -1,4 +1,3 @@
-from numpy import isin
 import polars as pl
 import logging
 from typing import Union

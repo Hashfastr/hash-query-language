@@ -10,7 +10,7 @@ class Series():
     def __init__(self, series:pl.Series, stype:Union[hqlt.HqlType, None]=None):
         if stype == None:
             ptype = series.dtype
-            stype = plt.from_pure_polars(ptype)
+            stype = plt.from_pure_polars(ptype).HqlType
         
         self.series = series
         self.type = stype

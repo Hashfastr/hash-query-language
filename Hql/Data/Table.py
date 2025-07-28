@@ -1,4 +1,3 @@
-from numpy import isin
 import polars as pl
 from polars.dataframe.group_by import GroupBy
 
@@ -247,7 +246,7 @@ class Table():
         
         if isinstance(df, pl.Series):
             if not isinstance(dtype, hqlt.HqlType):
-                raise CompilerException('Attempting to initialize a series with a non-hqlt type')
+                raise hqle.CompilerException('Attempting to initialize a series with a non-hqlt type')
 
             return Series(df, stype=dtype)            
             
@@ -307,13 +306,16 @@ class Table():
         #    raise hqle.QueryException('Attempting to rename field into an existing field')
         
         value = self.pop(src).unnest(src)
-        if value.series:
-            schema = value.series.type
-            value = value.series.series
+        if isinstance(value, Series):
+            schema = value.type
+            value = value.series
 
         else:
             schema = value.schema.schema
             value = value.df
+
+        if not isinstance(schema, (dict, CompilerType)):
+            raise hqle.CompilerException(f'Attempting to rename with schema of type {type(schema)}')
         
         self.insert(dest, value, schema)
     
@@ -322,11 +324,11 @@ class Table():
             self,
             name:list[str],
             value:Union[pl.DataFrame, pl.Series],
-            vtype:Union[CompilerType, dict],
-            cur_df:pl.DataFrame=None,
+            vtype:Union[hqlt.HqlType, dict],
+            cur_df:Union[None, pl.DataFrame]=None,
             idx:int=0
         ):
-        if not hasattr(cur_df, 'is_null'):
+        if isinstance(cur_df, type(None)):
             cur_df = self.df
             
         split = name[idx]
@@ -380,7 +382,7 @@ class Table():
         
         return new
 
-    def remove(self, name:list[str], cur_df:pl.DataFrame=None, idx:int=0):
+    def remove(self, name:list[str], cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
         if not hasattr(cur_df, 'is_null'):
             cur_df = self.df
             
@@ -408,7 +410,7 @@ class Table():
             
     def pop(self, name:list[str]):
         if not self.assert_field(name):
-            raise QueryException('Attempting to pop a non-existing field')
+            raise hqle.QueryException('Attempting to pop a non-existing field')
         
         # Schema is tracked through the select
         value = self.select(name)
@@ -463,14 +465,14 @@ class Table():
             df = left.join(right.df, on=on, how='inner')
 
         else:
-            raise QueryException(f'Invalid join kind {kind} used')
+            raise hqle.QueryException(f'Invalid join kind {kind} used')
         
         return Table(df=df, schema=schema, name=self.name)
 
     '''
     Sorts by expression, if they exist
     '''
-    def sort(self, exprs:list[pl.Expr], orders:list[bool]=None, nulls:list[bool]=None):
+    def sort(self, exprs:list[pl.Expr], orders:Union[None, list[bool]]=None, nulls:Union[None, list[bool]]=None):
         orders = [True for x in exprs] if orders is None else orders
         nulls = [x for x in orders] if nulls is None else nulls
         exprs = exprs if isinstance(exprs, list) else [exprs]

@@ -80,11 +80,9 @@ class pltools():
     @staticmethod
     def path_to_expr(path:list[str]):
         expr = pltools.path_to_expr_value(path)
-        expr_str = 'pl.col(a).struct.field(c)'
         
         # rebuild object
         for i in path[::-1][1:]:
             expr = pl.struct(expr).alias(i)
-            expr_str = f'pl.struct({expr_str}).alias({i})'
 
         return expr

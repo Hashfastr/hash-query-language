@@ -1,8 +1,7 @@
-from ..Expressions import Expression
-from ..Data import Schema, Data, Table
-from ..Context import register_op, Context
-from ..Exceptions import *
-from ..Operators import Operator
+from Hql.Expressions import Expression
+from Hql.Data import Schema, Data, Table
+from Hql.Context import register_op, Context
+from Hql.Operators import Operator
 import polars as pl
 
 # Project my beloved
@@ -18,7 +17,7 @@ import polars as pl
 @register_op('Project')
 class Project(Operator):
     def __init__(self, exprs:list[Expression]):
-        super().__init__()
+        Operator.__init__(self)
         self.exprs = exprs
         self.non_conseq = [
             'Take'
@@ -34,7 +33,7 @@ class Project(Operator):
 @register_op('ProjectAway')
 class ProjectAway(Operator):
     def __init__(self, exprs:list[Expression]):
-        super().__init__()
+        Operator.__init__(self)
         self.exprs = exprs
         self.non_conseq = [
             'Take'
@@ -50,7 +49,7 @@ class ProjectAway(Operator):
 @register_op('ProjectKeep')
 class ProjectKeep(Operator):
     def __init__(self, exprs:list[Expression]):
-        super().__init__()
+        Operator.__init__(self)
         self.exprs = exprs
         self.non_conseq = [
             'Take'
@@ -63,7 +62,7 @@ class ProjectKeep(Operator):
 @register_op('ProjectReorder')
 class ProjectReorder(Operator):
     def __init__(self, exprs:list[Expression]):
-        super().__init__()
+        Operator.__init__(self)
         self.exprs = exprs
         self.non_conseq = [
             'Take'
@@ -88,7 +87,7 @@ class ProjectReorder(Operator):
 @register_op('ProjectRename')
 class ProjectRename(Operator):
     def __init__(self, exprs:list[Expression]):
-        super().__init__()
+        Operator.__init__(self)
         self.exprs = exprs
         self.non_conseq = [
             'Take'

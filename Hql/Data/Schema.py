@@ -1,5 +1,5 @@
 import logging
-from Hql.Exceptions import *
+from Hql.Exceptions import HqlExceptions as hqle
 from typing import Union
 import polars as pl
 from Hql.Types.Hql import HqlTypes as hqlt
@@ -36,7 +36,7 @@ class Schema():
 
         # Whoopsie
         elif data:
-            raise CompilerException(f'Non-supported type passed to Schema init {type(data)}')
+            raise hqle.CompilerException(f'Non-supported type passed to Schema init {type(data)}')
         
         # Pass through empty case else we get an hqlt.object([])
         # Otherwise immediately convert to HqlTypes
@@ -101,7 +101,7 @@ class Schema():
                     if j == max_cols - 1:
                         logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
                         logging.critical(f'Applicable field: {key}')
-                        raise QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}')
+                        raise hqle.QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}')
 
         return Schema(schema=new)
 
@@ -126,7 +126,7 @@ class Schema():
             return node
 
     # Isolate the schema at a given path
-    def select(self, path:list[str]):
+    def select(self, path:list[str]) -> "Schema":
         cur = self.unnest(path).schema
         for part in path[::-1]:
             cur = {part: cur}
@@ -138,7 +138,7 @@ class Schema():
             schemas.append(self.select(field))
         return Schema.merge(schemas)
     
-    def unnest(self, path:list[str])->"Schema":
+    def unnest(self, path:list[str]) -> "Schema":
         cur = self.schema
         for part in path:
             if part not in cur:
@@ -182,7 +182,7 @@ class Schema():
     Doesn't return a schema object as it might be a type or a dict
     Typically this is called with a named expression, so it's gonna build the schema anyways.
     '''
-    def strip(self):
+    def strip(self) -> Union[dict, hqlt.HqlType]:
         cur = self.schema
         while isinstance(cur, dict) and len(cur) == 1:
             key = list(cur.keys())[0]
@@ -191,10 +191,10 @@ class Schema():
     
     def rename(self, src:list[str], dest:list[str]):
         if not self.assert_field(src):
-            raise QueryException('Attempting to rename a non-existing field')
+            raise hqle.QueryException('Attempting to rename a non-existing field')
         
         if self.assert_field(dest):
-            raise QueryException('Attempting to rename field into an existing field')
+            raise hqle.QueryException('Attempting to rename field into an existing field')
         
         src_type = self.pop(src)
         
@@ -207,7 +207,7 @@ class Schema():
                 
     def pop(self, name:list[str]):
         if not self.assert_field(name):
-            raise QueryException('Attempting to pop a non-existing field')
+            raise hqle.QueryException('Attempting to pop a non-existing field')
         
         src_type = hqlt.null()
         cur = self.schema
@@ -287,7 +287,7 @@ class Schema():
         if target not in supported:
             logging.critical(f'Unsupported schema conversion type {target}')
             logging.critical(f'Supported schemas: {supported}')
-            raise CompilerException(f'Unsupported schema conversion type {target}')
+            raise hqle.CompilerException(f'Unsupported schema conversion type {target}')
         
         if not schema:
             schema = self.schema
@@ -301,7 +301,7 @@ class Schema():
             if hasattr(schema, 'pl_schema') and target == 'pl':
                 return schema.pl_schema()
             
-            raise CompilerException(f'Unsupported type to convert {schema}')
+            raise hqle.CompilerException(f'Unsupported type to convert {schema}')
 
         # Base case, create empty object/struct
         if len(schema) == 0:            
@@ -332,7 +332,7 @@ class Schema():
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
     '''
-    def gen_pl_schema(self, schema:dict=None):
+    def gen_pl_schema(self, schema:Union[None, dict]=None):
         schema = schema if schema else self.schema
         
         if not isinstance(schema, dict):
@@ -458,7 +458,7 @@ class Schema():
     If a col is not defined in the schema, then it just skips over it
     Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:pl.DataFrame, schema:dict=None):
+    def apply(self, df:pl.DataFrame, schema:Union[None, dict]=None):
         if isinstance(schema, Schema):
             schema = schema.schema
         
@@ -473,7 +473,7 @@ class Schema():
         for key in schema:
             if key not in df:
                 logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}")
-                raise CompilerException('Attempting to apply a schema to a mismatched dataframe!')
+                raise hqle.CompilerException('Attempting to apply a schema to a mismatched dataframe!')
         
         new = {}
         for col in df:
@@ -499,7 +499,7 @@ class Schema():
         else:
             return True
         
-    def present_complex(self, df:pl.DataFrame, schema:dict=None):
+    def present_complex(self, df:pl.DataFrame, schema:Union[None, dict]=None):
         schema = schema if schema != None else self.schema
 
         newdf = {}
@@ -538,5 +538,5 @@ class Schema():
             return right
 
         else:
-            raise QueryException(f'Invalid join kind {kind} used')
+            raise hqle.QueryException(f'Invalid join kind {kind} used')
             
