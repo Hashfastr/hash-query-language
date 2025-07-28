@@ -1,4 +1,5 @@
 import json
+from typing import Union
 from Hql.Context import register_op, Context
 
 # The proto for an operator.
@@ -17,7 +18,7 @@ from Hql.Context import register_op, Context
 # In the case of index, it is nameless, so I used an unused name.
 # Additionally, the top operator doesn't have to be an index, could be the saved
 # value of another statement.
-@register_op('Operator')
+# @register_op('Operator')
 class Operator():
     def __init__(self):
         import random
@@ -58,9 +59,6 @@ class Operator():
     # default execution passthrough unless implemented
     def eval(self, ctx:Context, **kwargs):
         return ctx.data
-
-    def can_integrate(self, type:str):
-        return type in self.compatible
     
     def non_consequential(self, type:str):
         return type in self.non_conseq
@@ -71,5 +69,14 @@ class Operator():
     def get_variable(self, name:str):
         return self.variables[name]
 
+    def can_integrate(self, type:str):
+        return type in self.compatible
+
     def add_op(self, op:"Operator"):
-        return self
+        if self.can_integrate(op.type):
+            # You would then integrate a consuming integration here
+            return None
+
+        else:
+            # otherwise reject the operator back to the compiler
+            return op

@@ -1,9 +1,9 @@
-from . import Expr
-from . import QueryException, CompilerException 
-from . import Operator
-from . import Context, register_database
-from . import Schema, Data, Table
-from . import ESTypes
+from Hql.Expressions import Expression as Expr
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Operators import Operator
+from Hql.Context import Context, register_database
+from Hql.Data import Schema, Data, Table
+from Hql.Types.Elasticsearch import ESTypes
 
 import requests
 from elasticsearch import Elasticsearch as ES
@@ -56,7 +56,7 @@ class Elasticsearch(Database):
             if op.type == 'Take':
                 self.limit = op.expr.eval(self.ctx)
                 if not isinstance(self.limit, int):
-                    raise QueryException(f'Take operator passed non-int type {self.n_rows}')
+                    raise hqle.QueryException(f'Take operator passed non-int type {self.n_rows}')
 
     def add_index(self, pattern:str):
         self.pattern = pattern
@@ -107,7 +107,7 @@ class Elasticsearch(Database):
             
             return f"{lh}:[{start} TO {end}]"
 
-        raise CompilerException(f"Invalid filter type {expr.type}")
+        raise hqle.CompilerException(f"Invalid filter type {expr.type}")
 
     def gen_elastic_schema(self, props:dict):
         schema = {}
@@ -203,6 +203,8 @@ class Elasticsearch(Database):
             )
 
         client.clear_scroll(scroll_id=sid)
+
+        i = 0
 
         result_sets = dict()
         for i in results:

@@ -1,6 +1,8 @@
-from . import QueryException, ConfigException
-from . import Data, Table, Schema
-from . import Context, register_database
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Data import Data, Table, Schema
+from Hql.Context import Context, register_database
+
+from typing import Union
 
 import os
 import polars as pl
@@ -20,7 +22,7 @@ class CSV(Database):
         self.urls = None
         self.base_path = config.get('BASE_PATH', None)
         if not self.base_path:
-            raise ConfigException('CSV database config missing base_path parameter.')
+            raise hqle.ConfigException('CSV database config missing base_path parameter.')
         
         self.methods = [
             'file',
@@ -38,7 +40,7 @@ class CSV(Database):
             if op.type == 'Take':
                 self.take_sets.append(op.get_limits())
     
-    def from_file(self, filename:str, limit:int=None) -> Table:
+    def from_file(self, filename:str, limit:Union[None, int]=None) -> Table:
         try:
             base = self.base_path if self.base_path else '.'
             
@@ -46,17 +48,17 @@ class CSV(Database):
                 data = pl.read_csv(f, n_rows=limit)
         except:
             logging.critical(f'Could not load csv from {filename}')
-            raise QueryException('CSV databse not given valid csv data')
+            raise hqle.QueryException('CSV databse not given valid csv data')
                 
         return Table(df=data, name=filename)
         
-    def from_url(self, url:str, limit:int=None) -> Table:
+    def from_url(self, url:str, limit:Union[None, int]=None) -> Table:
         try:
             url = f'{self.base_path}/{url}' if self.base_path else url
             
             res = requests.get(url)
             if res.status_code != 200:
-                raise QueryException(f'Could not query remote url {url}')
+                raise hqle.QueryException(f'Could not query remote url {url}')
             
             name = url.split('/')[-1]
             reader = StringIO(res.text)
@@ -65,7 +67,7 @@ class CSV(Database):
             return Table(df=data, name=name)
         except:
             logging.critical(f'Could not load csv from {url}')
-            raise QueryException('CSV databse not given valid csv data')
+            raise hqle.QueryException('CSV databse not given valid csv data')
 
     def limit(self, name:str):
         min_limit = None
@@ -93,7 +95,7 @@ class CSV(Database):
             logging.critical('                database("csv").file("filename")')
             logging.critical('                database("csv").http("https://host/file.csv")')
             logging.critical('Where filename exists relative to the configured base_path')
-            raise QueryException('No file provided to CSV database')
+            raise hqle.QueryException('No file provided to CSV database')
         
         self.eval_ops()
         

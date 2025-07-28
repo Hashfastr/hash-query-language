@@ -1,7 +1,7 @@
-from .. import Operator
-from .. import Data
-from .. import Context
-from .. import QueryException, CompilerException
+from Hql.Operators import Operator
+from Hql.Data import Data
+from Hql.Context import Context
+from Hql.Exceptions import HqlExceptions as hqle
 
 import logging
 
@@ -24,13 +24,10 @@ class Database(Operator):
         else:
             logging.critical(f"Attempting to add invalid op type {op.type} to {self.dbtype}")
             logging.critical(f"Are you checking against can_integrate() before adding?")
-            raise CompilerException(f"Incompatible op {op.type} added to {self.dbtype}")
+            raise hqle.CompilerException(f"Incompatible op {op.type} added to {self.dbtype}")
     
     def eval_ops(self):
         pass
-
-    def can_integrate(self, type:str):
-        return type in self.compatible
     
     def make_query(self) -> Data:
         return Data()
@@ -39,5 +36,5 @@ class Database(Operator):
         self.ctx = ctx
         return self.make_query()
     
-    def get_variable(self, name: str):
-        raise QueryException(f'{self.dbtype} database has no variables')
+    def get_variable(self, name: str) -> object:
+        raise hqle.QueryException(f'{self.dbtype} database has no variables')
