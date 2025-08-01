@@ -101,7 +101,7 @@ class PythonTypes():
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
             hqlt.string.__init__(self)
-            
+ 
             self.priority = 4
             self.super = (PythonTypes.list)
 

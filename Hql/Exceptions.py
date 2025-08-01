@@ -30,10 +30,10 @@ class HqlExceptions():
             HqlExceptions.HqlException.__init__(self, f'{message}: line {self.line}:{self.col}')
 
     class ParseException(HqlException):
-        def __init__(self, message, ctx, filename:str=''):
-            self.ctx = ctx
-            self.line = ctx.start.line
-            self.col = ctx.start.column
+        def __init__(self, message:str, line:int, col:int, filename:str=''):
+            self.msg = message
+            self.line = line
+            self.col = col
             self.filename = filename
             
             HqlExceptions.HqlException.__init__(self, f'{message}: line {self.line}:{self.col}')

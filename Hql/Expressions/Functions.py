@@ -12,6 +12,9 @@ class FuncExpr(Expression):
         Expression.__init__(self)
         self.name = name
         self.args = args if args else []
+
+    def __bool__(self):
+        return self.name.__bool__()
     
     def to_dict(self):
         return {
@@ -42,8 +45,11 @@ class FuncExpr(Expression):
         
 class DotCompositeFunction(Expression):
     def __init__(self, funcs:list[FuncExpr]):
-        super().__init__()
+        Expression.__init__(self)
         self.funcs = funcs
+
+    def __bool__(self):
+        return bool(self.funcs)
     
     def to_dict(self):
         return {

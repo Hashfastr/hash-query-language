@@ -16,7 +16,10 @@ class PipeExpression(Expression):
     def __init__(self, prepipe:Union['Operator', Expression], pipes:list['Operator']):
         Expression.__init__(self)
         self.prepipe                 = prepipe
-        self.pipes:list['Operator']    = pipes
+        self.pipes:list['Operator']  = pipes
+
+    def __bool__(self):
+        return bool(self.prepipe)
         
     def to_dict(self):
         return {

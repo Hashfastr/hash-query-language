@@ -71,7 +71,7 @@ class Operator():
     def can_integrate(self, type:str):
         return type in self.compatible
 
-    def add_op(self, op:"Operator"):
+    def add_op(self, op:'Operator'):
         if self.can_integrate(op.type):
             # You would then integrate a consuming integration here
             return None

@@ -1,4 +1,5 @@
 __all__ = [
+    "Operator",
     "Database",
     "Where",
     "Project",

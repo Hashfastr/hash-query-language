@@ -6,8 +6,6 @@ from .grammar.HqlParser import HqlParser
 from .grammar.HqlVisitor import HqlVisitor
 
 from Hql.Query import Query, QueryStatement, LetStatement
-import Hql.Expressions as Exprs
-import Hql.Operators as Ops
 
 from Hql.Parser.BaseExpressions import BaseExpressions as ParseBaseExpressions
 from Hql.Parser.Functions import Functions as ParseFunctions
@@ -39,6 +37,10 @@ class Parser():
             logging.error(f"Failed to open file {self.filename}")
             logging.error(str(e))
             raise e
+
+        if not text:
+            logging.error(f'Query file is empty: {self.filename}')
+            raise hqle.QueryException('Empty query given')
         
         self.err_listener = HqlErrorListener(text, self.filename)
         
@@ -93,7 +95,7 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
     
     def visitQuery(self, ctx: HqlParser.QueryContext):
         query = Query()
-        
+
         for i in ctx.Statements:
             query.statements.append(self.visit(i))
                 
@@ -114,8 +116,11 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         return statement
 
     def visitPipeExpression(self, ctx: HqlParser.PipeExpressionContext):
-        prepipe = Ops.PrePipe(self.visit(ctx.Expression))
+        from Hql.Expressions import PipeExpression
+        from Hql.Operators import PrePipe
         
+        prepipe = PrePipe(self.visit(ctx.Expression))
+
         pipes = []
         for i in ctx.PipedOperators:
             try:
@@ -124,7 +129,7 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
                 e.filename = self.filename
                 Parser.handleException(i, e)
         
-        return Exprs.PipeExpression(prepipe, pipes)
+        return PipeExpression(prepipe, pipes)
 
     def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
         name = self.visit(ctx.Name)

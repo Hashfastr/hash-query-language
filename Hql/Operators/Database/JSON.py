@@ -46,20 +46,35 @@ class JSON(Database):
     
     # src used for error printing
     # Attempt to load as normal json then fall back to ndjson
-    def load_data(self, data, src:str) -> pl.DataFrame:
+    # We could use polars but it sucks in that it can't handle ambiguous multi-value
+    # Maybe a rust rewrite problem? Or someone is smarter than me
+    def load_data(self, f, src:str) -> list[dict]:
+        import json, ndjson
+
         try:
-            df = pl.read_json(data)
+            '''
+            df = pl.read_json(data, infer_schema_length=1000000)
             if self.limit != None:
                 df = df.limit(self.limit)
+            '''
+
+            data = json.loads(f.read())
+            if self.limit != None:
+                data = data[:self.limit]
 
         except:
             try:
-                df = pl.read_ndjson(data, n_rows=self.limit)
+                # df = pl.read_ndjson(data, n_rows=self.limit)
+                reader = ndjson.reader(f)
+                data = [x for x in reader]
             except:
+                f.close()
                 logging.critical(f'Could not load json or ndjson from {src}')
                 raise hqle.QueryException('JSON database not given valid json data')
 
-        return df
+        f.close()
+
+        return data
     
     def make_query(self) -> Data:
         # just check file, base_path is check upon instanciation
@@ -76,14 +91,14 @@ class JSON(Database):
         tables = []
         for file in self.files:
             f = self.from_file(file)
-            df = self.load_data(f, file)
-            table = Table(df=df, name=file)
+            data = self.load_data(f, file)
+            table = Table(init_data=data, name=file)
             tables.append(table)
 
         for url in self.urls:
             s = self.from_url(url)
-            df = self.load_data(s, url)
-            table = Table(df=df, name=url)
+            data = self.load_data(s, url)
+            table = Table(init_data=data, name=url)
             tables.append(table)
                 
         return Data(tables=tables)

@@ -24,9 +24,9 @@ func_registry = {}
 
 def register_func(name):
     def decorator(cls):
-        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Functions import Function
 
-        if not issubclass(cls, FuncExpr):
+        if not issubclass(cls, Function):
             raise hqle.CompilerException(f'Attempting to register non-function class {name} as a function')
 
         func_registry[name] = cls

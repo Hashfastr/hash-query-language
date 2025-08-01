@@ -1,6 +1,6 @@
 from . import Function
 from Hql import Config
-from Hql.Context import register_func, get_database, Context
+from Hql.Context import register_func, Context
 from Hql.Exceptions import HqlExceptions as hqle
 
 import logging

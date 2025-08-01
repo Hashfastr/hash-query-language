@@ -34,6 +34,6 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, ctx:'Context', **kwargs) -> Union['Data', Expression]:
+    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Expression']:
         from Hql.Data import Data
         return Data()

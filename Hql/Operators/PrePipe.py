@@ -1,7 +1,6 @@
 from Hql.Operators import Operator
 from Hql.Expressions import Expression
 from Hql.Context import register_op, Context
-from Hql.Operators import Operator
 
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -9,7 +8,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 @register_op('PrePipe')
 class PrePipe(Operator):
     def __init__(self, expr:Expression):
-        super().__init__()
+        Operator.__init__(self)
         self.expr = expr
         self.non_conseq = []
         
@@ -67,7 +66,7 @@ class PrePipe(Operator):
         return funcs
         
     def eval(self, ctx:'Context', **kwargs):
-        from .. import CompilerSet
+        from Hql.Compiler import CompilerSet
         
         tabular = kwargs.get('tabular', False)
         receiver = None
