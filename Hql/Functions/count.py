@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Table
 from Hql.Types.Hql import HqlTypes as hqlt
@@ -22,7 +22,7 @@ class count(Function):
             
         return name
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         tables = []
         for table in ctx.data:
             if not table.agg:

@@ -15,7 +15,7 @@ class Extend(Operator):
         super().__init__()
         self.exprs = exprs
             
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         for i in self.exprs:
             i.eval(ctx)
         

@@ -170,7 +170,7 @@ class Data():
         
         return exists
     
-    def cast_in_place(self, field:list[str], cast_type:hqlt.HqlType):
+    def cast_in_place(self, field:list[str], cast_type:'hqlt.HqlType'):
         tables = self.assert_field(field)
         if not tables:
             return False

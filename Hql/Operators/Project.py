@@ -23,7 +23,7 @@ class Project(Operator):
             'Take'
         ]
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         datasets = []
         for i in self.exprs:
             datasets.append(i.eval(ctx, as_value=False))
@@ -39,7 +39,7 @@ class ProjectAway(Operator):
             'Take'
         ]
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         paths = []
         for i in self.exprs:
             paths.append(i.eval(ctx, as_list=True))
@@ -55,7 +55,7 @@ class ProjectKeep(Operator):
             'Take'
         ]
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         op = Project(self.exprs)
         return op.eval(ctx)
 
@@ -71,7 +71,7 @@ class ProjectReorder(Operator):
     '''
     Gonna take out the specific bits and move them to the front
     '''
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         new = []
         cur = ctx.data
         
@@ -93,7 +93,7 @@ class ProjectRename(Operator):
             'Take'
         ]
 
-    def rename(self, ctx:Context, table:Table):
+    def rename(self, ctx:'Context', table:Table):
         for i in self.exprs:
             vpath = i.value.eval(ctx, as_list=True)
             value = table.get_value(vpath)
@@ -107,7 +107,7 @@ class ProjectRename(Operator):
 
         return table
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         for table in ctx.data:
             self.rename(ctx, table)
 

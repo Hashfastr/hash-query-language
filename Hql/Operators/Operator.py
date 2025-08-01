@@ -1,6 +1,5 @@
 import json
-from typing import Union
-from Hql.Context import register_op, Context
+from Hql.Context import Context
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
@@ -57,7 +56,7 @@ class Operator():
         return self.__str__()
 
     # default execution passthrough unless implemented
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return ctx.data
     
     def non_consequential(self, type:str):

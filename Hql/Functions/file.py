@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 
 from Hql import Config
 from Hql.Context import register_func, Context
@@ -14,7 +14,7 @@ class file(Function):
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):
             raise hqle.ArgumentException(f'Bad database file argument datatype {args[0].type}')
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         db = kwargs.get('receiver', None)
         files = [x.eval(ctx, as_str=True) for x in self.args]
         

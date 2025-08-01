@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 from Hql import Config
 from Hql.Context import register_func, get_database, Context
 from Hql.Exceptions import HqlExceptions as hqle
@@ -24,7 +24,7 @@ class database(Function):
         if self.args != [] and self.args[0].type != 'StringLiteral':
             raise hqle.ArgumentException(f'Bad database argument datatype {args[0].type}')
             
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         name = self.args[0].eval(None, as_str=True)
         if self.args == [] or name == '':
             dbconf = Config.HqlConfig.get_default_db()

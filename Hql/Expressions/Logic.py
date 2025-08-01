@@ -28,7 +28,7 @@ class Equality(Expression):
         }
     
     # Generates a polars filter
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         as_pl = kwargs.get('as_pl', True)
         
         lh = self.lh.eval(ctx, as_pl=as_pl)
@@ -82,7 +82,7 @@ class ListEquality(Expression):
         if self.op == '!in':
             return (lh != rh)
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         from .Functions import DotCompositeFunction, FuncExpr
 
         as_pl = kwargs.get('as_pl', True)
@@ -148,7 +148,7 @@ class ListEquality(Expression):
 # As per the grammar
 # Takes after the equality expression
 class Relational(Equality):
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         as_pl = kwargs.get('as_pl', True)
 
         lh = self.lh.eval(ctx, as_pl=as_pl)
@@ -202,7 +202,7 @@ class BetweenEquality(Expression):
             }
         }
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         as_pl = kwargs.get('as_pl', True)
         
         lh = self.lh.eval(ctx, as_pl=True)
@@ -244,7 +244,7 @@ class BinaryLogic(Expression):
             'rh': [x.to_dict() for x in self.rh]
         }
         a
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Binary Logic {kwargs}')
@@ -272,7 +272,7 @@ class BasicRange(Expression):
         self.end = end
         self.logic = True
     
-    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         lh = kwargs.get('lh', None)
         start = self.start.eval(ctx, as_pl=True)
         end = self.end.eval(ctx, as_pl=True)
@@ -290,7 +290,7 @@ class InsensitiveStringCmp(Expression):
         self.rh = rh
         self.neq = op == '!~'
 
-    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to InsensitiveStringCmp {kwargs}')
@@ -324,7 +324,7 @@ class Regex(Expression):
         self.lh = lh
         self.rh = rh
 
-    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Regex {kwargs}')
@@ -368,7 +368,7 @@ class Contains(Expression):
         if 'endswith' in op or 'suffix' in op:
             self.endswith = True
 
-    def eval(self, ctx: Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Contains {kwargs}')

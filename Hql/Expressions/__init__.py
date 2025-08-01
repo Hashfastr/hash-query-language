@@ -13,10 +13,10 @@ if TYPE_CHECKING:
 from Hql.Exceptions import HqlExceptions as hqle
 
 class PipeExpression(Expression):
-    def __init__(self, prepipe:Union[Operator, Expression], pipes:list[Operator]):
+    def __init__(self, prepipe:Union['Operator', Expression], pipes:list['Operator']):
         Expression.__init__(self)
         self.prepipe                 = prepipe
-        self.pipes:list[Operator]    = pipes
+        self.pipes:list['Operator']    = pipes
         
     def to_dict(self):
         return {
@@ -26,7 +26,7 @@ class PipeExpression(Expression):
         }
     
     # Takes pipes and puts them into a compiler set
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         from Hql.Operators import Operator
         from Hql.Operators.Database import Database
 
@@ -80,7 +80,7 @@ class ToExpression(Expression):
             'to': self.to.name
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         as_list = kwargs.get('as_list', False)
         as_str = kwargs.get('as_str', False)
         

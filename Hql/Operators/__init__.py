@@ -2,7 +2,6 @@ __all__ = [
     "Database",
     "Where",
     "Project",
-    "__proto__",
     "Take",
     "Count",
     "Extend",
@@ -11,7 +10,7 @@ __all__ = [
     "Top"
 ]
 
-from .__proto__ import Operator
+from .Operator import Operator
 from . import Database
 
 from .Where import Where

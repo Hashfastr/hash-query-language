@@ -22,7 +22,7 @@ https://learn.microsoft.com/en-us/kusto/query/range-operator
 '''
 @register_op('Range')
 class Range(Operator):
-    def __init__(self, name:Expression, start:Expression, end:Expression, step:Expression):
+    def __init__(self, name:'Expression', start:'Expression', end:'Expression', step:'Expression'):
         super().__init__()
         self.name = name
         self.start = start
@@ -39,7 +39,7 @@ class Range(Operator):
             'step': self.step.to_dict(),
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         name = self.name.eval(ctx, as_list=True)
         start = self.start.eval(ctx)
         end = self.end.eval(ctx)

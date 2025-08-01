@@ -46,7 +46,7 @@ class JSON(Database):
     
     # src used for error printing
     # Attempt to load as normal json then fall back to ndjson
-    def load_data(self, data, src:str) -> pl.Dataframe:
+    def load_data(self, data, src:str) -> pl.DataFrame:
         try:
             df = pl.read_json(data)
             if self.limit != None:

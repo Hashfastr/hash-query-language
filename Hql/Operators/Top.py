@@ -36,7 +36,7 @@ class Top(Operator):
             'by': self.order.to_dict()
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         name = self.by.name.eval(ctx, as_str=True, as_list=True)
         if isinstance(name, str):
             name = [name]

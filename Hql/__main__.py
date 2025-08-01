@@ -3,7 +3,7 @@ import sys
 from Hql.Parser import Parser
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Exceptions import HacExceptions as hace
-from Hql import Compiler
+from Hql.Compiler import Compiler
 from Hql.Hac import Parser as HaCParser
 
 import json

@@ -50,7 +50,7 @@ def register_op(name):
         if not issubclass(cls, Operator):
             raise hqle.CompilerException(f'Attempting to register non-operator class {name} as an operator')
 
-        if not issubclass(cls, Database):
+        if issubclass(cls, Database):
             raise hqle.CompilerException(f'Attempting to register database class {name} as an operator, use @register_database')
 
         op_registry[name] = cls

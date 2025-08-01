@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
@@ -73,7 +73,7 @@ class series_stats(Function):
     
         return s.var()
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         # Returns tables of series
         data = self.src.eval(ctx)
         name = self.src.eval(ctx, as_list=True)

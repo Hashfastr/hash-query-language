@@ -39,7 +39,7 @@ class ByExpression(Expression):
         super().__init__()
         self.exprs = exprs
         
-    def build_table_agg(self, ctx:Context, table:Table):
+    def build_table_agg(self, ctx:'Context', table:'Table'):
         from Hql.Data import Schema
 
         if table.schema == None:
@@ -77,7 +77,7 @@ class ByExpression(Expression):
         
         return table
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         from Hql.Data import Data
 
         new = []

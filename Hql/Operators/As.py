@@ -20,7 +20,7 @@ class As(Operator):
         super().__init__()
         self.expr = expr
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         if self.expr.type != 'Integer':
             raise hqle.CompilerException(f'Invalid type {self.expr.type} given to take operator')
         

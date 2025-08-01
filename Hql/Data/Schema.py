@@ -184,7 +184,7 @@ class Schema():
     Doesn't return a schema object as it might be a type or a dict
     Typically this is called with a named expression, so it's gonna build the schema anyways.
     '''
-    def strip(self) -> Union[dict, hqlt.HqlType]:
+    def strip(self) -> Union[dict, 'hqlt.HqlType']:
         cur = self.schema
         while isinstance(cur, dict) and len(cur) == 1:
             key = list(cur.keys())[0]
@@ -255,7 +255,7 @@ class Schema():
     '''
     Set a field to a specific type in the schema apply is then expected to be ran
     '''
-    def set(self, path:list[str], htype:Union[hqlt.HqlType, "Schema", dict], schema:Union[dict, "Schema", None]=None, idx:int=0):
+    def set(self, path:list[str], htype:Union['hqlt.HqlType', "Schema", dict], schema:Union[dict, "Schema", None]=None, idx:int=0):
         if isinstance(htype, Schema):
             htype = htype.schema
         
@@ -320,7 +320,7 @@ class Schema():
         
         return target_schema
 
-    def gen_pl_list_schema(self, schema:Union[dict, list, hqlt.HqlType]):
+    def gen_pl_list_schema(self, schema:Union[dict, list, 'hqlt.HqlType']):
         if isinstance(schema, dict):
             return self.gen_pl_schema(schema)
         

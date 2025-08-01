@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
 from Hql.Types.Hql import HqlTypes as hqlt
@@ -11,7 +11,7 @@ class ip4subnet(Function):
     def __init__(self, args:list):
         super().__init__(args, 1, 1)
     
-    def eval(self, ctx:Context, **kwargs) -> BasicRange:
+    def eval(self, ctx:'Context', **kwargs) -> BasicRange:
         import re
         subnet_regex = '(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\/(\\d{1,2})'
         

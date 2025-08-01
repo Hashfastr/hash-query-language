@@ -13,7 +13,7 @@ class PrePipe(Operator):
         self.expr = expr
         self.non_conseq = []
         
-    def resolve_tabular_path(self, ctx:Context, expr:Expression):
+    def resolve_tabular_path(self, ctx:'Context', expr:Expression):
         funcs = []
         
         if expr.type == 'Path':
@@ -66,7 +66,7 @@ class PrePipe(Operator):
 
         return funcs
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         from .. import CompilerSet
         
         tabular = kwargs.get('tabular', False)

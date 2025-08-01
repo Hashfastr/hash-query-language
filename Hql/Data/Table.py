@@ -3,10 +3,8 @@ from typing import TYPE_CHECKING, Union
 import polars as pl
 from polars.dataframe.group_by import GroupBy
 
-if TYPE_CHECKING:
-    from .Schema import Schema
-    from .Series import Series
-
+from .Schema import Schema
+from .Series import Series
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.PolarsTools import pltools
 from Hql.Types.Hql import HqlTypes as hqlt

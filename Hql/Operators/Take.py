@@ -41,7 +41,7 @@ class Take(Operator):
     the sum of all tables is less than or equal to the take amount.
     Unimplemented.
     '''
-    def eval(self, ctx:Context, **kwargs):        
+    def eval(self, ctx:'Context', **kwargs):        
         limit = self.limit.eval(ctx)
 
         if not isinstance(limit, int):

@@ -10,7 +10,7 @@ class Summarize(Operator):
         self.aggregate_exprs = aggregate_exprs
         self.by_expr = by_expr
 
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         ctx.data = self.by_expr.eval(ctx)
         
         agg_data = []

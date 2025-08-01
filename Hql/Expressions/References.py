@@ -24,13 +24,13 @@ class NamedReference(Expression):
             'scope': self.scope,
         }
         
-    def get_symbol(self, ctx:Context, name:str):
+    def get_symbol(self, ctx:'Context', name:str):
         if name not in ctx.symbol_table:
             return None
         
         return ctx.symbol_table[name]
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         if kwargs.get('as_pl', False):
             return pltools.path_to_expr([self.name])
 
@@ -92,10 +92,10 @@ class Path(Expression):
             logging.debug(self.path)
             logging.debug(e)
 
-    def gen_list(self, ctx:Context):
+    def gen_list(self, ctx:'Context'):
         return [x.eval(ctx, as_str=True) for x in self.path]
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         as_list = kwargs.get('as_list', False)
         as_pl = kwargs.get('as_pl', False)
         as_str = kwargs.get('as_str', False)
@@ -164,7 +164,7 @@ class NamedExpression(Expression):
             'value': self.value.to_dict()
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         insert = kwargs.get('insert', True)
         as_value = kwargs.get('as_value', False)
         value = self.value.eval(ctx)

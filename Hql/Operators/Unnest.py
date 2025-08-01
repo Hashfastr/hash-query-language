@@ -16,7 +16,7 @@ class Unnest(Operator):
             'tables': [x.to_dict() for x in self.tables]
         }
             
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         self.ctx = ctx
 
         field = self.field.eval(ctx, as_list=True)

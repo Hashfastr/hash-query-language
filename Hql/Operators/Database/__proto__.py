@@ -32,11 +32,11 @@ class Database(Operator):
     def eval_ops(self):
         pass
     
-    def make_query(self) -> Data:
+    def make_query(self) -> 'Data':
         from Hql.Data import Data
         return Data()
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         self.ctx = ctx
         return self.make_query()
     

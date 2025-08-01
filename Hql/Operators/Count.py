@@ -1,4 +1,4 @@
-from .__proto__ import Operator
+from . import Operator
 from Hql.Data import Data, Table
 from Hql.Expressions import Expression
 from Hql.Exceptions import HqlExceptions as hqle
@@ -22,7 +22,7 @@ class Count(Operator):
     Counts each table and replaces the contents of that table with the count.
     Adds an additional meta * table for the total count of all tables.
     '''
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         name = self.name.eval(ctx, as_str=True) if self.name else None
 
         if not isinstance(name, (str, type(None))):

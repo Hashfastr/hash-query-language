@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 from Hql.Context import register_func, Context
 from Hql.Data import Data
 
@@ -8,5 +8,5 @@ class bincount(Function):
         # allows 1 to infinity args
         super().__init__(args, 1, 1)
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return Data()

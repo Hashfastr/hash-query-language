@@ -9,7 +9,7 @@ class Sort(Operator):
         Operator.__init__(self)
         self.exprs = exprs
 
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         exprs = []
         orders = []
         nulls = []

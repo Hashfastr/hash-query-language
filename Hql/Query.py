@@ -61,7 +61,7 @@ class LetStatement(Statement):
             'value': self.root.to_dict()
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         name = self.name.eval(ctx, as_str=True)
                 
         if kwargs.get('no_exec', False):

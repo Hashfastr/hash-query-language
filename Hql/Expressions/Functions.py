@@ -21,7 +21,7 @@ class FuncExpr(Expression):
         }
     
     # Evals to function objects
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         # Do we need this? Provides no functional use
         '''
         if kwargs.get('as_list', False):
@@ -51,7 +51,7 @@ class DotCompositeFunction(Expression):
             'funcs': [x.to_dict() for x in self.funcs]
         }
         
-    def gen_list(self, ctx:Context):
+    def gen_list(self, ctx:'Context'):
         func_list = []
         for i in self.funcs:
             func_list.append(i.eval(ctx, as_str=True))
@@ -59,7 +59,7 @@ class DotCompositeFunction(Expression):
         return func_list
 
     # Evals to the function objects that can be executed
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
         

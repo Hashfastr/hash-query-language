@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 from Hql.Expressions import Expression
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Series, Table, Schema
@@ -58,7 +58,7 @@ class make_mv(Function):
     '''
     Need to rebuild, shouldn't be hard.
     '''
-    def aggregate(self, ctx:Context, table:Table):
+    def aggregate(self, ctx:'Context', table:Table):
         cols = []
         paths = []
         for arg in self.args:
@@ -103,7 +103,7 @@ class make_mv(Function):
 
     Returns a Series with a multivalue type
     '''
-    def normal(self, ctx:Context, table:Table):
+    def normal(self, ctx:'Context', table:Table):
         # Only operate on the single table
         ctx.data = Data(tables=[table])
 
@@ -121,7 +121,7 @@ class make_mv(Function):
         
         return Series(series, mv_type)
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         as_value = kwargs.get('as_value', False)
         
         new = []

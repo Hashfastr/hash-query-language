@@ -6,5 +6,5 @@ class Template(Operator):
     def __init__(self):
         Operator.__init__(self)
 
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return ctx.data

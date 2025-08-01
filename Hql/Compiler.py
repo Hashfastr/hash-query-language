@@ -59,7 +59,7 @@ class CompilerSet():
         self.add_ops([op])
         
     
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         ctx = Context(None, ctx.symbol_table)
         
         for i in self.ops:

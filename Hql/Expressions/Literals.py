@@ -17,7 +17,7 @@ class TypeExpression(Literal):
         Literal.__init__(self)
         self.type = type
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return hqlt.from_name(self.type)
 
 # A string literal
@@ -34,7 +34,7 @@ class StringLiteral(Literal):
             'value': self.value
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return self.value
 
 # Integer
@@ -52,7 +52,7 @@ class Integer(Literal):
             'value': self.value
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return self.value
 
 class IP4(Literal):
@@ -69,7 +69,7 @@ class IP4(Literal):
             'value': human
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return self.value
 
 class Float(Literal):
@@ -83,7 +83,7 @@ class Float(Literal):
             'value': self.value
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return self.value
 
 class Bool(Literal):
@@ -97,5 +97,5 @@ class Bool(Literal):
             'value': self.value
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return self.value

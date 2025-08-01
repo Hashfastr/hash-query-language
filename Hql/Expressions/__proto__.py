@@ -7,7 +7,8 @@ if TYPE_CHECKING:
     from Hql.Data import Data, Table
     from Hql.Types.Compiler import CompilerType
 
-from Hql.Context import Context
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself
@@ -26,7 +27,7 @@ class Expression():
             'type': self.type
         }
     
-    def eval(self, ctx:Context, **kwargs) -> Union[pl.Expr, "Expression", list[str], str, CompilerSet, CompilerType, Data, Table, int, float]:
+    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, 'Expression', list[str], str, 'CompilerSet', 'CompilerType', 'Data', 'Table', int, float]:
         return pl.Expr()
     
     def is_escaped(self) -> bool:

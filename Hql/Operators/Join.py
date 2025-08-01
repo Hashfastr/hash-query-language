@@ -16,13 +16,13 @@ class Join(Operator):
         self.kind = 'inner'
 
 
-    def process_params(self, ctx:Context):
+    def process_params(self, ctx:'Context'):
         for i in self.params:
             if i.name == 'kind':
                 self.kind = i.value.eval(ctx, as_str=True)
     
 
-    def get_right(self, ctx:Context, where:Expression):
+    def get_right(self, ctx:'Context', where:Expression):
         from Hql.Expressions import Identifier
         from Hql.Operators import Where
         compilerset = None
@@ -48,7 +48,7 @@ class Join(Operator):
         ...
         
 
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         self.process_params(ctx)
 
         left = ctx.data

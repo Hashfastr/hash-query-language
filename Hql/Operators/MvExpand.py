@@ -11,7 +11,7 @@ class MvExpand(Operator):
         self.to_exprs = to_exprs
         self.limit = limit
         
-    def explode_table(self, ctx:Context, table:Table):
+    def explode_table(self, ctx:'Context', table:Table):
         schema = table.schema
         df = table.df
 
@@ -35,7 +35,7 @@ class MvExpand(Operator):
             
         return Table(df=df, schema=schema, name=table.name)
 
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         # Long literal, just get us the number
         self.limit = self.limit.eval(ctx)
 

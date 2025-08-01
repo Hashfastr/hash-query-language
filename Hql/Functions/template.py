@@ -1,4 +1,4 @@
-from .__proto__ import Function
+from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Series, Table, Schema
@@ -11,5 +11,5 @@ class template(Function):
         # allows 1 to infinity args
         Function.__init__(self, args, 1, -1)
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         return Data()

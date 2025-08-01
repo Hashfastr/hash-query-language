@@ -1,8 +1,12 @@
 from Hql.Operators import Operator
-from Hql.Expressions import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_op, Context
 import logging
+
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from Hql.Expressions import Expression
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.
@@ -12,7 +16,7 @@ import logging
 @register_op('Where')
 class Where(Operator):
     # Pass in the parser context here for helpful debugging
-    def __init__(self, expr:Expression, params:list=None):
+    def __init__(self, expr:'Expression', params:Union[None, list]=None):
         Operator.__init__(self)
         self.parameters = params if params else []
         self.expr = expr
@@ -21,7 +25,7 @@ class Where(Operator):
     Counts each table and replaces the contents of that table with the count.
     Adds an additional meta * table for the total count of all tables.
     '''
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         pl_filter = self.expr.eval(ctx, as_pl=True)
 
         for table in ctx.data:

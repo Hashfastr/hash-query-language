@@ -25,7 +25,7 @@ class Datatable(Operator):
             # 'schema': 
         }
         
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx:'Context', **kwargs):
         width = len(self.schema)
         nvalues = len(self.values)
         
