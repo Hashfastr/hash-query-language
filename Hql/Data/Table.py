@@ -1,14 +1,17 @@
+from typing import TYPE_CHECKING, Union
+
 import polars as pl
 from polars.dataframe.group_by import GroupBy
 
-from .Schema import Schema
-from .Series import Series
+if TYPE_CHECKING:
+    from .Schema import Schema
+    from .Series import Series
+
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.PolarsTools import pltools
-from Hql.Types.Compiler import CompilerType
 from Hql.Types.Hql import HqlTypes as hqlt
+
 import logging
-from typing import Union
 
 '''
 Table for a structure of data, includes schema definition.
@@ -314,7 +317,7 @@ class Table():
             schema = value.schema.schema
             value = value.df
 
-        if not isinstance(schema, (dict, CompilerType)):
+        if not isinstance(schema, (dict, hqlt.HqlType)):
             raise hqle.CompilerException(f'Attempting to rename with schema of type {type(schema)}')
         
         self.insert(dest, value, schema)

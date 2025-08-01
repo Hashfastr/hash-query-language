@@ -1,10 +1,12 @@
-import logging
+from typing import TYPE_CHECKING, Union
+
 from Hql.Exceptions import HqlExceptions as hqle
-from typing import Union
+
 import polars as pl
-from Hql.Types.Hql import HqlTypes as hqlt
-from Hql.Types.Polars import PolarsTypes as plt
-from Hql.Types.Python import PythonTypes as pyt
+import logging
+
+if TYPE_CHECKING:
+    from Hql.Types.Hql import HqlTypes as hqlt
 
 class Schema():
     def __init__(
@@ -360,6 +362,8 @@ class Schema():
     '''
     @staticmethod
     def from_json(data:list[dict])-> dict:
+        from Hql.Types.Python import PythonTypes as pyt
+
         # get a set of keys to handle
         keyset = set()
         for row in data:
@@ -416,6 +420,8 @@ class Schema():
     '''
     @staticmethod
     def from_df(df:pl.DataFrame) -> dict:
+        from Hql.Types.Polars import PolarsTypes as plt
+
         schema = dict()
         
         for col in df:
@@ -432,6 +438,8 @@ class Schema():
 
     # Adjusts json to multivalue
     def adjust_mv(self, data:list[dict], schema:Union[dict, None]=None) -> list[dict]:
+        from Hql.Types.Hql import HqlTypes as hqlt
+
         schema = schema if schema != None else self.schema
         
         # Loop through each defined multivalue field

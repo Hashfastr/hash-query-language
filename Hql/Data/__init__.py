@@ -1,11 +1,14 @@
+from typing import TYPE_CHECKING, Union
+
 from .Table import Table
 from .Schema import Schema
 from .Series import Series
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Types.Hql import HqlTypes as hqlt
 
 import logging
-from typing import Union
+
+if TYPE_CHECKING:
+    from Hql.Types.Hql import HqlTypes as hqlt
 
 class Data():
     def __init__(self, tables:Union[list[Table], None]=None):
