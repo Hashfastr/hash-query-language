@@ -1,9 +1,12 @@
+from typing import TYPE_CHECKING
+import logging
+
 from Hql.Operators import Operator
-from Hql.Data import Data
-from Hql.Context import Context
 from Hql.Exceptions import HqlExceptions as hqle
 
-import logging
+if TYPE_CHECKING:
+    from Hql.Data import Data
+    from Hql.Context import Context
 
 class Database(Operator):
     def __init__(self, config:dict):
@@ -30,6 +33,7 @@ class Database(Operator):
         pass
     
     def make_query(self) -> Data:
+        from Hql.Data import Data
         return Data()
     
     def eval(self, ctx:Context, **kwargs):

@@ -1,9 +1,7 @@
-from ..Data import Data, Table
-from ..Expressions import Expression
-from ..Operators import Operator
-from ..Exceptions import *
-import polars as pl
-from ..Context import register_op, Context
+from Hql.Expressions import Expression
+from Hql.Operators import Operator
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_op, Context
 
 @register_op('Join')
 class Join(Operator):
@@ -25,19 +23,19 @@ class Join(Operator):
     
 
     def get_right(self, ctx:Context, where:Expression):
-        from ..Expressions import Identifier
-        from ..Operators import Where
+        from Hql.Expressions import Identifier
+        from Hql.Operators import Where
         compilerset = None
                 
         name = self.dataset.eval(ctx, as_str=True)
         
         if name not in ctx.symbol_table:
-            raise QueryException(f'Reference dataset {name} undefined')
+            raise hqle.QueryException(f'Reference dataset {name} undefined')
         
         compilerset = ctx.symbol_table[name]
 
         if not compilerset:
-            raise CompilerException(f'Unhandled join right side {self.dataset.type}')
+            raise hqle.CompilerException(f'Unhandled join right side {self.dataset.type}')
         
         # There's a where, add a right side filter
         if where:

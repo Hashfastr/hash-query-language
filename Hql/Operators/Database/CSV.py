@@ -1,16 +1,16 @@
+from .__proto__ import Database
+
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data, Table, Schema
-from Hql.Context import Context, register_database
+from Hql.Context import register_database
 
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import os
 import polars as pl
 import logging
 import requests
 from io import StringIO
-
-from .__proto__ import Database
 
 # Index in a database to grab data from, extremely simple.
 @register_database('CSV')

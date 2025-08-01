@@ -1,5 +1,5 @@
-from Hql.Context import register_func, Context
 from .__proto__ import Function
+from Hql.Context import register_func, Context
 from Hql.Data import Data
 
 @register_func('bincount')

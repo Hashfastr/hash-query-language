@@ -1,8 +1,11 @@
+from typing import TYPE_CHECKING, Union
+import polars as pl
+
 from .__proto__ import Expression
-from Hql.Context import Context
 from Hql.Types.Hql import HqlTypes as hqlt
 
-import polars as pl
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 class Literal(Expression):
     def __init__(self) -> None:

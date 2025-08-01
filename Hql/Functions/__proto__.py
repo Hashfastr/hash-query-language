@@ -1,10 +1,12 @@
 import json
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import Context
-from Hql.Data import Data
 from Hql.Expressions import Expression as Expression
+
+if TYPE_CHECKING:
+    from Hql.Data import Data
+    from Hql.Context import Context
 
 class Function():
     def __init__(self, args:list, min:int, max:int):
@@ -33,4 +35,5 @@ class Function():
         return self.__str__()
         
     def eval(self, ctx:Context, **kwargs) -> Union[Data, Expression]:
+        from Hql.Data import Data
         return Data()

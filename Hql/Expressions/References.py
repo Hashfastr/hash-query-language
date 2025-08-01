@@ -1,11 +1,13 @@
 from .__proto__ import Expression
-from Hql.Context import Context
 from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data, Table
 
-from typing import Union
+from typing import TYPE_CHECKING, Union
 import logging
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 # A named reference, can be scoped
 # Scopes are not implemented yet.

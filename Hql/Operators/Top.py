@@ -1,8 +1,8 @@
-from ..Operators import Operator
-from ..Data import Data
-from ..Expressions import Expression
-from ..Exceptions import *
-from ..Context import register_op, Context
+from Hql.Operators import Operator
+from Hql.Data import Data
+from Hql.Expressions import Expression
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_op, Context
 import polars as pl
 import numpy as np
 

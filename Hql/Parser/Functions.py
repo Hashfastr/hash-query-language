@@ -1,9 +1,9 @@
-from ..grammar.HqlVisitor import HqlVisitor
-from ..grammar.HqlParser import HqlParser
+from .grammar.HqlVisitor import HqlVisitor
+from .grammar.HqlParser import HqlParser
 
-from .. import Expressions as Expr
+import Hql.Expressions as Expr
 
-from ..Exceptions import *
+from Hql.Exceptions import HqlExceptions as hqle
 
 import logging
 
@@ -17,7 +17,7 @@ class Functions(HqlVisitor):
         expr = self.visit(ctx.Expression)
         if expr == None:
             logging.error('Path expression given NoneType root expression')
-            raise SemanticException(
+            raise hqle.SemanticException(
                 'NoneType root path expression',
                 ctx.start.line,
                 ctx.start.column

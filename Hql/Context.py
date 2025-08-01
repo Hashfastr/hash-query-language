@@ -1,5 +1,5 @@
 from Hql.Exceptions import HqlExceptions as hqle
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 database_registry = {}
 

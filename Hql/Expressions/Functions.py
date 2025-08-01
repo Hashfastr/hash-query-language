@@ -1,9 +1,11 @@
-from .__proto__ import Expression
-from typing import Union
-from Hql.Context import Context
+from typing import TYPE_CHECKING, Union
 import logging
+
+from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Functions import Function
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 class FuncExpr(Expression):
     def __init__(self, name:Expression, args:Union[None, list[Expression]]=None):

@@ -1,12 +1,17 @@
-from .Operator import Operator
-from ..Data import Data, Table, Schema
-from ..PolarsTools import pltools
-from ..Expressions import Expression
-from ..Exceptions import *
-from ..Context import register_op, Context
+from Hql.Operators import Operator
+from Hql.Data import Data, Table, Schema
+from Hql.PolarsTools import pltools
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_op
 import polars as pl
 import numpy as np
-from ..Operators import Operator
+from Hql.Operators import Operator
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Expressions import Expression
+    from Hql.Context import Context
 
 '''
 Generates a single-column table of values
@@ -41,13 +46,13 @@ class Range(Operator):
         step = self.step.eval(ctx)
         
         if type(start) not in (int, float):
-            raise CompilerException(f'Range given invalid start value type {type(start)}')
+            raise hqle.CompilerException(f'Range given invalid start value type {type(start)}')
         
         if type(end) not in (int, float):
-            raise CompilerException(f'Range given invalid end value type {type(end)}')
+            raise hqle.CompilerException(f'Range given invalid end value type {type(end)}')
         
         if type(step) not in (int, float):
-            raise CompilerException(f'Range given invalid step value type {type(step)}')
+            raise hqle.CompilerException(f'Range given invalid step value type {type(step)}')
                 
         series = pl.Series(np.arange(start, end, step))
         # This handles the inclusive case as arange does not

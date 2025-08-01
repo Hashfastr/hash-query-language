@@ -1,11 +1,6 @@
-from ..Data import Data
-from ..Expressions import Expression
-from ..Exceptions import *
-from ..PolarsTools import pltools
-from ..Functions import Function
-from ..Operators import Operator
-import polars as pl
-from ..Context import register_op, Context
+from Hql.Expressions import Expression
+from Hql.Operators import Operator
+from Hql.Context import register_op, Context
 
 # Creates a field with a value in the extend
 #

@@ -1,12 +1,12 @@
 from .Operator import Operator
-from ..Data import Data, Table, Schema
-from ..PolarsTools import pltools
-from ..Expressions import Expression
-from ..Exceptions import *
-from ..Context import register_op, Context
+from Hql.Data import Data, Table, Schema
+from Hql.PolarsTools import pltools
+from Hql.Expressions import Expression
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_op, Context
 import polars as pl
 import numpy as np
-from ..Operators import Operator
+from Hql.Operators import Operator
 
 '''
 Creates a simple datatable, essentially an inline dataframe/table

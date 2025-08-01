@@ -1,12 +1,13 @@
 from .__proto__ import Expression
-from .Functions import DotCompositeFunction, FuncExpr
-from Hql.Context import Context
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.PolarsTools import pltools
 
-from typing import Union
+from typing import TYPE_CHECKING, Union
 import logging
 import polars as pl
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 # Expression expressing anything with ==, >, <, <=, >=, !=, etc
 # has a left and right hand expression along with it's type.
@@ -82,6 +83,8 @@ class ListEquality(Expression):
             return (lh != rh)
         
     def eval(self, ctx:Context, **kwargs):
+        from .Functions import DotCompositeFunction, FuncExpr
+
         as_pl = kwargs.get('as_pl', True)
         
         lh = self.lh.eval(ctx, as_list=True)
@@ -145,7 +148,7 @@ class ListEquality(Expression):
 # As per the grammar
 # Takes after the equality expression
 class Relational(Equality):
-    def eval(self, ctx: Context, **kwargs):
+    def eval(self, ctx:Context, **kwargs):
         as_pl = kwargs.get('as_pl', True)
 
         lh = self.lh.eval(ctx, as_pl=as_pl)

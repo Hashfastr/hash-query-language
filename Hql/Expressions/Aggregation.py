@@ -1,10 +1,12 @@
 from .__proto__ import Expression
-from Hql.Context import Context
-from Hql.Data import Data, Table, Schema
 from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
 
-from typing import Union
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
+    from Hql.Data import Table
 
 class OrderedExpression(Expression):
     def __init__(self, expr:Union[Expression, None]=None, order:str='desc', nulls:str=''):
@@ -38,6 +40,8 @@ class ByExpression(Expression):
         self.exprs = exprs
         
     def build_table_agg(self, ctx:Context, table:Table):
+        from Hql.Data import Schema
+
         if table.schema == None:
            raise hqle.CompilerException(f'Table passed to by expression is not fully initialized, schema == None')
 
@@ -74,6 +78,8 @@ class ByExpression(Expression):
         return table
     
     def eval(self, ctx:Context, **kwargs):
+        from Hql.Data import Data
+
         new = []
         
         for table in ctx.data:

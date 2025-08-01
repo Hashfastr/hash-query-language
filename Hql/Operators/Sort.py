@@ -1,9 +1,6 @@
-from ..Data import Data, Table
-from ..Expressions import Expression
-from ..Operators import Operator
-from ..Exceptions import *
-import polars as pl
-from ..Context import register_op, Context
+from Hql.Expressions import Expression
+from Hql.Operators import Operator
+from Hql.Context import register_op, Context
 
 @register_op('Sort')
 @register_op('Order')

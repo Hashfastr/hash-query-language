@@ -1,10 +1,9 @@
-from .Operator import Operator
-from ..Data import Data, Table
-from ..Expressions import Expression
-from ..Operators import Operator
-from ..Exceptions import *
+from .__proto__ import Operator
+from Hql.Data import Data, Table
+from Hql.Expressions import Expression
+from Hql.Exceptions import HqlExceptions as hqle
 import polars as pl
-from ..Context import register_op, Context
+from Hql.Context import register_op, Context
 
 from typing import Union
 

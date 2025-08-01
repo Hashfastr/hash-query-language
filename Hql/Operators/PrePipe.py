@@ -1,14 +1,9 @@
-from .Operator import Operator
-from ..Expressions import Expression, StringLiteral
-import polars as pl
-from ..PolarsTools import pltools
-from ..Context import register_op, Context
-from ..Functions import Function
-from .. import Config
-from ..Operators import Operator
+from Hql.Operators import Operator
+from Hql.Expressions import Expression
+from Hql.Context import register_op, Context
+from Hql.Operators import Operator
 
-import logging
-from ..Exceptions import *
+from Hql.Exceptions import HqlExceptions as hqle
 
 # Super meta operator, 
 @register_op('PrePipe')
@@ -67,7 +62,7 @@ class PrePipe(Operator):
                 funcs.append(ctx.get_func('index')([path[1]]))
             
         if len(path) > 2:
-            raise CompilerException('Invalid path reference for tabular expression')
+            raise hqle.CompilerException('Invalid path reference for tabular expression')
 
         return funcs
         

@@ -1,7 +1,6 @@
-from Hql.Expressions import Expression as Expr
+import Hql.Expressions as Expr
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Operators import Operator
-from Hql.Context import Context, register_database
+from Hql.Context import register_database
 from Hql.Data import Schema, Data, Table
 from Hql.Types.Elasticsearch import ESTypes
 

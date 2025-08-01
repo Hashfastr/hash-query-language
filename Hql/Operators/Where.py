@@ -1,9 +1,7 @@
-from ..Operators import Operator
-from ..Expressions import Expression
-from ..Exceptions import *
-from ..Context import register_op, Context
-from ..Data import Data, Table, Schema
-from ..PolarsTools import pltools
+from Hql.Operators import Operator
+from Hql.Expressions import Expression
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import register_op, Context
 import logging
 
 # Where operator
@@ -29,7 +27,7 @@ class Where(Operator):
         for table in ctx.data:
             try:
                 table.filter(pl_filter)
-            except QueryException as e:
+            except hqle.QueryException as e:
                 logging.warning(e)
 
         return ctx.data

@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING, Union
+
 from .__proto__ import Expression
 from .Logic import *
 from .References import *
@@ -5,10 +7,8 @@ from .Literals import *
 from .Functions import *
 from .Aggregation import *
 
-from Hql.Operators import Operator
-from Hql.Operators.Database import Database
-
-from typing import Union
+if TYPE_CHECKING:
+    from Hql.Operators import Operator
 
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -27,6 +27,9 @@ class PipeExpression(Expression):
     
     # Takes pipes and puts them into a compiler set
     def eval(self, ctx:Context, **kwargs):
+        from Hql.Operators import Operator
+        from Hql.Operators.Database import Database
+
         no_exec = kwargs.get('no_exec', False)
 
         from Hql.Compiler import CompilerSet

@@ -1,12 +1,14 @@
-from . import QueryException, ConfigException 
-from . import Data, Table, Schema
-from . import Context, register_database 
+from .__proto__ import Database
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Data import Data, Table, Schema
+from Hql.Context import Context, register_database 
 
 import os
-import json, ndjson
 import requests
 import logging
-from .__proto__ import Database
+import polars as pl
+
+from typing import Union
 
 # Index in a database to grab data from, extremely simple.
 @register_database('JSON')
@@ -14,46 +16,50 @@ class JSON(Database):
     def __init__(self, config:dict):
         Database.__init__(self, config)
         
-        self.files = None
-        self.urls = None
+        self.files:list[str] = []
+        self.urls:list[str] = []
         self.base_path = config.get('BASE_PATH', None)
         if not self.base_path:
-            raise ConfigException('JSON database config missing base_path parameter.')
+            raise hqle.ConfigException('JSON database config missing base_path parameter.')
         
         self.methods = [
             'file',
             'http'
         ]
+
+        self.limit:Union[None, int] = None
     
-    def from_file(self, filename:str) -> str:
+    def from_file(self, filename:str):
         base = self.base_path if self.base_path else '.'
+        return open(f'{base}{os.sep}{filename}', mode='r')
         
-        with open(f'{base}{os.sep}{filename}', mode='r') as f:
-            data = self.load_data(f.read(), src=f"{self.base_path}{os.sep}{filename}")
-            
-        return data
-        
-    def from_url(self, url:str) -> str:
+    def from_url(self, url:str):
+        from io import StringIO
+
         url = f'{self.base_path}{url}' if self.base_path else url
         
         res = requests.get(url)
         if res.status_code != 200:
-            raise QueryException(f'Could not query remote url {url}')
+            raise hqle.QueryException(f'Could not query remote url {url}')
         
-        return self.load_data(res.text, src=url)
+        return StringIO(res.text)
     
     # src used for error printing
-    def load_data(self, data:str, src:str) -> list[dict]:
+    # Attempt to load as normal json then fall back to ndjson
+    def load_data(self, data, src:str) -> pl.Dataframe:
         try:
-            jdata = json.loads(data)
+            df = pl.read_json(data)
+            if self.limit != None:
+                df = df.limit(self.limit)
+
         except:
             try:
-                jdata = ndjson.loads(data)
+                df = pl.read_ndjson(data, n_rows=self.limit)
             except:
                 logging.critical(f'Could not load json or ndjson from {src}')
-                raise QueryException('JSON database not given valid json data')
+                raise hqle.QueryException('JSON database not given valid json data')
 
-        return jdata
+        return df
     
     def make_query(self) -> Data:
         # just check file, base_path is check upon instanciation
@@ -65,16 +71,19 @@ class JSON(Database):
             logging.critical('Where filename exists relative to the configured BASE_PATH')
             logging.critical('Similarly, file.json represents a file on a server prepended by BASE_PATH')
             logging.critical('If basepath is not specified it is taken as literal for http, or current dir for file.')
-            raise QueryException('No file provided to JSON database')
+            raise hqle.QueryException('No file provided to JSON database')
         
         tables = []
-        if self.files:
-            for file in self.files:
-                tables.append(Table(init_data=self.from_file(file), name=file))
-        else:
-            for url in self.urls:
-                # Get the filename
-                name = url.split('/')[-1]
-                tables.append(Table(init_data=self.from_url(url), name=name))
+        for file in self.files:
+            f = self.from_file(file)
+            df = self.load_data(f, file)
+            table = Table(df=df, name=file)
+            tables.append(table)
+
+        for url in self.urls:
+            s = self.from_url(url)
+            df = self.load_data(s, url)
+            table = Table(df=df, name=url)
+            tables.append(table)
                 
         return Data(tables=tables)
