@@ -2,7 +2,7 @@ import json
 from Hql.Context import Context
 import polars as pl
 from typing import Union
-from Hql import CompilerSet
+from Hql.Compiler import CompilerSet
 from Hql.Data import Data, Table
 from Hql.Types.Compiler import CompilerType
 

@@ -1,4 +1,3 @@
-from numpy import isin
 from .__proto__ import Expression
 from .Logic import *
 from .References import *
