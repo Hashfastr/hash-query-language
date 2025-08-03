@@ -29,7 +29,7 @@ class Typecast(Function):
 
         tables = []
         for table in data:
-            series = self.cast_type.cast(table.df)
+            series = table.series.cast(self.cast_type).series
 
             new = Table(name=table.name)
             new.insert(path, series, self.cast_type)

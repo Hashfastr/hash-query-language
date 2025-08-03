@@ -328,7 +328,7 @@ class Table():
             vtype:Union[hqlt.HqlType, dict],
             cur_df:Union[None, pl.DataFrame]=None,
             idx:int=0
-        ):
+        ) -> pl.DataFrame:
         if isinstance(cur_df, type(None)):
             cur_df = self.df
             
@@ -384,7 +384,7 @@ class Table():
         return new
 
     def remove(self, name:list[str], cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
-        if not hasattr(cur_df, 'is_null'):
+        if isinstance(cur_df, type(None)):
             cur_df = self.df
             
         if idx == 0 and not self.assert_field(name):

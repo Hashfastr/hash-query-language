@@ -22,3 +22,7 @@ class Series():
         if isinstance(self.series, type(None)):
             return False
         return True
+
+    def cast(self, target:"hqlt.HqlType"):
+        self.series = target.cast(self.series)
+        return self

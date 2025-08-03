@@ -2,7 +2,7 @@ class HqlExceptions():
     class HqlException(Exception):
         def __init__(self, message:str=""):
             self.type = self.__class__.__name__
-            super().__init__(f"{self.type}: {message}")
+            Exception.__init__(self, f"{message}")
 
     class ConfigException(HqlException):
         def __init__(self, message:str="Config error occurred"):
@@ -40,11 +40,11 @@ class HqlExceptions():
 
     class CompilerException(HqlException):
         def __init__(self, message:str="A compiler error has occurred"):
-            super().__init__(f"Compiler Exception: {message}")
+            super().__init__(f"{message}")
 
     class QueryException(HqlException):
         def __init__(self, message:str="A query error has occurred"):
-            super().__init__(f"Query Exception: {message}")
+            super().__init__(f"{message}")
 
 ###################
 ## HacExceptions ##

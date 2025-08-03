@@ -1,19 +1,23 @@
+from typing import Union
 from Hql.Exceptions import HqlExceptions as hqle
 
 class CompilerType():
-    def __init__(self):
-        if len(type(self).__bases__):
-            super().__init__()
-            self.HqlType = type(self).__bases__[-1]
-        else:
-            self.HqlType = None
+    def __init__(self, base:type, inner:Union[None, type]=None):
+        bases = type(self).__bases__
 
+        self.type = bases[0]
+        self.HqlType = base
+        self.inner = inner
         self.name = self.__class__.__name__
     
     def hql_schema(self):
         if self.HqlType == None:
-            raise hqle.CompilerException(f"{type(self).__name__} type defined without an Hql proto")
-        return self.HqlType
+            raise hqle.CompilerException(f"{self.type}.{self.name} defined without an Hql proto")
+
+        if self.inner:
+            return self.HqlType(self.inner)
+
+        return self.HqlType()
 
     def __len__(self):
         return 1

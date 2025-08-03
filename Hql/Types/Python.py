@@ -1,3 +1,4 @@
+from typing import Union
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
 from Hql.Types.Hql import HqlTypes as hqlt
@@ -5,8 +6,8 @@ from Hql.Types.Compiler import CompilerType
 
 class PythonTypes():
     class PythonType(CompilerType):
-        def __init__(self):
-            CompilerType.__init__(self)
+        def __init__(self, base:type, inner:Union[None, type]=None):
+            CompilerType.__init__(self, base, inner=inner)
 
             self.priority = 0
             self.super = ()
@@ -75,32 +76,30 @@ class PythonTypes():
         return PythonTypes.resolve_conflict(list(mvset))
             
     @register_type('python_int')
-    class int(PythonType, hqlt.int):
+    class int(PythonType):
         def __init__(self):
-            PythonTypes.PythonType.__init__(self)
-            hqlt.int.__init__(self)
-            
+            PythonTypes.PythonType.__init__(self, hqlt.int)
+                        
             self.priority = 2
             self.super = (PythonTypes.float, PythonTypes.str, PythonTypes.list) 
 
     @register_type('python_float')
-    class float(PythonType, hqlt.float):
+    class float(PythonType):
         def __init__(self):
-            PythonTypes.PythonType.__init__(self)
-            hqlt.float.__init__(self)
+            PythonTypes.PythonType.__init__(self, hqlt.float)
             
             self.priority = 3
             self.super = (PythonTypes.str, PythonTypes.list)
 
     @register_type('python_complex') 
-    class complex(PythonType, hqlt.string):
-        ...
+    class complex(PythonType):
+        def __init__(self):
+            PythonTypes.PythonType.__init__(self, hqlt.string)
         
     @register_type('python_str')
-    class str(PythonType, hqlt.string):
+    class str(PythonType):
         def __init__(self):
-            PythonTypes.PythonType.__init__(self)
-            hqlt.string.__init__(self)
+            PythonTypes.PythonType.__init__(self, hqlt.string)
  
             self.priority = 4
             self.super = (PythonTypes.list)
@@ -110,46 +109,37 @@ class PythonTypes():
         ...
     
     @register_type('python_bool') 
-    class bool(PythonType, hqlt.bool):
+    class bool(PythonType):
         def __init__(self):
-            PythonTypes.PythonType.__init__(self)
-            hqlt.bool.__init__(self)
-            
+            PythonTypes.PythonType.__init__(self, hqlt.bool)
+                        
             self.priority = 1
             self.super = (PythonTypes.int, PythonTypes.str, PythonTypes.list)
         
     @register_type('python_NoneType')
-    class NoneType(PythonType, hqlt.null):
+    class NoneType(PythonType):
         def __init__(self):
-            PythonTypes.PythonType.__init__(self)
-            hqlt.null.__init__(self)
-            
+            PythonTypes.PythonType.__init__(self, hqlt.null)
+                        
             self.priority = 0
             self.super = (PythonTypes.bool, PythonTypes.int, PythonTypes.float, PythonTypes.str, PythonTypes.list)
 
     @register_type('python_list')
-    class list(PythonType, hqlt.multivalue):
+    class list(PythonType):
         def __init__(self, inner):
-            PythonTypes.PythonType.__init__(self)
-            hqlt.multivalue.__init__(self, inner)
+            PythonTypes.PythonType.__init__(self, hqlt.multivalue, inner=inner)
 
             self.HqlType = hqlt.multivalue
             
             self.priority = 5
             self.super = ()
-        
-        def hql_schema(self):
-            return self.hql_schema()(self.inner)
 
     @register_type('python_dict')
-    class dict(PythonType, hqlt.object):
+    class dict(PythonType):
         def __init__(self, keys:list[str]):
             raise hqle.CompilerException('Unimplemented python type object')
 
-            PythonTypes.PythonType.__init__(self)
-            hqlt.object.__init__(self, keys)
-            
-            self.HqlType = hqlt.object
+            PythonTypes.PythonType.__init__(self, hqlt.object)
             self.keys = keys
             
         #def hql_schema(self):

@@ -150,7 +150,11 @@ class Path(Expression):
             
         return receiver
 
+'''
+Sets a name a value
 
+ip_addr = ip4(destination.ip)
+'''
 class NamedExpression(Expression):
     def __init__(self, paths:list[Expression], value:Expression):
         Expression.__init__(self)
@@ -181,7 +185,7 @@ class NamedExpression(Expression):
             data = ctx.data
         else:
             data = Data()
-        
+
         # loop through value tables as those are the only ones we can vouch for
         for table in value:
             # Need this if we're creating a new dataset instead of inserting
@@ -193,7 +197,7 @@ class NamedExpression(Expression):
                 path = path.eval(ctx, as_list=True)
                 
                 cur = table
-                
+
                 if cur.series:
                     # Get the series and set the type
                     schema = cur.series.type
@@ -202,9 +206,15 @@ class NamedExpression(Expression):
                 else:
                     # Get the value of the dataframe and schema
                     cur = cur.strip()
-                    schema = cur.schema
-                    cur = cur.df
-                
+
+                    if len(cur.df):
+                        schema = cur.schema
+                        cur = cur.df
+
+                    else:
+                        schema = cur.series.type
+                        cur = cur.series.series
+
                 # Insert properly
                 data.tables[table.name].insert(path, cur, schema)
 
