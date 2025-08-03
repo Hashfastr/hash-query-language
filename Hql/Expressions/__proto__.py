@@ -42,5 +42,7 @@ class Expression():
     def features(self):
         return []
 
+    # Defaults to the 'i am not none' approach
+    # True unless overridden
     def __bool__(self):
-        return self.value != None
+        return True

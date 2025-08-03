@@ -18,7 +18,7 @@ class Logic(HqlVisitor):
             self.visit(ctx.Left),
             self.visit(ctx.Right)
         )
-                
+
         return expr
 
     def visitRelationalExpression(self, ctx: HqlParser.RelationalExpressionContext):
