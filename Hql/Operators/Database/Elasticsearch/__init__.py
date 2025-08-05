@@ -6,6 +6,7 @@ from Hql.Operators.Operator import Operator
 import Hql.Expressions as Expr
 import Hql.Operators as Ops
 from Hql.Types.Elasticsearch import ESTypes
+from .Features import ESFeatureSet
 
 import requests
 from elasticsearch import Elasticsearch as ES
@@ -26,22 +27,8 @@ class Elasticsearch(Database):
         self.expr = None
         self.filters = []
         
-        self.compatible_ops = [
-            Ops.Where,
-            Ops.Take,
-            # Ops.Count
-        ]
+        self.feature_set = ESFeatureSet()
 
-        self.compatible_exprs = [
-            Expr.NamedReference,
-            Expr.Path,
-            Expr.Equality,
-            Expr.ListEquality,
-            Expr.Relational,
-            Expr.BetweenEquality,
-            Expr.BinaryLogic
-        ]
-        
         # Set to the config default to avoid DoS
         # Can be changed by the take operator for example.
         self.limit = self.config.get('LIMIT', 100000)
@@ -64,7 +51,8 @@ class Elasticsearch(Database):
             return self.add_limit(op)
         
         if isinstance(op, Ops.Where):
-            self.add_filter(op.expr)
+            ret = self.add_filter(op.expr)
+            return Ops.Where(ret) if ret else None
 
     def add_limit(self, op:Operator) -> Union[None, Operator]:
         # Safely handle the wtf case
@@ -78,54 +66,31 @@ class Elasticsearch(Database):
         if expr == None:
             return expr
 
-        # pre-load what we might return
-        ret = None
-
-        
+        acc, rej = self.feature_set.validate_feature(expr)
 
         if self.expr == None:
-            self.expr = op.expr
-            return None
+            self.expr = acc
+            return rej
 
-        
+        acc = self.feature_set.merge_binary(acc, 'and')
+        acc = self.feature_set.merge_binary(acc, 'or')
+
+        # attempts to merge have failed
+        if acc:
+            self.expr = Expr.BinaryLogic(self.expr, [], 'and')
+            self.feature_set.merge_binary(acc, 'and')
+
+        return rej
 
     def add_index(self, pattern:str):
         self.pattern = pattern
     
-    def gen_filter(self, expr:Expr):
-        filter = None
+    def gen_filter(self, expr:Union[None, Expr.Expression]=None):
+        expr = expr if expr else self.expr
+        if not self.expr:
+            return ''
 
-        if expr.type == "BinaryLogic":
-            op = ' AND ' if expr.bitype == 'and' else ' OR '
-            
-            # base empty filter case
-            if not expr.lh:
-                return ""
-            
-            terms = [
-                self.gen_filter(expr.lh)
-            ] + [self.gen_filter(x) for x in expr.rh]
-            
-            return op.join(terms)
         
-        if expr.type == 'Equality':
-            lh = expr.lh.eval(self.ctx, as_str=True)    
-            rh = expr.rh.eval(self.ctx, as_str=True)
-            
-            if expr.eqtype == '==':
-                return f"{lh}:\"{rh}\""
-                
-            if expr.eqtype in ('<>', '!='):
-                return f"-{lh}:\"{rh}\""
-        
-        if expr.type == "BetweenEquality":
-            lh = expr.lh.eval(self.ctx, as_str=True)
-            start = expr.start.eval(self.ctx, as_str=True)
-            end = expr.end.eval(self.ctx, as_str=True)
-            
-            return f"{lh}:[{start} TO {end}]"
-
-        raise hqle.CompilerException(f"Invalid filter type {expr.type}")
 
     def gen_elastic_schema(self, props:dict):
         schema = {}
