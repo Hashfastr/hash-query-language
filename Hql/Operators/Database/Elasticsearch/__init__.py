@@ -1,7 +1,10 @@
-import Hql.Expressions as Expr
+from typing import Union
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
 from Hql.Data import Schema, Data, Table
+from Hql.Operators.Operator import Operator
+import Hql.Expressions as Expr
+import Hql.Operators as Ops
 from Hql.Types.Elasticsearch import ESTypes
 
 import requests
@@ -20,13 +23,23 @@ class Elasticsearch(Database):
         # Default index pattern
         self.pattern = "*"
 
-        self.filter_expr = None
+        self.expr = None
         self.filters = []
         
-        self.compatible = [
-            'Where',
-            'Take',
-            # 'Count'
+        self.compatible_ops = [
+            Ops.Where,
+            Ops.Take,
+            # Ops.Count
+        ]
+
+        self.compatible_exprs = [
+            Expr.NamedReference,
+            Expr.Path,
+            Expr.Equality,
+            Expr.ListEquality,
+            Expr.Relational,
+            Expr.BetweenEquality,
+            Expr.BinaryLogic
         ]
         
         # Set to the config default to avoid DoS
@@ -46,33 +59,39 @@ class Elasticsearch(Database):
         self.pattern = name
         return self
     
-    def eval_ops(self):
-        for op in self.ops:
-            if op.type == 'Where':
-                self.add_filter(op.expr)
-            
-            # should only have on expression
-            if op.type == 'Take':
-                self.limit = op.expr.eval(self.ctx)
-                if not isinstance(self.limit, int):
-                    raise hqle.QueryException(f'Take operator passed non-int type {self.n_rows}')
+    def integrate(self, op:Operator) -> Union[None, Operator]:
+        if isinstance(op, Ops.Take):
+            return self.add_limit(op)
+        
+        if isinstance(op, Ops.Where):
+            self.add_filter(op.expr)
+
+    def add_limit(self, op:Operator) -> Union[None, Operator]:
+        # Safely handle the wtf case
+        if op.expr == None:
+            return op
+
+        self.limit = op.expr.eval(self.ctx)
+        return None
+
+    def add_filter(self, expr:Union[None, Expr.Expression]) -> Union[None, Expr.Expression]:
+        if expr == None:
+            return expr
+
+        # pre-load what we might return
+        ret = None
+
+        
+
+        if self.expr == None:
+            self.expr = op.expr
+            return None
+
+        
 
     def add_index(self, pattern:str):
         self.pattern = pattern
     
-    # When executed it assumes another where op, implying 'and' with other filters
-    def add_filter(self, expr:Expr):
-        if not self.filter_expr.lh:
-            logging.debug(f'Create initial filter for {self.dbtype}')
-            self.filter_expr.lh = expr
-            return
-        
-        logging.debug(f'Joining where filter into {self.dbtype}')
-        if self.filter_expr.type == 'BinaryLogic' and self.filter_expr.bitype == 'and':
-            self.filter_expr.rh.append(expr)
-        else:
-            self.filter_expr = Expr.BinaryLogic(self.filter_expr, expr, 'and')
-
     def gen_filter(self, expr:Expr):
         filter = None
 
@@ -195,7 +214,7 @@ class Elasticsearch(Database):
                 break
             
             logging.debug(f"Scroll {len(results)} < {self.limit} max")
-            
+
             res = client.scroll(
                 scroll_id=sid,
                 scroll=SCROLL_TIME,
