@@ -231,7 +231,7 @@ class BetweenEquality(Expression):
 # a and b and c and d
 class BinaryLogic(Expression):
     def __init__(self, lh:Expression, rh:list[Expression], type:str):
-        super().__init__()
+        Expression.__init__(self)
         self.bitype = type.lower()
         self.lh = lh
         self.rh = rh
@@ -243,7 +243,7 @@ class BinaryLogic(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
-        a
+        
     def eval(self, ctx:'Context', **kwargs):
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:

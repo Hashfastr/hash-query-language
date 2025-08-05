@@ -7,7 +7,6 @@ from Hql.Exceptions import HqlExceptions as hqle
 import logging
 from typing import Union
 
-
 class CompilerSet():
     def __init__(self, ops:list[Union[Ops.Operator, "CompilerSet"]]):
         self.type = self.__class__.__name__
@@ -39,18 +38,22 @@ class CompilerSet():
             i = -1
             while i >= -len(compiled):
                 nonconseq = compiled[i].non_consequential(op.type)
-                integrate = compiled[i].can_integrate(op.type)
+
+                res = compiled[i].integrate(op)
+
+                if res == None:
+                    logging.debug(f'Integrated {op.id} into {compiled[i].id}')
+                    break
+
+                elif res != op:
+                    logging.debug(f'Partially integrated {op.id} into {compiled[i].id}')
+                    break
                 
-                if nonconseq and not integrate:
+                if nonconseq:
                     logging.debug(f'Can optimize {op.id} passing {compiled[i].id}')
                     i -= 1
 
-                elif integrate:
-                    logging.debug(f'Integrating {op.id} into {compiled[i].id}')
-                    compiled[i].add_op(op)
-                    break
-
-                elif not nonconseq and not integrate:
+                else:
                     logging.debug(f'As high as we can go for {op.id}')
                     compiled.append(op)
                     break
@@ -88,10 +91,6 @@ class CompilerSet():
             
         return ctx.data
 
-# THE compiler which turns the assembly into containers and container configs.
-# Builds networks and containers using GUIDs and linking them on who to talk to.
-# At the end writes out the compose file, along with the configs for each container.
-# In the compose each container is configured to reference their own configs.
 class Compiler():
     def __init__(self, conf_file:str, query:Query):
         self.query = query

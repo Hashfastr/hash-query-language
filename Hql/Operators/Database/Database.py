@@ -1,6 +1,4 @@
 from typing import TYPE_CHECKING
-import logging
-
 from Hql.Operators import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -20,24 +18,25 @@ class Database(Operator):
         self.ops = []
         self.compatible = []
 
-    def add_op(self, op:Operator):
-        if self.can_integrate(op.type):
-            self.ops.append(op)
-        else:
-            logging.critical(f"Attempting to add invalid op type {op.type} to {self.type}")
-            logging.critical(f"Are you checking against can_integrate() before adding?")
-            raise hqle.CompilerException(f"Incompatible op {op.type} added to {self.type}")
-    
-    def eval_ops(self):
-        pass
-    
-    def make_query(self) -> 'Data':
+    def compile(self) -> str:
+        return ''
+
+    def query(self) -> 'Data':
         from Hql.Data import Data
+
+        # query = self.compile()
+        # ES.query(query)
+
         return Data()
     
     def eval(self, ctx:'Context', **kwargs):
+        preview = kwargs.get('preview', False)
+
+        if preview:
+            return self.compile()
+
         self.ctx = ctx
-        return self.make_query()
+        return self.query()
     
     def get_variable(self, name:str) -> object:
         raise hqle.QueryException(f'{self.type} database has no variables')

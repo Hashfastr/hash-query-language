@@ -1,4 +1,4 @@
-from .__proto__ import Database
+from . import Database
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data, Table, Schema

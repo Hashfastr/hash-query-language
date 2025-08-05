@@ -1,5 +1,5 @@
 import importlib,pkgutil
-from .__proto__ import Database
+from .Database import Database
 
 for loader, name, is_pkg in pkgutil.iter_modules(__path__):
     importlib.import_module(f"{__name__}.{name}")

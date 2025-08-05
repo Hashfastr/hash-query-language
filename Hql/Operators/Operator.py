@@ -71,7 +71,41 @@ class Operator():
     def can_integrate(self, type:str):
         return type in self.compatible
 
-    def add_op(self, op:'Operator'):
+    '''
+    Where you take in operators you can merge together
+
+    Idea is that you return what you couldn't integrate
+    - Full integration means you return None
+    - Impossible integration means you return the original op
+    - Partial mean you return an op with what you couldn't integrate
+
+    A partial integration must still result in a semantically congruent operator
+    when combined with the integrating operator.
+
+    So for example, elasticsearch has no functions, so the database here would do a partial
+    integration leaving behind a semantically congruent operator
+
+    Elasticsearch
+    | where foo == 10 and bar == toint('11')
+
+    Elasticsearch (has foo == 10 integrated)
+    | where bar == toint('11')
+
+    Since an 'and' in this case can be represented by a pipe, the reduced where operator is returned.
+    If it were a 'or' on the other hand then there would be no ability to integrate
+    Alternatively if the expression were:
+
+    | where foo == 10 and (bar == toint('11') or zoo == 'wee')
+
+    Then again you can only integrate foo, although if the or were an and you could say
+
+    Elasticsearch
+    | where foo == 10 and (bar == toint('11') and zoo == 'wee')
+
+    Elasticsearch (has foo == 10 and zoo == 'wee' integrated)
+    | where bar == toint('11')
+    '''
+    def integrate(self, op:'Operator'):
         if self.can_integrate(op.type):
             # You would then integrate a consuming integration here
             return None

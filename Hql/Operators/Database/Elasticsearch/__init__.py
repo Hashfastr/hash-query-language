@@ -9,18 +9,18 @@ from elasticsearch import Elasticsearch as ES
 
 import json
 import logging
-from .__proto__ import Database
+from .. import Database
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Elasticsearch')
 class Elasticsearch(Database):
     def __init__(self, config:dict):
         Database.__init__(self, config)
-        
+       
+        # Default index pattern
         self.pattern = "*"
 
-        # The database filter always starts as an and
-        self.filter_expr = Expr.BinaryLogic(None, [], 'and')
+        self.filter_expr = None
         self.filters = []
         
         self.compatible = [
