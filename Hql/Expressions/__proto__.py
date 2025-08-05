@@ -21,6 +21,7 @@ class Expression():
         self.literal = False
         self.logic   = False
         self.value   = None
+        self.tabular = False
     
     def to_dict(self) -> Union[None, dict]:
         return {
@@ -44,5 +45,5 @@ class Expression():
 
     # Defaults to the 'i am not none' approach
     # True unless overridden
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return True

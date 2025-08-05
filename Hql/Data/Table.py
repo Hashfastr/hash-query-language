@@ -79,7 +79,7 @@ class Table():
         return human.to_dicts()
 
     def get_schema(self):
-        return self.schema.schema
+        return self.schema.to_dict()
 
     def set_schema(self, schema:Schema):
         self.df = schema.apply(self.df)

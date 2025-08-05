@@ -32,10 +32,9 @@ class PipeExpression(Expression):
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Operators import Operator
         from Hql.Operators.Database import Database
+        from Hql.Compiler import CompilerSet
 
         no_exec = kwargs.get('no_exec', False)
-
-        from Hql.Compiler import CompilerSet
 
         # Resolve database references
         prepipe = self.prepipe.eval(ctx, tabular=True)
@@ -43,11 +42,11 @@ class PipeExpression(Expression):
         if isinstance(prepipe, type(None)):
             raise hqle.CompilerException(f'Prepipe evaluation returned None')
         
-        if not isinstance(prepipe, Operator):
-            raise hqle.CompilerException('Prepipe returned non-operator')
+        if not isinstance(prepipe, (Operator, CompilerSet)):
+            raise hqle.CompilerException(f'Prepipe returned non-operator/cs, got {prepipe}')
         
         # can add more tabular prepipe types here
-        if not (isinstance(prepipe, Database) or isinstance(prepipe, Operator)) and self.pipes != []:
+        if not isinstance(prepipe, (Database, Operator, CompilerSet)) and self.pipes != []:
             raise hqle.CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
 
         ops = [prepipe] + self.pipes

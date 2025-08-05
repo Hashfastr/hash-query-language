@@ -14,9 +14,6 @@ class ip4subnet(Function):
     def eval(self, ctx:'Context', **kwargs) -> BasicRange:
         import re
         subnet_regex = '(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\/(\\d{1,2})'
-        
-        if kwargs:
-            print()
 
         subnet_text = self.args[0].eval(ctx, as_str=True)
         ip_text   = re.match(subnet_regex, subnet_text)

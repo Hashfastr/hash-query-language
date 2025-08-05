@@ -9,9 +9,23 @@ from typing import Union
 
 
 class CompilerSet():
-    def __init__(self, ops:list[Ops.Operator]):
+    def __init__(self, ops:list[Union[Ops.Operator, "CompilerSet"]]):
         self.type = self.__class__.__name__
-        self.ops = ops
+        self.ops = self.adjust_set(ops)
+
+    def adjust_set(self, ops:list[Union[Ops.Operator, "CompilerSet"]]) -> list[Ops.Operator]:
+        new_ops = []
+        for i in ops:
+            if isinstance(i, type(self)):
+                new_ops += i.ops
+
+            elif isinstance(i, Ops.Operator):
+                new_ops.append(i)
+
+            else:
+                raise hqle.CompilerException(f'Passed invalid type to {type(i)} to compilerset')
+
+        return new_ops
         
     def compile(self):
         compiled = [self.ops[0]]
@@ -93,7 +107,9 @@ class Compiler():
         
         return ctx.root.eval(ctx)
  
-    def compile(self):        
+    def compile(self):
+        from Hql.Query import Statement, LetStatement, QueryStatement
+
         self.compiled = []
         self.op_sets = []
         ctx = Context(None)
@@ -101,14 +117,8 @@ class Compiler():
         statement = self.query.statements
         
         for statement in self.query.statements:
-            # let T1 = SigninLogs | project Username;
-            if statement.type == "LetExpression":
-                logging.debug('Letting let expression')
-                root = statement.value
-                
-            # SigninLogs | project Username
-            elif statement.type == "QueryStatement":
-                logging.debug('Handling QueryStatement')
+            if isinstance(statement, Statement):
+                logging.debug(f'Handling {statement.type}')
                 root = statement.root
 
             else:
@@ -116,14 +126,17 @@ class Compiler():
 
             cs = root.eval(ctx, no_exec=True)
                                 
-            if statement.type == "LetExpression":
+            if isinstance(statement, LetStatement):
                 name = statement.name.eval(ctx, as_str=True)
                 ctx.symbol_table[name] = cs
                 
-            else:
+            elif isinstance(statement, QueryStatement):
                 if ctx.root:
                     logging.warning('Overwriting root compiler set, bug?')
                     
                 ctx.root = cs
+
+            else:
+                raise hqle.CompilerException(f'Unhandled statement type {statement.type}')
                 
         self.ctx = ctx

@@ -12,8 +12,7 @@ class Database(Operator):
     def __init__(self, config:dict):
         Operator.__init__(self)
 
-        self.dbtype = self.__class__.__name__
-        self.type = "Database"
+        # self.type = self.__class__.__name__
         
         self.ctx = None
         self.config = config
@@ -25,9 +24,9 @@ class Database(Operator):
         if self.can_integrate(op.type):
             self.ops.append(op)
         else:
-            logging.critical(f"Attempting to add invalid op type {op.type} to {self.dbtype}")
+            logging.critical(f"Attempting to add invalid op type {op.type} to {self.type}")
             logging.critical(f"Are you checking against can_integrate() before adding?")
-            raise hqle.CompilerException(f"Incompatible op {op.type} added to {self.dbtype}")
+            raise hqle.CompilerException(f"Incompatible op {op.type} added to {self.type}")
     
     def eval_ops(self):
         pass
@@ -40,5 +39,5 @@ class Database(Operator):
         self.ctx = ctx
         return self.make_query()
     
-    def get_variable(self, name: str) -> object:
-        raise hqle.QueryException(f'{self.dbtype} database has no variables')
+    def get_variable(self, name:str) -> object:
+        raise hqle.QueryException(f'{self.type} database has no variables')

@@ -1,9 +1,9 @@
+import logging
 from typing import TYPE_CHECKING, Union
 
-from Hql.Exceptions import HqlExceptions as hqle
-
 import polars as pl
-import logging
+
+from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
@@ -59,6 +59,18 @@ class Schema():
         if len(self.schema):
             return True
         return False
+
+    def to_dict(self, recurse:Union[None, dict]=None) -> dict:
+        schema = recurse if recurse else self.schema
+
+        out = dict()
+        for key in schema:
+            if isinstance(schema[key], dict):
+                out[key] = self.to_dict(recurse=schema[key])
+            else:
+                out[key] = schema[key].name
+
+        return out
     
     @staticmethod
     def merge(schemata:list):

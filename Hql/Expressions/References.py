@@ -39,6 +39,9 @@ class NamedReference(Expression):
         
         if kwargs.get('as_str', False):
             return self.name
+
+        if kwargs.get('sym_table', False) and self.name in ctx.symbol_table:
+            return ctx.symbol_table[self.name]
         
         as_value = kwargs.get('as_value', True)
         receiver = kwargs.get('receiver', ctx.data)

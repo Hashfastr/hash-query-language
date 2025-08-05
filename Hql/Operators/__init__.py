@@ -3,12 +3,22 @@ __all__ = [
     "Database",
     "Where",
     "Project",
+    "ProjectAway",
+    "ProjectKeep",
+    "ProjectReorder",
+    "ProjectRename",
     "Take",
     "Count",
     "Extend",
     "PrePipe",
     "Range",
-    "Top"
+    "Top",
+    "Unnest",
+    "Summarize",
+    "Datatable",
+    "Join",
+    "MvExpand",
+    "Sort"
 ]
 
 from .Operator import Operator

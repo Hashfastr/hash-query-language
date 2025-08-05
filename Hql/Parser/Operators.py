@@ -39,8 +39,6 @@ class Operators(HqlVisitor):
         for i in ctx.Parameters:
             params.append(self.visit(i))
 
-        print(predicate)
-        
         if not predicate:
             raise hqle.ParseException('Where instanciated with None type predicate', ctx)
             

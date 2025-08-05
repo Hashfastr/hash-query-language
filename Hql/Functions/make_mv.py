@@ -109,8 +109,8 @@ class make_mv(Function):
 
         # Create the data subset and grab the table
         # Using project as it resolves functions for us, clever huh?
-        data = Project(self.args).eval(ctx)
-        table = data.tables[0]
+        data:Data = Project(self.args).eval(ctx)
+        table = data.table_by_index(0)
         series = self.get_series(table.df, table.schema.schema)
         
         # Cast to our agreed upon type

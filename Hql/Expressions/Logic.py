@@ -74,7 +74,7 @@ class ListEquality(Expression):
                 return (lh)
 
             if self.op == '!in':
-                return (pl.not_(lh))
+                return (~lh)
 
         if self.op == 'in':
             return (lh == rh)
@@ -156,10 +156,10 @@ class Relational(Equality):
 
         if as_pl:
             if not isinstance(lh, pl.Expr):
-                raise hqle.CompilerException(f'Relational left hand {self.lh.type} returned non-polars expression')
+                raise hqle.CompilerException(f'Relational left hand {self.lh.type} returned non-polars expression {type(lh)}')
             
             if not isinstance(rh, pl.Expr):
-                raise hqle.CompilerException(f'Relational right hand {self.rh.type} returned non-polars expression')
+                raise hqle.CompilerException(f'Relational right hand {self.rh.type} returned non-polars expression {type(rh)}')
 
             if self.eqtype == '<':
                 return (lh < rh)
@@ -215,7 +215,7 @@ class BetweenEquality(Expression):
         filt = lh.is_between(start, end)
         
         if self.negate:
-            filt = filt.not_()
+            filt = ~filt
         
         if as_pl:
             return filt
@@ -259,9 +259,9 @@ class BinaryLogic(Expression):
         filt = lh
         for i in rh:
             if self.bitype == 'and':
-                filt = filt and i
+                filt = filt & i
             else:
-                filt = filt or i
+                filt = filt | i
                 
         return (filt)
 
@@ -314,7 +314,7 @@ class InsensitiveStringCmp(Expression):
         expr = lh.str.contains(f'(?i){rh}')
 
         if self.neq:
-            expr = pl.not_(expr)
+            expr = ~expr
 
         return expr
 
@@ -409,6 +409,6 @@ class Contains(Expression):
             expr = lh.str.contains(rh)
 
         if self.neq:
-            expr = pl.not_(expr)
+            expr = ~expr
 
         return expr

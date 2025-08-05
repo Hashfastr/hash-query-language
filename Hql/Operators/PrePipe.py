@@ -12,7 +12,7 @@ class PrePipe(Operator):
         self.expr = expr
         self.non_conseq = []
         
-    def resolve_tabular_path(self, ctx:'Context', expr:Expression):
+    def resolve_tabular_path(self, ctx:'Context', expr:Expression) -> list:
         funcs = []
         
         if expr.type == 'Path':
@@ -34,11 +34,6 @@ class PrePipe(Operator):
         # Tabular expression just giving a database name, e.g. ['tf11-elastic']
         # Could also be a variable reference in the symbol table
         elif len(path) == 1:
-            name = path[0].eval(ctx, as_str=True)
-            
-            if name in ctx.symbol_table:
-                return [ctx.symbol_table[name]]
-
             funcs.append(ctx.get_func('database')([]))
             funcs.append(ctx.get_func('index')(path))
         
@@ -67,6 +62,7 @@ class PrePipe(Operator):
         
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Compiler import CompilerSet
+        from Hql.Expressions import NamedReference
         
         tabular = kwargs.get('tabular', False)
         receiver = None
@@ -75,6 +71,11 @@ class PrePipe(Operator):
             return self.expr
         
         if tabular:
+            if isinstance(self.expr, NamedReference):
+                expr = self.expr.eval(ctx, sym_table=True)
+                if expr:
+                    return expr
+
             table = self.resolve_tabular_path(ctx, self.expr)
             
             if isinstance(table[0], CompilerSet):
