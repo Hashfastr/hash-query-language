@@ -1,7 +1,5 @@
 from typing import Union
 
-from numpy import isin
-
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
 from Hql.Data import Schema, Data, Table
@@ -29,7 +27,7 @@ class Elasticsearch(Database):
         Database.__init__(self, config)
        
         # Default index pattern
-        self.index = "*"
+        self.pattern = "*"
 
         self.expr:Union[None, Expr.Expression] = None
         self.filters = []
@@ -50,8 +48,6 @@ class Elasticsearch(Database):
         ]
 
         self.query = ''
-        
-
 
     def to_dict(self):
         self.compile()
@@ -59,7 +55,7 @@ class Elasticsearch(Database):
         return {
             'id': self.id,
             'type': self.type,
-            'index': self.index,
+            'index': self.pattern,
             'limit': self.limit,
             'query': self.query
         }
@@ -134,7 +130,7 @@ class Elasticsearch(Database):
         self.query = query
         return query
 
-    def gen_elastic_schema(self, props:dict):
+    def gen_elastic_schema(self, props:dict) -> dict:
         schema = {}
         for i in props:
             if 'properties' in props[i]:
@@ -243,10 +239,12 @@ class Elasticsearch(Database):
         tables = []
         for i in result_sets:
             table = Table(init_data=result_sets[i], name=i)
-            
-            schema = Schema(schema=self.gen_elastic_schema(index[i]['mappings']['properties']))
-            table.set_schema(schema)
-            
+
+            # schema = self.gen_elastic_schema(index[i]['mappings']['properties'])
+            # schema = Schema(schema=schema).convert_schema(target='hql')
+            # schema = Schema.merge([table.schema.schema, schema])
+
+            # table.set_schema(schema)
             tables.append(table)
 
         return Data(tables=tables)

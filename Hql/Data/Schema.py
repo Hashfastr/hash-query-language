@@ -489,13 +489,14 @@ class Schema():
         if not isinstance(schema, dict):
             return schema.cast(df)
         
-        # Check the schema doesn't map to missing cols
+        new = {}
+        
+        # If the schema maps to a missing col, create it as an empty col
         for key in schema:
             if key not in df:
-                logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}")
-                raise hqle.CompilerException('Attempting to apply a schema to a mismatched dataframe!')
+                logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}, manually adding")
+                new[key] = pl.Series(name=key, values=[None] * df.height)
         
-        new = {}
         for col in df:
             key = col.name
             

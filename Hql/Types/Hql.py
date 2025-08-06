@@ -31,7 +31,7 @@ class HqlTypes():
             if self.proto == None:
                 raise hqle.CompilerException('Attempting to cast data to type without a prototype')
 
-            return series.cast(self.proto)
+            return series.cast(self.pl_schema())
 
         def __len__(self):
             return 1
