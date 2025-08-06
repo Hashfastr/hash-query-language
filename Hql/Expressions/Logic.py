@@ -12,9 +12,16 @@ if TYPE_CHECKING:
 # Expression expressing anything with ==, >, <, <=, >=, !=, etc
 # has a left and right hand expression along with it's type.
 class Equality(Expression):
-    def __init__(self, type:str, lh:Expression, rh:Expression):
-        super().__init__()
-        self.eqtype = type
+    def __init__(self, eqtype:str, lh:Expression, rh:Expression):
+        Expression.__init__(self)
+
+        self.eqtype = eqtype
+
+        if eqtype == '==':
+            self.neq = False
+        else:
+            self.neq = True
+
         self.lh:Expression = lh
         self.rh:Expression = rh
         self.logic = True
@@ -22,7 +29,7 @@ class Equality(Expression):
     def to_dict(self):
         return {
             'type': self.type,
-            'eqtype': self.eqtype,
+            'neq': self.neq,
             'lh': self.lh.to_dict(),
             'rh': self.rh.to_dict()
         }
@@ -35,11 +42,7 @@ class Equality(Expression):
         rh = self.rh.eval(ctx, as_pl=as_pl)
         
         if as_pl:
-            if self.eqtype == '==':
-                return (lh == rh)
-
-            if self.eqtype == '!=' or self.eqtype == '<>':
-                return (lh != rh)
+            return (lh != rh) if self.neq else (lh == rh)
         
         raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
@@ -56,9 +59,9 @@ class Equality(Expression):
 class ListEquality(Expression):
     def __init__(self, lh:Expression, op:str, rh:list[Expression]):
         super().__init__()
-        self.lh = lh
-        self.op = op
-        self.rh = rh
+        self.lh:Expression = lh
+        self.op:str = op
+        self.rh:list[Expression] = rh
         self.logic = True
     
     def to_dict(self):

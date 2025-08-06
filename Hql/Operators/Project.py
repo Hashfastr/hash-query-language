@@ -24,6 +24,9 @@ class Project(Operator):
         ]
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         datasets = []
         for i in self.exprs:
             datasets.append(i.eval(ctx, as_value=False))
@@ -40,6 +43,9 @@ class ProjectAway(Operator):
         ]
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         paths = []
         for i in self.exprs:
             paths.append(i.eval(ctx, as_list=True))
@@ -56,6 +62,9 @@ class ProjectKeep(Operator):
         ]
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         op = Project(self.exprs)
         return op.eval(ctx)
 
@@ -72,6 +81,9 @@ class ProjectReorder(Operator):
     Gonna take out the specific bits and move them to the front
     '''
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         new = []
         cur = ctx.data
         
@@ -108,6 +120,9 @@ class ProjectRename(Operator):
         return table
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         for table in ctx.data:
             self.rename(ctx, table)
 

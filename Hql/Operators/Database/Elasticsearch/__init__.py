@@ -1,4 +1,7 @@
 from typing import Union
+
+from numpy import isin
+
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
 from Hql.Data import Schema, Data, Table
@@ -6,14 +9,18 @@ from Hql.Operators.Operator import Operator
 import Hql.Expressions as Expr
 import Hql.Operators as Ops
 from Hql.Types.Elasticsearch import ESTypes
-from .Features import ESFeatureSet
+from Hql.Context import Context
 
 import requests
 from elasticsearch import Elasticsearch as ES
+from elasticsearch import AuthenticationException as ESAuthExcept
 
 import json
 import logging
 from .. import Database
+
+from .Features import ESFeatureSet
+from .Compiler import get_func
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Elasticsearch')
@@ -22,16 +29,16 @@ class Elasticsearch(Database):
         Database.__init__(self, config)
        
         # Default index pattern
-        self.pattern = "*"
+        self.index = "*"
 
-        self.expr = None
+        self.expr:Union[None, Expr.Expression] = None
         self.filters = []
         
         self.feature_set = ESFeatureSet()
 
         # Set to the config default to avoid DoS
         # Can be changed by the take operator for example.
-        self.limit = self.config.get('LIMIT', 100000)
+        self.limit:int = self.config.get('LIMIT', 100000)
         
         # Default scroll max, cannot be higher than 10k
         # Higher values are generally better, each request has some time to it
@@ -41,56 +48,91 @@ class Elasticsearch(Database):
         self.methods = [
             'index'
         ]
+
+        self.query = ''
+        
+
+
+    def to_dict(self):
+        self.compile()
+        
+        return {
+            'id': self.id,
+            'type': self.type,
+            'index': self.index,
+            'limit': self.limit,
+            'query': self.query
+        }
             
-    def get_variable(self, name: str):
+    def get_variable(self, name:str):
         self.pattern = name
         return self
     
     def integrate(self, op:Operator) -> Union[None, Operator]:
         if isinstance(op, Ops.Take):
-            return self.add_limit(op)
+            return self.add_limit(op.expr)
         
         if isinstance(op, Ops.Where):
             ret = self.add_filter(op.expr)
             return Ops.Where(ret) if ret else None
 
-    def add_limit(self, op:Operator) -> Union[None, Operator]:
-        # Safely handle the wtf case
-        if op.expr == None:
-            return op
+        return op
 
-        self.limit = op.expr.eval(self.ctx)
+    def add_limit(self, expr:Expr.Integer) -> None:
+        from Hql.Context import Context
+
+        if not isinstance(expr, Expr.Integer):
+            raise hqle.CompilerException(f'Attempting to add limit with expression of type {type(expr)}')
+
+        # the ctx does not matter here, this is a literal int
+        ctx = self.ctx if self.ctx else Context(None)
+        limit = expr.eval(ctx)
+
+        if not isinstance(limit, int):
+            raise hqle.CompilerException('Take passed non-int to Elasticsearch')
+
+        self.limit = limit
+
         return None
 
-    def add_filter(self, expr:Union[None, Expr.Expression]) -> Union[None, Expr.Expression]:
+    def add_filter(self, expr:Union[None, Expr.Expression]) -> Union[None, Expr.Expression, Ops.Operator]:
         if expr == None:
             return expr
 
-        acc, rej = self.feature_set.validate_feature(expr)
+        acc, unsupported = self.feature_set.validate_feature(expr)
+
+            
+        if isinstance(acc, Ops.Operator):
+            return acc
 
         if self.expr == None:
             self.expr = acc
-            return rej
+            return unsupported
 
-        acc = self.feature_set.merge_binary(acc, 'and')
-        acc = self.feature_set.merge_binary(acc, 'or')
-
+        acc, rej = self.feature_set.merge_binary(self.expr, acc, 'and')
+        # acc, rej = self.feature_set.merge_binary(self.expr, rej, 'or')
+        
         # attempts to merge have failed
-        if acc:
+        if rej:
             self.expr = Expr.BinaryLogic(self.expr, [], 'and')
-            self.feature_set.merge_binary(acc, 'and')
+            self.feature_set.merge_binary(self.expr, rej, 'and')
 
-        return rej
+        return unsupported
 
     def add_index(self, pattern:str):
         self.pattern = pattern
     
-    def gen_filter(self, expr:Union[None, Expr.Expression]=None):
-        expr = expr if expr else self.expr
-        if not self.expr:
-            return ''
+    def compile(self) -> str:
+        if self.expr == None:
+            query = ''
+        else:
+            query = get_func(self.expr)(self.expr)
 
-        
+        if not isinstance(query, str):
+            raise hqle.CompilerException('Elasticsearch compiler returned non-str')
+
+        self.query = query
+        return query
 
     def gen_elastic_schema(self, props:dict):
         schema = {}
@@ -103,14 +145,24 @@ class Elasticsearch(Database):
 
         return schema
 
-    def make_query(self) -> dict:
+    def eval(self, ctx:Context, **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
+        try:
+            return self.make_query()
+        except ESAuthExcept:
+            user = self.config.get('ELASTIC_USER', 'elastic')
+            raise hqle.ConfigException(f'Elasticsearch authentication with user {user} failed') from None
+
+    def make_query(self) -> Data:
         # Host, or hosts, to use for the query.
         # Should be in array format
-        HOSTS = self.config.get('HOSTS', ['http://localhost:9200'])
+        HOSTS = self.config.get('ELASTIC_HOSTS', ['http://localhost:9200'])
         # Elastic user to use
-        USER = self.config.get('USER', 'elastic')
+        USER = self.config.get('ELASTIC_USER', 'elastic')
         # Elastic user password to use
-        PASS = self.config.get('PASS', 'changeme')
+        PASS = self.config.get('ELASTIC_PASS', 'changeme')
         # SSL Validation
         VALIDATE_CERTS = self.config.get('VALIDATE_CERTS', 'true')
         # How long should the scroll session be kept alive?
@@ -120,9 +172,6 @@ class Elasticsearch(Database):
         SCROLL_MAX = self.scroll_max if self.limit >= self.scroll_max else self.limit
         # Request timeout in seconds
         TIMEOUT = self.config.get('TIMEOUT', 10)
-
-        # Debug?
-        DEBUG = self.config.get('DEBUG', False)
         
         client = ES(
             HOSTS,
@@ -132,14 +181,10 @@ class Elasticsearch(Database):
             retry_on_timeout=True,
         )
         
-        self.eval_ops()
-        
         logging.debug("Starting initial query")
 
-        q = self.gen_filter(self.filter_expr)
-        
-        logging.debug(f"{self.dbtype} query, using the following Lucene:")
-        logging.debug(q)
+        logging.debug(f"{self.type} query, using the following Lucene:")
+        logging.debug(self.query)
         logging.debug(f'Index pattern: {self.pattern}')
         logging.debug(f'Limit: {self.limit}')
         
@@ -153,7 +198,7 @@ class Elasticsearch(Database):
             index=self.pattern,
             size=SCROLL_MAX,
             scroll=SCROLL_TIME,
-            q=q
+            q=self.query
         )
         sid = res['_scroll_id']
         
@@ -198,12 +243,10 @@ class Elasticsearch(Database):
         tables = []
         for i in result_sets:
             table = Table(init_data=result_sets[i], name=i)
+            
+            schema = Schema(schema=self.gen_elastic_schema(index[i]['mappings']['properties']))
+            table.set_schema(schema)
+            
             tables.append(table)
 
-        data = Data(tables=tables)
-
-        for table in data:
-            eschema = Schema(schema=self.gen_elastic_schema(index[i]['mappings']['properties']))
-            table.change_schema(eschema)
-
-        return data
+        return Data(tables=tables)

@@ -243,17 +243,12 @@ class HqlTypes():
     # Need to figure this out properly
     @register_type('hql_range')
     class range(HqlType, pl.Struct):
-        def __init__(self, start, end, dtype):
+        def __init__(self, inner:type):
+            self.inner = inner
             HqlTypes.HqlType.__init__(self, self.pl_schema())
 
-            self.start = start
-            # self.start_clusivity = 'gt' if start_clusivity == 'gt' else 'gte'
-            self.end = end
-            # self.end_clusivity = 'lt' if end_clusivity == 'lt' else 'lte'
-            self.dtype = dtype
-
         def pl_schema(self) -> pl.DataType:
-            return pl.Struct(fields=[pl.Field('start', self.dtype), pl.Field('end', self.dtype)])
+            return pl.Struct(fields=[pl.Field('start', self.inner), pl.Field('end', self.inner)])
 
     @register_type('hql_matrix')
     class matrix(HqlType):
@@ -301,8 +296,6 @@ class HqlTypes():
         def __init__(self, schema:Union[dict, None]=None):
             self.schema = schema if schema else dict()
             HqlTypes.HqlType.__init__(self, self.pl_schema())
-            
-            raise hqle.CompilerException('Unimplemented type object')
 
         def pl_schema(self) -> pl.DataType:
             return pl.Struct(self.schema)

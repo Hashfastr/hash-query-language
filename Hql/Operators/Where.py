@@ -26,6 +26,11 @@ class Where(Operator):
     Adds an additional meta * table for the total count of all tables.
     '''
     def eval(self, ctx:'Context', **kwargs):
+        preview = kwargs.get('preview', False)
+
+        if preview:
+            return self.to_dict()
+
         pl_filter = self.expr.eval(ctx, as_pl=True)
 
         for table in ctx.data:

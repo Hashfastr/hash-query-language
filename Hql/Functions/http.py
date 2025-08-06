@@ -2,7 +2,6 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql import Config
 from Hql.Context import register_func, Context
-from Hql.Operators.Database import Database
 
 # This is a meta function resolved while parsing
 @register_func('http')
@@ -14,6 +13,8 @@ class http(Function):
             raise hqle.ArgumentException(f'Bad database http argument datatype {args[0].type}')
         
     def eval(self, ctx:'Context', **kwargs):
+        from Hql.Operators.Database import Database
+
         db = kwargs.get('receiver', None)
         urls = [x.eval(ctx, as_str=True) for x in self.args]
         

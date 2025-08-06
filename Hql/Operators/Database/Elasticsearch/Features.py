@@ -4,6 +4,7 @@ class ESFeatureSet(FeatureSet):
     def __init__(self) -> None:
         import Hql.Expressions as Expr
         import Hql.Operators as Ops
+        import Hql.Context as Context
 
         FeatureSet.__init__(self)
 
@@ -17,5 +18,6 @@ class ESFeatureSet(FeatureSet):
             Expr.Relational,
             Expr.BetweenEquality,
             Expr.BinaryLogic,
-            Expr.Literal
+            Expr.Literal,
+            Context.get_func('ago')
         ]

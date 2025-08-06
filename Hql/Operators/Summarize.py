@@ -11,6 +11,9 @@ class Summarize(Operator):
         self.by_expr = by_expr
 
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         ctx.data = self.by_expr.eval(ctx)
         
         agg_data = []

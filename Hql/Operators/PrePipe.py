@@ -61,6 +61,9 @@ class PrePipe(Operator):
         return funcs
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         from Hql.Compiler import CompilerSet
         from Hql.Expressions import NamedReference
         

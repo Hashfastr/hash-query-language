@@ -17,6 +17,11 @@ class Unnest(Operator):
         }
             
     def eval(self, ctx:'Context', **kwargs):
+        preview = kwargs.get('preview', False)
+
+        if preview:
+            return self.to_dict()
+
         self.ctx = ctx
 
         field = self.field.eval(ctx, as_list=True)

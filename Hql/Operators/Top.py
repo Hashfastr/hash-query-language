@@ -37,6 +37,11 @@ class Top(Operator):
         }
         
     def eval(self, ctx:'Context', **kwargs):
+        preview = kwargs.get('preview', False)
+
+        if preview:
+            return self.to_dict()
+
         name = self.by.name.eval(ctx, as_str=True, as_list=True)
         if isinstance(name, str):
             name = [name]

@@ -78,17 +78,26 @@ class CompilerSet():
     
     def eval(self, ctx:'Context', **kwargs):
         ctx = Context(None, ctx.symbol_table)
+        preview = kwargs.get('preview', False)
+        pdict = []
         
         for i in self.ops:
             start = time.perf_counter()
             logging.debug(f'Executing {i.type}: {i.id}')
             
-            data = i.eval(ctx)
-            ctx.data = data
+            data = i.eval(ctx, preview=preview)
+
+            if preview:
+                pdict.append(data)
+            else:
+                ctx.data = data
                         
             end = time.perf_counter()
             logging.debug(f"{i.id} - {end - start}")
             
+        if preview:
+            return pdict
+
         return ctx.data
 
 class Compiler():
@@ -97,14 +106,15 @@ class Compiler():
         Config.HqlConfig = Config.Config(conf_file)
         self.ctx = Context(None)
 
-    def run(self, ctx:Union[Context,None]=None):
+    def run(self, ctx:Union[Context,None]=None, **kwargs):
         ctx = ctx if ctx else self.ctx
+        preview = kwargs.get('preview', False)
         
         if not ctx.root:
             logging.critical('No root statement compiled!')
             raise hqle.CompilerException('No root statement compiled before runtime!')
         
-        return ctx.root.eval(ctx)
+        return ctx.root.eval(ctx, preview=preview)
  
     def compile(self):
         from Hql.Query import Statement, LetStatement, QueryStatement

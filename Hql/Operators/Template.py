@@ -7,4 +7,9 @@ class Template(Operator):
         Operator.__init__(self)
 
     def eval(self, ctx:'Context', **kwargs):
+        preview = kwargs.get('preview', False)
+
+        if preview:
+            return self.to_dict()
+
         return ctx.data

@@ -49,6 +49,9 @@ class Join(Operator):
         
 
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         self.process_params(ctx)
 
         left = ctx.data

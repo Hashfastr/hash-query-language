@@ -21,6 +21,9 @@ class As(Operator):
         self.expr = expr
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         if self.expr.type != 'Integer':
             raise hqle.CompilerException(f'Invalid type {self.expr.type} given to take operator')
         

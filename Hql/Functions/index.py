@@ -2,7 +2,6 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql import Config
 from Hql.Context import register_func, Context
-from Hql.Operators.Database import Database
 
 # This is a meta function resolved while parsing
 @register_func('index')
@@ -14,6 +13,8 @@ class index(Function):
             raise hqle.ArgumentException(f'Bad database argument datatype {args[0].type}')
         
     def eval(self, ctx:'Context', **kwargs):
+        from Hql.Operators.Database import Database
+
         db = kwargs.get('receiver', None)
         index_name = self.args[0].eval(ctx, as_str=True)
         

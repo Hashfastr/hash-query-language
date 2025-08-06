@@ -10,6 +10,9 @@ class Sort(Operator):
         self.exprs = exprs
 
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         exprs = []
         orders = []
         nulls = []

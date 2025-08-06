@@ -73,6 +73,7 @@ class FeatureSet():
         return (expr, None)
 
     def merge_binary(self, into:"Expr.Expression", src:Union[None, "Expr.Expression"], bitype:str) -> tuple["Expr.Expression", Union[None, "Expr.Expression"]]:
+        import Hql.Expressions as Expr
         if isinstance(into, Expr.BinaryLogic) and into.bitype == bitype:
             # check for mergability
             if isinstance(src, Expr.BinaryLogic) and src.bitype == bitype:

@@ -36,6 +36,9 @@ class MvExpand(Operator):
         return Table(df=df, schema=schema, name=table.name)
 
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         # Long literal, just get us the number
         self.limit = self.limit.eval(ctx)
 

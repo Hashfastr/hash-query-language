@@ -44,6 +44,7 @@ def main():
     parser.add_argument('-co', '--compose-override', help="Override the compose binary found in the path")
     parser.add_argument('-c', '--config', help="Location of the config file")
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
+    parser.add_argument('-pre', '--preview', help="Print a preview of what will be ran", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
     
     args = parser.parse_args()
@@ -124,6 +125,9 @@ def main():
     logging.debug("Done.")
     
     logging.debug(f"Compiling took {end - start}")
+    
+    if args.preview:
+        logging.debug(json.dumps(compiler.run(None, preview=True), indent=2))
    
     if args.no_exec:
         return

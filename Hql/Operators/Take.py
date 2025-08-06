@@ -12,27 +12,26 @@ from Hql.Context import register_op, Context
 @register_op('Take')
 class Take(Operator):
     def __init__(self, limit:Expression, tables:list[Expression]):
-        super().__init__()
-        self.limit = limit
+        Operator.__init__(self)
+        self.expr = limit
         self.tables = tables
 
     def to_dict(self):
         return {
             'type': self.type,
-            'limit': self.limit.to_dict(),
+            'limit': self.expr.to_dict(),
             'tables': [x.to_dict() for x in self.tables]
         }
 
     def get_limits(self):
         ctx = Context(Data())
-        limit = self.limit.eval(ctx)
+        limit = self.expr.eval(ctx)
         tables = [x.eval(ctx, as_str=True) for x in self.tables]
 
         return {
             'limit': limit,
             'tables': tables
         }
-
     
     '''
     Takes only so many results for each table.
@@ -42,10 +41,13 @@ class Take(Operator):
     Unimplemented.
     '''
     def eval(self, ctx:'Context', **kwargs):        
-        limit = self.limit.eval(ctx)
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
+        limit = self.expr.eval(ctx)
 
         if not isinstance(limit, int):
-            raise hqle.QueryException(f'Take operator passed non-int type {self.limit}')
+            raise hqle.QueryException(f'Take operator passed non-int type {type(self.expr)}')
         
         table_names = []
         for i in self.tables:

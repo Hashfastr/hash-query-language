@@ -26,6 +26,9 @@ class Datatable(Operator):
         }
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         width = len(self.schema)
         nvalues = len(self.values)
         

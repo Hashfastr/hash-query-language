@@ -57,6 +57,8 @@ class Operator():
 
     # default execution passthrough unless implemented
     def eval(self, ctx:'Context', **kwargs):
+        preview = kwargs.get('preview', False)
+
         return ctx.data
     
     def non_consequential(self, type:str):

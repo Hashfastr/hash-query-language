@@ -23,6 +23,9 @@ class Count(Operator):
     Adds an additional meta * table for the total count of all tables.
     '''
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('preview', False):
+            return self.to_dict()
+
         name = self.name.eval(ctx, as_str=True) if self.name else None
 
         if not isinstance(name, (str, type(None))):

@@ -2,7 +2,6 @@ from . import Function
 
 from Hql import Config
 from Hql.Context import register_func, Context
-from Hql.Operators.Database import Database
 from Hql.Exceptions import HqlExceptions as hqle
 
 # This is a meta function resolved while parsing
@@ -15,6 +14,8 @@ class file(Function):
             raise hqle.ArgumentException(f'Bad database file argument datatype {args[0].type}')
         
     def eval(self, ctx:'Context', **kwargs):
+        from Hql.Operators.Database import Database
+
         db = kwargs.get('receiver', None)
         files = [x.eval(ctx, as_str=True) for x in self.args]
         
