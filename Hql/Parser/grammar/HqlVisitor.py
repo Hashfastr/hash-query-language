@@ -59,6 +59,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#letMacroDeclaration.
+    def visitLetMacroDeclaration(self, ctx:HqlParser.LetMacroDeclarationContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#letFunctionParameterList.
     def visitLetFunctionParameterList(self, ctx:HqlParser.LetFunctionParameterListContext):
         return self.visitChildren(ctx)
@@ -196,6 +201,11 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#pipeExpression.
     def visitPipeExpression(self, ctx:HqlParser.PipeExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#emptyPipedExpression.
+    def visitEmptyPipedExpression(self, ctx:HqlParser.EmptyPipedExpressionContext):
         return self.visitChildren(ctx)
 
 

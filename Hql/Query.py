@@ -1,5 +1,7 @@
 import json
+from typing import Union
 from Hql.Expressions import Expression
+from Hql.Operators import Operator
 from Hql.Context import Context
 
 # Top most object, a query.
@@ -48,7 +50,7 @@ class QueryStatement(Statement):
         Statement.__init__(self, root)
 
 class LetStatement(Statement):
-    def __init__(self, name:Expression, value:Expression, lettype:str):
+    def __init__(self, name:Expression, value:Union[Expression, list[Operator]], lettype:str):
         Statement.__init__(self, value)
         self.name = name
         self.lettype = lettype
@@ -63,8 +65,12 @@ class LetStatement(Statement):
         
     def eval(self, ctx:'Context', **kwargs):
         name = self.name.eval(ctx, as_str=True)
-                
-        if kwargs.get('no_exec', False):
+        
+        if self.lettype == 'macro':
+            ctx.macros[name] = self.root
+
+        elif kwargs.get('no_exec', False):
             ctx.symbol_table[name] = self.root
+
         else:
             ctx.symbol_table[name] = self.root.eval(ctx)

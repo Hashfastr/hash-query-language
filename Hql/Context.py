@@ -94,7 +94,7 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data, symbol_table:Union[dict, None]=None) -> None:
+    def __init__(self, data, symbol_table:Union[dict, None]=None, macros:Union[dict, None]=None) -> None:
         from copy import copy
 
         self.dbs = copy(database_registry)
@@ -102,6 +102,7 @@ class Context():
         self.funcs = copy(func_registry)
         self.data = data
         self.symbol_table = symbol_table if symbol_table else dict()
+        self.macros = macros if macros else dict()
         self.root = None
 
     def __bool__(self):

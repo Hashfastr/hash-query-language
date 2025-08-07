@@ -120,18 +120,26 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         from Hql.Operators import PrePipe
         
         prepipe = PrePipe(self.visit(ctx.Expression))
+        pipes = self.visit(ctx.PipedOperators)
+        
+        return PipeExpression(prepipe, pipes)
 
+    def visitEmptyPipedExpression(self, ctx: HqlParser.EmptyPipedExpressionContext):
         pipes = []
-        for i in ctx.PipedOperators:
+        for i in ctx.Operators:
             try:
                 pipes.append(self.visit(i))
             except hqle.ParseException as e:
                 e.filename = self.filename
                 Parser.handleException(i, e)
-        
-        return PipeExpression(prepipe, pipes)
+        return pipes
 
     def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
         name = self.visit(ctx.Name)
         value = self.visit(ctx.Expression)
         return LetStatement(name, value, 'variable')
+
+    def visitLetMacroDeclaration(self, ctx: HqlParser.LetMacroDeclarationContext):
+        name = self.visit(ctx.Name)
+        pipes = self.visit(ctx.Pipes)
+        return LetStatement(name, pipes, 'macro')

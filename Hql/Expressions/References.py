@@ -172,7 +172,7 @@ class NamedExpression(Expression):
         }
         
     def eval(self, ctx:'Context', **kwargs):
-        insert = kwargs.get('insert', True)
+        insert = kwargs.get('insert', False)
         as_value = kwargs.get('as_value', False)
         value = self.value.eval(ctx)
 

@@ -1,4 +1,5 @@
 from typing import Union
+import polars as pl
 from Hql.Exceptions import HqlExceptions as hqle
 
 class CompilerType():
@@ -18,6 +19,15 @@ class CompilerType():
             return self.HqlType(self.inner)
 
         return self.HqlType()
+
+    def pl_schema(self):
+        return self.hql_schema().pl_schema()
+
+    def cast(self, series:pl.Series):
+        if self.HqlType == None:
+            raise hqle.CompilerException('Attempting to cast data to type without a prototype')
+
+        return series.cast(self.pl_schema())
 
     def __len__(self):
         return 1

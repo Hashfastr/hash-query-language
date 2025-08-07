@@ -176,6 +176,7 @@ cython_debug/
 *.jar
 
 conf.json
+conf
 
 out
 out.json
@@ -183,10 +184,6 @@ out.json
 profile.txt
 
 index_debug.json
-
-big.json
-
-*.ipynb
 
 *swp
 

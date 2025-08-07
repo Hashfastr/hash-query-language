@@ -31,6 +31,7 @@ letStatement:
     | Variable=letVariableDeclaration
     | Materialized=letMaterializeDeclaration
     | EntityGroup=letEntityGroupDeclaration
+    | Macro=letMacroDeclaration
     ;
 
 letVariableDeclaration:
@@ -50,6 +51,9 @@ letMaterializeDeclaration:
 
 letEntityGroupDeclaration:
     LET Name=simpleNameReference '=' entityGroupExpression;
+
+letMacroDeclaration:
+    LET Name=simpleNameReference '=' Pipes=emptyPipedExpression;
 
 
 letFunctionParameterList:
@@ -145,7 +149,10 @@ expression:
     pipeExpression;
 
 pipeExpression:
-    Expression=beforePipeExpression (PipedOperators+=pipedOperator)*;
+    Expression=beforePipeExpression (PipedOperators=emptyPipedExpression)?;
+
+emptyPipedExpression:
+    Operators+=pipedOperator (Operators+=pipedOperator)*;
 
 pipedOperator:
     '|' Operator=afterPipeOperator;

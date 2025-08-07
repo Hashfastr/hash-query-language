@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Union
 import polars as pl
 
 from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Types.Compiler import CompilerType 
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
@@ -478,24 +479,29 @@ class Schema():
     If a col is not defined in the schema, then it just skips over it
     Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:pl.DataFrame, schema:Union[None, dict]=None):
+    def apply(self, df:pl.DataFrame, schema:Union[None, dict, CompilerType]=None):
         if isinstance(schema, Schema):
             schema = schema.schema
         
         if schema == None:
             schema = self.schema
         
-        # Single value schema    
+        # Single value schema
         if not isinstance(schema, dict):
+            print(type(df))
             return schema.cast(df)
         
         new = {}
         
-        # If the schema maps to a missing col, create it as an empty col
+        # Had this here to handle cases where the schema defines non-existing cols
+        # This is fine, would likely help the receiving program.
+        # We don't operate from the schema anyways, but from the dataframe
+        # Keeping as we *might* want to do something?
         for key in schema:
             if key not in df:
-                logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}, manually adding")
-                new[key] = pl.Series(name=key, values=[None] * df.height)
+                # logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}, manually adding")
+                # new[key] = pl.Series(name=key, values=[None] * df.height)
+                pass
         
         for col in df:
             key = col.name
