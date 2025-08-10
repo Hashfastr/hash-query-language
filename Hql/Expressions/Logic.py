@@ -1,6 +1,8 @@
+from types import NoneType
+
+from polars.expr import Expr
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.PolarsTools import pltools
 
 from typing import TYPE_CHECKING, Union
 import logging
@@ -49,7 +51,10 @@ class Equality(Comparator):
         self.neq = '!' in op
 
     def as_pl(self, ctx:'Context'):
-        lh:pl.Expr = self.lh.eval(ctx, as_pl=True)
+        lh = self.lh.eval(ctx, as_pl=True)
+
+        if not isinstance(lh, pl.Expr):
+            raise hqle.CompilerException(f'lh evaluated to non-pl.Expr type {type(lh)}')
         
         rh = []
         for i in self.rh:
@@ -69,10 +74,13 @@ class Equality(Comparator):
             if self.neq:
                 new = ~new
 
-            if expr == None:
+            if isinstance(expr, NoneType):
                 expr = new
             else:
                 expr = (expr | new)
+
+        if isinstance(expr, NoneType):
+            raise hqle.CompilerException('Equality returned None expression')
 
         return expr
 
@@ -197,19 +205,23 @@ class Substring(Comparator):
             logging.warning('Term matching not supported in Hql-land, do not expect increased performance')
         
         lh = self.lh.eval(ctx, as_pl=True)
+        expr = None
         if not isinstance(lh, pl.Expr):
             raise hqle.CompilerException(f'lh.eval() returned non-pl.Expr type {type(lh)}')
 
         if 'prefix' in self.op or 'startswith' in self.op:
             # no list right hand supported atm
-            return self.prefix(ctx, lh, self.rh[0], True)
+            expr = self.prefix(ctx, lh, self.rh[0], True)
 
         if 'suffix' in self.op or 'endswith' in self.op:
             # no list right hand supported atm
-            return self.prefix(ctx, lh, self.rh[0], False)
+            expr = self.prefix(ctx, lh, self.rh[0], False)
 
         if 'all' in self.op or 'any' in self.op:
-            return self.all_any(ctx, lh, self.rh)
+            expr = self.all_any(ctx, lh, self.rh)
+
+        if not isinstance(expr, NoneType):
+            return ~expr if self.neq else expr
 
         raise hqle.CompilerException(f'Substring comparator got to the end of execution, unhandled operator {self.op} ?')
 
@@ -218,34 +230,42 @@ class Substring(Comparator):
 # - >
 # - <=
 # - >=
-#
 # As per the grammar
 # Takes after the equality expression
-class Relational(Equality):
+class Relational(Comparator):
+    def __init__(self, lh: Expression, op: str, rh: list[Expression]) -> None:
+        Comparator.__init__(self, lh, op, rh)
+
+        if len(self.rh) > 1:
+            raise hqle.CompilerException(f'Relational expression given a incompatible number of right hand expressions {len(rh)} > 1')
+
     def eval(self, ctx:'Context', **kwargs):
         as_pl = kwargs.get('as_pl', True)
 
         lh = self.lh.eval(ctx, as_pl=as_pl)
-        rh = self.rh.eval(ctx, as_pl=as_pl)
+        # list right hand not supported atm
+        rh = self.rh[0].eval(ctx, as_pl=as_pl)
 
         if as_pl:
             if not isinstance(lh, pl.Expr):
-                raise hqle.CompilerException(f'Relational left hand {self.lh.type} returned non-polars expression {type(lh)}')
+                raise hqle.CompilerException(f'Relational left hand {type(self.lh)} returned non-polars expression {type(lh)}')
             
             if not isinstance(rh, pl.Expr):
-                raise hqle.CompilerException(f'Relational right hand {self.rh.type} returned non-polars expression {type(rh)}')
+                raise hqle.CompilerException(f'Relational right hand {type(self.rh[0])} returned non-polars expression {type(rh)}')
 
-            if self.eqtype == '<':
+            if self.op == '<':
                 return (lh < rh)
             
-            if self.eqtype == '>':
+            if self.op == '>':
                 return (lh > rh)
             
-            if self.eqtype == '<=':
+            if self.op == '<=':
                 return (lh <= rh)
             
-            if self.eqtype == '>=':
+            if self.op == '>=':
                 return (lh >= rh)
+
+            raise hqle.CompilerException(f'Unhandled op type {self.op}')
 
         raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
@@ -285,6 +305,12 @@ class BetweenEquality(Expression):
 
         if not isinstance(lh, pl.Expr):
             raise hqle.CompilerException(f'Between left hand {self.lh.type} returned non-polars expression')
+
+        if not isinstance(start, pl.Expr):
+            raise hqle.CompilerException(f'Start field returned non-pl.Expr type {type(start)}')
+
+        if not isinstance(end, pl.Expr):
+            raise hqle.CompilerException(f'Start field returned non-pl.Expr type {type(end)}')
         
         filt = lh.is_between(start, end)
         
@@ -356,42 +382,6 @@ class BasicRange(Expression):
 
         return (lh > start).and_(lh < end)
 
-class InsensitiveStringCmp(Expression):
-    def __init__(self, lh:Expression, op:str, rh:Expression) -> None:
-        Expression.__init__(self)
-        self.cs = False
-        self.lh = lh
-        self.rh = rh
-        self.neq = op == '!~'
-
-    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
-        as_pl = kwargs.get('as_pl', True)
-        if not as_pl:
-            logging.critical(f'Odd kwargs passed to InsensitiveStringCmp {kwargs}')
-            raise hqle.CompilerException(f'InsensitiveStringCmp expression given as_pl=False in kwargs')
-        
-        lh = self.lh.eval(ctx, as_pl=True)
-        
-        if self.rh.literal:
-            if self.rh.type != "StringLiteral":
-                hqle.QueryException(f'Righthand {self.type} expression is not a string')
-
-            rh = self.rh.value
-
-        else:
-            raise hqle.QueryException(f'Dynamic right hands not supported in {self.type} just yet')
-
-        if not isinstance(lh, pl.Expr):
-            raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
-
-        # Case insensitive match
-        expr = lh.str.contains(f'(?i){rh}')
-
-        if self.neq:
-            expr = ~expr
-
-        return expr
-
 class Regex(Expression):
     def __init__(self, lh:Expression, rh:Expression) -> None:
         Expression.__init__(self)
@@ -418,75 +408,7 @@ class Regex(Expression):
         if not isinstance(lh, pl.Expr):
             raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
 
-        if not (isinstance(rh, pl.Expr)  isinstance(rh, str)):
+        if not (isinstance(rh, pl.Expr) or isinstance(rh, str)):
             raise hqle.CompilerException(f'Passed regex is not a string {rh}')
 
         return lh.str.contains(rh)
-
-'''
-op is the raw operator for a contains like query.
-Certain keywords in the operator indicate expression
-'''
-class Contains(Expression):
-    def __init__(self, lh:Expression, op:str, rh:Expression) -> None:
-        Expression.__init__(self)
-        self.lh = lh
-        self.op = op
-        self.rh = rh
-        self.startswith = False
-        self.endswith = False
-
-        self.term = 'has' in op
-        self.neq = '!' in op
-        self.cs = '_cs' in op
-
-        if 'startswith' in op or 'prefix' in op:
-            self.startswith = True
-        
-        if 'endswith' in op or 'suffix' in op:
-            self.endswith = True
-
-    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
-        as_pl = kwargs.get('as_pl', True)
-        if not as_pl:
-            logging.critical(f'Odd kwargs passed to Contains {kwargs}')
-            raise hqle.CompilerException(f'Contains expression given as_pl=False in kwargs')
-        
-        if self.term:
-            logging.warning('Term matching with using has is not supported in Hql-land')
-            logging.warning('Semantically equivalent to contains, no performance benefits')
-
-        lh = self.lh.eval(ctx, as_pl=True)
-
-        if self.rh.literal:
-            if self.rh.type != "StringLiteral":
-                hqle.QueryException(f'Righthand {self.type} expression is not a string')
-
-            rh = self.rh.value
-
-            if rh == None:
-                raise hqle.CompilerException(f'Literal value is None for {self.rh.type}')
-
-        else:
-            raise hqle.QueryException(f'Dynamic right hands not supported in {self.type} just yet')
-
-        if not isinstance(lh, pl.Expr):
-            raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
-
-        if not self.cs:
-            rh = rh.lower()
-            lh = lh.str.to_lowercase()
-
-        if self.startswith:
-            expr = lh.str.starts_with(rh)
-
-        elif self.endswith:
-            expr = lh.str.ends_with(rh)
-
-        else:
-            expr = lh.str.contains(rh)
-
-        if self.neq:
-            expr = ~expr
-
-        return expr
