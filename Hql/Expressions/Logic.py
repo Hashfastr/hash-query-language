@@ -112,10 +112,10 @@ class Equality(Comparator):
 Handles the following term operators:
 - has/has_cs
     - term substring
-- has_all
+- has_all/has_all_cs
     - term substring list and
     - field has 'test' and field has 'foo'
-- has_any
+- has_any/has_any_cs
     - term substring list or
     - field has 'test' or field has 'foo'
 - hasprefix/hasprefix_cs
@@ -126,10 +126,10 @@ Handles the following term operators:
 Non-term operators:
 - contains/contains_cs
     - non-term substring
-- contains_all
+- contains_all/contains_all_cs
     - contains substring list and
     - field contains 'test' and field contains 'foo'
-- contains_any
+- contains_any/contains_any_cs
     - contains substring list or
     - field contains 'test' or field contains 'foo'
 - startswith/startswith_cs
@@ -383,10 +383,15 @@ class BasicRange(Expression):
         return (lh > start).and_(lh < end)
 
 class Regex(Expression):
-    def __init__(self, lh:Expression, rh:Expression) -> None:
+    def __init__(self, lh:Expression, rh:Expression, i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:
         Expression.__init__(self)
         self.lh = lh
         self.rh = rh
+
+        self.i = i
+        self.m = m
+        self.s = s
+        self.g = g
 
     def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         as_pl = kwargs.get('as_pl', True)

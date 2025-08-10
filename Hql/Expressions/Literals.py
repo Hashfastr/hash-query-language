@@ -45,7 +45,7 @@ class StringLiteral(Literal):
 # Z
 # unreal, not real
 class Integer(Literal):
-    def __init__(self, value:str):
+    def __init__(self, value:Union[str, int]):
         Literal.__init__(self)
         self.value = int(value)
     
@@ -79,7 +79,7 @@ class IP4(Literal):
         return self.value
 
 class Float(Literal):
-    def __init__(self, value:str):
+    def __init__(self, value:Union[str, float]):
         Literal.__init__(self)
         self.value = float(value)
         

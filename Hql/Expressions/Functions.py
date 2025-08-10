@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING, Union
 import logging
 
+from Hql.Expressions.References import NamedReference
+
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -8,9 +10,15 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class FuncExpr(Expression):
-    def __init__(self, name:Expression, args:Union[None, list[Expression]]=None):
+    def __init__(self, name:Union[Expression, str], args:Union[None, list[Expression]]=None):
+        from Hql.Expressions import NamedReference
         Expression.__init__(self)
-        self.name = name
+        
+        if isinstance(name, str):
+            self.name = NamedReference(name)
+        else:
+            self.name = name
+
         self.args = args if args else []
 
     def __bool__(self):
