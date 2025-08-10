@@ -57,6 +57,8 @@ class Equality(Comparator):
 
         expr = None
         for i in rh:
+            i = pl.regex_escape(i)
+
             if self.cs:
                 new = (lh == rh)
             else:
@@ -98,34 +100,47 @@ class Equality(Comparator):
         
         raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
-# List equality
-# Essenitally a filter stating that a field should have any value in a tuple.
-# 
-# | where event.code in (10, 11, 13, 3)
-#
-# is semantically identical to
-#
-# | where event.code == 10 or event.code == 11 or event.code == 13 or event.code == 3
-#
-# But is much easier to write and read
-class ListEquality(Comparator):
+'''
+Handles the following term operators:
+- has/has_cs
+    - term substring
+- has_all
+    - term substring list and
+    - field has 'test' and field has 'foo'
+- has_any
+    - term substring list or
+    - field has 'test' or field has 'foo'
+- hasprefix/hasprefix_cs
+    - Term prefix/startswith
+- hassuffix/hassuffix_cs
+    - Term suffix/endswith
+
+Non-term operators:
+- contains/contains_cs
+    - non-term substring
+- contains_all
+    - contains substring list and
+    - field contains 'test' and field contains 'foo'
+- contains_any
+    - contains substring list or
+    - field contains 'test' or field contains 'foo'
+- startswith/startswith_cs
+    - non-term prefix/startswith
+- endswith/endswith_cs
+    - non-term suffix/endswith
+'''
+class Substring(Comparator):
     def __init__(self, lh:Expression, op:str, rh:list[Expression]):
         Comparator.__init__(self, lh, op, rh)
 
         self.term = 'has' in op
 
-        self.contains = False
-        if 'has' in op or 'contains' in op:
-            self.contains = True
-
-        self.logic_or = False if 'all' in op else True
+        # only affects *_all, *_any right now
+        self.logic_and = True if 'all' in op else False
+        
         self.logic_not = op[0] == '!'
-
-        # The existence of these two in the same string is impossible
         self.cs = op.endswith('_cs')
-        self.cs = not op.endswith('~')
-
-    
+ 
     def to_dict(self):
         return {
             'type': self.type,
@@ -134,76 +149,69 @@ class ListEquality(Comparator):
             'rh': [x.to_dict() for x in self.rh]
         }
 
-    def comparator(self, lh, rh=None):
-        if rh == None:
-            if self.op == 'in':
-                return (lh)
+    def has(self, ctx:'Context', lh:pl.Expr, rh:Expression):
+        rh_str = rh.eval(ctx, as_str=True)
+        if not isinstance(rh_str, str):
+            raise hqle.CompilerException(f'Substring righthand returned non-str {type(rh_str)}')
 
-            if self.op == '!in':
-                return (~lh)
+        rh_str = pl.regex_escape(rh_str)
 
-        if self.op == 'in':
-            return (lh == rh)
+        regex = '' if self.cs else '(?i)'
+        regex += rh_str
 
-        if self.op == '!in':
-            return (lh != rh)
+        return lh.str.contains(regex)
+
+    # as_pl representation
+    def prefix(self, ctx:'Context', lh:pl.Expr, rh:Expression, prefix:bool):
+        rh_str = rh.eval(ctx, as_str=True)
+        if not isinstance(rh_str, str):
+            raise hqle.CompilerException(f'Substring righthand returned non-str {type(rh_str)}')
+
+        # regex escape
+        rh_str = pl.regex_escape(rh_str)
         
+        regex = '' if self.cs else '(?i)'
+        regex += '^' if prefix else ''
+        regex += f'{rh_str}'
+        regex += '' if prefix else '$'
+
+        return lh.str.contains(regex)
+
+    def all_any(self, ctx:'Context', lh:pl.Expr, rh:list[Expression]):
+        exprs = []
+        for i in rh:
+            exprs.append(self.has(ctx, lh, i))
+
+        expr = exprs[0]
+        for i in exprs[1:]:
+            expr = expr & i if 'all' in self.op else expr | i
+
+        return expr
+
     def eval(self, ctx:'Context', **kwargs):
-        from .Functions import DotCompositeFunction, FuncExpr
-
         as_pl = kwargs.get('as_pl', True)
+        if not as_pl:
+            raise hqle.CompilerException(f'{as_pl} in Substring comparator only supported as True')
         
-        lh = self.lh.eval(ctx, as_list=True)
-
-        if not (isinstance(lh, list) and lh and isinstance(lh[0], str)):
-            raise hqle.CompilerException(f'List equality lh returns non-list[str]: {lh}')
-
-        lh = pltools.path_to_expr_value(lh)
+        if self.term:
+            logging.warning('Term matching not supported in Hql-land, do not expect increased performance')
         
-        filts = []
-        for rh in self.rh:
-            if isinstance(rh, FuncExpr) or isinstance(rh, DotCompositeFunction):
-                rh = rh.eval(ctx)
+        lh = self.lh.eval(ctx, as_pl=True)
+        if not isinstance(lh, pl.Expr):
+            raise hqle.CompilerException(f'lh.eval() returned non-pl.Expr type {type(lh)}')
 
-            if rh == None:
-                raise hqle.CompilerException('Given rh is NoneType')
+        if 'prefix' in self.op or 'startswith' in self.op:
+            # no list right hand supported atm
+            return self.prefix(ctx, lh, self.rh[0], True)
 
-            # path was returned from a function
-            if isinstance(rh, list):
-                rh = pltools.path_to_expr_value(rh)
-                filt = self.comparator(lh, rh=rh)
+        if 'suffix' in self.op or 'endswith' in self.op:
+            # no list right hand supported atm
+            return self.prefix(ctx, lh, self.rh[0], False)
 
-            # Literal comparator
-            elif rh.literal:
-                filt = self.comparator(lh, rh=rh.value)
-            
-            # Logic comparator
-            elif rh.logic:
-                filt = self.comparator(rh.eval(ctx, lh=lh))
-            
-            # Expression we need to resolve
-            else:
-                rh = rh.eval(ctx, as_list=True)
+        if 'all' in self.op or 'any' in self.op:
+            return self.all_any(ctx, lh, self.rh)
 
-                if not (isinstance(rh, list) and rh and isinstance(rh[0], str)):
-                    raise hqle.CompilerException(f'List equality rh returns non-list[str]: {rh}')
-
-                rh = pltools.path_to_expr_value(rh)
-                filt = self.comparator(lh, rh=rh)
-                
-            filts.append(filt)
-        
-        if self.op == 'in':
-            final = filts[0].or_(*filts[1:])
-        
-        else:
-            final = filts[0].and_(*filts[1:])
-                
-        if as_pl:
-            return final
-        
-        else:
-            raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        raise hqle.CompilerException(f'Substring comparator got to the end of execution, unhandled operator {self.op} ?')
 
 # Handles relational expressions
 # - <
