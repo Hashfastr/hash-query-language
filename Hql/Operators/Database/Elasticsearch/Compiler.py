@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 func_temp = Callable[[Union["Ops.Operator", "Expr.Expression"]], str]
 
 compiler_registry = {}
-def get_func(expr:"Expr.Expression") -> func_temp:
+def get_expr(expr:"Expr.Expression") -> func_temp:
     expr_str = f'{expr.type}_expr'
 
     if expr_str in compiler_registry:
@@ -26,7 +26,7 @@ def register(name:str):
 def Where_op(op:"Ops.Where") -> str:
     if op.expr == None:
         return ''
-    return get_func(op.expr)(op.expr)
+    return get_expr(op.expr)(op.expr)
 
 @register('StringLiteral_expr')
 def StringLiteral_expr(expr:"Expr.StringLiteral") -> str:
@@ -56,44 +56,36 @@ def EscapedName(expr:"Expr.EscapedNamedReference") -> str:
 
 @register('Path_expr')
 def Path(expr:"Expr.Path") -> str:
-    path = [get_func(x)(x) for x in expr.path]
+    path = [get_expr(x)(x) for x in expr.path]
     return '.'.join(path)
 
 @register('Equality_expr')
-@register('CaseInsensitiveStringCmp_expr')
 def Equality(expr:"Expr.Equality") -> str:
-    lh = get_func(expr.lh)(expr.lh)
-    rh = get_func(expr.rh)(expr.rh)
+    lh = get_expr(expr.lh)(expr.lh)
+    
+    exprs = []
+    for i in expr.rh:
+        rh = get_expr(i)(i)
+        ret = f'{lh}:{rh}'
+        exprs.append(ret)
 
-    ret = f'{lh}:{rh}'
+    ret = ' OR '.join(exprs)
+    if len(exprs) > 1:
+        ret = f'({ret})'
 
     return f'(NOT {ret})' if expr.neq else ret
 
-@register('ListEquality_expr')
-def ListEquality(expr:"Expr.ListEquality") -> str:
-    lh = get_func(expr.lh)(expr.lh)
-
-    rh = ' or '.join([get_func(x)(x) for x in expr.rh])
-    rh = f'({rh})'
-    
-    ret = f'{lh}: {rh}'
-
-    if expr.op == 'in':
-        return ret
-    else:
-        return f'(NOT {ret})'
-
 @register('Relational_expr')
 def Relational(expr:"Expr.Relational") -> str:
-    lh = get_func(expr.lh)(expr.lh)
-    rh = get_func(expr.rh)(expr.rh)
-    return f'{lh} {expr.eqtype} {rh}'
+    lh = get_expr(expr.lh)(expr.lh)
+    rh = get_expr(expr.rh[0])(expr.rh[0])
+    return f'{lh}:{expr.op}{rh}'
 
 @register('BetweenEquality_expr')
 def Between(expr:"Expr.BetweenEquality") -> str:
-    lh = get_func(expr.lh)(expr.lh)
-    start = get_func(expr.start)(expr.start)
-    end = get_func(expr.end)(expr.end)
+    lh = get_expr(expr.lh)(expr.lh)
+    start = get_expr(expr.start)(expr.start)
+    end = get_expr(expr.end)(expr.end)
 
     ret = f'{lh}:[{start} TO {end}]'
 
@@ -106,38 +98,49 @@ def Between(expr:"Expr.BetweenEquality") -> str:
 def Binary(expr:"Expr.BinaryLogic") -> str:
     exprs = [expr.lh] + expr.rh
     if expr.bitype == 'and':
-        bitok = ' and '
+        bitok = ' AND '
     else:
-        bitok = ' or '
+        bitok = ' OR '
 
-    ret = bitok.join([get_func(x)(x) for x in exprs])
+    ret = bitok.join([get_expr(x)(x) for x in exprs])
     return f'({ret})'
 
 @register('BasicRange_expr')
 def Range(expr:"Expr.BasicRange") -> str:
-    start = get_func(expr.start)(expr.start)
-    end = get_func(expr.end)(expr.end)
+    start = get_expr(expr.start)(expr.start)
+    end = get_expr(expr.end)(expr.end)
     return f'[{start} TO {end}]'
 
 @register('Regex_expr')
 def Regex(expr:"Expr.Regex") -> str:
-    lh = get_func(expr.lh)(expr.lh)
-    rh = get_func(expr.rh)(expr.rh)
+    lh = get_expr(expr.lh)(expr.lh)
+    rh = get_expr(expr.rh)(expr.rh)
     return f'{lh}:/{rh}/'
 
-@register('Contains_expr')
-def Contains(expr:"Expr.Contains") -> str:
-    lh = get_func(expr.lh)(expr.lh)
-    rh = get_func(expr.rh)(expr.rh)
-    
-    if expr.startswith:
-        ret = f'{lh}:/{rh}.*/'
-    elif expr.endswith:
-        ret = f'{lh}:/.*{rh}/'
+@register('Substring_expr')
+def Substring(expr:"Expr.Substring") -> str:
+    lh = get_expr(expr.lh)(expr.lh)
+
+    rhs = []
+    for i in expr.rh:
+        rhs.append(get_expr(i)(i))
+
+    exprs = []
+    for i in rhs:
+        if 'startswith' in expr.op or 'prefix' in expr.op:
+            exprs.append(f'{lh}:/{i}.*/')
+        elif 'endswith' in expr.op or 'suffix' in expr.op:
+            exprs.append(f'{lh}:/.*{i}/')
+        else:
+            exprs.append(f'{lh}:/.*{i}.*/')
+
+    if 'all' in expr.op:
+        ret = ' AND '.join(exprs)
     else:
-        ret = f'{lh}:/.*{rh}.*/'
+        ret = ' OR '.join(exprs)
+    ret = f'({ret})'
 
     if expr.neq:
-        ret = f'(NOT {ret})'
+        ret = f'NOT {ret}'
 
     return ret

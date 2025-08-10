@@ -18,7 +18,7 @@ import logging
 from .. import Database
 
 from .Features import ESFeatureSet
-from .Compiler import get_func
+from .Compiler import get_expr
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Elasticsearch')
@@ -122,7 +122,7 @@ class Elasticsearch(Database):
         if self.expr == None:
             query = ''
         else:
-            query = get_func(self.expr)(self.expr)
+            query = get_expr(self.expr)(self.expr)
 
         if not isinstance(query, str):
             raise hqle.CompilerException('Elasticsearch compiler returned non-str')

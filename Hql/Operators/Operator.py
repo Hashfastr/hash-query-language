@@ -35,16 +35,19 @@ class Operator():
     def to_dict(self):
         if self.expr:
             return {
+                'id': self.id,
                 'type': self.type,
                 'expression': self.expr.to_dict()
             }
         if self.exprs:
             return {
+                'id': self.id,
                 'type': self.type,
                 'expressions': [x.to_dict() for x in self.exprs]
             }
         else:
             return {
+                'id': self.id,
                 'type': self.type,
                 'expression': None
             }

@@ -146,7 +146,7 @@ class Substring(Comparator):
         # only affects *_all, *_any right now
         self.logic_and = True if 'all' in op else False
         
-        self.logic_not = op[0] == '!'
+        self.neq = op[0] == '!'
         self.cs = op.endswith('_cs')
  
     def to_dict(self):

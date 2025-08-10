@@ -14,7 +14,7 @@ class ESFeatureSet(FeatureSet):
             Expr.NamedReference,
             Expr.Path,
             Expr.Equality,
-            Expr.ListEquality,
+            Expr.Substring,
             Expr.Relational,
             Expr.BetweenEquality,
             Expr.BinaryLogic,

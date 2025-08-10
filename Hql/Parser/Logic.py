@@ -14,9 +14,9 @@ class Logic(HqlVisitor):
             return self.visit(ctx.Left)
 
         expr = Expr.Equality(
-            ctx.OperatorToken.text,
             self.visit(ctx.Left),
-            self.visit(ctx.Right)
+            ctx.OperatorToken.text,
+            [self.visit(ctx.Right)]
         )
 
         return expr
@@ -27,9 +27,9 @@ class Logic(HqlVisitor):
             return self.visit(ctx.Left)
 
         expr = Expr.Relational(
-            ctx.OperatorToken.text,
             self.visit(ctx.Left),
-            self.visit(ctx.Right)
+            ctx.OperatorToken.text,
+            [self.visit(ctx.Right)]
         )
 
         return expr
@@ -106,13 +106,16 @@ class Logic(HqlVisitor):
             return self.visit(ctx.Left)
 
         lh = self.visit(ctx.Left)
-        token = ctx.OperatorToken.text
+        op = ctx.OperatorToken.text
         
-        exprs = []
+        rh = []
         for i in ctx.Expressions:
-            exprs.append(self.visit(i))
+            rh.append(self.visit(i))
+
+        if 'in' in op:
+            return Expr.Equality(lh, op, rh)
         
-        return Expr.ListEquality(lh, token, exprs)
+        return Expr.Substring(lh, op, rh)
 
     def visitStringBinaryOperator(self, ctx: HqlParser.StringBinaryOperatorContext):
         if not ctx.OperatorToken:
@@ -137,6 +140,6 @@ class Logic(HqlVisitor):
             raise hqle.ParseException('String Binary Operator has no Operator, wut?', ctx)
         
         if op in ('=~', '!~'):
-            return Expr.InsensitiveStringCmp(lh, op, rh)
+            return Expr.Equality(lh, op, [rh])
 
-        return Expr.Contains(lh, op, rh)
+        return Expr.Contains(lh, op, [rh])
