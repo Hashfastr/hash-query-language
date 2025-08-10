@@ -1,4 +1,3 @@
-from Hql.Data import Data as HqlData
 from Hql.Exceptions import HacExceptions as hace
 
 class Hac():
@@ -11,14 +10,15 @@ class Hac():
         self.src = src
 
         # Required tags from a HaC definition
-        self.required = [
-            'title',
-            'id',
-            'status',
-            'schedule',
-            'description',
-            'hql'
-        ]
+        self.required = []
+        # self.required = [
+        #     'title',
+        #     'id',
+        #     'status',
+        #     'schedule',
+        #     'description',
+        #     'hql'
+        # ]
 
         self.validate()
 

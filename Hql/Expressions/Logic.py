@@ -9,40 +9,92 @@ import polars as pl
 if TYPE_CHECKING:
     from Hql.Context import Context
 
-# Expression expressing anything with ==, >, <, <=, >=, !=, etc
-# has a left and right hand expression along with it's type.
-class Equality(Expression):
-    def __init__(self, eqtype:str, lh:Expression, rh:Expression):
+class Comparator(Expression):
+    def __init__(self, lh:Expression, op:str, rh:list[Expression]) -> None:
         Expression.__init__(self)
 
-        self.eqtype = eqtype
+        self.lh = lh
+        self.op = op
+        self.rh = rh
 
-        if eqtype == '==':
-            self.neq = False
-        else:
-            self.neq = True
+        self.cs       = True
+        self.neq      = False
+        self.term     = False
+        self.logic    = True
 
-        self.lh:Expression = lh
-        self.rh:Expression = rh
-        self.logic = True
-    
     def to_dict(self):
         return {
             'type': self.type,
+            'cs': self.cs,
             'neq': self.neq,
+            'term': self.term,
+            'op': self.op,
             'lh': self.lh.to_dict(),
-            'rh': self.rh.to_dict()
+            'rh': [x.to_dict() for x in self.rh]
         }
+
+'''
+Handles the following direct comparators:
+- ==/!=
+- =~/!~
+- in/!in
+- in~/!in~
+Not substring comparators
+'''
+class Equality(Comparator):
+    def __init__(self, lh:Expression, op:str, rh:list[Expression]):
+        Comparator.__init__(self, lh, op, rh)
+
+        self.cs = '~' not in op
+        self.neq = '!' in op
+
+    def as_pl(self, ctx:'Context'):
+        lh:pl.Expr = self.lh.eval(ctx, as_pl=True)
+        
+        rh = []
+        for i in self.rh:
+            rh.append(i.eval(ctx, as_pl=self.cs, as_str=not self.cs))
+
+        expr = None
+        for i in rh:
+            if self.cs:
+                new = (lh == rh)
+            else:
+                # rh is evaluated as a string here
+                regex = f'(?i)^{i}$'
+                new = lh.str.contains(regex)
+
+            if self.neq:
+                new = ~new
+
+            if expr == None:
+                expr = new
+            else:
+                expr = (expr | new)
+
+        return expr
+
+    def decompile(self, ctx):
+        lh = self.lh.eval(ctx, decomp=True)
+
+        if len(self.rh) == 1 and 'in' not in self.op:
+            return f'{lh} {self.op} {self.rh[0].eval(ctx, decomp=True)}'
+
+        rh = []
+        for i in self.rh:
+            rh.append(i.eval(ctx, decomp=True))
+
+        rh = ', '.join(rh)
+
+        return f'{lh} {self.op} ({rh})'
     
     # Generates a polars filter
     def eval(self, ctx:'Context', **kwargs):
-        as_pl = kwargs.get('as_pl', True)
-        
-        lh = self.lh.eval(ctx, as_pl=as_pl)
-        rh = self.rh.eval(ctx, as_pl=as_pl)
-        
-        if as_pl:
-            return (lh != rh) if self.neq else (lh == rh)
+        if kwargs.get('as_pl', True):
+            return self.as_pl(ctx)
+
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
         
         raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
 
@@ -56,18 +108,29 @@ class Equality(Expression):
 # | where event.code == 10 or event.code == 11 or event.code == 13 or event.code == 3
 #
 # But is much easier to write and read
-class ListEquality(Expression):
+class ListEquality(Comparator):
     def __init__(self, lh:Expression, op:str, rh:list[Expression]):
-        super().__init__()
-        self.lh:Expression = lh
-        self.op:str = op
-        self.rh:list[Expression] = rh
-        self.logic = True
+        Comparator.__init__(self, lh, op, rh)
+
+        self.term = 'has' in op
+
+        self.contains = False
+        if 'has' in op or 'contains' in op:
+            self.contains = True
+
+        self.logic_or = False if 'all' in op else True
+        self.logic_not = op[0] == '!'
+
+        # The existence of these two in the same string is impossible
+        self.cs = op.endswith('_cs')
+        self.cs = not op.endswith('~')
+
     
     def to_dict(self):
         return {
             'type': self.type,
             'lh': self.lh.to_dict(),
+            'op': self.op,
             'rh': [x.to_dict() for x in self.rh]
         }
 
@@ -347,11 +410,15 @@ class Regex(Expression):
         if not isinstance(lh, pl.Expr):
             raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
 
-        if not (isinstance(rh, pl.Expr) and isinstance(rh, str)):
+        if not (isinstance(rh, pl.Expr)  isinstance(rh, str)):
             raise hqle.CompilerException(f'Passed regex is not a string {rh}')
 
         return lh.str.contains(rh)
 
+'''
+op is the raw operator for a contains like query.
+Certain keywords in the operator indicate expression
+'''
 class Contains(Expression):
     def __init__(self, lh:Expression, op:str, rh:Expression) -> None:
         Expression.__init__(self)

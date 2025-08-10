@@ -4,10 +4,21 @@ from typing import Union
 from Hql.Exceptions import HqlExceptions as hqle
 
 class Config():
-    def __init__(self, conf_file:Union[None, str]=None):
+    def __init__(self, conf_file:Union[None, str]=None, conf_dir:Union[None, str]=None):
         if conf_file:
             with open(conf_file, mode='r') as f:
                 self.conf = json.loads(f.read())
+
+        if conf_dir:
+            self.load_dir(conf_dir)
+
+    def load_dir(self, conf_dir:str):
+        from pathlib import Path
+        path = Path(conf_dir)
+
+        for file in path.rglob("*"):
+            if file.is_file():
+                file.name
     
     def is_database(self, name:str):        
         if name in self.conf['databases']:

@@ -929,7 +929,20 @@ equalsEqualityExpression:
     Left=relationalExpression OperatorToken=('==' | '<>' | '!=') Right=relationalExpression;
 
 listEqualityExpression:
-    Left=relationalExpression OperatorToken=(IN | NOT_IN | IN_CI | NOT_IN_CI | HAS_ANY | HAS_ALL) '(' Expressions+=invocationExpression (',' Expressions+=invocationExpression)* ')';
+    Left=relationalExpression OperatorToken=(
+          IN
+        | NOT_IN
+        | IN_CI
+        | NOT_IN_CI
+        | HAS_ANY
+        | HAS_ANY_CS
+        | HAS_ALL
+        | HAS_ALL_CS
+        | CONTAINS_ALL
+        | CONTAINS_ALL_CS
+        | CONTAINS_ANY
+        | CONTAINS_ANY_CS
+    ) '(' Expressions+=invocationExpression (',' Expressions+=invocationExpression)* ')';
 
 betweenEqualityExpression:
     Left=relationalExpression OperatorToken=(BETWEEN | NOT_BETWEEN) '(' Expressions+=invocationExpression '..' Expressions+=invocationExpression ')';
