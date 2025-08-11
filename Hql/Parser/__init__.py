@@ -12,6 +12,8 @@ from Hql.Parser.Functions import Functions as ParseFunctions
 from Hql.Parser.Operators import Operators as ParseOperators
 from Hql.Parser.Logic import Logic as ParseLogic
 
+from Hql.Parser.Sigma import SigmaParser
+
 import logging
 
 class HqlErrorListener(ErrorListener):

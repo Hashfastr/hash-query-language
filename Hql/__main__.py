@@ -1,6 +1,6 @@
 import sys    
 
-from Hql.Parser import Parser
+from Hql.Parser import Parser, SigmaParser
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Compiler import Compiler
@@ -46,6 +46,7 @@ def main():
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
     parser.add_argument('-pre', '--preview', help="Print a preview of what will be ran", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
+    parser.add_argument('-sig', '--sigma', help="Input file is a Sigma file", action='store_true')
     
     args = parser.parse_args()
     
@@ -68,6 +69,13 @@ def main():
         conf_file = "./conf.json"
     else:
         conf_file = args.config
+
+    if args.sigma:
+        with open(args.file, mode='r') as f:
+            parser = SigmaParser(f.read())
+        asm = parser.assemble()
+        print(json.dumps(asm.to_dict(), indent=2))
+        return
         
     ##################################
     ## Generate HaC (if applicable) ##

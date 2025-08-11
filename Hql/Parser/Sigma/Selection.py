@@ -6,7 +6,7 @@ from Hql.Expressions.Functions import FuncExpr
 if TYPE_CHECKING:
     import Hql.Expressions as Expr
 
-class SigmaSelection():
+class Selection():
     def __init__(self, name:str, selection:dict):
         from Hql.Context import Context
         from Hql.Data import Data
@@ -15,15 +15,25 @@ class SigmaSelection():
 
         self.name = name
         self.selection = selection
-        self.fields = dict()
+        self.fields = []
 
     def process_fields(self):
         for i in self.selection:
-            self.fields[i] = self.process_field(i, self.selection[i])
+            field = self.process_field(i, self.selection[i])
+            self.fields.append(field)
         return self.build_selection()
 
     def build_selection(self):
-        ...
+        from Hql.Expressions import BinaryLogic
+
+        exprs = []
+        for i in self.fields:
+            exprs.append(i)
+
+        if len(exprs) == 1:
+            return exprs[0]
+
+        return BinaryLogic(exprs[0], exprs[1:], 'and')
 
     def to_literal_object(self, value, modifiers:list[str]):
         from Hql.Expressions.Literals import StringLiteral, Integer, Float
@@ -146,16 +156,25 @@ class SigmaSelection():
 
         return BinaryLogic(name, exprs, 'or')
 
-    def process_field(self, name:str, field):
+    def equality(self, name:'Expr.NamedReference', field:list):
+        from Hql.Expressions import Equality
+
+        rhs = []
+        for i in field:
+            rhs.append(self.to_literal_object(i, []))
+
+        return Equality(name, 'in', rhs)
+
+    def process_field(self, field_name:str, field):
         import Hql.Expressions as Expr
 
         if not isinstance(field, list):
             field = [field]
 
-        name = name.split('|')[0]
-        modifiers = name.split('|')[1:]
+        name = field_name.split('|')
 
-        lh = Expr.NamedReference(name)
+        lh = Expr.NamedReference(name[0])
+        modifiers = name[1:]
 
         if 'exists' in modifiers:
             expr = Expr.FuncExpr('exists', [lh]).eval(self.faux_ctx)
@@ -179,3 +198,5 @@ class SigmaSelection():
 
         if 're' in modifiers:
             return self.regex(lh, modifiers, field)
+
+        return self.equality(lh, field)

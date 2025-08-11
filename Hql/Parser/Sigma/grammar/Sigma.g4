@@ -15,13 +15,11 @@ statement:
       ofStatement
     | notStatement
     | bracketStatement
+    | selectionIdentifier
     ;
     
 notStatement:
-      NOT
-    | Bracket=bracketStatement
-    | Selection=selectionIdentifier
-    ;
+    NOT (Bracket=bracketStatement | Selection=selectionIdentifier);
 
 bracketStatement:
     LP Statement=condition RP;
@@ -42,16 +40,13 @@ ofTarget:
 selectionIdentifier:
       Basic=basicIdentifier;
       
-patternIdentifier:
-      Wildcard=wildcardIdentifier
-    | Regex=regexIdentifier
-    ;
+patternIdentifier: Wildcard=wildcardIdentifier;
     
 basicIdentifier:
     Identifier=IDENTIFIER;
     
 wildcardIdentifier:
-    Identifier=IDENTIFIER;
+    Identifier=WILDCARD;
     
 regexIdentifier:
     Identifier=REGEXIDENTIFIER;
