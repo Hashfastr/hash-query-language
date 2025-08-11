@@ -70,12 +70,6 @@ def main():
     else:
         conf_file = args.config
 
-    if args.sigma:
-        with open(args.file, mode='r') as f:
-            parser = SigmaParser(f.read())
-        asm = parser.assemble()
-        print(json.dumps(asm.to_dict(), indent=2))
-        return
         
     ##################################
     ## Generate HaC (if applicable) ##
@@ -99,7 +93,11 @@ def main():
     start = time.perf_counter()
 
     try:
-        parser = Parser(args.file)
+        if args.sigma:
+            with open(args.file, mode='r') as f:
+                parser = SigmaParser(f.read())
+        else:
+            parser = Parser(args.file)
         parser.assemble()
     except hqle.HqlException as e:
         logging.critical('Exception caught when assembling')

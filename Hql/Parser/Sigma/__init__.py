@@ -7,6 +7,8 @@ class SigmaParser():
         self.loaded = yaml.load(txt, yaml.SafeLoader)
 
     def assemble(self):
+        from Hql.Expressions import PipeExpression
+        
         hac = dict()
         for i in self.loaded:
             if i in ('logsource', 'detection'):
@@ -18,9 +20,12 @@ class SigmaParser():
         dac = self.loaded['detection']
         src = self.loaded['logsource']
 
-        return self.parse_dac(src, dac)
+        op_expr = self.parse_dac(src, dac)
+        pipe_expr = PipeExpression(None, [op_expr])
 
     def parse_dac(self, src:dict, dac:dict):
+        from Hql.Operators import Where
+
         selections = []
         for i in dac:
             if i == 'condition':
@@ -29,7 +34,7 @@ class SigmaParser():
             selections.append(Selection(i, dac[i]))
 
         condition = Condition(dac['condition'], selections)
-        expr = condition.assemble()
+        expr = Where(condition.assemble())
 
         return expr
 
