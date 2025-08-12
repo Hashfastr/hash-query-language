@@ -1,5 +1,6 @@
 import json
 from typing import Union
+from Hql import Expressions
 from Hql.Expressions import Expression
 from Hql.Operators import Operator
 from Hql.Context import Context
@@ -19,8 +20,8 @@ from Hql.Context import Context
 # Each statement is denoted by a ; with the exception of the root statement.
 # The root statement is denoted by EOF, but can have a ; regardless
 class Query():
-    def __init__(self):
-        self.statements = []
+    def __init__(self, statements:list['Statement']):
+        self.statements = statements
 
     def to_dict(self):
         return {

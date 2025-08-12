@@ -1,13 +1,21 @@
+from typing import TYPE_CHECKING, Union
 from .Selection import Selection
 from .Condition import Condition
 
+if TYPE_CHECKING:
+    from Hql.Expressions import DotCompositeFunction
+
 class SigmaParser():
     def __init__(self, txt):
+        from Hql.Query import Query
         import yaml
+
         self.loaded = yaml.load(txt, yaml.SafeLoader)
+        self.assembly:Union[None, Query] = None
 
     def assemble(self):
         from Hql.Expressions import PipeExpression
+        from Hql.Query import Query, QueryStatement
         
         hac = dict()
         for i in self.loaded:
@@ -20,10 +28,28 @@ class SigmaParser():
         dac = self.loaded['detection']
         src = self.loaded['logsource']
 
-        op_expr = self.parse_dac(src, dac)
-        pipe_expr = PipeExpression(None, [op_expr])
+        prepipe = self.gen_src(src)
+        pipe = self.parse_dac(dac)
+        expr = PipeExpression(prepipe, [pipe])
 
-    def parse_dac(self, src:dict, dac:dict):
+        statement = QueryStatement(expr)
+        self.assembly = Query([statement])
+
+    def gen_src(self, src:dict) -> 'DotCompositeFunction':
+        from Hql.Expressions import DotCompositeFunction
+        from Hql.Expressions import FuncExpr, StringLiteral
+
+        product = StringLiteral(src['product'])
+        category = StringLiteral(src['category'])
+
+        funcs = [
+            FuncExpr('product', [product]),
+            FuncExpr('category', [category])
+        ]
+
+        return DotCompositeFunction(funcs)
+
+    def parse_dac(self, dac:dict):
         from Hql.Operators import Where
 
         selections = []
