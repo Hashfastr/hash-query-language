@@ -1,4 +1,6 @@
 from . import Hac
+import logging
+import datetime
 
 class HacDoc():
     def __init__(self, hac:Hac) -> None:
@@ -81,3 +83,45 @@ class HacDoc():
             md += '\n'
 
         return md
+
+    def decompile(self):
+        from copy import deepcopy
+        asm:dict = deepcopy(self.hac.asm)
+        long = False
+
+        out = '/**\n'
+        for i in asm:
+            out += ' * '
+            out += f'@{i}'
+            
+            if isinstance(asm[i], str):
+                if len(asm[i]) < 60:
+                    out += f' {asm[i]}\n'
+                else:
+                    out += '\n * '
+                    asm[i].replace('\n', '\n * ')
+                    out += asm[i]
+                    out += '\n'
+                    long = True
+
+            elif isinstance(asm[i], list):
+                out += '\n'
+                for j in asm[i]:
+                    out += f' * - {j}\n'
+                long = True
+
+            elif isinstance(asm[i], datetime.date):
+                out += ' '
+                out += str(asm[i])
+                out += '\n'
+
+            else:
+                logging.critical(f'Attempting to decompile impossible Hac datatype {type(asm[i])}, skipping')
+
+            if long:
+                out += ' * \n'
+                long = False
+        
+        out += ' */\n'
+
+        return out

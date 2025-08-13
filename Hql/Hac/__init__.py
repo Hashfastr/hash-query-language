@@ -38,6 +38,9 @@ class Hac():
             dag = Dag(self)
             return dag.gen_dag()
 
+        if target == 'decompile':
+            return hd.decompile()
+
         raise hace.HacException(f'Unknown HaC render type {target}')
     
     def get(self, name:str):
