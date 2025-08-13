@@ -1,4 +1,7 @@
-from types import NoneType
+try:
+    from types import NoneType
+except:
+    NoneType = type(None)
 
 from polars.expr import Expr
 from .__proto__ import Expression

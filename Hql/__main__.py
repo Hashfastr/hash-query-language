@@ -10,6 +10,7 @@ import json
 import logging
 import argparse, sys
 import cProfile, pstats, time
+from pathlib import Path
 
 def config_logging(level:int):
     logging.basicConfig(
@@ -66,22 +67,29 @@ def main():
         rule_file = args.rule_set
         
     if args.config == None:
-        conf_file = "./conf.json"
+        conf_path = "./conf"
     else:
-        conf_file = args.config
-
+        conf_path = args.config
+    conf_path = Path(conf_path)
         
     ##################################
     ## Generate HaC (if applicable) ##
     ##################################
-    if args.render_hac:
-        try:
-            parser = HaCParser.Parser(filename=args.file)
-        except hace.LexerException:
-            logging.critical('hql file does not contain a valid HaC comment!')
-            return -1
 
-        hac = parser.assemble()
+    if args.render_hac:
+        if args.sigma:
+            with open(args.file, mode='r') as f:
+                parser = SigmaParser(f.read())
+            hac = parser.gen_hac()
+
+        else:
+            try:
+                parser = HaCParser.Parser(filename=args.file)
+                hac = parser.assemble()
+            except hace.LexerException:
+                logging.critical('hql file does not contain a valid HaC comment!')
+                return -1
+
         print(hac.render(args.render_hac))
         return
 
@@ -118,13 +126,10 @@ def main():
     ## Compile Assembly ##
     ######################
     
-    # with open(rule_file, mode="r") as f:
-    #     ruleset = json.loads(f.read())
-    
     logging.debug("Compiling...")
     start = time.perf_counter()
     
-    compiler = Compiler(conf_file, parser.assembly)
+    compiler = Compiler(conf_path, parser.assembly)
     compiler.compile()
     
     end = time.perf_counter()

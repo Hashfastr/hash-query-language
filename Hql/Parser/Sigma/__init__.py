@@ -4,6 +4,7 @@ from .Condition import Condition
 
 if TYPE_CHECKING:
     from Hql.Expressions import DotCompositeFunction
+    from Hql.Hac import Hac
 
 class SigmaParser():
     def __init__(self, txt):
@@ -12,6 +13,16 @@ class SigmaParser():
 
         self.loaded = yaml.load(txt, yaml.SafeLoader)
         self.assembly:Union[None, Query] = None
+
+    def gen_hac(self):
+        from copy import deepcopy
+        from Hql.Hac import Hac
+        doc:dict = deepcopy(self.loaded)
+
+        for i in ['detection', 'logsource']:
+            doc.pop(i)
+
+        return Hac(doc, 'sigma')
 
     def assemble(self):
         from Hql.Expressions import PipeExpression
@@ -63,10 +74,6 @@ class SigmaParser():
         expr = Where(condition.assemble())
 
         return expr
-
-    def gen_hac(self, sigma:dict):
-        from Hql.Hac import Hac
-        return Hac(sigma, 'sigma')
 
     def gen_hql(self, src:dict, dac:dict):
         selections = []

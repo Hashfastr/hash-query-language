@@ -61,42 +61,32 @@ class Config():
             raise hqle.ConfigException(f'Duplicate definition of database {name} in {src}')
 
         self.conf['databases'][name] = config
-
-    def load_general(self, src:str, config:dict):
-        if len(self.conf['general']):
-            raise hqle.ConfigException(f'Duplicate definition of the top-level general config in {src}')
-
-        self.conf['general'] = config
     
     def is_database(self, name:str):        
-        if name in self.conf['databases']:
-            return True
-        return False
+        return name in self.conf['databases']
     
     def get_database(self, dbname:str):
-        try:
-            return self.conf['databases'][dbname]
-        except KeyError:
+        if dbname not in self.conf['databases']:
             logging.critical(f'Config file for {dbname} is missing databases definition')
             logging.critical('Check that your config contains a database under that name')
             raise hqle.ConfigException(f'Missing database definition {dbname}')
+            
+        return self.conf['databases'][dbname]
+
+    def load_general(self, src:str, config:dict):
+        if self.conf['general']:
+            raise hqle.ConfigException(f'Duplicate definition of the top-level general config in {src}')
+
+        self.conf['general'] = config
         
     def get_default_db(self):
-        try:
-            default_name = self.conf['DEFAULT_DB']
-        except KeyError:
+        if 'default_db' not in self.conf['general']:
             logging.critical('Config file is missing databases definition')
             logging.critical('Check that your config contains a database')
             raise hqle.ConfigException('Missing database definition')
         
-        return self.get_database(default_name)
+        name = self.conf['general']['default_db']
+        return self.get_database(name)
 
-    def get_base_path(self, dbname:str):
-        try:
-            return self.conf['databases'][dbname]['BASEPATH']
-        except KeyError:
-            logging.critical('Base path unconfigured for file operations')
-            raise hqle.ConfigException('Missing base path configuration')
-
-global HqlConfig
-HqlConfig = Config()
+# global HqlConfig
+# HqlConfig = Config()
