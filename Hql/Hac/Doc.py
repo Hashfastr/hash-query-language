@@ -95,12 +95,11 @@ class HacDoc():
             out += f'@{i}'
             
             if isinstance(asm[i], str):
-                if len(asm[i]) < 60:
+                if len(asm[i]) < 60 or i == 'title':
                     out += f' {asm[i]}\n'
                 else:
                     out += '\n * '
-                    asm[i].replace('\n', '\n * ')
-                    out += asm[i]
+                    out += asm[i].strip().replace('\n', '\n * ')
                     out += '\n'
                     long = True
 
@@ -117,10 +116,15 @@ class HacDoc():
 
             else:
                 logging.critical(f'Attempting to decompile impossible Hac datatype {type(asm[i])}, skipping')
+                out += '\n'
 
-            if long:
+            if long or i == 'schedule':
                 out += ' * \n'
                 long = False
+
+        # Check for a trailing empty comment line from 'long' instances
+        if out[-4:] == ' * \n':
+            out = out[:-4]
         
         out += ' */\n'
 

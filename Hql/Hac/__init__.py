@@ -4,23 +4,25 @@ class Hac():
     '''
     asm is the output of the parser
     src is a string identifier of the origin of the HaC, e.g. a filename
+    default_schedule is if there is an undefined schedule, safe defaults to hourly
     '''
-    def __init__(self, asm:dict, src:str) -> None:
+    def __init__(self, asm:dict, src:str, default_schedule:str='0 * * * *') -> None:
         self.asm = asm
         self.src = src
+        self.default_schedule = default_schedule
 
         # Required tags from a HaC definition
-        self.required = []
-        # self.required = [
-        #     'title',
-        #     'id',
-        #     'status',
-        #     'schedule',
-        #     'description',
-        #     'hql'
-        # ]
+        self.required = [
+            'title',
+            'id',
+            'status',
+            'schedule',
+            'description',
+            'author',
+        ]
 
         self.validate()
+        self.reorder_keys()
 
     def render(self, target:str='md'):
         from .Doc import HacDoc
@@ -48,7 +50,29 @@ class Hac():
             return self.src
         return self.asm.get(name, '')
 
+    def reorder_keys(self):
+        new = dict()
+
+        for i in self.required:
+            new[i] = self.asm.pop(i)
+
+        for i in self.asm:
+            new[i] = self.asm[i]
+
+        self.asm = new
+
     def validate(self):
         for i in self.required:
             if i not in self.asm:
-                raise hace.HacException(f'Missing required field {i} in {self.src}')
+                if i == 'schedule':
+                    self.asm['schedule'] = self.default_schedule
+
+                elif i == 'author':
+                    self.asm['author'] = 'Unknown'
+
+                elif i == 'id':
+                    import uuid
+                    self.asm['id'] = str(uuid.uuid4())
+
+                else:
+                    raise hace.HacException(f'Missing required field {i} in {self.src}')
