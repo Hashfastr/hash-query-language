@@ -97,12 +97,6 @@ class OpParameter(Expression):
             'value': self.value.to_dict()
         }
 
-    def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-
-        raise hqle.CompilerException('Undefined behavior for OpParameter eval')
-
 class ToClause(Expression):
     def __init__(self, expr:Expression, to:Union[None, hqlt.HqlType]=None):
         Expression.__init__(self)

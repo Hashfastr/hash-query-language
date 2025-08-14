@@ -1,6 +1,7 @@
 import json
 import polars as pl
 from typing import TYPE_CHECKING, Union
+from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Compiler import CompilerSet
@@ -29,7 +30,10 @@ class Expression():
         }
     
     def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, 'Expression', list[str], str, 'CompilerSet', 'CompilerType', 'Data', 'Table', int, float]:
-        return pl.Expr()
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+
+        raise hqle.CompilerException(f'Undefined eval for {self.type}')
     
     def is_escaped(self) -> bool:
         return self.escaped

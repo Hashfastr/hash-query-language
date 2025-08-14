@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 class OrderedExpression(Expression):
     def __init__(self, expr:Union[Expression, None]=None, order:str='desc', nulls:str=''):
-        super().__init__()
+        Expression.__init__(self)
         self.expr = expr
         self.order = order
         
@@ -21,6 +21,16 @@ class OrderedExpression(Expression):
                 self.nulls = 'last'
         else:
             self.nulls = nulls
+
+    def decompile(self, ctx: 'Context') -> str:
+        if not self.expr:
+            raise hqle.CompilerException('Decompile of ordered expression with NoneType self.expr')
+
+        expr = self.expr.eval(ctx, decompile=True)
+        if not isinstance(expr, str):
+            raise hqle.DecompileStringException(type(self.expr), type(expr))
+
+        return f'{expr} {self.order} nulls {self.nulls}'
         
     def to_dict(self):
         if self.expr == None:
@@ -76,9 +86,22 @@ class ByExpression(Expression):
         table.agg_schema = Schema.merge(schema)
         
         return table
+
+    def decompile(self, ctx:'Context') -> str:
+        exprs = []
+        for i in self.exprs:
+            expr = i.eval(ctx, decompile=True)
+            if not isinstance(expr, str):
+                raise hqle.DecompileStringException(type(i), type(expr))
+            exprs.append(expr)
+
+        return ', '.join(exprs)
     
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Data import Data
+
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
 
         new = []
         

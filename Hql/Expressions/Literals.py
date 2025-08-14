@@ -12,12 +12,21 @@ class Literal(Expression):
         Expression.__init__(self)
         self.literal = True
 
+    def decompile(self, ctx: 'Context') -> str:
+        return str(self.value)
+
 class TypeExpression(Literal):
     def __init__(self, type:str):
         Literal.__init__(self)
         self.type = type
+
+    def decompile(self, ctx: 'Context') -> str:
+        return self.type
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+
         return hqlt.from_name(self.type)
 
 # A string literal
@@ -26,15 +35,27 @@ class TypeExpression(Literal):
 class StringLiteral(Literal):
     def __init__(self, value:str):
         Literal.__init__(self)
-        self.value = value.strip('"').strip("'")
+
+        if value[0] == '"':
+            self.quote = '"'
+        else:
+            self.quote = "'"
+
+        self.value = value.strip(self.quote)
     
     def to_dict(self):
         return {
             'type': self.type,
             'value': self.value
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        return self.quote + self.value + self.quote
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 
@@ -56,6 +77,9 @@ class Integer(Literal):
         }
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 
@@ -74,8 +98,21 @@ class IP4(Literal):
             'type': self.type,
             'value': human
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        # just stealing how I did this for the ip4 type
+        d = 0xFF
+        c = d << 8
+        b = c << 8
+        a = b << 8
+        i = self.value
+
+        return f'{(i & a) >> 24}.{(i & b) >> 16}.{(i & c) >> 8}.{i & d}'
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+        
         return self.value
 
 class Float(Literal):
@@ -90,6 +127,9 @@ class Float(Literal):
         }
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+        
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 
@@ -107,6 +147,9 @@ class Bool(Literal):
         }
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+        
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 
