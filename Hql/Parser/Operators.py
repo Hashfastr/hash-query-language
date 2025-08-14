@@ -206,14 +206,15 @@ class Operators(HqlVisitor):
         return Ops.MvExpand(exprs, limit)
     
     def visitMvexpandOperatorExpression(self, ctx: HqlParser.MvexpandOperatorExpressionContext):
+        from Hql.Types.Hql import HqlTypes as hqlt
+
         expr = self.visit(ctx.Expression)
         
         if ctx.ToClause:
-            to = self.visit(ctx.ToClause)
-        else:
-            to = None
+            to:hqlt.HqlType = self.visit(ctx.ToClause)
+            return Exprs.ToClause(expr, to)
 
-        return Exprs.ToExpression(expr, to)
+        return Exprs.ToClause(expr)
     
     def visitMvapplyOperatorExpressionToClause(self, ctx: HqlParser.MvapplyOperatorExpressionToClauseContext):
         return self.visit(ctx.Type)

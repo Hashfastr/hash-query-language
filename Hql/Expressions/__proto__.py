@@ -43,6 +43,9 @@ class Expression():
     def features(self):
         return []
 
+    def decompile(self, ctx:'Context') -> str:
+        return ''
+
     # Defaults to the 'i am not none' approach
     # True unless overridden
     def __bool__(self) -> bool:

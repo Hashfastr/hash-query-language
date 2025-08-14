@@ -27,12 +27,33 @@ class PipeExpression(Expression):
             'prepipe': self.prepipe.to_dict(),
             'pipes': [x.to_dict() for x in self.pipes]
         }
+
+    def decompile(self, ctx:'Context') -> str:
+        prepipe = self.prepipe.eval(ctx, decompile=True)
+        if not isinstance(prepipe, str):
+            raise hqle.DecompileStringException(type(self.prepipe), type(prepipe))
+
+        pipes = []
+        for i in self.pipes:
+            pipe = i.eval(ctx, decompile=True)
+            if not isinstance(pipe, str):
+                raise hqle.DecompileStringException(type(i), type(pipe))
+            pipes.append(pipe)
+
+        out = f'{prepipe}'
+        for i in pipes:
+            out += f'\n{i}'
+
+        return out
     
     # Takes pipes and puts them into a compiler set
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Operators import Operator
         from Hql.Operators.Database import Database
         from Hql.Compiler import CompilerSet
+
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
 
         no_exec = kwargs.get('no_exec', False)
 
@@ -59,9 +80,16 @@ class PipeExpression(Expression):
 
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
-        super().__init__()
+        Expression.__init__(self)
         self.name = name
         self.value = value
+
+    def decompile(self, ctx: 'Context') -> str:
+        value = self.value.eval(ctx, decompile=True)
+        if not isinstance(value, str):
+            raise hqle.DecompileStringException(type(self.value), type(value))
+
+        return f'{self.name}={value}'
         
     def to_dict(self):        
         return {
@@ -69,22 +97,46 @@ class OpParameter(Expression):
             'value': self.value.to_dict()
         }
 
-class ToExpression(Expression):
-    def __init__(self, expr:Expression, to:hqlt.HqlType):
+    def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
+
+        raise hqle.CompilerException('Undefined behavior for OpParameter eval')
+
+class ToClause(Expression):
+    def __init__(self, expr:Expression, to:Union[None, hqlt.HqlType]=None):
         Expression.__init__(self)
         self.expr = expr
         self.to = to
         
     def to_dict(self):
-        return {
+        d = {
             'type': self.type,
             'expr': self.expr.to_dict(),
-            'to': self.to.name
         }
+
+        if self.to:
+            d['to'] = self.to.name
+
+        return d
+
+    def decompile(self, ctx: 'Context') -> str:
+        expr = self.expr.eval(ctx, decompile=True)
+        if not isinstance(expr, str):
+            raise hqle.DecompileStringException(type(self.expr), type(expr))
+
+        if self.to:
+            to = self.to.name
+            expr += f' to {to}'
+
+        return expr
         
     def eval(self, ctx:'Context', **kwargs):
         as_list = kwargs.get('as_list', False)
         as_str = kwargs.get('as_str', False)
+
+        if kwargs.get('decompile', False):
+            return self.decompile(ctx)
         
         if as_list or as_str:
             return self.expr.eval(ctx, as_list=as_list, as_str=as_str)

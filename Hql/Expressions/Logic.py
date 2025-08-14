@@ -1,11 +1,10 @@
 try:
-    # this will error if you're below 3.9, EL9 cough cough
+    # this will error if you're below 3.10, EL9 cough cough
     # the except will fix it
     from types import NoneType
 except:
     NoneType = type(None)
 
-from polars.expr import Expr
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 
