@@ -142,4 +142,4 @@ class Logic(HqlVisitor):
         if op in ('=~', '!~'):
             return Expr.Equality(lh, op, [rh])
 
-        return Expr.Contains(lh, op, [rh])
+        return Expr.Substring(lh, op, [rh])

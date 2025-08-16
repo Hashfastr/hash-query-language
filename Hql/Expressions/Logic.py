@@ -1,10 +1,3 @@
-try:
-    # this will error if you're below 3.10, EL9 cough cough
-    # the except will fix it
-    from types import NoneType
-except:
-    NoneType = type(None)
-
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -54,6 +47,8 @@ class Equality(Comparator):
         self.cs = '~' not in op
         self.neq = '!' in op
 
+        self.list = 'in' in op
+
     def as_pl(self, ctx:'Context'):
         lh = self.lh.eval(ctx, as_pl=True)
 
@@ -78,12 +73,12 @@ class Equality(Comparator):
             if self.neq:
                 new = ~new
 
-            if isinstance(expr, NoneType):
+            if isinstance(expr, type(None)):
                 expr = new
             else:
                 expr = (expr | new)
 
-        if isinstance(expr, NoneType):
+        if isinstance(expr, type(None)):
             raise hqle.CompilerException('Equality returned None expression')
 
         return expr
@@ -91,7 +86,8 @@ class Equality(Comparator):
     def decompile(self, ctx):
         lh = self.lh.eval(ctx, decomp=True)
 
-        if len(self.rh) == 1 and 'in' not in self.op:
+        # Non-list decomp
+        if len(self.rh) == 1 and not self.list:
             return f'{lh} {self.op} {self.rh[0].eval(ctx, decomp=True)}'
 
         rh = []
@@ -152,6 +148,8 @@ class Substring(Comparator):
         
         self.neq = op[0] == '!'
         self.cs = op.endswith('_cs')
+
+        self.list = ('all' in op or 'any' in op)
  
     def to_dict(self):
         return {
@@ -200,7 +198,25 @@ class Substring(Comparator):
 
         return expr
 
+    def decompile(self, ctx: 'Context') -> str:
+        lh = self.lh.eval(ctx, decomp=True)
+
+        # Non-list decomp
+        if len(self.rh) == 1 and not self.list:
+            return f'{lh} {self.op} {self.rh[0].eval(ctx, decomp=True)}'
+
+        rh = []
+        for i in self.rh:
+            rh.append(i.eval(ctx, decomp=True))
+
+        rh = ', '.join(rh)
+
+        return f'{lh} {self.op} ({rh})'
+
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
+
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             raise hqle.CompilerException(f'{as_pl} in Substring comparator only supported as True')
@@ -224,7 +240,7 @@ class Substring(Comparator):
         if 'all' in self.op or 'any' in self.op:
             expr = self.all_any(ctx, lh, self.rh)
 
-        if not isinstance(expr, NoneType):
+        if not isinstance(expr, type(None)):
             return ~expr if self.neq else expr
 
         raise hqle.CompilerException(f'Substring comparator got to the end of execution, unhandled operator {self.op} ?')
@@ -243,7 +259,15 @@ class Relational(Comparator):
         if len(self.rh) > 1:
             raise hqle.CompilerException(f'Relational expression given a incompatible number of right hand expressions {len(rh)} > 1')
 
+    def decompile(self, ctx: 'Context') -> str:
+        lh = self.lh.eval(ctx, decomp=True)
+        rh = self.rh[0].eval(ctx, decomp=True)
+        return f'{lh} {self.op} {rh}'
+
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
+
         as_pl = kwargs.get('as_pl', True)
 
         lh = self.lh.eval(ctx, as_pl=as_pl)
@@ -282,12 +306,13 @@ class Relational(Comparator):
 # Here lh is the '@timestamp' escaped string literal, and the right hand has
 # the start and end values for the time range.
 class BetweenEquality(Expression):
-    def __init__(self, lh:Expression, start:Expression, end:Expression, negate:str="BETWEEN"):
-        super().__init__()
+    def __init__(self, lh:Expression, start:Expression, end:Expression, op:str):
+        Expression.__init__(self)
+
         self.lh = lh
         self.start = start
         self.end = end
-        self.negate = True if negate == "NOT_BETWEEN" else False
+        self.negate = '!' in op
     
     def to_dict(self):
         return {
@@ -299,8 +324,19 @@ class BetweenEquality(Expression):
                 'end': self.end.to_dict()
             }
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        lh = self.lh.eval(ctx, decomp=True)
+        start = self.start.eval(ctx, decomp=True)
+        end = self.end.eval(ctx, decomp=True)
+        op = '!between' if self.negate else 'between'
+
+        return f'{lh} {op} ({start} .. {end})'
     
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
+
         as_pl = kwargs.get('as_pl', True)
         
         lh = self.lh.eval(ctx, as_pl=True)
@@ -334,9 +370,9 @@ class BetweenEquality(Expression):
 # If there is 3 items in the right list it is equal to
 # a and b and c and d
 class BinaryLogic(Expression):
-    def __init__(self, lh:Expression, rh:list[Expression], type:str):
+    def __init__(self, lh:Expression, rh:list[Expression], bitype:str):
         Expression.__init__(self)
-        self.bitype = type.lower()
+        self.bitype = bitype.lower()
         self.lh = lh
         self.rh = rh
         
@@ -347,8 +383,20 @@ class BinaryLogic(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        exprs = [self.lh] + self.rh
+
+        decomp = []
+        for i in exprs:
+            decomp.append(i.eval(ctx, decomp=True))
+
+        return self.bitype.join(decomp)
         
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
+
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Binary Logic {kwargs}')
@@ -375,8 +423,17 @@ class BasicRange(Expression):
         self.start = start
         self.end = end
         self.logic = True
+
+    def decompile(self, ctx: 'Context') -> str:
+        start = self.start.eval(ctx, decomp=True)
+        end = self.end.eval(ctx, decomp=True)
+
+        return f'{start} .. {end}'
     
     def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
+
         lh = kwargs.get('lh', None)
         start = self.start.eval(ctx, as_pl=True)
         end = self.end.eval(ctx, as_pl=True)
@@ -397,7 +454,16 @@ class Regex(Expression):
         self.s = s
         self.g = g
 
+    def decompile(self, ctx: 'Context') -> str:
+        lh = self.lh.eval(ctx, decomp=True)
+        rh = self.rh.eval(ctx, decomp=True)
+
+        return f'{lh} matches regex {rh}'
+
     def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
+
         as_pl = kwargs.get('as_pl', True)
         if not as_pl:
             logging.critical(f'Odd kwargs passed to Regex {kwargs}')
