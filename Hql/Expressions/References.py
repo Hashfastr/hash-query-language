@@ -1,3 +1,4 @@
+from unicodedata import decomposition
 from .__proto__ import Expression
 from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
@@ -12,18 +13,31 @@ if TYPE_CHECKING:
 # A named reference, can be scoped
 # Scopes are not implemented yet.
 class NamedReference(Expression):
-    def __init__(self, name:str, scope:str=""):
+    def __init__(self, name:str, scope:Union[None, Expression]=None):
         Expression.__init__(self)
         self.name = name
         self.scope = scope
 
     def to_dict(self):
-        return {
+        d:dict = {
             'type': self.type,
             'name': self.name,
-            'scope': self.scope,
         }
+
+        if self.scope:
+            d['scope'] = self.scope.to_dict()
+
+        return d
+
+    def decompile(self, ctx: 'Context') -> str:
+        decomp = self.name
         
+        if self.scope:
+            scope = self.scope.eval(ctx, decomp=True)
+            decomp += f' {scope}'
+
+        return decomp
+
     def get_symbol(self, ctx:'Context', name:str):
         if name not in ctx.symbol_table:
             return None
@@ -31,6 +45,9 @@ class NamedReference(Expression):
         return ctx.symbol_table[name]
     
     def eval(self, ctx:'Context', **kwargs):
+        if kwargs.get('decomp', False):
+            return self.decompile(ctx)
+
         if kwargs.get('as_pl', False):
             return pltools.path_to_expr([self.name])
 
@@ -69,7 +86,8 @@ class NamedReference(Expression):
             raise hqle.CompilerException(f'{type(receiver)} cannot have child named references!')
         
 class EscapedNamedReference(NamedReference):
-    ...
+    def decompile(self, ctx: 'Context') -> str:
+        return "['" + self.name + "']"
     
 class Keyword(NamedReference):
     ...
@@ -95,14 +113,21 @@ class Path(Expression):
             logging.debug(self.path)
             logging.debug(e)
 
+    def decompile(self, ctx: 'Context') -> str:
+        return '.'.join([x.eval(ctx, decomp=True) for x in self.path])
+
     def gen_list(self, ctx:'Context'):
         return [x.eval(ctx, as_str=True) for x in self.path]
     
     def eval(self, ctx:'Context', **kwargs):
+        decomp = kwargs.get('decomp', False)
         as_list = kwargs.get('as_list', False)
         as_pl = kwargs.get('as_pl', False)
         as_str = kwargs.get('as_str', False)
         as_value = kwargs.get('as_value', True)
+
+        if decomp:
+            return self.decompile(ctx)
         
         if as_pl:
             return pltools.path_to_expr(self.gen_list(ctx))
@@ -170,6 +195,19 @@ class NamedExpression(Expression):
             'name': [x.to_dict() for x in self.paths],
             'value': self.value.to_dict()
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        paths:list[str] = []
+        for i in self.paths:
+            path = i.eval(ctx, decomp=True)
+            if not isinstance(path, str):
+                raise hqle.DecompileStringException(type(i), type(path))
+            paths.append(path)
+
+        lh = ', '.join(paths)
+        value = self.value.eval(ctx, decomp=True)
+
+        return f'{lh} = {value}'
         
     def eval(self, ctx:'Context', **kwargs):
         insert = kwargs.get('insert', False)
