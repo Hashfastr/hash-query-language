@@ -64,7 +64,7 @@ class Parser():
     
     @staticmethod
     def handleException(ctx, e):
-        logging.critical(f'Failed to parse query {e.filename}')
+        logging.warning(f'Failed to parse HaC {e.filename}')
         
         if isinstance(e, hace.LexerException):
             text = e.text
@@ -73,9 +73,9 @@ class Parser():
         else:
             text = Parser.getText(ctx)
         
-        logging.critical(text)
+        logging.warning(text)
         marker = (' ' * e.col) + '^'
-        logging.critical(marker)
+        logging.warning(marker)
         raise e
 
 class Tag():

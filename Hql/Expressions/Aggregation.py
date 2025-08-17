@@ -84,7 +84,7 @@ class ByExpression(Expression):
         
         return table
 
-    def decompile(self, ctx:'Context') -> str:
+    def decompile(self, ctx: 'Context') -> str:
         exprs = []
         for i in self.exprs:
             exprs.append(i.decompile(ctx))

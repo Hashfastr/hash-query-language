@@ -6,10 +6,8 @@ class Template(Operator):
     def __init__(self):
         Operator.__init__(self)
 
+    def decompile(self, ctx: 'Context', split: bool = False) -> str:
+        return ''
+
     def eval(self, ctx:'Context', **kwargs):
-        preview = kwargs.get('preview', False)
-
-        if preview:
-            return self.to_dict()
-
         return ctx.data

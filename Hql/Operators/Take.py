@@ -35,7 +35,11 @@ class Take(Operator):
 
     def decompile(self, ctx: 'Context') -> str:
         out = 'take '
-        out += self.expr.decompile(ctx)
+        expr = self.expr.decompile(ctx)
+        if not isinstance(expr, str):
+            raise hqle.DecompileStringException(type(self.expr), type(expr))
+
+        out += expr
 
         if self.tables:
             out += ' from '

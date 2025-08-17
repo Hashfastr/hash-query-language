@@ -102,14 +102,16 @@ class BaseExpressions(HqlVisitor):
     '''
     def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
         text = ""
+        quote = "'"
         
         # how do you handle multiple tokens in a string literal? Unsure.
         # Just quits after the one
         for i in ctx.Tokens:
-            text += i.text.strip("\"").strip('\'')
+            quote = i.text[0]
+            text += i.text[1:-1]
             break
         
-        return Expr.StringLiteral(text)
+        return Expr.StringLiteral(text, quote=quote)
 
     def visitLongLiteralExpression(self, ctx: HqlParser.LongLiteralExpressionContext):
         if ctx.Token == None:

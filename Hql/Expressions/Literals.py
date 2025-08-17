@@ -30,15 +30,11 @@ class TypeExpression(Literal):
 # literally a string
 # we strip off quotes when constructing as the parser doesn't remove them for us.
 class StringLiteral(Literal):
-    def __init__(self, value:str):
+    def __init__(self, value:str, quote:str="'"):
         Literal.__init__(self)
 
-        if value[0] == '"':
-            self.quote = '"'
-        else:
-            self.quote = "'"
-
-        self.value = value.strip(self.quote)
+        self.quote = quote
+        self.value = value
     
     def to_dict(self):
         return {

@@ -22,7 +22,9 @@ class Where(Operator):
         self.parameters = params if params else []
         self.expr = expr
 
-    def decompile(self, ctx: 'Context') -> str:
+    def decompile(self, ctx: 'Context') -> Union[str, list[str]]:
+        from Hql.Expressions import BinaryLogic
+
         out = 'where '
 
         if self.parameters:
@@ -32,7 +34,29 @@ class Where(Operator):
             out += ' '.join(exprs)
             out += ' '
 
-        out += self.expr.decompile(ctx)
+        # Attempt to split up ands
+        if isinstance(self.expr, BinaryLogic) and self.expr.bitype == 'and':
+            splits = []
+            exprs = [] 
+            for i in [self.expr.lh] + self.expr.rh:
+                exprs.append(i.decompile(ctx))
+
+            splits = []
+            for i in exprs:
+                if not splits or len(splits[0]) + len(i) > 60:
+                    splits.append(i)
+
+                else:
+                    splits[0] += f' and {i}'
+
+            outs = []
+            for i in splits:
+                outs.append(out + i)
+
+            return outs
+
+        else:
+            out += self.expr.decompile(ctx)
 
         return out
 

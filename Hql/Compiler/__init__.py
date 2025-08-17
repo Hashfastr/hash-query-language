@@ -66,15 +66,12 @@ class CompilerSet():
 
         return self
     
-
     def add_ops(self, ops:list[Ops.Operator]):
         self.ops += ops
         self.compile()
         
-    
     def add_op(self, op:Ops.Operator):
         self.add_ops([op])
-        
     
     def eval(self, ctx:'Context', **kwargs):
         ctx = Context(None, ctx.symbol_table)
@@ -117,8 +114,7 @@ class Compiler():
         return ctx.root.eval(ctx, preview=preview)
 
     def decompile(self):
-        ctx = Context(None)
-        return self.query.decompile(ctx)
+        return self.query.decompile(self.ctx)
  
     def compile(self):
         from Hql.Query import Statement, LetStatement, QueryStatement

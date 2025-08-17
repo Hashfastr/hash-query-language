@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Union
-from pathlib import Path
+from pathlib import Path, PurePath
 import oyaml as yaml
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -21,7 +21,7 @@ class Config():
         files = []
 
         # If this triggers, the below loop won't run
-        if path.is_file:
+        if path.is_file():
             files.append(path)
 
         for file in path.rglob("*"):
@@ -32,8 +32,11 @@ class Config():
             self.load_file(i)
 
     def load_file(self, path:Path):
-        with open(path, mode='r') as f:
+        with path.open(mode='r') as f:
             parsed = yaml.load(f, yaml.SafeLoader)
+
+        if not parsed:
+            return
 
         # elevate to the generic config format
         if 'config' not in parsed:

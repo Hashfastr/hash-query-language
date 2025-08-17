@@ -56,7 +56,7 @@ class Operator():
                 'expression': None
             }
 
-    def decompile(self, ctx:'Context') -> str:
+    def decompile(self, ctx: 'Context') -> Union[str, list[str]]:
         return ''
     
     def __str__(self):

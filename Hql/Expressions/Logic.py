@@ -382,7 +382,9 @@ class BinaryLogic(Expression):
         for i in exprs:
             decomp.append(i.decompile(ctx))
 
-        return self.bitype.join(decomp)
+        bitype = f' {self.bitype} '
+
+        return bitype.join(decomp)
         
     def eval(self, ctx:'Context', **kwargs):
         as_pl = kwargs.get('as_pl', True)

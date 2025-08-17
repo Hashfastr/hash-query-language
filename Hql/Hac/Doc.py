@@ -126,6 +126,6 @@ class HacDoc():
         if out[-4:] == ' * \n':
             out = out[:-4]
         
-        out += ' */\n'
+        out += ' */'
 
         return out

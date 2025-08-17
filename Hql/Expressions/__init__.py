@@ -28,16 +28,21 @@ class PipeExpression(Expression):
             'pipes': [x.to_dict() for x in self.pipes]
         }
 
-    def decompile(self, ctx:'Context') -> str:
+    def decompile(self, ctx: 'Context') -> str:
         prepipe = self.prepipe.decompile(ctx)
 
         pipes = []
         for i in self.pipes:
-            pipes.append(i.decompile(ctx))
+            pipe = i.decompile(ctx)
+            
+            if isinstance(pipe, str):
+                pipes.append(pipe)
+            else:
+                pipes += pipe
 
         out = f'{prepipe}'
         for i in pipes:
-            out += f'\n{i}'
+            out += f'\n| {i}'
 
         return out
     

@@ -197,7 +197,7 @@ class NamedExpression(Expression):
         }
 
     def decompile(self, ctx: 'Context') -> str:
-        paths:list[str] = []
+        paths = []
         for i in self.paths:
             paths.append(i.decompile(ctx))
 
