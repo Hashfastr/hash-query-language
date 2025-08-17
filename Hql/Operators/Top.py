@@ -4,7 +4,6 @@ from Hql.Expressions import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_op, Context
 import polars as pl
-import numpy as np
 
 '''
 Give the top, or bottom, x values for a given field in a dataframe
@@ -24,29 +23,32 @@ https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
 @register_op('Top')
 class Top(Operator):
-    def __init__(self, quota:Expression, by:Expression):
-        super().__init__()
-        self.quota = quota
+    def __init__(self, expr:Expression, by:Expression):
+        Operator.__init__(self)
+        self.expr = expr
         self.by = by
         
     def to_dict(self):
         return {
             'type': self.type,
-            'quota': self.quota.to_dict(),
-            'by': self.order.to_dict()
+            'quota': self.expr.to_dict(),
+            'by': self.by.to_dict()
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        out = 'top '
+        out += self.expr.decompile(ctx)
+        out += ' by '
+        out += self.by.decompile(ctx)
+
+        return out
         
     def eval(self, ctx:'Context', **kwargs):
-        preview = kwargs.get('preview', False)
-
-        if preview:
-            return self.to_dict()
-
         name = self.by.name.eval(ctx, as_str=True, as_list=True)
         if isinstance(name, str):
             name = [name]
             
-        quota = self.quota.eval(ctx)
+        quota = self.expr.eval(ctx)
         order = self.by.order
         nulls = self.by.nulls
         

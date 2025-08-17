@@ -59,6 +59,9 @@ class PrePipe(Operator):
             raise hqle.CompilerException('Invalid path reference for tabular expression')
 
         return funcs
+
+    def decompile(self, ctx: 'Context') -> str:
+        return self.expr.decompile(ctx)
         
     def eval(self, ctx:'Context', **kwargs):
         if kwargs.get('preview', False):

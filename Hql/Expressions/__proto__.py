@@ -30,9 +30,6 @@ class Expression():
         }
     
     def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, 'Expression', list[str], str, 'CompilerSet', 'CompilerType', 'Data', 'Table', int, float]:
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-
         raise hqle.CompilerException(f'Undefined eval for {self.type}')
     
     def is_escaped(self) -> bool:

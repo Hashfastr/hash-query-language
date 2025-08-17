@@ -14,11 +14,11 @@ class Extend(Operator):
     def __init__(self, exprs:list[Expression]):
         super().__init__()
         self.exprs = exprs
+
+    def decompile(self, ctx: 'Context') -> str:
+        return ', '.join(x.decompile(ctx) for x in self.exprs)
             
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         for i in self.exprs:
             i.eval(ctx)
         

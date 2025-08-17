@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
+    from Hql.Expressions import OpParameter
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.
@@ -16,21 +17,30 @@ if TYPE_CHECKING:
 @register_op('Where')
 class Where(Operator):
     # Pass in the parser context here for helpful debugging
-    def __init__(self, expr:'Expression', params:Union[None, list]=None):
+    def __init__(self, expr:'Expression', params:Union[None, list['OpParameter']]=None):
         Operator.__init__(self)
         self.parameters = params if params else []
         self.expr = expr
+
+    def decompile(self, ctx: 'Context') -> str:
+        out = 'where '
+
+        if self.parameters:
+            exprs = []
+            for i in self.parameters:
+                exprs.append(i.decompile(ctx))
+            out += ' '.join(exprs)
+            out += ' '
+
+        out += self.expr.decompile(ctx)
+
+        return out
 
     '''
     Counts each table and replaces the contents of that table with the count.
     Adds an additional meta * table for the total count of all tables.
     '''
     def eval(self, ctx:'Context', **kwargs):
-        preview = kwargs.get('preview', False)
-
-        if preview:
-            return self.to_dict()
-
         pl_filter = self.expr.eval(ctx, as_pl=True)
 
         for table in ctx.data:

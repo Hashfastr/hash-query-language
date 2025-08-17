@@ -29,16 +29,11 @@ class PipeExpression(Expression):
         }
 
     def decompile(self, ctx:'Context') -> str:
-        prepipe = self.prepipe.eval(ctx, decompile=True)
-        if not isinstance(prepipe, str):
-            raise hqle.DecompileStringException(type(self.prepipe), type(prepipe))
+        prepipe = self.prepipe.decompile(ctx)
 
         pipes = []
         for i in self.pipes:
-            pipe = i.eval(ctx, decompile=True)
-            if not isinstance(pipe, str):
-                raise hqle.DecompileStringException(type(i), type(pipe))
-            pipes.append(pipe)
+            pipes.append(i.decompile(ctx))
 
         out = f'{prepipe}'
         for i in pipes:
@@ -51,9 +46,6 @@ class PipeExpression(Expression):
         from Hql.Operators import Operator
         from Hql.Operators.Database import Database
         from Hql.Compiler import CompilerSet
-
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
 
         no_exec = kwargs.get('no_exec', False)
 
@@ -85,10 +77,7 @@ class OpParameter(Expression):
         self.value = value
 
     def decompile(self, ctx: 'Context') -> str:
-        value = self.value.eval(ctx, decompile=True)
-        if not isinstance(value, str):
-            raise hqle.DecompileStringException(type(self.value), type(value))
-
+        value = self.value.decompile(ctx)
         return f'{self.name}={value}'
         
     def to_dict(self):        
@@ -115,9 +104,7 @@ class ToClause(Expression):
         return d
 
     def decompile(self, ctx: 'Context') -> str:
-        expr = self.expr.eval(ctx, decompile=True)
-        if not isinstance(expr, str):
-            raise hqle.DecompileStringException(type(self.expr), type(expr))
+        expr = self.expr.decompile(ctx)
 
         if self.to:
             to = self.to.name
@@ -129,9 +116,6 @@ class ToClause(Expression):
         as_list = kwargs.get('as_list', False)
         as_str = kwargs.get('as_str', False)
 
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-        
         if as_list or as_str:
             return self.expr.eval(ctx, as_list=as_list, as_str=as_str)
         

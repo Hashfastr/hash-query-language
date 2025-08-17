@@ -14,19 +14,16 @@ database("tf11-elastic").index("so-beats-2022.10.*")
 
 https://learn.microsoft.com/en-us/kusto/query/as-operator
 '''
-@register_op('As')
+# Disabling this for now until I decide how to implement
+#@register_op('As')
 class As(Operator):
     def __init__(self, expr:Expression):
-        super().__init__()
+        Operator.__init__(self)
         self.expr = expr
+
+    def decompile(self, ctx: 'Context') -> str:
+        expr = self.expr.decompile(ctx)
+        return f'as {expr}'
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
-        if self.expr.type != 'Integer':
-            raise hqle.CompilerException(f'Invalid type {self.expr.type} given to take operator')
-        
-        limit = self.expr.eval(ctx)
-        
-        return ctx.data[:limit]
+        return ctx.data

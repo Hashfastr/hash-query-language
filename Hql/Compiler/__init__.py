@@ -115,6 +115,10 @@ class Compiler():
             raise hqle.CompilerException('No root statement compiled before runtime!')
         
         return ctx.root.eval(ctx, preview=preview)
+
+    def decompile(self):
+        ctx = Context(None)
+        return self.query.decompile(ctx)
  
     def compile(self):
         from Hql.Query import Statement, LetStatement, QueryStatement

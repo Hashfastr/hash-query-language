@@ -1,5 +1,9 @@
 import json
+from typing import TYPE_CHECKING, Union
 from Hql.Context import Context
+
+if TYPE_CHECKING:
+    from Hql.Data import Data
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
@@ -35,7 +39,7 @@ class Operator():
     def to_dict(self):
         if self.expr:
             return {
-                'id': self.id,
+        'id': self.id,
                 'type': self.type,
                 'expression': self.expr.to_dict()
             }
@@ -51,6 +55,9 @@ class Operator():
                 'type': self.type,
                 'expression': None
             }
+
+    def decompile(self, ctx:'Context') -> str:
+        return ''
     
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -59,9 +66,7 @@ class Operator():
         return self.__str__()
 
     # default execution passthrough unless implemented
-    def eval(self, ctx:'Context', **kwargs):
-        preview = kwargs.get('preview', False)
-
+    def eval(self, ctx:'Context', **kwargs) -> 'Data':
         return ctx.data
     
     def non_consequential(self, type:str):

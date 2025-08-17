@@ -45,7 +45,8 @@ def main():
     parser.add_argument('-co', '--compose-override', help="Override the compose binary found in the path")
     parser.add_argument('-c', '--config', help="Location of the config file")
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
-    parser.add_argument('-pre', '--preview', help="Print a preview of what will be ran", action='store_true')
+    parser.add_argument('-dpar', '--deparse', help="Deparse the program before compiling", action='store_true')
+    parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
     parser.add_argument('-sig', '--sigma', help="Input file is a Sigma file", action='store_true')
     
@@ -76,19 +77,22 @@ def main():
     ## Generate HaC (if applicable) ##
     ##################################
 
-    if args.render_hac:
-        if args.sigma:
-            with open(args.file, mode='r') as f:
-                parser = SigmaParser(f.read())
-            hac = parser.gen_hac()
+    if args.sigma:
+        with open(args.file, mode='r') as f:
+            parser = SigmaParser(f.read())
+        hac = parser.gen_hac()
 
-        else:
-            try:
-                parser = HaCParser.Parser(filename=args.file)
-                hac = parser.assemble()
-            except hace.LexerException:
-                logging.critical('hql file does not contain a valid HaC comment!')
-                return -1
+    else:
+        try:
+            parser = HaCParser.Parser(filename=args.file)
+            hac = parser.assemble()
+        except hace.LexerException:
+            hac = None
+
+    if args.render_hac:
+        if not hac:
+            logging.critical('Hql file does not contain a valid HaC comment!')
+            return -1
 
         print(hac.render(args.render_hac))
         return
@@ -112,15 +116,24 @@ def main():
         logging.critical(e)
         return -1
     
-    if args.asm_show:
-        # Use print to give a raw output
-        print(parser.assembly)
-        return
-        
     logging.debug('Done.')
     
     end = time.perf_counter()
     logging.debug(f'Parsing took {end - start}')
+    
+    if args.asm_show:
+        # Use print to give a raw output
+        print(parser.assembly)
+        return
+
+    if args.deparse:
+        if hac:
+            hac_str = hac.render(target='decompile')
+            print(hac_str)
+
+        code = Compiler(conf_path, parser.assembly).decompile()
+        print(code)
+        return
         
     ######################
     ## Compile Assembly ##
@@ -136,9 +149,9 @@ def main():
     logging.debug("Done.")
     
     logging.debug(f"Compiling took {end - start}")
-    
-    if args.preview:
-        logging.debug(json.dumps(compiler.run(None, preview=True), indent=2))
+
+    if args.decompile:
+        compiler.de
    
     if args.no_exec:
         return

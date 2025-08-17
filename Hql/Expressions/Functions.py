@@ -30,16 +30,11 @@ class FuncExpr(Expression):
         }
 
     def decompile(self, ctx: 'Context') -> str:
-        name = self.name.eval(ctx, decompile=True)
-        if not isinstance(name, str):
-            raise hqle.DecompileStringException(type(self.name), type(name))
+        name = self.name.decompile(ctx)
 
         args = []
         for i in self.args:
-            arg = i.eval(ctx, decompile=True)
-            if not isinstance(arg, str):
-                raise hqle.DecompileStringException(type(i), type(arg))
-            args.append(arg)
+            args.append(i.decompile(ctx))
 
         out = f'{name}('
         out += ', '.join(args)
@@ -57,9 +52,6 @@ class FuncExpr(Expression):
         if kwargs.get('as_str', False):
             return self.name.eval(ctx, as_str=True)
         '''
-
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
         
         name = self.name.eval(ctx, as_str=True)
         if not isinstance(name, str):
@@ -94,10 +86,7 @@ class DotCompositeFunction(Expression):
     def decompile(self, ctx: 'Context') -> str:
         funcs = []
         for i in self.funcs:
-            func = i.eval(ctx, decompile=True)
-            if not isinstance(func, str):
-                raise hqle.DecompileStringException(type(i), type(func))
-            funcs.append(func)
+            funcs.append(i.decompile(ctx))
 
         return '.'.join(funcs)
 
@@ -107,9 +96,6 @@ class DotCompositeFunction(Expression):
 
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
-
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
         
         # Do we even need this? Doesn't make any sense.
         '''

@@ -26,10 +26,7 @@ class OrderedExpression(Expression):
         if not self.expr:
             raise hqle.CompilerException('Decompile of ordered expression with NoneType self.expr')
 
-        expr = self.expr.eval(ctx, decompile=True)
-        if not isinstance(expr, str):
-            raise hqle.DecompileStringException(type(self.expr), type(expr))
-
+        expr = self.expr.decompile(ctx)
         return f'{expr} {self.order} nulls {self.nulls}'
         
     def to_dict(self):
@@ -90,18 +87,12 @@ class ByExpression(Expression):
     def decompile(self, ctx:'Context') -> str:
         exprs = []
         for i in self.exprs:
-            expr = i.eval(ctx, decompile=True)
-            if not isinstance(expr, str):
-                raise hqle.DecompileStringException(type(i), type(expr))
-            exprs.append(expr)
+            exprs.append(i.decompile(ctx))
 
         return ', '.join(exprs)
     
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Data import Data
-
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
 
         new = []
         

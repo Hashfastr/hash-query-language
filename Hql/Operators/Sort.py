@@ -9,10 +9,17 @@ class Sort(Operator):
         Operator.__init__(self)
         self.exprs = exprs
 
-    def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
+    def decompile(self, ctx: 'Context') -> str:
+        out = 'sort by '
 
+        exprs = []
+        for i in self.exprs:
+            exprs.append(i.decompile(ctx))
+        out += ', '.join(exprs)
+        
+        return out
+
+    def eval(self, ctx:'Context', **kwargs):
         exprs = []
         orders = []
         nulls = []

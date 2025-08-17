@@ -16,17 +16,27 @@ import polars as pl
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 @register_op('Project')
 class Project(Operator):
-    def __init__(self, exprs:list[Expression]):
+    def __init__(self, optok:str, exprs:list[Expression]):
         Operator.__init__(self)
         self.exprs = exprs
         self.non_conseq = [
             'Take'
         ]
+        self.optok = optok
+
+    def decompile(self, ctx: 'Context') -> str:
+        out = self.optok
+
+        if self.exprs:
+            out += ' '
+            exprs = []
+            for i in self.exprs:
+                exprs.append(i.decompile(ctx))
+            out += ', '.join(exprs)
+
+        return out
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         datasets = []
         for i in self.exprs:
             datasets.append(i.eval(ctx, as_value=False))
@@ -34,18 +44,8 @@ class Project(Operator):
         return Data.merge(datasets)
 
 @register_op('ProjectAway')
-class ProjectAway(Operator):
-    def __init__(self, exprs:list[Expression]):
-        Operator.__init__(self)
-        self.exprs = exprs
-        self.non_conseq = [
-            'Take'
-        ]
-        
+class ProjectAway(Project):
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         paths = []
         for i in self.exprs:
             paths.append(i.eval(ctx, as_list=True))
@@ -53,37 +53,15 @@ class ProjectAway(Operator):
         return ctx.data.drop_many(paths)
 
 @register_op('ProjectKeep')
-class ProjectKeep(Operator):
-    def __init__(self, exprs:list[Expression]):
-        Operator.__init__(self)
-        self.exprs = exprs
-        self.non_conseq = [
-            'Take'
-        ]
-        
-    def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
-        op = Project(self.exprs)
-        return op.eval(ctx)
+class ProjectKeep(Project):
+    ...
 
 @register_op('ProjectReorder')
-class ProjectReorder(Operator):
-    def __init__(self, exprs:list[Expression]):
-        Operator.__init__(self)
-        self.exprs = exprs
-        self.non_conseq = [
-            'Take'
-        ]
-    
+class ProjectReorder(Project):
     '''
     Gonna take out the specific bits and move them to the front
     '''
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         new = []
         cur = ctx.data
         
@@ -97,14 +75,7 @@ class ProjectReorder(Operator):
         return Data.merge(new)
 
 @register_op('ProjectRename')
-class ProjectRename(Operator):
-    def __init__(self, exprs:list[Expression]):
-        Operator.__init__(self)
-        self.exprs = exprs
-        self.non_conseq = [
-            'Take'
-        ]
-
+class ProjectRename(Project):
     def rename(self, ctx:'Context', table:Table):
         for i in self.exprs:
             vpath = i.value.eval(ctx, as_list=True)
@@ -120,9 +91,6 @@ class ProjectRename(Operator):
         return table
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         for table in ctx.data:
             self.rename(ctx, table)
 

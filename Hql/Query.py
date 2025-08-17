@@ -23,6 +23,12 @@ class Query():
     def __init__(self, statements:list['Statement']):
         self.statements = statements
 
+    def decompile(self, ctx:Context):
+        statements = []
+        for i in self.statements:
+            statements.append(i.decompile(ctx))
+        return ';\n\n'.join(statements)
+
     def to_dict(self):
         return {
             "statements": [x.to_dict() for x in self.statements]
@@ -42,6 +48,9 @@ class Statement():
             'type': self.type,
             'root': self.root.to_dict()
         }
+
+    def decompile(self, ctx:Context):
+        return self.root.decompile(ctx)
     
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -63,6 +72,11 @@ class LetStatement(Statement):
             'name': self.name.to_dict(),
             'value': self.root.to_dict()
         }
+
+    def decompile(self, ctx: Context):
+        name = self.name.decompile(ctx)
+        value = self.root.decompile(ctx)
+        return f'let {name} = {value}'
         
     def eval(self, ctx:'Context', **kwargs):
         name = self.name.eval(ctx, as_str=True)

@@ -38,11 +38,16 @@ class Range(Operator):
             'end': self.end.to_dict(),
             'step': self.step.to_dict(),
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        name = self.name.decompile(ctx)
+        start = self.start.decompile(ctx)
+        end = self.end.decompile(ctx)
+        step = self.step.decompile(ctx)
+
+        return f'range {name} from {start} to {end} step {step}'
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         name = self.name.eval(ctx, as_list=True)
         start = self.start.eval(ctx)
         end = self.end.eval(ctx)

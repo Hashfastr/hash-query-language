@@ -14,9 +14,9 @@ Creates a simple datatable, essentially an inline dataframe/table
 @register_op('Datatable')
 class Datatable(Operator):
     def __init__(self, schema:list[list[Expression]], values:list[Expression]):
-        super().__init__()
-        self.schema = schema
+        Operator.__init__(self)
         self.values = values
+        self.schema = schema
         self.tabular = True
         
     def to_dict(self):
@@ -24,11 +24,33 @@ class Datatable(Operator):
             'type': self.type,
             # 'schema': 
         }
-        
-    def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
 
+    def decompile(self, ctx: 'Context') -> str:
+        width = len(self.schema)
+        nvalues = len(self.values)
+
+        schema = []
+        for i in self.schema:
+            schema.append(f'{i[0].decompile(ctx)}: {i[1].decompile(ctx)}')
+        schema = ', '.join(schema)
+        
+        values = []
+        for i in range(0, nvalues, width):
+            row = [x.decompile(ctx) for x in self.values[i:i+width]]
+            values.append(', '.join(row))
+
+        table = '    '
+        table += ',\n    '.join(values)
+        table += '\n'
+
+        total  = f'datatable ({schema})\n'
+        total += '[\n'
+        total += table
+        total += ']'
+
+        return total
+
+    def eval(self, ctx:'Context', **kwargs):
         width = len(self.schema)
         nvalues = len(self.values)
         

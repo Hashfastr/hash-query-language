@@ -32,6 +32,19 @@ class Take(Operator):
             'limit': limit,
             'tables': tables
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        out = 'take '
+        out += self.expr.decompile(ctx)
+
+        if self.tables:
+            out += ' from '
+            exprs = []
+            for i in self.tables:
+                exprs.append(i.decompile(ctx))
+            out += ', '.join(exprs)
+
+        return out
     
     '''
     Takes only so many results for each table.
@@ -41,9 +54,6 @@ class Take(Operator):
     Unimplemented.
     '''
     def eval(self, ctx:'Context', **kwargs):        
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         limit = self.expr.eval(ctx)
 
         if not isinstance(limit, int):

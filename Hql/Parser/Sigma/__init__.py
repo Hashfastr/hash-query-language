@@ -27,15 +27,8 @@ class SigmaParser():
     def assemble(self):
         from Hql.Expressions import PipeExpression
         from Hql.Query import Query, QueryStatement
-        
-        hac = dict()
-        for i in self.loaded:
-            if i in ('logsource', 'detection'):
-                continue
-            hac[i] = self.loaded[i]
 
-        hac = self.gen_hac(hac)
-
+        hac = self.gen_hac()
         dac = self.loaded['detection']
         src = self.loaded['logsource']
 

@@ -33,7 +33,7 @@ class NamedReference(Expression):
         decomp = self.name
         
         if self.scope:
-            scope = self.scope.eval(ctx, decomp=True)
+            scope = self.scope.decompile(ctx)
             decomp += f' {scope}'
 
         return decomp
@@ -114,7 +114,7 @@ class Path(Expression):
             logging.debug(e)
 
     def decompile(self, ctx: 'Context') -> str:
-        return '.'.join([x.eval(ctx, decomp=True) for x in self.path])
+        return '.'.join([x.decompile(ctx) for x in self.path])
 
     def gen_list(self, ctx:'Context'):
         return [x.eval(ctx, as_str=True) for x in self.path]
@@ -199,13 +199,10 @@ class NamedExpression(Expression):
     def decompile(self, ctx: 'Context') -> str:
         paths:list[str] = []
         for i in self.paths:
-            path = i.eval(ctx, decomp=True)
-            if not isinstance(path, str):
-                raise hqle.DecompileStringException(type(i), type(path))
-            paths.append(path)
+            paths.append(i.decompile(ctx))
 
         lh = ', '.join(paths)
-        value = self.value.eval(ctx, decomp=True)
+        value = self.value.decompile(ctx)
 
         return f'{lh} = {value}'
         

@@ -16,17 +16,14 @@ class Literal(Expression):
         return str(self.value)
 
 class TypeExpression(Literal):
-    def __init__(self, type:str):
+    def __init__(self, etype:str):
         Literal.__init__(self)
-        self.type = type
+        self.type = etype
 
     def decompile(self, ctx: 'Context') -> str:
         return self.type
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-
         return hqlt.from_name(self.type)
 
 # A string literal
@@ -53,9 +50,6 @@ class StringLiteral(Literal):
         return self.quote + self.value + self.quote
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 
@@ -75,11 +69,11 @@ class Integer(Literal):
             'type': self.type,
             'value': self.value
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        return str(self.value)
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 
@@ -110,9 +104,6 @@ class IP4(Literal):
         return f'{(i & a) >> 24}.{(i & b) >> 16}.{(i & c) >> 8}.{i & d}'
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-        
         return self.value
 
 class Float(Literal):
@@ -125,11 +116,11 @@ class Float(Literal):
             'type': self.type,
             'value': self.value
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        return str(self.value)
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-        
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 
@@ -145,11 +136,11 @@ class Bool(Literal):
             'type': self.type,
             'value': self.value
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        return str(self.value)
         
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decompile', False):
-            return self.decompile(ctx)
-        
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
 

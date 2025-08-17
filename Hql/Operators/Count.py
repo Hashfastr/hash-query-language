@@ -15,17 +15,18 @@ from Hql.Exceptions import HqlExceptions as hqle
 @register_op('Count')
 class Count(Operator):
     def __init__(self, name:Union[Expression, None]=None):
-        super().__init__()
+        Operator.__init__(self)
         self.name = name
+
+    def decompile(self, ctx: 'Context') -> str:
+        name = self.name.decompile(ctx) if self.name else ''
+        return f'count as {name}' if name else 'count'
     
     '''
     Counts each table and replaces the contents of that table with the count.
     Adds an additional meta * table for the total count of all tables.
     '''
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         name = self.name.eval(ctx, as_str=True) if self.name else None
 
         if not isinstance(name, (str, type(None))):

@@ -5,7 +5,7 @@ from Hql.Context import register_op, Context
 @register_op('Unnest')
 class Unnest(Operator):
     def __init__(self, field:Expression, tables:list[Expression]):
-        super().__init__()
+        Operator.__init__(self)
         self.field = field
         self.tables = tables
         
@@ -15,13 +15,21 @@ class Unnest(Operator):
             'field': self.field.to_dict(),
             'tables': [x.to_dict() for x in self.tables]
         }
+
+    def decompile(self, ctx: 'Context') -> str:
+        out = 'unnest '
+        out += self.field.decompile(ctx)
+
+        if self.tables:
+            out += ' on '
+            exprs = []
+            for i in self.tables:
+                exprs.append(i.decompile(ctx))
+            out += ', '.join(exprs)
+
+        return out
             
     def eval(self, ctx:'Context', **kwargs):
-        preview = kwargs.get('preview', False)
-
-        if preview:
-            return self.to_dict()
-
         self.ctx = ctx
 
         field = self.field.eval(ctx, as_list=True)

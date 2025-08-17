@@ -63,35 +63,35 @@ class Operators(HqlVisitor):
         for i in ctx.Expressions:
             exprs.append(self.visit(i))
         
-        return Ops.Project(exprs)
+        return Ops.Project('project', exprs)
 
     def visitProjectAwayOperator(self, ctx: HqlParser.ProjectAwayOperatorContext):
         exprs = []
         for i in ctx.Columns:
             exprs.append(self.visit(i))
         
-        return Ops.ProjectAway(exprs)
+        return Ops.ProjectAway('project-away', exprs)
     
     def visitProjectKeepOperator(self, ctx: HqlParser.ProjectKeepOperatorContext):
         exprs = []
         for i in ctx.Columns:
             exprs.append(self.visit(i))
         
-        return Ops.ProjectKeep(exprs)
+        return Ops.ProjectKeep('project-keep', exprs)
 
     def visitProjectRenameOperator(self, ctx: HqlParser.ProjectRenameOperatorContext):
         exprs = []
         for i in ctx.Expressions:
             exprs.append(self.visit(i))
         
-        return Ops.ProjectRename(exprs)
+        return Ops.ProjectRename('project-rename', exprs)
     
     def visitProjectReorderOperator(self, ctx: HqlParser.ProjectReorderOperatorContext):
         exprs = []
         for i in ctx.Expressions:
             exprs.append(self.visit(i))
         
-        return Ops.ProjectReorder(exprs)
+        return Ops.ProjectReorder('project-reorder', exprs)
         
     def visitExtendOperator(self, ctx: HqlParser.ExtendOperatorContext):
         exprs = []
@@ -201,9 +201,9 @@ class Operators(HqlVisitor):
         if ctx.LimitClause:
             limit = self.visit(ctx.LimitClause)
         else:
-            limit = Exprs.Integer('2147483647')
+            limit = None
         
-        return Ops.MvExpand(exprs, limit)
+        return Ops.MvExpand(exprs, limit=limit)
     
     def visitMvexpandOperatorExpression(self, ctx: HqlParser.MvexpandOperatorExpressionContext):
         from Hql.Types.Hql import HqlTypes as hqlt
