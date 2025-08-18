@@ -110,13 +110,17 @@ class Visitor(SigmaVisitor):
     def visitOfTarget(self, ctx: SigmaParser.OfTargetContext):
         # pattern or 'them'
         # 'them' means all selections
-        pat = ctx.Pattern.text if ctx.Pattern else '*'
+        if ctx.Pattern:
+            pat = self.visit(ctx.Pattern)
+        else:
+            pat = '*'
+
         target = self.condition.get_sel(pat)
 
         if not target:
             raise Exception(f'Specifier {pat} matches nothing')
 
-        return target
+        return [x.process_fields() for x in target]
 
     def visitSelectionIdentifier(self, ctx: SigmaParser.SelectionIdentifierContext):
         if ctx.Basic:

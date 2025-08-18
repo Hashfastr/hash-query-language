@@ -1,0 +1,3 @@
+[submodule "examples/sigma"]
+	path = examples/sigma
+	url = https://github.com/SigmaHQ/sigma.git
