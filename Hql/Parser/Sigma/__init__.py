@@ -1,26 +1,38 @@
 from typing import TYPE_CHECKING, Union
+
 from .Selection import Selection
 from .Condition import Condition
+from Hql.Exceptions import HqlExceptions as hqle
+
+import logging, json
 
 if TYPE_CHECKING:
     from Hql.Expressions import DotCompositeFunction
     from Hql.Hac import Hac
 
 class SigmaParser():
-    def __init__(self, txt):
+    def __init__(self, txt:str):
         from Hql.Query import Query
         import yaml
 
         self.loaded = yaml.load(txt, yaml.SafeLoader)
         self.assembly:Union[None, Query] = None
 
+        if self.loaded.get('status', '') == 'deprecated':
+            raise hqle.QueryException(f'Sigma rule is deprecated')
+
     def gen_hac(self):
         from copy import deepcopy
         from Hql.Hac import Hac
         doc:dict = deepcopy(self.loaded)
 
-        for i in ['detection', 'logsource']:
-            doc.pop(i)
+        try:
+            for i in ['detection', 'logsource']:
+                doc.pop(i)
+        except KeyError as e:
+            logging.critical(f"Missing critical field")
+            logging.critical(e)
+            raise hqle.QueryException(f'Invalid sigma supplied to parser')
 
         return Hac(doc, 'sigma')
 
@@ -43,13 +55,18 @@ class SigmaParser():
         from Hql.Expressions import DotCompositeFunction
         from Hql.Expressions import FuncExpr, StringLiteral
 
-        product = StringLiteral(src['product'])
-        category = StringLiteral(src['category'])
+        funcs = []
 
-        funcs = [
-            FuncExpr('product', [product]),
-            FuncExpr('category', [category])
-        ]
+        if 'product' not in src:
+            FuncExpr('product', [StringLiteral('*')])
+        else:
+            FuncExpr('product', [StringLiteral(src['product'])])
+
+        if 'category' in src:
+            funcs.append(FuncExpr('product', [StringLiteral(src['category'])]))
+
+        if 'service' in src:
+            funcs.append(FuncExpr('product', [StringLiteral(src['service'])]))
 
         return DotCompositeFunction(funcs)
 

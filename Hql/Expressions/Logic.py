@@ -380,7 +380,10 @@ class BinaryLogic(Expression):
 
         decomp = []
         for i in exprs:
-            decomp.append(i.decompile(ctx))
+            j = i.decompile(ctx)
+            if isinstance(i, BinaryLogic):
+                j = f'({j})'
+            decomp.append(j)
 
         bitype = f' {self.bitype} '
 

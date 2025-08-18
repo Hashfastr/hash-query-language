@@ -1,3 +1,4 @@
+from pathlib import Path
 import Hql.Operators as Ops
 import time
 import Hql.Config as Config
@@ -98,10 +99,11 @@ class CompilerSet():
         return ctx.data
 
 class Compiler():
-    def __init__(self, conf_file:str, query:Query):
+    def __init__(self, conf_file:Path, query:Query):
+        from Hql.Data import Data
+
         self.query = query
-        Config.HqlConfig = Config.Config(conf_file)
-        self.ctx = Context(None)
+        self.ctx = Context(Data())
 
     def run(self, ctx:Union[Context,None]=None, **kwargs):
         ctx = ctx if ctx else self.ctx
@@ -118,10 +120,11 @@ class Compiler():
  
     def compile(self):
         from Hql.Query import Statement, LetStatement, QueryStatement
+        from Hql.Data import Data
 
         self.compiled = []
         self.op_sets = []
-        ctx = Context(None)
+        ctx = Context(Data())
                 
         statement = self.query.statements
         

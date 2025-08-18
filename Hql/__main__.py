@@ -4,6 +4,7 @@ from Hql.Parser import Parser, SigmaParser
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Compiler import Compiler
+from Hql.Query import Query
 from Hql.Hac import Parser as HaCParser
 
 import json
@@ -36,19 +37,20 @@ def config_logging(level:int):
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0])
     parser.add_argument('-asm', '--asm-show', help='Show the json of the parsed data and exit', action='store_true')
-    parser.add_argument('-f', '--file', help="File to compile", required=True)
+    file_ops = parser.add_mutually_exclusive_group(required=True)
+    file_ops.add_argument('-f', '--file', help="Hql/Sigma file")
+    file_ops.add_argument('-d', '--directory', help="File to compile")
+    parser.add_argument('-o', '--output', help='Output dir otherwise stdout')
     parser.add_argument('-v', '--verbose', help="Set verbosity to debug", action='store_true')
     parser.add_argument('-l' '--logging-level', help="Verbosity level 1-5, where 5 is debug, 1 is critical, default is 3, warning.", type=int)
-    parser.add_argument('-r', '--rule-set', help="The ruleset used for compiling, defaults to ./rules.json")
-    parser.add_argument('-nc', '--no-clean', help="Should Hql not clean up container files after execution?", action='store_true')
     parser.add_argument('-p', '--profile', help="Profile the performance of Hql", action='store_true')
-    parser.add_argument('-co', '--compose-override', help="Override the compose binary found in the path")
     parser.add_argument('-c', '--config', help="Location of the config file")
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
     parser.add_argument('-dpar', '--deparse', help="Deparse the program before compiling", action='store_true')
     parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
     parser.add_argument('-sig', '--sigma', help="Input file is a Sigma file", action='store_true')
+    parser.add_argument('-om', '--omni', help="Process both Sigma and Hql if given the input", action='store_true')
     
     args = parser.parse_args()
     
@@ -60,12 +62,6 @@ def main():
         config_logging(args.l__logging_level)
     elif args.verbose:
         config_logging(5)
-    
-    # unused for now
-    if args.rule_set == None:
-        rule_file = "./rules.json"
-    else:
-        rule_file = args.rule_set
         
     if args.config == None:
         conf_path = "./conf"
@@ -73,18 +69,79 @@ def main():
         conf_path = args.config
     conf_path = Path(conf_path)
         
+    sigma_files:list[Path] = []
+    hql_files:list[Path] = []
+
+    if args.directory:
+        path = Path(args.directory)
+
+        # Hql
+        for file in path.rglob('*.hql'):
+            if file.is_file():
+                hql_files.append(file)
+
+        # yml
+        for file in path.rglob('*.yml'):
+            if file.is_file():
+                sigma_files.append(file)
+
+    else:
+        if args.sigma:
+            sigma_files.append(Path(args.file))
+        else:
+            hql_files.append(Path(args.file))
+
+    errors = []
+    successes = []
+
+    if args.sigma or args.omni:
+        for i in sigma_files:
+            with i.open(mode='r') as f:
+                txt = f.read()
+
+            try:
+                print(run_query(txt, args, i, conf_path))
+            except Exception as e:
+                logging.critical('Exception caught when running query')
+                logging.critical(e)
+                errors.append(i)
+                continue
+
+            successes.append(i)
+    
+    if not args.sigma or args.omni:
+        for i in hql_files:
+            with i.open(mode='r') as f:
+                txt = f.read()
+
+            try:
+                print(run_query(txt, args, i, conf_path))
+            except Exception as e:
+                logging.critical('Exception caught when running query')
+                logging.critical(e)
+                errors.append(i)
+                continue
+
+            successes.append(i)
+
+    logging.info(f'Finished execution {len(errors)} errors, {len(successes)} successes')
+
+    if errors:
+        return -1
+        
+def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
     ##################################
     ## Generate HaC (if applicable) ##
     ##################################
 
+    logging.debug(f'Parsing HaC for {src_path.as_posix()}...')
     if args.sigma:
-        with open(args.file, mode='r') as f:
-            parser = SigmaParser(f.read())
+        parser = SigmaParser(text)
         hac = parser.gen_hac()
 
     else:
         try:
-            parser = HaCParser.Parser(filename=args.file)
+            parser = HaCParser.Parser(text=text)
             hac = parser.assemble()
         except hace.LexerException:
             hac = None
@@ -92,29 +149,22 @@ def main():
     if args.render_hac:
         if not hac:
             logging.critical('Hql file does not contain a valid HaC comment!')
-            return -1
+            return ''
 
-        print(hac.render(args.render_hac))
-        return
+        return hac.render(args.render_hac)
 
     #######################
     ## Generate Assembly ##
     #######################
     
-    logging.debug('Parsing...')
+    logging.debug(f'Parsing {src_path.as_posix()}...')
     start = time.perf_counter()
 
-    try:
-        if args.sigma:
-            with open(args.file, mode='r') as f:
-                parser = SigmaParser(f.read())
-        else:
-            parser = Parser(args.file)
-        parser.assemble()
-    except hqle.HqlException as e:
-        logging.critical('Exception caught when assembling')
-        logging.critical(e)
-        return -1
+    if args.sigma or args.omni:
+        parser = SigmaParser(text)
+    else:
+        parser = Parser(text)
+    parser.assemble()
     
     logging.debug('Done.')
     
@@ -123,17 +173,20 @@ def main():
     
     if args.asm_show:
         # Use print to give a raw output
-        print(parser.assembly)
-        return
+        return str(parser.assembly)
 
     if args.deparse:
-        if hac:
-            hac_str = hac.render(target='decompile')
-            print(hac_str)
+        deparse = ''
 
-        code = Compiler(conf_path, parser.assembly).decompile()
-        print(code)
-        return
+        if hac:
+            deparse += hac.render(target='decompile')
+            deparse += '\n'
+
+        if not isinstance(parser.assembly, Query):
+            raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
+
+        deparse += Compiler(conf_path, parser.assembly).decompile()
+        return deparse
         
     ######################
     ## Compile Assembly ##
@@ -141,6 +194,9 @@ def main():
     
     logging.debug("Compiling...")
     start = time.perf_counter()
+
+    if not isinstance(parser.assembly, Query):
+        raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
     
     compiler = Compiler(conf_path, parser.assembly)
     compiler.compile()
@@ -151,10 +207,10 @@ def main():
     logging.debug(f"Compiling took {end - start}")
 
     if args.decompile:
-        compiler.de
+        return compiler.decompile()
    
     if args.no_exec:
-        return
+        return ''
     
     #############
     ## Queries ##
@@ -164,7 +220,7 @@ def main():
     start = time.perf_counter()
     
     results = compiler.run()
-    print(json.dumps(results.to_dict(), default=repr))
+    return json.dumps(results.to_dict(), default=repr)
    
     end = time.perf_counter() 
     logging.debug("Ran")

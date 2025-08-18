@@ -27,26 +27,19 @@ class HqlErrorListener(ErrorListener):
         Parser.handleException(recognizer, e)
         
 class Parser():
-    def __init__(self, filename:str):
+    def __init__(self, text:str, filename:str=''):
         self.filename = filename
+        self.text = text
         self.tree = self.parse_file()
     
     def parse_file(self) -> HqlParser.QueryContext:
-        try:
-            with open(self.filename, 'r') as f:
-                text = f.read()
-        except Exception as e:
-            logging.error(f"Failed to open file {self.filename}")
-            logging.error(str(e))
-            raise e
-
-        if not text:
-            logging.error(f'Query file is empty: {self.filename}')
+        if not self.text:
+            logging.error(f'Given query is empty: {self.filename}')
             raise hqle.QueryException('Empty query given')
         
-        self.err_listener = HqlErrorListener(text, self.filename)
+        self.err_listener = HqlErrorListener(self.text, self.filename)
         
-        lexer = HqlLexer(InputStream(text))
+        lexer = HqlLexer(InputStream(self.text))
         token_stream = CommonTokenStream(lexer)
         parser = HqlParser(token_stream)
         
