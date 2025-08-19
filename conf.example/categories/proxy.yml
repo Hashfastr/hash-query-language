@@ -1,0 +1,7 @@
+category:
+  proxy:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('proxy').product('*')

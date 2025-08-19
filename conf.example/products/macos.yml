@@ -1,0 +1,7 @@
+product:
+  macos:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

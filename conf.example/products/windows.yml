@@ -1,0 +1,8 @@
+product:
+  windows:
+    configured: False
+    services:
+      all:
+        hql: |
+          let T = database('');
+          merge T

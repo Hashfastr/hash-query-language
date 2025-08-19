@@ -1,0 +1,7 @@
+product:
+  onelogin:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

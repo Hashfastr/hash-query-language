@@ -1,0 +1,7 @@
+category:
+  webserver:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('webserver').product('*')

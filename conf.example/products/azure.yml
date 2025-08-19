@@ -1,0 +1,7 @@
+product:
+  azure:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

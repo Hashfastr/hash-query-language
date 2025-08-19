@@ -1,0 +1,7 @@
+category:
+  sysmon_status:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('sysmon_status').product('*')

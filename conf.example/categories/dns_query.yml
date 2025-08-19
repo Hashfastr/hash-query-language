@@ -1,0 +1,7 @@
+category:
+  dns_query:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('dns_query').product('*')

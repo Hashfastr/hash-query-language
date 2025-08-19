@@ -1,0 +1,7 @@
+product:
+  ruby_on_rails:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

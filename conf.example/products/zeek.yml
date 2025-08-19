@@ -1,0 +1,7 @@
+product:
+  zeek:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

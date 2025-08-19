@@ -1,0 +1,7 @@
+product:
+  python:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

@@ -1,0 +1,7 @@
+category:
+  process_tampering:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('process_tampering').product('*')

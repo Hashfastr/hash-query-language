@@ -1,0 +1,7 @@
+category:
+  application:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('application').product('*')

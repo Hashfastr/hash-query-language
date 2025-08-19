@@ -55,18 +55,20 @@ class SigmaParser():
         from Hql.Expressions import DotCompositeFunction
         from Hql.Expressions import FuncExpr, StringLiteral
 
+        '''
+        Category can contain a set of product/service combos
+        Products contain a set of services, can be used to narrow down categories
+        Services filter down logs from a product
+        '''
+        order = ['category', 'product', 'service']
         funcs = []
 
-        if 'product' not in src:
-            FuncExpr('product', [StringLiteral('*')])
-        else:
-            FuncExpr('product', [StringLiteral(src['product'])])
+        for i in order:
+            if i in src:
+                funcs.append(FuncExpr(i, [StringLiteral(src[i])]))
 
-        if 'category' in src:
-            funcs.append(FuncExpr('product', [StringLiteral(src['category'])]))
-
-        if 'service' in src:
-            funcs.append(FuncExpr('product', [StringLiteral(src['service'])]))
+        if len(funcs) == 0:
+            raise hqle.QueryException(f'Sigma provided no log sources!')
 
         return DotCompositeFunction(funcs)
 

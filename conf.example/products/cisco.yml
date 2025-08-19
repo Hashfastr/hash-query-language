@@ -1,0 +1,7 @@
+product:
+  cisco:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

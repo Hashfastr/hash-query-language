@@ -1,0 +1,7 @@
+category:
+  firewall:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('firewall').product('*')

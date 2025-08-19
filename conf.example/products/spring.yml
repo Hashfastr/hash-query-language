@@ -1,0 +1,7 @@
+product:
+  spring:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

@@ -1,0 +1,7 @@
+product:
+  sql:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

@@ -1,0 +1,7 @@
+category:
+  registry_delete:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('registry_delete').product('*')

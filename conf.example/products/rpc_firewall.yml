@@ -1,0 +1,7 @@
+product:
+  rpc_firewall:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

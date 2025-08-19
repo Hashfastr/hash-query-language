@@ -1,0 +1,7 @@
+category:
+  database:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('database').product('*')

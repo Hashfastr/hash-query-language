@@ -1,0 +1,7 @@
+product:
+  aws:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

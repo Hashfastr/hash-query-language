@@ -1,0 +1,7 @@
+category:
+  driver_load:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('driver_load').product('*')

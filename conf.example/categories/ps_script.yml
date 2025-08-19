@@ -1,0 +1,7 @@
+category:
+  ps_script:
+    configured: False
+    products:
+      all:
+        hql: |
+          category('ps_script').product('*')

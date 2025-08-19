@@ -1,0 +1,7 @@
+product:
+  m365:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

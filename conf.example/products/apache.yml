@@ -1,0 +1,7 @@
+product:
+  apache:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')

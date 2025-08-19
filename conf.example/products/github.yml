@@ -1,0 +1,7 @@
+product:
+  github:
+    configured: False
+    services:
+      all:
+        hql: |
+          database('')
