@@ -31,23 +31,20 @@ class Expression():
     
     def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, 'Expression', list[str], str, 'CompilerSet', 'CompilerType', 'Data', 'Table', int, float]:
         raise hqle.CompilerException(f'Undefined eval for {self.type}')
-    
-    def is_escaped(self) -> bool:
-        return self.escaped
-    
+
     def __str__(self) -> str:
-        return json.dumps(self.to_dict(), indent=2)
+        return json.dumps(self.to_dict())
     
     def __repr__(self) -> str:
         return self.__str__()
+
+    # Defaults to the 'i am not none' approach
+    # True unless overridden
+    def __bool__(self) -> bool:
+        return True
 
     def features(self):
         return []
 
     def decompile(self, ctx:'Context') -> str:
         return ''
-
-    # Defaults to the 'i am not none' approach
-    # True unless overridden
-    def __bool__(self) -> bool:
-        return True

@@ -5,3 +5,5 @@ numpy
 requests
 ndjson
 oyaml
+opensearch-py
+aiohttp
