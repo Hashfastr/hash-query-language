@@ -1,63 +1,35 @@
 from typing import Union, TYPE_CHECKING
-from pathlib import Path
 import logging
+import time
 
+from Hql.Compiler import Compiler
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 
 if TYPE_CHECKING:
     from Hql.Query import Query
+    from Hql.Config import Config
 
-class HqlCompiler():
-    def __init__(self, conf_file:Path, query:'Query'):
-        from Hql.Data import Data
-
-        self.query = query
-        self.ctx = Context(Data())
-
-    def run(self, ctx:Union[Context,None]=None, **kwargs):
+class HqlCompiler(Compiler):
+    def __init__(self, config:'Config', query:Union[None, 'Query']=None):
+        Compiler.__init__(self)
+        self.config = config
+        self.Query(query)
+        
+    def run(self, ctx: Union[Context, None] = None) -> Context:
         ctx = ctx if ctx else self.ctx
-        
-        if not ctx.root:
-            logging.critical('No root statement compiled!')
-            raise hqle.CompilerException('No root statement compiled before runtime!')
-        
-        return ctx.root.eval(ctx, preview=preview)
 
-    def decompile(self):
-        return self.query.decompile(self.ctx)
- 
-    def compile(self):
-        from Hql.Query import Statement, LetStatement, QueryStatement
-        from Hql.Data import Data
+        if not self.ops:
+            raise hqle.QueryException('Running an empty compiler has no effect!')
 
-        self.compiled = []
-        self.op_sets = []
-        ctx = Context(Data())
-                
-        statement = self.query.statements
-        
-        for statement in self.query.statements:
-            if isinstance(statement, Statement):
-                logging.debug(f'Handling {statement.type}')
-                root = statement.root
+        for i in self.ops:
+            start = time.perf_counter()
+            logging.debug(f'Executing {i.type}: {i.id}')
+            
+            ctx.data = i.eval(ctx)
+            
+            end = time.perf_counter()
+            logging.debug(f"{i.id} - {end - start}")
 
-            else:
-                raise hqle.CompilerException(f'Unhandled statement type {statement.type}')
+        return ctx
 
-            cs = root.eval(ctx, no_exec=True)
-                                
-            if isinstance(statement, LetStatement):
-                name = statement.name.eval(ctx, as_str=True)
-                ctx.symbol_table[name] = cs
-                
-            elif isinstance(statement, QueryStatement):
-                if ctx.root:
-                    logging.warning('Overwriting root compiler set, bug?')
-                    
-                ctx.root = cs
-
-            else:
-                raise hqle.CompilerException(f'Unhandled statement type {statement.type}')
-                
-        self.ctx = ctx

@@ -7,100 +7,7 @@ from typing import Union, TYPE_CHECKING
 if TYPE_CHECKING:
     from Hql.Operators import Operator
     from Hql.Expressions import Expression
-
-class CompilerSet():
-    def __init__(self, ops:list[Union['Operator', "CompilerSet"]]):
-        self.type = self.__class__.__name__
-        self.ops = self.adjust_set(ops)
-
-    def adjust_set(self, ops:list[Union['Operator', "CompilerSet"]]) -> list['Operator']:
-        from Hql.Operators import Operator
-
-        new_ops = []
-        for i in ops:
-            if isinstance(i, type(self)):
-                new_ops += i.ops
-
-            elif isinstance(i, Operator):
-                new_ops.append(i)
-
-            else:
-                raise hqle.CompilerException(f'Passed invalid type to {type(i)} to compilerset')
-
-        return new_ops
-        
-    def compile(self):
-        compiled = [self.ops[0]]
-        
-        logging.debug('Optimizing the following operators in a compilerset:')
-        for op in self.ops:
-            logging.debug(f'    {op.id}: {op.type}')
-        
-        for op in self.ops[1:]:
-            # This is an attempt at optimizing cases where a take can be placed higher
-            i = -1
-            while i >= -len(compiled):
-                nonconseq = compiled[i].non_consequential(op.type)
-
-                res = compiled[i].integrate(op)
-
-                if res == None:
-                    logging.debug(f'Integrated {op.id} into {compiled[i].id}')
-                    break
-
-                elif res != op:
-                    logging.debug(f'Partially integrated {op.id} into {compiled[i].id}')
-                    break
-                
-                if nonconseq:
-                    logging.debug(f'Can optimize {op.id} passing {compiled[i].id}')
-                    i -= 1
-
-                else:
-                    logging.debug(f'As high as we can go for {op.id}')
-                    compiled.append(op)
-                    break
-                
-        logging.debug('Final compiled set:')
-        for op in compiled:
-            logging.debug(f'    {op.id}: {op.type}')
-            
-        self.ops = compiled
-
-        return self
-    
-    def add_ops(self, ops:list['Operator']):
-        self.ops += ops
-        self.compile()
-        
-    def add_op(self, op:'Operator'):
-        self.add_ops([op])
-    
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Data import Data
-
-        ctx = Context(Data(), ctx.symbol_table)
-        preview = kwargs.get('preview', False)
-        pdict = []
-        
-        for i in self.ops:
-            start = time.perf_counter()
-            logging.debug(f'Executing {i.type}: {i.id}')
-            
-            data = i.eval(ctx, preview=preview)
-
-            if preview:
-                pdict.append(data)
-            else:
-                ctx.data = data
-                        
-            end = time.perf_counter()
-            logging.debug(f"{i.id} - {end - start}")
-            
-        if preview:
-            return pdict
-
-        return ctx.data
+    import Hql
 
 class Compiler():
     def __init__(self):
@@ -110,21 +17,7 @@ class Compiler():
         self.type = self.__class__.__name__
 
     def run(self, ctx:Union[Context, None]=None) -> Context:
-        ctx = ctx if ctx else self.ctx
-
-        if not self.ops:
-            raise hqle.QueryException('Running an empty compiler has no effect!')
-
-        for i in self.ops:
-            start = time.perf_counter()
-            logging.debug(f'Executing {i.type}: {i.id}')
-            
-            ctx.data = i.eval(ctx)
-            
-            end = time.perf_counter()
-            logging.debug(f"{i.id} - {end - start}")
-
-        return ctx
+        return self.ctx
 
     def add_op(self, op:'Operator'):
         self.ops.append(op)
@@ -186,95 +79,116 @@ class Compiler():
     'rejected' back to the compiler
     '''
 
-    def Where(self, op:'Operator'):
+    '''
+    Statements
+    '''
+
+    def Query(self, query:'Hql.Query.Query'):
+        return query
+
+    def QueryStatement(self, statement:'Hql.Query.QueryStatement'):
+        return statement
+
+    def LetStatement(self, statement:'Hql.Query.LetStatement'):
+        return statement
+
+    '''
+    Operators
+    '''
+
+    def Where(self, op:'Hql.Operators.Where'):
         return op
 
-    def Project(self, op:'Operator'):
+    def Project(self, op:'Hql.Operators.Project'):
         return op
 
-    def ProjectAway(self, op:'Operator'):
+    def ProjectAway(self, op:'Hql.Operators.ProjectAway'):
         return op
 
-    def ProjectKeep(self, op:'Operator'):
+    def ProjectKeep(self, op:'Hql.Operators.ProjectKeep'):
         return op
 
-    def ProjectReorder(self, op:'Operator'):
+    def ProjectReorder(self, op:'Hql.Operators.ProjectReorder'):
         return op
 
-    def ProjectRename(self, op:'Operator'):
+    def ProjectRename(self, op:'Hql.Operators.ProjectRename'):
         return op
 
-    def Take(self, op:'Operator'):
+    def Take(self, op:'Hql.Operators.Take'):
         return op
 
-    def Count(self, op:'Operator'):
+    def Count(self, op:'Hql.Operators.Count'):
         return op
 
-    def Extend(self, op:'Operator'):
+    def Extend(self, op:'Hql.Operators.Extend'):
         return op
 
-    def PrePipe(self, op:'Operator'):
+    def PrePipe(self, op:'Hql.Operators.PrePipe'):
         return op
 
-    def Range(self, op:'Operator'):
+    def Range(self, op:'Hql.Operators.Range'):
         return op
 
-    def Top(self, op:'Operator'):
+    def Top(self, op:'Hql.Operators.Top'):
         return op
 
-    def Unnest(self, op:'Operator'):
+    def Unnest(self, op:'Hql.Operators.Unnest'):
         return op
 
-    def Summarize(self, op:'Operator'):
+    def Summarize(self, op:'Hql.Operators.Summarize'):
         return op
 
-    def Datatable(self, op:'Operator'):
+    def Datatable(self, op:'Hql.Operators.Datatable'):
         return op
 
-    def Join(self, op:'Operator'):
+    def Join(self, op:'Hql.Operators.Join'):
         return op
 
-    def MvExpand(self, op:'Operator'):
+    def MvExpand(self, op:'Hql.Operators.MvExpand'):
         return op
 
-    def Sort(self, op:'Operator'):
+    def Sort(self, op:'Hql.Operators.Sort'):
         return op
 
-    def PipeExpression(self, expr:'Expression'):
+    '''
+    Expressions
+    '''
+
+    def PipeExpression(self, expr:'Hql.Expressions.PipeExpression'):
         return expr
 
-    def OpParameter(self, expr:'Expression'):
+    def OpParameter(self, expr:'Hql.Expressions.OpParameter'):
         return expr
 
-    def ToClause(self, expr:'Expression'):
+    def ToClause(self, expr:'Hql.Expressions.ToClause'):
         return expr
 
-    def OrderedExpression(self, expr:'Expression'):
+    def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression'):
         return expr
 
-    def ByExpression(self, expr:'Expression'):
+    def ByExpression(self, expr:'Hql.Expressions.ByExpression'):
         return expr
 
-    def FuncExpr(self, expr:'Expression'):
+    def FuncExpr(self, expr:'Hql.Expressions.FuncExpr'):
         return expr
 
-    def DotCompositeFunction(self, expr:'Expression'):
+    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction'):
         return expr
 
-    def TypeExpression(self, expr:'Expression'):
+    def TypeExpression(self, expr:'Hql.Expressions.TypeExpression'):
         return expr
 
-    def StringLiteral(self, expr:'Expression'):
+    def StringLiteral(self, expr:'Hql.Expressions.StringLiteral'):
         return expr
 
-    def Integer(self, expr:'Expression'):
+    def Integer(self, expr:'Hql.Expressions.Integer'):
         return expr
 
-    def IP4(self, expr:'Expression'):
+    def IP4(self, expr:'Hql.Expressions.IP4'):
         return expr
 
-    def Float(self, expr:'Expression'):
+    def Float(self, expr:'Hql.Expressions.Float'):
         return expr
 
-    def Bool(self, expr:'Expression'):
+    def Bool(self, expr:'Hql.Expressions.Bool'):
         return expr
