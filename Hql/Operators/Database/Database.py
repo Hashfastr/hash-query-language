@@ -8,25 +8,23 @@ if TYPE_CHECKING:
 
 class Database(Operator):
     def __init__(self, config:dict):
+        from Hql.Compiler import Compiler
+
         Operator.__init__(self)
 
         self.type = self.__class__.__name__
         
         self.ctx = None
         self.config = config
-        
-        self.ops = []
-        self.compatible = []
+        self.compiler = Compiler()
 
-        self.query = ''
-
-    def compile(self) -> str:
-        return ''
+    def add_op(self, op:Operator):
+        self.compiler.add_op(op)
 
     def exec_query(self) -> 'Data':
         from Hql.Data import Data
 
-        query = self.compile()
+        query = self.compiler.compile()
         # ES.query(query)
 
         return Data()
@@ -35,14 +33,11 @@ class Database(Operator):
         return {
             'id': self.id,
             'type': self.type,
-            'query': self.query,
+            'query': self.compiler.compile(),
             # 'ops': [x.to_dict() for x in self.ops]
         }
     
     def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
         self.ctx = ctx
         return self.exec_query()
     

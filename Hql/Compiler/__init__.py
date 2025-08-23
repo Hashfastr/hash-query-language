@@ -2,7 +2,7 @@ import time
 from Hql.Context import Context
 from Hql.Exceptions import HqlExceptions as hqle
 import logging
-from typing import Union, TYPE_CHECKING
+from typing import Callable, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from Hql.Operators import Operator
@@ -12,63 +12,74 @@ if TYPE_CHECKING:
 class Compiler():
     def __init__(self):
         from Hql.Data import Data
-        self.ctx = Context(Data())
-        self.ops:list['Operator'] = []
         self.type = self.__class__.__name__
+        self.ctx = Context(Data())
+
+        self.ops:list['Operator'] = []
+        self.parents = []
+
+    def from_name(self, name:str) -> Callable:
+        if hasattr(self, name):
+            return getattr(self, name)
+        raise hqle.CompilerException(f'Attempting to get non-existant compiler function for {name}')
 
     def run(self, ctx:Union[Context, None]=None) -> Context:
+        ctx = ctx if ctx else self.ctx
         return self.ctx
 
     def add_op(self, op:'Operator'):
         self.ops.append(op)
+    
+    def add_ops(self, ops:list['Operator']):
+        self.ops += ops
 
-    def optimize(self):
-        compiled = [self.ops[0]]
+    def add_parent(self, parent):
+        self.parents.append(parent)
+
+    def optimize(self, ops:list['Operator']):
+        optimized = [ops[0]]
         
         logging.debug(f'Optimizing the following operators in for {self.type}:')
-        for op in self.ops:
+        for op in ops:
             logging.debug(f'    {op.id}: {op.type}')
         
-        for op in self.ops[1:]:
+        for op in ops[1:]:
             # This is an attempt at optimizing cases where a take can be placed higher
             i = -1
-            while i >= -len(compiled):
-                nonconseq = compiled[i].non_consequential(op.type)
+            while i >= -len(optimized):
+                nonconseq = optimized[i].non_consequential(op.type)
 
-                res = compiled[i].integrate(op)
+                res = optimized[i].integrate(op)
 
                 if res == None:
-                    logging.debug(f'Integrated {op.id} into {compiled[i].id}')
+                    logging.debug(f'Integrated {op.id} into {optimized[i].id}')
                     break
 
                 elif res != op:
-                    logging.debug(f'Partially integrated {op.id} into {compiled[i].id}')
+                    logging.debug(f'Partially integrated {op.id} into {optimized[i].id}')
                     break
                 
                 if nonconseq:
-                    logging.debug(f'Can optimize {op.id} passing {compiled[i].id}')
+                    logging.debug(f'Can optimize {op.id} passing {optimized[i].id}')
                     i -= 1
 
                 else:
                     logging.debug(f'As high as we can go for {op.id}')
-                    compiled.append(op)
+                    optimized.append(op)
                     break
-                
-        logging.debug('Final compiled set:')
-        for op in compiled:
+
+        logging.debug('Final optimized set:')
+        for op in optimized:
             logging.debug(f'    {op.id}: {op.type}')
             
-        self.ops = compiled
-
-        return self
+        return optimized
 
     '''
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
     def compile(self) -> Union[str, list['Operator']]:
-        self.optimize()
-        return self.ops
+        return self.optimize(self.ops)
 
     def decompile(self) -> str:
         from Expressions import PipeExpression
@@ -86,6 +97,9 @@ class Compiler():
     def Query(self, query:'Hql.Query.Query'):
         return query
 
+    def Statement(self, statement:'Hql.Query.Statement'):
+        return statement
+
     def QueryStatement(self, statement:'Hql.Query.QueryStatement'):
         return statement
 
@@ -95,6 +109,9 @@ class Compiler():
     '''
     Operators
     '''
+
+    def PrePipe(self, op:'Hql.Operators.PrePipe'):
+        return op
 
     def Where(self, op:'Hql.Operators.Where'):
         return op
@@ -121,9 +138,6 @@ class Compiler():
         return op
 
     def Extend(self, op:'Hql.Operators.Extend'):
-        return op
-
-    def PrePipe(self, op:'Hql.Operators.PrePipe'):
         return op
 
     def Range(self, op:'Hql.Operators.Range'):
@@ -153,6 +167,9 @@ class Compiler():
     '''
     Expressions
     '''
+
+    def Tabular(self, expr:'Hql.Expressions.Expression'):
+        return expr
 
     def PipeExpression(self, expr:'Hql.Expressions.PipeExpression'):
         return expr
@@ -191,4 +208,25 @@ class Compiler():
         return expr
 
     def Bool(self, expr:'Hql.Expressions.Bool'):
+        return expr
+    
+    def NamedReference(self, expr:'Hql.Expressions.NamedReference'):
+        return expr
+
+    def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference'):
+        return self.NamedReference(expr)
+
+    def Keyword(self, expr:'Hql.Expressions.Keyword'):
+        return self.NamedReference(expr)
+
+    def Identifier(self, expr:'Hql.Expressions.Identifier'):
+        return self.NamedReference(expr)
+
+    def Wildcard(self, expr:'Hql.Expressions.Wildcard'):
+        return self.NamedReference(expr)
+
+    def Path(self, expr:'Hql.Expressions.Path'):
+        return expr
+
+    def NamedExpression(self, expr:'Hql.Expressions.NamedExpression'):
         return expr

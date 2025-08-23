@@ -1,9 +1,12 @@
 import json
 import logging
-from typing import Union
+from typing import TYPE_CHECKING, Union
 from pathlib import Path, PurePath
 import oyaml as yaml
 from Hql.Exceptions import HqlExceptions as hqle
+
+if TYPE_CHECKING:
+    from Hql.Operators import Database
 
 class Config():
     def __init__(self, conf_path:str):
@@ -65,10 +68,10 @@ class Config():
 
         self.conf['databases'][name] = config
     
-    def is_database(self, name:str):        
+    def is_database(self, name:str) -> bool:
         return name in self.conf['databases']
     
-    def get_database(self, dbname:str):
+    def get_database(self, dbname:str) -> 'Database':
         if dbname not in self.conf['databases']:
             logging.critical(f'Config file for {dbname} is missing databases definition')
             logging.critical('Check that your config contains a database under that name')
@@ -82,7 +85,7 @@ class Config():
 
         self.conf['general'] = config
         
-    def get_default_db(self):
+    def get_default_db(self) -> 'Database':
         if 'default_db' not in self.conf['general']:
             logging.critical('Config file is missing databases definition')
             logging.critical('Check that your config contains a database')
