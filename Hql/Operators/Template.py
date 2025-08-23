@@ -1,7 +1,7 @@
 from Hql.Operators import Operator
 from Hql.Context import register_op, Context
 
-@register_op('Template')
+# @register_op('Template')
 class Template(Operator):
     def __init__(self):
         Operator.__init__(self)

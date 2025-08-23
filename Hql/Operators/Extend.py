@@ -9,10 +9,10 @@ from Hql.Context import register_op, Context
 # | extend Duration = EndTime - StartTime
 #
 # https://learn.microsoft.com/en-us/kusto/query/extend-operator
-@register_op('Extend')
+# @register_op('Extend')
 class Extend(Operator):
     def __init__(self, exprs:list[Expression]):
-        super().__init__()
+        Operator.__init__(self)
         self.exprs = exprs
 
     def decompile(self, ctx: 'Context') -> str:

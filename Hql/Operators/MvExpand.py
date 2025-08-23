@@ -9,7 +9,7 @@ import polars as pl
 if TYPE_CHECKING:
     from Hql.Expressions import ToClause, Integer
 
-@register_op('MvExpand')
+# @register_op('MvExpand')
 class MvExpand(Operator):
     def __init__(self, to_exprs:list['ToClause'], limit:Union[None, 'Integer']=None):
         Operator.__init__(self)

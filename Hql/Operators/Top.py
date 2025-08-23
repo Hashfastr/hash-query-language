@@ -21,7 +21,7 @@ Preserves the other fields as well
 
 https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
-@register_op('Top')
+# @register_op('Top')
 class Top(Operator):
     def __init__(self, expr:Expression, by:Expression):
         Operator.__init__(self)

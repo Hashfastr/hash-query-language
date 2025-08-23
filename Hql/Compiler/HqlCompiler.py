@@ -3,7 +3,7 @@ import logging
 import time
 import json
 
-from Hql.Compiler import Compiler
+from Hql.Compiler import Compiler, BranchDescriptor
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 from Hql.Query import LetStatement, QueryStatement
@@ -11,6 +11,7 @@ from Hql.Query import LetStatement, QueryStatement
 if TYPE_CHECKING:
     from Hql.Query import Query
     from Hql.Config import Config
+    from Hql.Operators import Database
     import Hql
 
 class HqlCompiler(Compiler):
@@ -64,7 +65,7 @@ class HqlCompiler(Compiler):
 
         self.ctx.symbol_table[name] = expr
 
-    def Tabular(self, expr: 'Hql.Expressions.Expression'):
+    def Tabular(self, expr: 'Hql.Expressions.Expression') -> 'Database':
         from Hql.Operators.Database import Database
 
         db = None
@@ -138,3 +139,104 @@ class HqlCompiler(Compiler):
         comp.parents = parents
 
         return comp
+
+    def Where(self, op: 'Hql.Operators.Where') -> BranchDescriptor:
+        from Hql.Operators import Where
+
+        method = self.from_name(op.expr.type)
+        res:BranchDescriptor = method(op.expr)
+        op = Where(res.get_expr(), op.parameters)
+
+        res.op = op
+        res.expr = None
+
+        return res
+
+    def Project(self, op: 'Hql.Operators.Project') -> BranchDescriptor:
+        from Hql.Operators import Project
+
+        parts:list[BranchDescriptor] = []
+        for i in op.exprs:
+            method = self.from_name(i.type)
+            parts.append(method(i))
+
+        res = BranchDescriptor()
+        exprs = []
+        for i in parts:
+            exprs.append(i.get_expr())
+            res.merge_attrs(i.attrs)
+
+        op = Project(op.optok, exprs)
+        res.op = op
+
+        return res
+
+    def ProjectAway(self, op: 'Hql.Operators.Project') -> BranchDescriptor:
+        return self.Project(op)
+
+    def ProjectKeep(self, op: 'Hql.Operators.Project') -> BranchDescriptor:
+        return self.Project(op)
+
+    def ProjectReorder(self, op: 'Hql.Operators.Project') -> BranchDescriptor:
+        return self.Project(op)
+
+    def ProjectRename(self, op: 'Hql.Operators.ProjectRename') -> BranchDescriptor:
+        return self.Project(op)
+
+    def Take(self, op: 'Hql.Operators.Take') -> BranchDescriptor:
+        from Hql.Operators import Take
+
+        handler = self.from_name(op.expr.type)
+        expr = handler(op.expr)
+
+        parts = []
+        for i in op.tables:
+            handler = self.from_name(i.type)
+            parts.append(handler(i))
+
+        res = BranchDescriptor()
+        res.merge_attrs(expr.attrs)
+        for i in parts:
+            res.merge_attrs(i.attrs)
+
+        op = Take(expr.get_expr(), [x.get_expr() for x in parts])
+        res.op = op
+
+        return res
+
+    def Count(self, op: 'Hql.Operators.Count') -> BranchDescriptor:
+        from Hql.Operators import Count
+
+        res = BranchDescriptor()
+
+        if op.name:
+            handler = self.from_name(op.name.type)
+            expr = handler(op.name)
+            res.merge_attrs(expr.attrs)
+            expr = expr.get_expr()
+        else:
+            expr = None
+
+        op = Count(expr)
+        res.op = op
+
+        return res
+
+    def Extend(self, op: 'Hql.Operators.Extend') -> object:
+        from Hql.Operators import Extend
+
+        parts = []
+        for i in op.exprs:
+            handler = self.from_name(i.type)
+            parts.append(handler(i))
+
+        res = BranchDescriptor()
+        exprs = []
+        for i in parts:
+            res.merge_attrs(i.attrs)
+            exprs.append(i.get_expr())
+
+        op = Extend(exprs)
+        res.op = op
+
+        return res

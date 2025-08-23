@@ -9,6 +9,48 @@ if TYPE_CHECKING:
     from Hql.Expressions import Expression
     import Hql
 
+'''
+Wraps an Expression or Operator with some tagged metadata
+Helpful for finding out if we can compile something
+'''
+class BranchDescriptor():
+    def __init__(self, expr:Union[None, 'Expression'] = None, op:Union[None, 'Operator'] = None, comp_str:str = '', **kwargs):
+        # contains a timeseries element
+        self.attrs = kwargs
+
+        self.expr = expr
+        self.op = op
+        self.str = comp_str
+
+    def get_attr(self, name:str):
+        return self.attrs.get(name, None)
+
+    def merge_attrs(self, attrs:dict):
+        for i in attrs:
+            cur = self.attrs.get(i, None)
+            val = attrs.get(i, None)
+
+            if isinstance(cur, type(None)):
+                self.attrs[i] = attrs[i]
+
+            elif isinstance(cur, type(bool)) and isinstance(val, type(bool)):
+                if not cur:
+                    self.attrs[i] = attrs[i]
+
+            # Default catchall for now
+            else:
+                self.attrs[i] = attrs[i]
+
+    def get_expr(self) -> 'Expression':
+        if isinstance(self.expr, type(None)):
+            raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Expr')
+        return self.expr
+
+    def get_op(self) -> 'Operator':
+        if isinstance(self.op, type(None)):
+            raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Op')
+        return self.op
+
 class Compiler():
     def __init__(self):
         from Hql.Data import Data
@@ -94,139 +136,139 @@ class Compiler():
     Statements
     '''
 
-    def Query(self, query:'Hql.Query.Query'):
+    def Query(self, query:'Hql.Query.Query') -> object:
         return query
 
-    def Statement(self, statement:'Hql.Query.Statement'):
+    def Statement(self, statement:'Hql.Query.Statement') -> object:
         return statement
 
-    def QueryStatement(self, statement:'Hql.Query.QueryStatement'):
+    def QueryStatement(self, statement:'Hql.Query.QueryStatement') -> object:
         return statement
 
-    def LetStatement(self, statement:'Hql.Query.LetStatement'):
+    def LetStatement(self, statement:'Hql.Query.LetStatement') -> object:
         return statement
 
     '''
     Operators
     '''
 
-    def PrePipe(self, op:'Hql.Operators.PrePipe'):
+    def PrePipe(self, op:'Hql.Operators.PrePipe') -> object:
         return op
 
-    def Where(self, op:'Hql.Operators.Where'):
+    def Where(self, op:'Hql.Operators.Where') -> object:
         return op
 
-    def Project(self, op:'Hql.Operators.Project'):
+    def Project(self, op:'Hql.Operators.Project') -> object:
         return op
 
-    def ProjectAway(self, op:'Hql.Operators.ProjectAway'):
+    def ProjectAway(self, op:'Hql.Operators.ProjectAway') -> object:
         return op
 
-    def ProjectKeep(self, op:'Hql.Operators.ProjectKeep'):
+    def ProjectKeep(self, op:'Hql.Operators.ProjectKeep') -> object:
         return op
 
-    def ProjectReorder(self, op:'Hql.Operators.ProjectReorder'):
+    def ProjectReorder(self, op:'Hql.Operators.ProjectReorder') -> object:
         return op
 
-    def ProjectRename(self, op:'Hql.Operators.ProjectRename'):
+    def ProjectRename(self, op:'Hql.Operators.ProjectRename') -> object:
         return op
 
-    def Take(self, op:'Hql.Operators.Take'):
+    def Take(self, op:'Hql.Operators.Take') -> object:
         return op
 
-    def Count(self, op:'Hql.Operators.Count'):
+    def Count(self, op:'Hql.Operators.Count') -> object:
         return op
 
-    def Extend(self, op:'Hql.Operators.Extend'):
+    def Extend(self, op:'Hql.Operators.Extend') -> object:
         return op
 
-    def Range(self, op:'Hql.Operators.Range'):
+    def Range(self, op:'Hql.Operators.Range') -> object:
         return op
 
-    def Top(self, op:'Hql.Operators.Top'):
+    def Top(self, op:'Hql.Operators.Top') -> object:
         return op
 
-    def Unnest(self, op:'Hql.Operators.Unnest'):
+    def Unnest(self, op:'Hql.Operators.Unnest') -> object:
         return op
 
-    def Summarize(self, op:'Hql.Operators.Summarize'):
+    def Summarize(self, op:'Hql.Operators.Summarize') -> object:
         return op
 
-    def Datatable(self, op:'Hql.Operators.Datatable'):
+    def Datatable(self, op:'Hql.Operators.Datatable') -> object:
         return op
 
-    def Join(self, op:'Hql.Operators.Join'):
+    def Join(self, op:'Hql.Operators.Join') -> object:
         return op
 
-    def MvExpand(self, op:'Hql.Operators.MvExpand'):
+    def MvExpand(self, op:'Hql.Operators.MvExpand') -> object:
         return op
 
-    def Sort(self, op:'Hql.Operators.Sort'):
+    def Sort(self, op:'Hql.Operators.Sort') -> object:
         return op
 
     '''
     Expressions
     '''
 
-    def Tabular(self, expr:'Hql.Expressions.Expression'):
+    def Tabular(self, expr:'Hql.Expressions.Expression') -> Union['Hql.Expressions.Expression', 'Hql.Operators.Database']:
         return expr
 
-    def PipeExpression(self, expr:'Hql.Expressions.PipeExpression'):
+    def PipeExpression(self, expr:'Hql.Expressions.PipeExpression') -> object:
         return expr
 
-    def OpParameter(self, expr:'Hql.Expressions.OpParameter'):
+    def OpParameter(self, expr:'Hql.Expressions.OpParameter') -> object:
         return expr
 
-    def ToClause(self, expr:'Hql.Expressions.ToClause'):
+    def ToClause(self, expr:'Hql.Expressions.ToClause') -> object:
         return expr
 
-    def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression'):
+    def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression') -> object:
         return expr
 
-    def ByExpression(self, expr:'Hql.Expressions.ByExpression'):
+    def ByExpression(self, expr:'Hql.Expressions.ByExpression') -> object:
         return expr
 
-    def FuncExpr(self, expr:'Hql.Expressions.FuncExpr'):
+    def FuncExpr(self, expr:'Hql.Expressions.FuncExpr') -> object:
         return expr
 
-    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction'):
+    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction') -> object:
         return expr
 
-    def TypeExpression(self, expr:'Hql.Expressions.TypeExpression'):
+    def TypeExpression(self, expr:'Hql.Expressions.TypeExpression') -> object:
         return expr
 
-    def StringLiteral(self, expr:'Hql.Expressions.StringLiteral'):
+    def StringLiteral(self, expr:'Hql.Expressions.StringLiteral') -> object:
         return expr
 
-    def Integer(self, expr:'Hql.Expressions.Integer'):
+    def Integer(self, expr:'Hql.Expressions.Integer') -> object:
         return expr
 
-    def IP4(self, expr:'Hql.Expressions.IP4'):
+    def IP4(self, expr:'Hql.Expressions.IP4') -> object:
         return expr
 
-    def Float(self, expr:'Hql.Expressions.Float'):
+    def Float(self, expr:'Hql.Expressions.Float') -> object:
         return expr
 
-    def Bool(self, expr:'Hql.Expressions.Bool'):
+    def Bool(self, expr:'Hql.Expressions.Bool') -> object:
         return expr
     
-    def NamedReference(self, expr:'Hql.Expressions.NamedReference'):
+    def NamedReference(self, expr:'Hql.Expressions.NamedReference') -> object:
         return expr
 
-    def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference'):
+    def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference') -> object:
         return self.NamedReference(expr)
 
-    def Keyword(self, expr:'Hql.Expressions.Keyword'):
+    def Keyword(self, expr:'Hql.Expressions.Keyword') -> object:
         return self.NamedReference(expr)
 
-    def Identifier(self, expr:'Hql.Expressions.Identifier'):
+    def Identifier(self, expr:'Hql.Expressions.Identifier') -> object:
         return self.NamedReference(expr)
 
-    def Wildcard(self, expr:'Hql.Expressions.Wildcard'):
+    def Wildcard(self, expr:'Hql.Expressions.Wildcard') -> object:
         return self.NamedReference(expr)
 
-    def Path(self, expr:'Hql.Expressions.Path'):
+    def Path(self, expr:'Hql.Expressions.Path') -> object:
         return expr
 
-    def NamedExpression(self, expr:'Hql.Expressions.NamedExpression'):
+    def NamedExpression(self, expr:'Hql.Expressions.NamedExpression') -> object:
         return expr

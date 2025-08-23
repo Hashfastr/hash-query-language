@@ -5,7 +5,7 @@ from Hql.Context import register_op, Context
 from Hql.Exceptions import HqlExceptions as hqle
 
 # Super meta operator, 
-@register_op('PrePipe')
+# @register_op('PrePipe')
 class PrePipe(Operator):
     def __init__(self, expr:Expression):
         Operator.__init__(self)

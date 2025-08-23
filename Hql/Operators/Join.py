@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Expressions import OpParameter
 
-@register_op('Join')
+# @register_op('Join')
 class Join(Operator):
     def __init__(self, rh:'Expression', params:Union[None, list['OpParameter']]=None, on:Union[None, list['Expression']]=None, where:Union[None, 'Expression']=None):
         Operator.__init__(self)

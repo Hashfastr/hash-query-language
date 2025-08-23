@@ -12,7 +12,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 # Count simply returns the number of rows given by a record set.
 #
 # https://learn.microsoft.com/en-us/kusto/query/count-operator
-@register_op('Count')
+# @register_op('Count')
 class Count(Operator):
     def __init__(self, name:Union[Expression, None]=None):
         Operator.__init__(self)

@@ -43,28 +43,28 @@ def get_func(name):
     else:
         raise hqle.CompilerException(f"Unknown function {name} referenced")
     
-op_registry = {}
-
-def register_op(name):
-    def decorator(cls):
-        from Hql.Operators import Operator
-        from Hql.Operators.Database import Database
-
-        if not issubclass(cls, Operator):
-            raise hqle.CompilerException(f'Attempting to register non-operator class {name} as an operator')
-
-        if issubclass(cls, Database):
-            raise hqle.CompilerException(f'Attempting to register database class {name} as an operator, use @register_database')
-
-        op_registry[name] = cls
-        return cls
-    return decorator
-
-def get_op(name):
-    if name in op_registry:
-        return op_registry[name]
-    else:
-        raise hqle.CompilerException(f"Unknown operator {name} referenced")
+# op_registry = {}
+#
+# def register_op(name):
+#     def decorator(cls):
+#         from Hql.Operators import Operator
+#         from Hql.Operators.Database import Database
+#
+#         if not issubclass(cls, Operator):
+#             raise hqle.CompilerException(f'Attempting to register non-operator class {name} as an operator')
+#
+#         if issubclass(cls, Database):
+#             raise hqle.CompilerException(f'Attempting to register database class {name} as an operator, use @register_database')
+#
+#         op_registry[name] = cls
+#         return cls
+#     return decorator
+#
+# def get_op(name):
+#     if name in op_registry:
+#         return op_registry[name]
+#     else:
+#         raise hqle.CompilerException(f"Unknown operator {name} referenced")
 
 '''
 The naming scheme here is 

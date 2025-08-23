@@ -9,7 +9,7 @@ from Hql.Context import register_op, Context
 # The implementation algorithm is just grab the first n rows.
 #
 # https://learn.microsoft.com/en-us/kusto/query/take-operator
-@register_op('Take')
+# @register_op('Take')
 class Take(Operator):
     def __init__(self, limit:Expression, tables:list[Expression]):
         Operator.__init__(self)

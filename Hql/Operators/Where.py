@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 # Can also take a number of parameters, although I'm not sure what they are
 # but they can exist.
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
-@register_op('Where')
+# @register_op('Where')
 class Where(Operator):
     # Pass in the parser context here for helpful debugging
     def __init__(self, expr:'Expression', params:Union[None, list['OpParameter']]=None):

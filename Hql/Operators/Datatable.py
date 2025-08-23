@@ -11,7 +11,7 @@ from Hql.Operators import Operator
 '''
 Creates a simple datatable, essentially an inline dataframe/table
 '''
-@register_op('Datatable')
+# @register_op('Datatable')
 class Datatable(Operator):
     def __init__(self, schema:list[list[Expression]], values:list[Expression]):
         Operator.__init__(self)

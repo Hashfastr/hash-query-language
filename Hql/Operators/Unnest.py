@@ -2,7 +2,7 @@ from Hql.Expressions import Expression
 from Hql.Operators import Operator
 from Hql.Context import register_op, Context
 
-@register_op('Unnest')
+# @register_op('Unnest')
 class Unnest(Operator):
     def __init__(self, field:Expression, tables:list[Expression]):
         Operator.__init__(self)

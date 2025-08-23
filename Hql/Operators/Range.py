@@ -20,7 +20,7 @@ range x from 1 to 5 step 1
 
 https://learn.microsoft.com/en-us/kusto/query/range-operator
 '''
-@register_op('Range')
+# @register_op('Range')
 class Range(Operator):
     def __init__(self, name:'Expression', start:'Expression', end:'Expression', step:'Expression'):
         super().__init__()

@@ -7,7 +7,7 @@ from Hql.Operators import Operator
 if TYPE_CHECKING:
     from Hql.Expressions import ByExpression
 
-@register_op('Summarize')
+# @register_op('Summarize')
 class Summarize(Operator):
     def __init__(self, aggregate_exprs:list[Expression], by_expr:'ByExpression'):
         Operator.__init__(self)

@@ -2,8 +2,8 @@ from Hql.Expressions import Expression
 from Hql.Operators import Operator
 from Hql.Context import register_op, Context
 
-@register_op('Sort')
-@register_op('Order')
+# @register_op('Sort')
+# @register_op('Order')
 class Sort(Operator):
     def __init__(self, exprs:list[Expression]):
         Operator.__init__(self)

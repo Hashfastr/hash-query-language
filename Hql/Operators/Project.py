@@ -14,7 +14,7 @@ import polars as pl
 #
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
-@register_op('Project')
+# @register_op('Project')
 class Project(Operator):
     def __init__(self, optok:str, exprs:list[Expression]):
         Operator.__init__(self)
@@ -43,7 +43,7 @@ class Project(Operator):
                 
         return Data.merge(datasets)
 
-@register_op('ProjectAway')
+# @register_op('ProjectAway')
 class ProjectAway(Project):
     def eval(self, ctx:'Context', **kwargs):
         paths = []
@@ -52,11 +52,11 @@ class ProjectAway(Project):
             
         return ctx.data.drop_many(paths)
 
-@register_op('ProjectKeep')
+# @register_op('ProjectKeep')
 class ProjectKeep(Project):
     ...
 
-@register_op('ProjectReorder')
+# @register_op('ProjectReorder')
 class ProjectReorder(Project):
     '''
     Gonna take out the specific bits and move them to the front
@@ -74,7 +74,7 @@ class ProjectReorder(Project):
         
         return Data.merge(new)
 
-@register_op('ProjectRename')
+# @register_op('ProjectRename')
 class ProjectRename(Project):
     def rename(self, ctx:'Context', table:Table):
         for i in self.exprs:

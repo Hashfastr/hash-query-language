@@ -15,7 +15,7 @@ database("tf11-elastic").index("so-beats-2022.10.*")
 https://learn.microsoft.com/en-us/kusto/query/as-operator
 '''
 # Disabling this for now until I decide how to implement
-#@register_op('As')
+## @register_op('As')
 class As(Operator):
     def __init__(self, expr:Expression):
         Operator.__init__(self)
