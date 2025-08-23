@@ -13,23 +13,28 @@ if TYPE_CHECKING:
 from Hql.Exceptions import HqlExceptions as hqle
 
 class PipeExpression(Expression):
-    def __init__(self, prepipe:Union['Operator', Expression], pipes:list['Operator']):
+    def __init__(self, pipes:list['Operator'],prepipe:Union['Operator', Expression, None]=None):
         Expression.__init__(self)
-        self.prepipe                 = prepipe
-        self.pipes:list['Operator']  = pipes
+        self.prepipe                = prepipe
+        self.pipes:list['Operator'] = pipes
 
     def __bool__(self):
         return bool(self.prepipe)
         
     def to_dict(self):
-        return {
+        d:dict = {
             'type': self.type,
-            'prepipe': self.prepipe.to_dict(),
-            'pipes': [x.to_dict() for x in self.pipes]
         }
+        
+        if self.prepipe:
+            d['prepipe'] = self.prepipe.to_dict()
+
+        d['pipes'] = [x.to_dict() for x in self.pipes]
+
+        return d
 
     def decompile(self, ctx: 'Context') -> str:
-        prepipe = self.prepipe.decompile(ctx)
+        prepipe = self.prepipe.decompile(ctx) if self.prepipe else ''
 
         pipes = []
         for i in self.pipes:
@@ -42,7 +47,9 @@ class PipeExpression(Expression):
 
         out = f'{prepipe}'
         for i in pipes:
-            out += f'\n| {i}'
+            if out:
+                out += '\n'
+            out += f'| {i}'
 
         return out
     
@@ -68,10 +75,6 @@ class PipeExpression(Expression):
             raise hqle.CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
 
         ops = [prepipe] + self.pipes
-        cs = CompilerSet(ops).compile()
-
-        if no_exec:
-            return cs
 
         return cs.eval(ctx)
 

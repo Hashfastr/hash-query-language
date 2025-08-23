@@ -107,22 +107,79 @@ class Compiler():
         from Hql.Data import Data
         self.ctx = Context(Data())
         self.ops:list['Operator'] = []
-        self.root:Union[None, 'Expression', 'Operator'] = None
+        self.type = self.__class__.__name__
 
-    def run(self, ctx:Union[Context, None]=None):
+    def run(self, ctx:Union[Context, None]=None) -> Context:
         ctx = ctx if ctx else self.ctx
-        raise hqle.QueryException('Running an empty compiler has no effect!')
+
+        if not self.ops:
+            raise hqle.QueryException('Running an empty compiler has no effect!')
+
+        for i in self.ops:
+            start = time.perf_counter()
+            logging.debug(f'Executing {i.type}: {i.id}')
+            
+            ctx.data = i.eval(ctx)
+            
+            end = time.perf_counter()
+            logging.debug(f"{i.id} - {end - start}")
+
+        return ctx
 
     def add_op(self, op:'Operator'):
         self.ops.append(op)
 
-    def compile(self):
-        return ''
+    def optimize(self):
+        compiled = [self.ops[0]]
+        
+        logging.debug(f'Optimizing the following operators in for {self.type}:')
+        for op in self.ops:
+            logging.debug(f'    {op.id}: {op.type}')
+        
+        for op in self.ops[1:]:
+            # This is an attempt at optimizing cases where a take can be placed higher
+            i = -1
+            while i >= -len(compiled):
+                nonconseq = compiled[i].non_consequential(op.type)
 
-    def decompile(self):
-        if not self.root:
-            return ''
-        return self.root.decompile(self.ctx)
+                res = compiled[i].integrate(op)
+
+                if res == None:
+                    logging.debug(f'Integrated {op.id} into {compiled[i].id}')
+                    break
+
+                elif res != op:
+                    logging.debug(f'Partially integrated {op.id} into {compiled[i].id}')
+                    break
+                
+                if nonconseq:
+                    logging.debug(f'Can optimize {op.id} passing {compiled[i].id}')
+                    i -= 1
+
+                else:
+                    logging.debug(f'As high as we can go for {op.id}')
+                    compiled.append(op)
+                    break
+                
+        logging.debug('Final compiled set:')
+        for op in compiled:
+            logging.debug(f'    {op.id}: {op.type}')
+            
+        self.ops = compiled
+
+        return self
+
+    '''
+    You'll want to replace this with something like a string that you'll query your database with.
+    Default returns optimized operators for running in Hql-land
+    '''
+    def compile(self) -> Union[str, list['Operator']]:
+        self.optimize()
+        return self.ops
+
+    def decompile(self) -> str:
+        from Expressions import PipeExpression
+        return PipeExpression(pipes=self.ops).decompile(self.ctx)
 
     '''
     By default, all of these return themselves as they are being
