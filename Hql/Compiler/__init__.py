@@ -5,8 +5,9 @@ import logging
 from typing import Callable, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators import Operator, Database
     from Hql.Expressions import Expression
+    from .HqlCompiler import HqlCompiler
     import Hql
 
 '''
@@ -14,13 +15,15 @@ Wraps an Expression or Operator with some tagged metadata
 Helpful for finding out if we can compile something
 '''
 class BranchDescriptor():
-    def __init__(self, expr:Union[None, 'Expression'] = None, op:Union[None, 'Operator'] = None, comp_str:str = '', **kwargs):
+    def __init__(self):
         # contains a timeseries element
-        self.attrs = kwargs
+        self.attrs:dict = dict()
 
-        self.expr = expr
-        self.op = op
-        self.str = comp_str
+        self.expr:Union[None, 'Expression'] = None
+        self.op:Union[None, 'Operator'] = None
+        self.db:Union[None, 'Database'] = None
+        self.str:str = ''
+        self.join_attrs:dict = dict()
 
     def get_attr(self, name:str):
         return self.attrs.get(name, None)
@@ -120,8 +123,8 @@ class Compiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self) -> Union[str, list['Operator']]:
-        return self.optimize(self.ops)
+    def compile(self, src:Union['Expression', 'Operator']) -> object:
+        return ''
 
     def decompile(self) -> str:
         from Expressions import PipeExpression

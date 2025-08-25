@@ -11,9 +11,15 @@ from Hql.Query import LetStatement, QueryStatement
 if TYPE_CHECKING:
     from Hql.Query import Query
     from Hql.Config import Config
-    from Hql.Operators import Database
+    from Hql.Operators import Database, Operator
+    from Hql.Expressions import Expression
     import Hql
 
+'''
+Hql preprocessor
+'compiles' out a set of pure-Hql expressions and operators
+Works out preprocessor functions
+'''
 class HqlCompiler(Compiler):
     def __init__(self, config:'Config', query:Union[None, 'Query']=None):
         Compiler.__init__(self)
@@ -40,6 +46,9 @@ class HqlCompiler(Compiler):
 
         return ctx
 
+    def compile(self, src:Union['Operator', 'Expression']) -> BranchDescriptor:
+        return self.from_name(src.type)(src)
+
     def Query(self, query: 'Hql.Query.Query'):
         for i in query.statements:
             self.Statement(i)
@@ -65,20 +74,29 @@ class HqlCompiler(Compiler):
 
         self.ctx.symbol_table[name] = expr
 
-    def Tabular(self, expr: 'Hql.Expressions.Expression') -> 'Database':
-        from Hql.Operators.Database import Database
+    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> 'Database':
+        from Hql.Operators.Database import Database, Static
+        from Hql.Expressions import DotCompositeFunction, NamedReference
+        from Hql.Operators import Range
 
         db = None
 
-        if isinstance(expr, 'Hql.Expressions.DotCompositeFunction'):
-            db = self.DotCompositeFunction(expr)
+        if isinstance(expr, DotCompositeFunction):
+            res = self.DotCompositeFunction(expr)
+            db = res.db
 
-        elif isinstance(expr, 'Hql.Expressions.NamedReference'):
+        elif isinstance(expr, NamedReference):
             db = self.ctx.symbol_table[expr.name]
 
             if not isinstance(db, Database):
                 db = self.config.get_default_db()
                 db = db.get_variable(expr.name)
+
+        elif isinstance(expr, Range):
+            op = self.Range(expr).op
+            if not op:
+                raise hqle.CompilerException('Range precompile did not set op')
+            db = Static(op.eval(self.ctx))
 
         if not isinstance(db, Database):
             logging.critical(json.dumps(expr.to_dict(), indent=2))
@@ -142,9 +160,10 @@ class HqlCompiler(Compiler):
 
     def Where(self, op: 'Hql.Operators.Where') -> BranchDescriptor:
         from Hql.Operators import Where
+        desc = BranchDescriptor()
 
-        method = self.from_name(op.expr.type)
-        res:BranchDescriptor = method(op.expr)
+        res = self.compile(op.expr)
+
         op = Where(res.get_expr(), op.parameters)
 
         res.op = op
@@ -206,23 +225,19 @@ class HqlCompiler(Compiler):
 
     def Count(self, op: 'Hql.Operators.Count') -> BranchDescriptor:
         from Hql.Operators import Count
-
-        res = BranchDescriptor()
+        desc = BranchDescriptor()
 
         if op.name:
-            handler = self.from_name(op.name.type)
-            expr = handler(op.name)
-            res.merge_attrs(expr.attrs)
+            expr = self.from_name(op.name.type)(op.name)
+            desc.merge_attrs(expr.attrs)
             expr = expr.get_expr()
         else:
             expr = None
 
-        op = Count(expr)
-        res.op = op
+        desc.op = Count(expr)
+        return desc
 
-        return res
-
-    def Extend(self, op: 'Hql.Operators.Extend') -> object:
+    def Extend(self, op: 'Hql.Operators.Extend') -> BranchDescriptor:
         from Hql.Operators import Extend
 
         parts = []
@@ -230,13 +245,129 @@ class HqlCompiler(Compiler):
             handler = self.from_name(i.type)
             parts.append(handler(i))
 
-        res = BranchDescriptor()
+        desc = BranchDescriptor()
         exprs = []
         for i in parts:
-            res.merge_attrs(i.attrs)
+            desc.merge_attrs(i.attrs)
             exprs.append(i.get_expr())
 
-        op = Extend(exprs)
-        res.op = op
+        desc.op = Extend(exprs)
+        return desc
 
-        return res
+    def Range(self, op: 'Hql.Operators.Range') -> BranchDescriptor:
+        from Hql.Operators import Range
+        desc = BranchDescriptor()
+
+        res = self.from_name(op.name.type)(op.name)
+        desc.merge_attrs(res.attrs)
+        name = res.get_expr()
+        
+        res = self.from_name(op.start.type)(op.start)
+        desc.merge_attrs(res.attrs)
+        start = res.get_expr()
+        
+        res = self.from_name(op.end.type)(op.end)
+        desc.merge_attrs(res.attrs)
+        end = res.get_expr()
+
+        res = self.from_name(op.step.type)(op.step)
+        desc.merge_attrs(res.attrs)
+        step = res.get_expr()
+        
+        desc.op = Range(name, start, end, step)
+        return desc
+
+    def Top(self, op: 'Hql.Operators.Top') -> BranchDescriptor:
+        from Hql.Operators import Top
+        desc = BranchDescriptor()
+
+        res = self.from_name(op.expr.type)(op.expr)
+        desc.merge_attrs(res.attrs)
+        expr = res.get_expr()
+
+        res = self.from_name(op.by.type)(op.by)
+        desc.merge_attrs(res.attrs)
+        by = res.get_expr()
+
+        desc.op = Top(expr, by)
+        return desc
+
+    def Unnest(self, op: 'Hql.Operators.Unnest') -> BranchDescriptor:
+        from Hql.Operators import Unnest
+        desc = BranchDescriptor()
+
+        res = self.from_name(op.field.type)(op.field)
+        desc.merge_attrs(res.attrs)
+        field = res.get_expr()
+
+        tables = []
+        for i in op.tables:
+            res = self.from_name(i.type)(i)
+            desc.merge_attrs(res.attrs)
+            tables.append(res.get_expr())
+
+        desc.op = Unnest(field, tables)
+        return desc
+
+    def Summarize(self, op: 'Hql.Operators.Summarize') -> BranchDescriptor:
+        from Hql.Operators import Summarize
+        from Hql.Expressions import ByExpression
+        desc = BranchDescriptor()
+
+        exprs = []
+        for i in op.aggregate_exprs:
+            res = self.from_name(i.type)(i)
+            desc.merge_attrs(res.attrs)
+            exprs.append(res.get_expr())
+
+        res = self.ByExpression(op.by_expr)
+        desc.merge_attrs(res.attrs)
+        by_expr = res.get_expr()
+
+        # Mostly done to shut my linter up
+        if not isinstance(by_expr, ByExpression):
+            raise hqle.CompilerException(f'ByExpression returned non-ByExpression expr type {type(by_expr)}')
+
+        desc.op = Summarize(exprs, by_expr)
+        return desc
+
+    def Datatable(self, op: 'Hql.Operators.Datatable') -> BranchDescriptor:
+        from Hql.Operators import Datatable
+        desc = BranchDescriptor()
+
+        schema = []
+        for i in op.schema:
+            res = self.compile(i[0])
+            desc.merge_attrs(res.attrs)
+            name = res.get_expr()
+
+            res = self.compile(i[1])
+            desc.merge_attrs(res.attrs)
+            t = res.get_expr()
+            
+            schema.append([name, t])
+
+        values = []
+        for i in op.values:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            values.append(res.get_expr())
+
+        desc.op = Datatable(schema, values)
+        return desc
+
+    def Join(self, op: 'Hql.Operators.Join') -> BranchDescriptor:
+        from Hql.Operators import Join
+        desc = BranchDescriptor()
+
+        join = 
+
+        res = self.compile()
+
+        return desc
+
+    def ByExpression(self, expr: 'Hql.Expressions.ByExpression') -> BranchDescriptor:
+        return BranchDescriptor(expr=expr)
+
+    def DotCompositeFunction(self, expr: 'Hql.Expressions.DotCompositeFunction') -> BranchDescriptor:
+        return BranchDescriptor(expr=expr)
