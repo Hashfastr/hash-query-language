@@ -1,9 +1,10 @@
+from os import stat
 from typing import Union, TYPE_CHECKING
 import logging
 import time
 import json
 
-from Hql.Compiler import Compiler, BranchDescriptor
+from Hql.Compiler import Compiler, BranchDescriptor, InstructionSet
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 from Hql.Query import LetStatement, QueryStatement
@@ -49,9 +50,13 @@ class HqlCompiler(Compiler):
     def compile(self, src:Union['Operator', 'Expression']) -> BranchDescriptor:
         return self.from_name(src.type)(src)
 
+    def is_breaking(self, op:'Operator') -> bool:
+        breaking = self.from_name(op.type)(op).attrs.get('aggregate', False)
+        return breaking
+
     def Query(self, query: 'Hql.Query.Query'):
         for i in query.statements:
-            self.Statement(i)
+            self.root = self.Statement(i)
 
     def Statement(self, statement: 'Hql.Query.Statement'):
         if isinstance(statement, QueryStatement):
@@ -69,6 +74,7 @@ class HqlCompiler(Compiler):
 
     def LetStatement(self, statement: 'Hql.Query.LetStatement'):
         name = statement.name.eval(self.ctx, as_str=True)
+        res = self.compile(statement.root)
         handler = self.from_name(statement.root.type)
         expr = handler(statement.root)
 
@@ -121,6 +127,7 @@ class HqlCompiler(Compiler):
             else:
                 logging.critical(json.dumps(expr.prepipe.to_dict(), indent=2))
                 raise hqle.CompilerException(f'Invalid prepipe expression type {type(expr.prepipe)}')
+
         else:
             logging.warning('Preprocessing PipeExpression had None prepipe')
             prepipe = []
@@ -138,20 +145,31 @@ class HqlCompiler(Compiler):
         # Do basic optimization
         pipes = self.optimize(pipes)
 
+        idx = 0
+        for idx, i in enumerate(pipes):
+            if self.is_breaking(i):
+                break
+
+        viable = pipes[:idx]
+        breaking = pipes[idx:]
+
         # Compile operators into DBs
-        parents = []
+        sets = []
         for i in prepipe:
             comp = i
-            for idx, j in enumerate(pipes):
+            for idx, j in enumerate(viable):
                 rej = comp.add_op(j)
 
                 if rej:
-                    new = HqlCompiler(self.config)
-                    new.add_parent(comp)
-                    new.add_op(rej)
-                    comp = new
+                    comp = InstructionSet(comp)
+                    comp.add_op(rej)
 
-            parents.append(comp)
+            if not isinstance(comp, InstructionSet):
+                comp = InstructionSet(comp)
+
+            sets.append(comp)
+
+        comp = InstructionSet()
 
         comp = HqlCompiler(self.config)
         comp.parents = parents
@@ -360,7 +378,9 @@ class HqlCompiler(Compiler):
         from Hql.Operators import Join
         desc = BranchDescriptor()
 
-        join = 
+        res = self.compile(op.rh)
+        desc.join_attrs = res.attrs
+        rh = res.expr
 
         res = self.compile()
 
