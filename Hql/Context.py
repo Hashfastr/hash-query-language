@@ -106,10 +106,30 @@ class Context():
         self.data = data
         self.symbol_table = symbol_table if symbol_table else dict()
         self.macros = macros if macros else dict()
-        self.root = None
+        # self.root = None
 
     def __bool__(self):
         return self.data.__bool__()
+
+    @staticmethod
+    def merge(ctxs:list['Context']):
+        from Hql.Data import Data
+        
+        if len(ctxs) == 1:
+            return ctxs[0]
+
+        data = Data.merge([x.data for x in ctxs])
+
+        syms = dict()
+        macros = dict()
+        for i in ctxs:
+            for j in i.symbol_table:
+                syms[j] = i.symbol_table[j]
+            
+            for j in i.macros:
+                macros[j] = i.macros[j]
+
+        return Context(data, symbol_table=syms, macros=macros)
 
     def get_db(self, name:str):
         if name in self.dbs:

@@ -145,9 +145,10 @@ class HqlCompiler(Compiler):
         # Do basic optimization
         pipes = self.optimize(pipes)
 
+        # Find where we might need to sync
         idx = 0
         for idx, i in enumerate(pipes):
-            if self.is_breaking(i):
+            if i.fulldata:
                 break
 
         viable = pipes[:idx]
@@ -175,6 +176,37 @@ class HqlCompiler(Compiler):
         comp.parents = parents
 
         return comp
+
+    def optimize(self, ops: list[BranchDescriptor]):
+        optimized = [ops[0]]
+        
+        logging.debug(f'Optimizing the following operators:')
+        for op in ops:
+            assert op.op
+            logging.debug(f'    {op.op.id}: {op.op.type}')
+
+        for op in ops:
+            assert op.op
+            
+            i = -1
+            while i >= -len(optimized):
+                if not optimized[i].get_attr('row_dependent') and op.get_attr('row_reducing'):
+                    logging.debug(f'Can optimize {op.op.id} passing {optimized[i].op.id}')
+                    i -= 1
+                    continue
+
+                rej = optimized[i].integrate()
+
+                optimized.insert(i, op)
+                
+        
+        logging.debug('Final optimized set:')
+        for op in optimized:
+            assert op.op
+            logging.debug(f'    {op.op.id}: {op.op.type}')
+
+        return optimized
+
 
     def Where(self, op: 'Hql.Operators.Where') -> BranchDescriptor:
         from Hql.Operators import Where

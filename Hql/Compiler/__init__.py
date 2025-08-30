@@ -39,11 +39,6 @@ class InstructionSet():
 
         return ctx
 
-    def merge_sets(self, sets:list[Context]):
-        from Hql.Operators import Merge
-        data = [x.data for x in sets]
-        
-
     def eval(self, ctx:Context, **kwargs) -> Context:
         logging.debug(f'Starting InstructionSet {self.id}')
         start = time.perf_counter()
@@ -52,9 +47,7 @@ class InstructionSet():
         for i in self.upstream:
             sets.append(i.eval(Context(Data())))
 
-        
-
-        ctx = self.exec(self.db, ctx)
+        ctx = Context.merge(sets)
 
         for i in self.ops:
             ctx = self.exec(i, ctx)
@@ -135,7 +128,7 @@ class Compiler():
     def add_parent(self, parent):
         self.parents.append(parent)
 
-    def optimize(self, ops:list['Operator']):
+    def optimize(self, ops):
         optimized = [ops[0]]
         
         logging.debug(f'Optimizing the following operators in for {self.type}:')
