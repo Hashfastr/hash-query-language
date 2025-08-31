@@ -131,6 +131,9 @@ def main():
         return -1
         
 def run_query(text:str, args, src:Path, conf:Config) -> str:
+    from Hql.Context import Context
+    from Hql.Data import Data
+
     ##################################
     ## Generate HaC (if applicable) ##
     ##################################
@@ -186,7 +189,7 @@ def run_query(text:str, args, src:Path, conf:Config) -> str:
         if not isinstance(parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
 
-        # deparse += Compiler(conf, parser.assembly).decompile()
+        deparse += parser.assembly.decompile(Context(Data()))
         return deparse
         
     ######################
@@ -219,7 +222,7 @@ def run_query(text:str, args, src:Path, conf:Config) -> str:
     logging.debug("Running")
     start = time.perf_counter()
     
-    results = compiler.run()
+    results = compiler.run().data
     return json.dumps(results.to_dict(), default=repr)
    
     end = time.perf_counter() 

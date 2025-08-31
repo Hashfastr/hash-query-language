@@ -6,14 +6,10 @@ import json
 
 from Hql.Compiler import Compiler, BranchDescriptor, InstructionSet
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import Context
-from Hql.Query import LetStatement, QueryStatement
 
 if TYPE_CHECKING:
     from Hql.Query import Query
     from Hql.Config import Config
-    from Hql.Operators import Database, Operator
-    from Hql.Expressions import Expression
     import Hql
 
 '''
@@ -30,7 +26,7 @@ class HqlCompiler(Compiler):
         if query:
             self.Query(query)
 
-    def compile(self, src:Union['Operator', 'Expression']) -> BranchDescriptor:
+    def compile(self, src:Union['Hql.Operators.Operator', 'Hql.Expressions.Expression', 'Hql.Query.Statement']) -> BranchDescriptor:
         return self.from_name(src.type)(src)
 
     # def is_breaking(self, op:'Operator') -> bool:
@@ -39,29 +35,29 @@ class HqlCompiler(Compiler):
 
     def Query(self, query: 'Hql.Query.Query'):
         for i in query.statements:
-            self.root = self.Statement(i)
+            self.compile(i)
 
     def Statement(self, statement: 'Hql.Query.Statement'):
-        if isinstance(statement, QueryStatement):
-            self.QueryStatement(statement)
-
-        elif isinstance(statement, LetStatement):
-            self.LetStatement(statement)
-
-        else:
-            raise hqle.CompilerException('')
+        logging.error("This shouldn't trigger? Compiling Statement directly")
+        self.compile(statement.root)
 
     def QueryStatement(self, statement: 'Hql.Query.QueryStatement'):
-        handler = self.from_name(statement.root.type)
-        self.root = handler(statement.root)
+        res = self.compile(statement.root)
+
+        if not isinstance(res, InstructionSet):
+            logging.warning(f'QueryStatement compiled to {type(res)} not InstructionSet, mistake?')
+            self.root = res.get_expr()
+        else:
+            self.root = res
 
     def LetStatement(self, statement: 'Hql.Query.LetStatement'):
         name = statement.name.eval(self.ctx, as_str=True)
         res = self.compile(statement.root)
-        handler = self.from_name(statement.root.type)
-        expr = handler(statement.root)
 
-        self.ctx.symbol_table[name] = expr
+        if not isinstance(res, InstructionSet):
+            res = res.get_expr()
+
+        self.ctx.symbol_table[name] = res
 
     def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> 'Database':
         from Hql.Operators.Database import Database, Static
@@ -99,6 +95,7 @@ class HqlCompiler(Compiler):
     def PipeExpression(self, expr: 'Hql.Expressions.PipeExpression'):
         from Hql.Operators import PrePipe
         from Hql.Expressions import Expression
+        desc = BranchDescriptor()
 
         if expr.prepipe:
             if isinstance(expr.prepipe, PrePipe):
@@ -121,9 +118,9 @@ class HqlCompiler(Compiler):
         # Preprocess all pipes
         pipes = []
         for i in expr.pipes:
-            method = self.from_name(i.type)
-            p = method(i)
-            pipes.append(p)
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            pipes.append(i)
 
         # Do basic optimization
         pipes = self.optimize(pipes)
@@ -159,6 +156,7 @@ class HqlCompiler(Compiler):
         for i in groups[1:]:
             comp.ops += [x.get_op() for x in i]
 
+        comp.attrs = desc.attrs
         return comp
 
     def optimize(self, ops: list[BranchDescriptor]):
@@ -397,11 +395,22 @@ class HqlCompiler(Compiler):
 
     def Join(self, op: 'Hql.Operators.Join') -> BranchDescriptor:
         from Hql.Operators import Join
+        from Hql.Expressions import PipeExpression
         desc = BranchDescriptor()
 
-        res = self.compile(op.rh)
-        desc.join_attrs = res.attrs
-        rh = res.get_expr()
+        # The case of recompiling a compiled join
+        if isinstance(op.rh, InstructionSet):
+            rh = op.rh
+            desc.join_attrs = rh.attrs
+
+        elif isinstance(op.rh, PipeExpression):
+            rh = self.compile(op.rh)
+            desc.join_attrs = rh.attrs
+
+        else:
+            res = self.Tabular(op.rh)
+            desc.join_attrs = res.attrs
+            rh = res.get_expr()
         assert isinstance(rh, InstructionSet)
 
         params = []
@@ -445,6 +454,7 @@ class HqlCompiler(Compiler):
             assert isinstance(limit, Integer)
 
         desc.op = MvExpand(exprs, limit)
+        return desc
 
     def Sort(self, op: 'Hql.Operators.Sort') -> BranchDescriptor:
         from Hql.Operators import Sort
