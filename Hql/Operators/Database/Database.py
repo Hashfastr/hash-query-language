@@ -1,10 +1,11 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 from Hql.Operators import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Data import Data
     from Hql.Context import Context
+    from Hql.Compiler import BranchDescriptor
 
 class Database(Operator):
     def __init__(self, config:dict):
@@ -18,7 +19,7 @@ class Database(Operator):
         self.config = config
         self.compiler = Compiler()
 
-    def add_op(self, op:Operator):
+    def add_op(self, op:Union['BranchDescriptor', Operator]):
         self.compiler.add_op(op)
 
     def exec_query(self) -> 'Data':

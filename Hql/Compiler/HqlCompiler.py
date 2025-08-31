@@ -50,9 +50,9 @@ class HqlCompiler(Compiler):
     def compile(self, src:Union['Operator', 'Expression']) -> BranchDescriptor:
         return self.from_name(src.type)(src)
 
-    def is_breaking(self, op:'Operator') -> bool:
-        breaking = self.from_name(op.type)(op).attrs.get('aggregate', False)
-        return breaking
+    # def is_breaking(self, op:'Operator') -> bool:
+    #     breaking = self.compile(op).attrs.get('aggregate', False)
+    #     return breaking
 
     def Query(self, query: 'Hql.Query.Query'):
         for i in query.statements:
@@ -145,20 +145,21 @@ class HqlCompiler(Compiler):
         # Do basic optimization
         pipes = self.optimize(pipes)
 
-        # Find where we might need to sync
+        # Create groups where data needs to be sync'd
+        groups:list[list[BranchDescriptor]] = []
+        top = 0
         idx = 0
         for idx, i in enumerate(pipes):
-            if i.fulldata:
-                break
+            if i.get_attr('requires_sync'):
+                groups.append(pipes[top:idx])
+                top = idx
+        groups.append(pipes[top:idx])
 
-        viable = pipes[:idx]
-        breaking = pipes[idx:]
-
-        # Compile operators into DBs
+        # Compile first group
         sets = []
         for i in prepipe:
             comp = i
-            for idx, j in enumerate(viable):
+            for idx, j in enumerate(groups[0]):
                 rej = comp.add_op(j)
 
                 if rej:
@@ -170,14 +171,16 @@ class HqlCompiler(Compiler):
 
             sets.append(comp)
 
-        comp = InstructionSet()
-
-        comp = HqlCompiler(self.config)
-        comp.parents = parents
+        comp = InstructionSet(sets)
+        # If needed I can compile the other groups separate in the future
+        for i in groups[1:]:
+            comp.ops += [x.get_op() for x in i]
 
         return comp
 
     def optimize(self, ops: list[BranchDescriptor]):
+        from Hql.Operators import Take
+
         optimized = [ops[0]]
         
         logging.debug(f'Optimizing the following operators:')
@@ -185,20 +188,23 @@ class HqlCompiler(Compiler):
             assert op.op
             logging.debug(f'    {op.op.id}: {op.op.type}')
 
-        for op in ops:
+        for op in ops[1:]:
             assert op.op
-            
             i = -1
             while i >= -len(optimized):
                 if not optimized[i].get_attr('row_dependent') and op.get_attr('row_reducing'):
+                    if isinstance(optimized[i].op, Take):
+                        logging.debug(f'Maintaining Take as a priority operator')
+                        continue
+
                     logging.debug(f'Can optimize {op.op.id} passing {optimized[i].op.id}')
                     i -= 1
                     continue
 
-                rej = optimized[i].integrate()
-
-                optimized.insert(i, op)
+                else:
+                    break
                 
+            optimized.insert(i, op)
         
         logging.debug('Final optimized set:')
         for op in optimized:
@@ -210,16 +216,15 @@ class HqlCompiler(Compiler):
 
     def Where(self, op: 'Hql.Operators.Where') -> BranchDescriptor:
         from Hql.Operators import Where
-        desc = BranchDescriptor()
 
         res = self.compile(op.expr)
-
         op = Where(res.get_expr(), op.parameters)
 
-        res.op = op
-        res.expr = None
+        desc = BranchDescriptor()
+        desc.op = op
+        desc.merge_attrs(res.attrs)
 
-        return res
+        return desc
 
     def Project(self, op: 'Hql.Operators.Project') -> BranchDescriptor:
         from Hql.Operators import Project

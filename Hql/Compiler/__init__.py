@@ -21,11 +21,16 @@ class InstructionSet():
         else:
             self.upstream = [upstream]
 
-        self.ops = operators if operators else []
+        self.ops:list['Operator'] = operators if operators else []
         self.id = '%08x' % random.getrandbits(32)
 
-    def add_op(self, op:'Operator'):
-        self.ops.append(op)
+    def add_op(self, op:Union['BranchDescriptor', 'Operator']):
+        if isinstance(op, BranchDescriptor):
+            self.ops.append(op.get_op())
+
+        else:
+            self.ops.append(op)
+
         return None
 
     def exec(self, inst:Union['Database', 'Operator'], ctx:Context) -> Context:
@@ -108,7 +113,6 @@ class Compiler():
         self.ctx = Context(Data())
 
         self.ops:list['Operator'] = []
-        self.parents = []
 
     def from_name(self, name:str) -> Callable:
         if hasattr(self, name):
@@ -119,8 +123,8 @@ class Compiler():
         ctx = ctx if ctx else self.ctx
         return self.ctx
 
-    def add_op(self, op:'Operator'):
-        self.ops.append(op)
+    def add_op(self, op:'BranchDescriptor'):
+        self.ops.append(op.get_op())
     
     def add_ops(self, ops:list['Operator']):
         self.ops += ops

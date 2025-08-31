@@ -3,7 +3,7 @@ import sys
 from Hql.Parser import Parser, SigmaParser
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Exceptions import HacExceptions as hace
-from Hql.Compiler import Compiler
+from Hql.Compiler import HqlCompiler
 from Hql.Query import Query
 from Hql.Hac import Parser as HaCParser
 
@@ -185,7 +185,7 @@ def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
         if not isinstance(parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
 
-        deparse += Compiler(conf_path, parser.assembly).decompile()
+        deparse += HqlCompiler(conf_path, parser.assembly).decompile()
         return deparse
         
     ######################
