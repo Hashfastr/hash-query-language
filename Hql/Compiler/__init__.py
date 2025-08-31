@@ -77,6 +77,9 @@ class BranchDescriptor():
         self.str:str = ''
         self.join_attrs:dict = dict()
 
+    def set_attr(self, name:str, value):
+        self.attrs[name] = value
+
     def get_attr(self, name:str):
         return self.attrs.get(name, None)
 

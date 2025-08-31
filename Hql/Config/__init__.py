@@ -9,18 +9,16 @@ if TYPE_CHECKING:
     from Hql.Operators import Database
 
 class Config():
-    def __init__(self, conf_path:str):
+    def __init__(self, path:Path):
         # skeleton
         self.conf = {
             'general': {},
             'databases': {}
         }
 
-        self.load(conf_path)
+        self.load(path)
 
-    def load(self, conf_path:str):
-        path = Path(conf_path)
-
+    def load(self, path:Path):
         files = []
 
         # If this triggers, the below loop won't run

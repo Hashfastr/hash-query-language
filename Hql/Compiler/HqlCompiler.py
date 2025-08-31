@@ -29,23 +29,6 @@ class HqlCompiler(Compiler):
 
         if query:
             self.Query(query)
-        
-    def run(self, ctx: Union[Context, None] = None) -> Context:
-        ctx = ctx if ctx else self.ctx
-
-        if not self.ops:
-            raise hqle.QueryException('Running an empty compiler has no effect!')
-
-        for i in self.ops:
-            start = time.perf_counter()
-            logging.debug(f'Executing {i.type}: {i.id}')
-            
-            ctx.data = i.eval(ctx)
-            
-            end = time.perf_counter()
-            logging.debug(f"{i.id} - {end - start}")
-
-        return ctx
 
     def compile(self, src:Union['Operator', 'Expression']) -> BranchDescriptor:
         return self.from_name(src.type)(src)
@@ -192,7 +175,7 @@ class HqlCompiler(Compiler):
             assert op.op
             i = -1
             while i >= -len(optimized):
-                if not optimized[i].get_attr('row_dependent') and op.get_attr('row_reducing'):
+                if not (optimized[i].get_attr('row_dependent') or optimized[i].get_attr('row_mutable')) and op.get_attr('row_reducing'):
                     if isinstance(optimized[i].op, Take):
                         logging.debug(f'Maintaining Take as a priority operator')
                         continue
@@ -259,31 +242,30 @@ class HqlCompiler(Compiler):
 
     def Take(self, op: 'Hql.Operators.Take') -> BranchDescriptor:
         from Hql.Operators import Take
+        desc = BranchDescriptor()
+        desc.set_attr('row_mutable', True)
 
-        handler = self.from_name(op.expr.type)
-        expr = handler(op.expr)
+        res = self.compile(op.expr)
+        desc.merge_attrs(res.attrs)
+        expr = res.get_expr()
 
-        parts = []
+        tables = []
         for i in op.tables:
-            handler = self.from_name(i.type)
-            parts.append(handler(i))
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            tables.append(res.get_expr())
 
-        res = BranchDescriptor()
-        res.merge_attrs(expr.attrs)
-        for i in parts:
-            res.merge_attrs(i.attrs)
-
-        op = Take(expr.get_expr(), [x.get_expr() for x in parts])
-        res.op = op
-
-        return res
+        desc.op = Take(expr, tables)
+        return desc
 
     def Count(self, op: 'Hql.Operators.Count') -> BranchDescriptor:
         from Hql.Operators import Count
         desc = BranchDescriptor()
+        desc.set_attr('row_dependent', True)
+        desc.set_attr('row_mutable', True)
 
         if op.name:
-            expr = self.from_name(op.name.type)(op.name)
+            expr = self.compile(op.name)
             desc.merge_attrs(expr.attrs)
             expr = expr.get_expr()
         else:
@@ -313,19 +295,19 @@ class HqlCompiler(Compiler):
         from Hql.Operators import Range
         desc = BranchDescriptor()
 
-        res = self.from_name(op.name.type)(op.name)
+        res = self.compile(op.name)
         desc.merge_attrs(res.attrs)
         name = res.get_expr()
         
-        res = self.from_name(op.start.type)(op.start)
+        res = self.compile(op.start)
         desc.merge_attrs(res.attrs)
         start = res.get_expr()
         
-        res = self.from_name(op.end.type)(op.end)
+        res = self.compile(op.end)
         desc.merge_attrs(res.attrs)
         end = res.get_expr()
 
-        res = self.from_name(op.step.type)(op.step)
+        res = self.compile(op.step)
         desc.merge_attrs(res.attrs)
         step = res.get_expr()
         
@@ -334,15 +316,17 @@ class HqlCompiler(Compiler):
 
     def Top(self, op: 'Hql.Operators.Top') -> BranchDescriptor:
         from Hql.Operators import Top
+        from Hql.Expressions import ByExpression
         desc = BranchDescriptor()
 
-        res = self.from_name(op.expr.type)(op.expr)
+        res = self.compile(op.expr)
         desc.merge_attrs(res.attrs)
         expr = res.get_expr()
 
-        res = self.from_name(op.by.type)(op.by)
+        res = self.compile(op.by)
         desc.merge_attrs(res.attrs)
         by = res.get_expr()
+        assert isinstance(by, ByExpression)
 
         desc.op = Top(expr, by)
         return desc
@@ -351,13 +335,13 @@ class HqlCompiler(Compiler):
         from Hql.Operators import Unnest
         desc = BranchDescriptor()
 
-        res = self.from_name(op.field.type)(op.field)
+        res = self.compile(op.field)
         desc.merge_attrs(res.attrs)
         field = res.get_expr()
 
         tables = []
         for i in op.tables:
-            res = self.from_name(i.type)(i)
+            res = self.compile(i)
             desc.merge_attrs(res.attrs)
             tables.append(res.get_expr())
 
@@ -371,7 +355,7 @@ class HqlCompiler(Compiler):
 
         exprs = []
         for i in op.aggregate_exprs:
-            res = self.from_name(i.type)(i)
+            res = self.compile(i)
             desc.merge_attrs(res.attrs)
             exprs.append(res.get_expr())
 
@@ -417,10 +401,63 @@ class HqlCompiler(Compiler):
 
         res = self.compile(op.rh)
         desc.join_attrs = res.attrs
-        rh = res.expr
+        rh = res.get_expr()
+        assert isinstance(rh, InstructionSet)
 
-        res = self.compile()
+        params = []
+        for i in op.params:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            params.append(res.get_expr())
+        
+        on = []
+        for i in op.on:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            on.append(res.get_expr())
 
+        where = None
+        if op.where:
+            res = self.compile(op.where)
+            desc.merge_attrs(res.attrs)
+            where = res.get_expr()
+
+        desc.op = Join(rh, params=params, on=on, where=where)
+        return desc
+
+    def MvExpand(self, op: 'Hql.Operators.MvExpand') -> object:
+        from Hql.Operators import MvExpand
+        from Hql.Expressions import Integer
+        desc = BranchDescriptor()
+        desc.set_attr('row_mutable', True)
+
+        exprs = []
+        for i in op.exprs:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            exprs.append(res.get_expr())
+        
+        limit = None
+        if op.limit:
+            res = self.compile(op.limit)
+            desc.merge_attrs(res.attrs)
+            limit = res.get_expr()
+            assert isinstance(limit, Integer)
+
+        desc.op = MvExpand(exprs, limit)
+
+    def Sort(self, op: 'Hql.Operators.Sort') -> object:
+        from Hql.Operators import Sort
+        desc = BranchDescriptor()
+        desc.set_attr('row_dependent', True)
+
+        exprs = []
+        for i in op.exprs:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            exprs.append(res.get_expr())
+
+        desc.op = Sort(exprs)
         return desc
 
     def ByExpression(self, expr: 'Hql.Expressions.ByExpression') -> BranchDescriptor:

@@ -3,9 +3,10 @@ import sys
 from Hql.Parser import Parser, SigmaParser
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Exceptions import HacExceptions as hace
-from Hql.Compiler import HqlCompiler
+from Hql.Compiler import Compiler, HqlCompiler
 from Hql.Query import Query
 from Hql.Hac import Parser as HaCParser
+from Hql.Config import Config
 
 import json
 import logging
@@ -67,7 +68,7 @@ def main():
         conf_path = "./conf"
     else:
         conf_path = args.config
-    conf_path = Path(conf_path)
+    conf = Config(Path(conf_path))
         
     sigma_files:list[Path] = []
     hql_files:list[Path] = []
@@ -100,7 +101,7 @@ def main():
                 txt = f.read()
 
             try:
-                print(run_query(txt, args, i, conf_path))
+                print(run_query(txt, args, i, conf))
             except Exception as e:
                 logging.critical('Exception caught when running query')
                 logging.critical(e)
@@ -115,7 +116,7 @@ def main():
                 txt = f.read()
 
             try:
-                print(run_query(txt, args, i, conf_path))
+                print(run_query(txt, args, i, conf))
             except Exception as e:
                 logging.critical('Exception caught when running query')
                 logging.critical(e)
@@ -129,12 +130,12 @@ def main():
     if errors:
         return -1
         
-def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
+def run_query(text:str, args, src:Path, conf:Config) -> str:
     ##################################
     ## Generate HaC (if applicable) ##
     ##################################
 
-    logging.debug(f'Parsing HaC for {src_path.as_posix()}...')
+    logging.debug(f'Parsing HaC for {src.as_posix()}...')
     if args.sigma:
         parser = SigmaParser(text)
         hac = parser.gen_hac()
@@ -157,7 +158,7 @@ def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
     ## Generate Assembly ##
     #######################
     
-    logging.debug(f'Parsing {src_path.as_posix()}...')
+    logging.debug(f'Parsing {src.as_posix()}...')
     start = time.perf_counter()
 
     if args.sigma or args.omni:
@@ -185,7 +186,7 @@ def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
         if not isinstance(parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
 
-        deparse += HqlCompiler(conf_path, parser.assembly).decompile()
+        # deparse += Compiler(conf, parser.assembly).decompile()
         return deparse
         
     ######################
@@ -198,8 +199,7 @@ def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
     if not isinstance(parser.assembly, Query):
         raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
     
-    compiler = Compiler(conf_path, parser.assembly)
-    compiler.compile()
+    compiler = HqlCompiler(conf, parser.assembly)
     
     end = time.perf_counter()
     logging.debug("Done.")
