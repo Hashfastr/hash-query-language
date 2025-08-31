@@ -17,7 +17,7 @@ class FuncExpr(Expression):
         else:
             self.name = name
 
-        self.args = args if args else []
+        self.args:list[Expression] = args if args else []
 
     def __bool__(self):
         return self.name.__bool__()

@@ -76,6 +76,10 @@ class BranchDescriptor():
         self.db:Union[None, 'Database'] = None
         self.str:str = ''
         self.join_attrs:dict = dict()
+        self.list_attrs:list[str] = [
+            'types',
+            'functions'
+        ]
 
     def set_attr(self, name:str, value):
         self.attrs[name] = value
@@ -86,9 +90,18 @@ class BranchDescriptor():
     def merge_attrs(self, attrs:dict):
         for i in attrs:
             cur = self.attrs.get(i, None)
-            val = attrs.get(i, None)
+            val = attrs[i]
 
-            if isinstance(cur, type(None)):
+            if i in self.list_attrs:
+                if not isinstance(val, list):
+                    val = [val]
+
+                if cur:
+                    cur += val
+                else:
+                    self.attrs[i] = val
+
+            elif isinstance(cur, type(None)):
                 self.attrs[i] = attrs[i]
 
             elif isinstance(cur, type(bool)) and isinstance(val, type(bool)):

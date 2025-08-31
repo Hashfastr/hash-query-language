@@ -425,7 +425,7 @@ class HqlCompiler(Compiler):
         desc.op = Join(rh, params=params, on=on, where=where)
         return desc
 
-    def MvExpand(self, op: 'Hql.Operators.MvExpand') -> object:
+    def MvExpand(self, op: 'Hql.Operators.MvExpand') -> BranchDescriptor:
         from Hql.Operators import MvExpand
         from Hql.Expressions import Integer
         desc = BranchDescriptor()
@@ -446,7 +446,7 @@ class HqlCompiler(Compiler):
 
         desc.op = MvExpand(exprs, limit)
 
-    def Sort(self, op: 'Hql.Operators.Sort') -> object:
+    def Sort(self, op: 'Hql.Operators.Sort') -> BranchDescriptor:
         from Hql.Operators import Sort
         desc = BranchDescriptor()
         desc.set_attr('row_dependent', True)
@@ -459,9 +459,201 @@ class HqlCompiler(Compiler):
 
         desc.op = Sort(exprs)
         return desc
+    
+    def OpParameter(self, expr: 'Hql.Expressions.OpParameter') -> BranchDescriptor:
+        from Hql.Expressions import OpParameter
+        desc = BranchDescriptor()
 
-    def ByExpression(self, expr: 'Hql.Expressions.ByExpression') -> BranchDescriptor:
-        return BranchDescriptor(expr=expr)
+        res = self.compile(expr.value)
+        desc.merge_attrs(res.attrs)
 
-    def DotCompositeFunction(self, expr: 'Hql.Expressions.DotCompositeFunction') -> BranchDescriptor:
-        return BranchDescriptor(expr=expr)
+        desc.expr = OpParameter(expr.name, res.get_expr())
+        return desc
+
+    def ToClause(self, expr: 'Hql.Expressions.ToClause') -> BranchDescriptor:
+        from Hql.Expressions import ToClause
+        desc = BranchDescriptor()
+
+        if expr.to:
+            desc.set_attr('type_casting', True)
+            desc.set_attr('types', expr.to)
+
+        res = self.compile(expr.expr)
+        desc.merge_attrs(res.attrs)
+    
+        desc.expr = ToClause(res.get_expr(), to=expr.to)
+        return desc
+
+    def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression') -> BranchDescriptor:
+        from Hql.Expressions import OrderedExpression
+        desc = BranchDescriptor()
+        desc.set_attr('null_ordering', True)
+        desc.set_attr('ordering', True)
+
+        ordered_expr = None
+        if expr.expr:
+            res = self.compile(expr.expr)
+            desc.merge_attrs(res.attrs)
+
+        desc.expr = OrderedExpression(expr=ordered_expr, order=expr.order, nulls=expr.nulls)
+        return desc
+
+    def ByExpression(self, expr:'Hql.Expressions.ByExpression') -> BranchDescriptor:
+        from Hql.Expressions import ByExpression
+        desc = BranchDescriptor()
+        desc.set_attr('aggregation', True)
+
+        by_exprs = []
+        for i in expr.exprs:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            by_exprs.append(res.get_expr())
+
+        desc.expr = ByExpression(by_exprs)
+        return desc
+
+    def FuncExpr(self, expr:'Hql.Expressions.FuncExpr') -> BranchDescriptor:
+        from Hql.Expressions import FuncExpr, NamedReference
+        desc = BranchDescriptor()
+
+        res = self.compile(expr.name)
+        desc.merge_attrs(res.attrs)
+        name = res.get_expr()
+        assert isinstance(name, NamedReference)
+
+        args = []
+        for i in expr.args:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            args.append(res.get_expr())
+
+        desc.set_attr('functions', name.value)
+        desc.expr = FuncExpr(name, args)
+        return desc
+
+    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction') -> BranchDescriptor:
+        from Hql.Expressions import DotCompositeFunction
+        desc = BranchDescriptor()
+
+        funcs = []
+        for i in expr.funcs:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            funcs.append(res.get_expr())
+
+        if len(funcs) > 1:
+            desc.set_attr('dot_functions', True)
+            desc.expr = DotCompositeFunction(funcs)
+        else:
+            # Breakdown a dot function to a normal function
+            desc.expr = funcs[0]
+
+        return desc
+
+    def TypeExpression(self, expr:'Hql.Expressions.TypeExpression') -> BranchDescriptor:
+        from Hql.Types.Hql import HqlTypes as hqlt
+        
+        desc = BranchDescriptor()
+        desc.set_attr('types', hqlt.from_name(expr.type))
+        desc.expr = expr
+        
+        return desc
+
+    def StringLiteral(self, expr:'Hql.Expressions.StringLiteral') -> BranchDescriptor:
+        from Hql.Types.Hql import HqlTypes as hqlt
+
+        desc = BranchDescriptor()
+        desc.set_attr('types', hqlt.string())
+        desc.expr = expr
+
+        return desc
+
+    def Integer(self, expr:'Hql.Expressions.Integer') -> BranchDescriptor:
+        from Hql.Types.Hql import HqlTypes as hqlt
+        
+        desc = BranchDescriptor()
+        desc.set_attr('types', hqlt.int())
+        desc.expr = expr
+
+        return desc
+
+    def IP4(self, expr:'Hql.Expressions.IP4') -> BranchDescriptor:
+        from Hql.Types.Hql import HqlTypes as hqlt
+        
+        desc = BranchDescriptor()
+        desc.set_attr('types', hqlt.ip4())
+        desc.expr = expr
+
+        return desc
+
+    def Float(self, expr:'Hql.Expressions.Float') -> BranchDescriptor:
+        from Hql.Types.Hql import HqlTypes as hqlt
+        
+        desc = BranchDescriptor()
+        desc.set_attr('types', hqlt.float())
+        desc.expr = expr
+
+        return desc
+
+    def Bool(self, expr:'Hql.Expressions.Bool') -> BranchDescriptor:
+        from Hql.Types.Hql import HqlTypes as hqlt
+        
+        desc = BranchDescriptor()
+        desc.set_attr('types', hqlt.bool())
+        desc.expr = expr
+
+        return desc
+    
+    def NamedReference(self, expr:'Hql.Expressions.NamedReference') -> BranchDescriptor:
+        desc = BranchDescriptor()
+        desc.expr = expr
+        return desc
+
+    def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference') -> BranchDescriptor:
+        desc = BranchDescriptor()
+        desc.set_attr('complex_names', True)
+        desc.expr = expr
+        return desc
+
+    def Keyword(self, expr:'Hql.Expressions.Keyword') -> BranchDescriptor:
+        return self.NamedReference(expr)
+
+    def Identifier(self, expr:'Hql.Expressions.Identifier') -> BranchDescriptor:
+        return self.NamedReference(expr)
+
+    def Wildcard(self, expr:'Hql.Expressions.Wildcard') -> BranchDescriptor:
+        desc = self.NamedReference(expr)
+        desc.set_attr('wildcards', True)
+        return desc
+
+    def Path(self, expr:'Hql.Expressions.Path') -> BranchDescriptor:
+        from Hql.Expressions import Path
+        desc = BranchDescriptor()
+        desc.set_attr('nested_objects', True)
+        
+        path = []
+        for i in expr.path:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            path.append(res.get_expr())
+
+        desc.expr = Path(path)
+        return desc
+
+    def NamedExpression(self, expr:'Hql.Expressions.NamedExpression') -> BranchDescriptor:
+        from Hql.Expressions import NamedExpression
+        desc = BranchDescriptor()
+        desc.set_attr('assignment', True)
+
+        paths = []
+        for i in expr.paths:
+            res = self.compile(i)
+            desc.merge_attrs(res.attrs)
+            paths.append(res.get_expr())
+
+        res = self.compile(expr.value)
+        desc.merge_attrs(res.attrs)
+        value = res.get_expr()
+
+        desc.expr = NamedExpression(paths, value)
+        return desc
