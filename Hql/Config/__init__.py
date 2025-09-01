@@ -9,14 +9,15 @@ if TYPE_CHECKING:
     from Hql.Operators import Database
 
 class Config():
-    def __init__(self, path:Path):
+    def __init__(self, path:Union[Path, None]=None):
         # skeleton
         self.conf = {
             'general': {},
             'databases': {}
         }
 
-        self.load(path)
+        if path:
+            self.load(path)
 
     def load(self, path:Path):
         files = []
@@ -79,10 +80,8 @@ class Config():
         if 'hql' not in conf:
             raise hqle.ConfigException(f'Missing hql definition in config {src}')
 
-        logging.debug(conf['hql'])
         parser = Parser(conf['hql'], src)
-
-        parser.assemble(targets=['pipeExpression'])
+        parser.assemble(targets=['pipeExpression', 'beforePipeExpression', 'emptyPipedExpression'])
 
         conf['hql'] = parser.assembly
         return conf
@@ -90,7 +89,7 @@ class Config():
     def is_database(self, name:str) -> bool:
         return name in self.conf['databases']
     
-    def get_database(self, dbname:str) -> 'Database':
+    def get_database(self, dbname:str) -> dict:
         if dbname not in self.conf['databases']:
             logging.critical(f'Config file for {dbname} is missing databases definition')
             logging.critical('Check that your config contains a database under that name')
@@ -104,7 +103,7 @@ class Config():
 
         self.conf['general'] = config
         
-    def get_default_db(self) -> 'Database':
+    def get_default_db(self) -> dict:
         if 'default_db' not in self.conf['general']:
             logging.critical('Config file is missing databases definition')
             logging.critical('Check that your config contains a database')

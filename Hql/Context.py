@@ -1,5 +1,6 @@
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import TYPE_CHECKING, Union
+from Hql.Config import Config
 
 if TYPE_CHECKING:
     from Hql.Data import Data
@@ -97,7 +98,7 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data:'Data', symbol_table:Union[dict, None]=None, macros:Union[dict, None]=None) -> None:
+    def __init__(self, data:'Data', symbol_table:Union[dict, None]=None, macros:Union[dict, None]=None, config:Union[Config, None]=None) -> None:
         from copy import copy
 
         self.dbs = copy(database_registry)
@@ -106,6 +107,7 @@ class Context():
         self.data = data
         self.symbol_table = symbol_table if symbol_table else dict()
         self.macros = macros if macros else dict()
+        self.config = config if config else Config()
         # self.root = None
 
     def __bool__(self):

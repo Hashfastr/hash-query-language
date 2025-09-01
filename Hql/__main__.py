@@ -119,8 +119,8 @@ def main():
             try:
                 print(run_query(txt, args, i, conf))
             except Exception as e:
-                logging.critical('Exception caught when running query')
-                logging.critical(e)
+                logging.exception('Exception caught when running query')
+                # logging.critical(e.__traceback__)
                 errors.append(i)
                 continue
 

@@ -20,7 +20,7 @@ Works out preprocessor functions
 class HqlCompiler(Compiler):
     def __init__(self, config:'Config', query:Union[None, 'Query']=None):
         Compiler.__init__(self)
-        self.config = config
+        self.ctx.config = config
         self.root = None
 
         if query:
@@ -68,6 +68,8 @@ class HqlCompiler(Compiler):
 
         if isinstance(expr, DotCompositeFunction):
             res = self.DotCompositeFunction(expr)
+            res = res.get_expr().eval(self.ctx, preprocess=True)
+            print(type(res))
 
             if isinstance(res.expr, PipeExpression):
                 return res.expr
@@ -78,7 +80,7 @@ class HqlCompiler(Compiler):
             db = self.ctx.symbol_table[expr.name]
 
             if not isinstance(db, Database):
-                db = self.config.get_default_db()
+                db = self.ctx.config.get_default_db()
                 db = db.get_variable(expr.name)
 
         elif isinstance(expr, Range):

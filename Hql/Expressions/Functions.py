@@ -96,6 +96,7 @@ class DotCompositeFunction(Expression):
 
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
+        preprocess = kwargs.get('preprocess', False)
         
         # Do we even need this? Doesn't make any sense.
         '''
@@ -109,6 +110,8 @@ class DotCompositeFunction(Expression):
         func_list = []
         for i in self.funcs:
             func = i.eval(ctx)
+            if preprocess and not func.preprocess:
+                raise hqle.QueryException(f'Attempting to use function {func.name} in a preprocess context')
             func_list.append(func)
             
             if not no_exec:

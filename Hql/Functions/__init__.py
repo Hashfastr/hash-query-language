@@ -17,6 +17,7 @@ class Function():
         self.min = min
         # Can disable by passing -1
         self.max = max
+        self.preprocess = False
         
         if len(args) < min:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')

@@ -32,7 +32,7 @@ class Parser():
     def __init__(self, text:str, filename:str=''):
         self.filename = filename
         self.text = text
-        self.tree = self.parse_file()
+        self.tree = None
         self.assembly = None
     
     def parse_file(self) -> HqlParser:
@@ -52,16 +52,14 @@ class Parser():
         return parser
 
     def assemble(self, target:str='query', targets:Union[None, list]=None):
-
         if not targets:
             targets = [target]
         
         for i in targets:
-            logging.debug(i)
-            visitor = Visitor(self.filename)
-            target = getattr(self.tree, i)()
-
             try:
+                self.tree = self.parse_file()
+                visitor = Visitor(self.filename)
+                target = getattr(self.tree, i)()
                 self.assembly = visitor.visit(target)
             except:
                 continue
@@ -125,7 +123,7 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         from Hql.Operators import PrePipe
         
         prepipe = PrePipe(self.visit(ctx.Expression))
-        pipes = self.visit(ctx.PipedOperators)
+        pipes = self.visit(ctx.PipedOperators).pipes
         
         return PipeExpression(pipes, prepipe=prepipe)
 

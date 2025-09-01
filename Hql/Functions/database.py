@@ -9,7 +9,8 @@ import logging
 @register_func('database')
 class database(Function):
     def __init__(self, args:list):
-        super().__init__(args, 0, 1)
+        Function.__init__(self, args, 0, 1)
+        self.preprocess = True
         
         # later feature to use, maybe
         self.disallowed = (
@@ -27,9 +28,9 @@ class database(Function):
     def eval(self, ctx:'Context', **kwargs):
         name = self.args[0].eval(None, as_str=True)
         if self.args == [] or name == '':
-            dbconf = Config.HqlConfig.get_default_db()
+            dbconf = ctx.config.get_default_db()
         else:
-            dbconf = Config.HqlConfig.get_database(name)
+            dbconf = ctx.config.get_database(name)
         
         # This will probably have some unintended consequences
         # Enable when ready

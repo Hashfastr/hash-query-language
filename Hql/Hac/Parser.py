@@ -64,18 +64,17 @@ class Parser():
     
     @staticmethod
     def handleException(ctx, e):
-        logging.warning(f'Failed to parse HaC {e.filename}')
+        text = f'Failed to parse HaC {e.filename}\n'
         
         if isinstance(e, hace.LexerException):
-            text = e.text
-            text = text.split('\n')[e.line - 1]
+            text += e.text.split('\n')[e.line - 1]
             
         else:
-            text = Parser.getText(ctx)
+            text += Parser.getText(ctx)
         
-        logging.warning(text)
-        marker = (' ' * e.col) + '^'
-        logging.warning(marker)
+        text += '\n'
+        text += (' ' * e.col) + '^'
+        e.text = text
         raise e
 
 class Tag():
