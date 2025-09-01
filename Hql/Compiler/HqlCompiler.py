@@ -59,15 +59,19 @@ class HqlCompiler(Compiler):
 
         self.ctx.symbol_table[name] = res
 
-    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> 'Database':
+    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> Union['Hql.Operators.Database', 'Hql.Expressions.PipeExpression']:
         from Hql.Operators.Database import Database, Static
-        from Hql.Expressions import DotCompositeFunction, NamedReference
+        from Hql.Expressions import DotCompositeFunction, NamedReference, PipeExpression
         from Hql.Operators import Range
 
         db = None
 
         if isinstance(expr, DotCompositeFunction):
             res = self.DotCompositeFunction(expr)
+
+            if isinstance(res.expr, PipeExpression):
+                return res.expr
+
             db = res.db
 
         elif isinstance(expr, NamedReference):
@@ -94,7 +98,7 @@ class HqlCompiler(Compiler):
 
     def PipeExpression(self, expr: 'Hql.Expressions.PipeExpression'):
         from Hql.Operators import PrePipe
-        from Hql.Expressions import Expression
+        from Hql.Expressions import Expression, PipeExpression
         desc = BranchDescriptor()
 
         if expr.prepipe:
@@ -114,6 +118,14 @@ class HqlCompiler(Compiler):
 
         if not isinstance(prepipe, list):
             prepipe = [prepipe]
+
+        new = []
+        for i in prepipe:
+            if isinstance(i, PipeExpression):
+                new.append(self.PipeExpression(i))
+            else:
+                new.append(i)
+        prepipe = new
 
         # Preprocess all pipes
         pipes = []

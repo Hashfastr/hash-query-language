@@ -7,13 +7,13 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
 from Hql.Data import Schema, Data, Table
 from Hql.Operators.Operator import Operator
-from Hql.Types.Opensearch import SOTypes
+# from Hql.Types.Opensearch import SOTypes
 from Hql.Context import Context
 
 import Hql.Expressions as Expr
 import Hql.Operators as Ops
 
-from .Compiler import get_expr
+# from .Compiler import get_expr
 
 from opensearchpy import AsyncOpenSearch
 

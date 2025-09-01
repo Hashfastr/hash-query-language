@@ -16,6 +16,7 @@ from Hql.Parser.Logic import Logic as ParseLogic
 from Hql.Parser.Sigma import SigmaParser
 
 import logging
+from typing import Union
 
 class HqlErrorListener(ErrorListener):
     def __init__(self, text:str, filename:str):
@@ -32,8 +33,9 @@ class Parser():
         self.filename = filename
         self.text = text
         self.tree = self.parse_file()
+        self.assembly = None
     
-    def parse_file(self) -> HqlParser.QueryContext:
+    def parse_file(self) -> HqlParser:
         if not self.text:
             logging.error(f'Given query is empty: {self.filename}')
             raise hqle.QueryException('Empty query given')
@@ -47,17 +49,28 @@ class Parser():
         parser.removeErrorListeners()
         parser.addErrorListener(self.err_listener)
          
-        return parser.query()
+        return parser
 
-    def assemble(self):
-        visitor = Visitor(self.filename)
-        self.assembly = visitor.visit(self.tree)
+    def assemble(self, target:str='query', targets:Union[None, list]=None):
+
+        if not targets:
+            targets = [target]
         
-        if self.assembly == None:
-            logging.error("Compiler error!")
-            logging.error("Parser returned None instead of valid assembly")
-            logging.error("Import error?")
-            raise Exception("Compiler error, visitor returned None")
+        for i in targets:
+            logging.debug(i)
+            visitor = Visitor(self.filename)
+            target = getattr(self.tree, i)()
+
+            try:
+                self.assembly = visitor.visit(target)
+            except:
+                continue
+
+            break
+
+        if not self.assembly:
+            logging.critical(f'Failed to parse query {self.filename}')
+            raise hqle.CompilerException(f'Could not parse\n{self.text}')
     
     @staticmethod
     def getText(ctx):
@@ -68,19 +81,16 @@ class Parser():
         return stream.getText(start, stop)
     
     @staticmethod
-    def handleException(ctx, e:hqle.ParseException):
-        logging.critical(f'Failed to parse query {e.filename}')
-        
+    def handleException(ctx, e:Union[hqle.ParseException, hqle.LexerException]):
         if isinstance(e, hqle.LexerException):
             text = e.text
             text = text.split('\n')[e.line - 1]
-            
         else:
             text = Parser.getText(ctx)
         
-        logging.critical(text)
-        marker = (' ' * e.col) + '^'
-        logging.critical(marker)
+        text += '\n'
+        text += (' ' * e.col) + '^'
+        # text 
         raise e
 
 # Overrides the HqlVisitor templates

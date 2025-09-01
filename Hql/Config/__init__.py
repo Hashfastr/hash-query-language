@@ -64,7 +64,28 @@ class Config():
         if name in self.conf['databases']:
             raise hqle.ConfigException(f'Duplicate definition of database {name} in {src}')
 
+        if config['macro']:
+            macro = {}
+            for i in config['macro']:
+                macro[i] = self.macro(src, config['macro'][i])
+
+            config['macro'] = macro
+
         self.conf['databases'][name] = config
+
+    def macro(self, src:str, conf:dict):
+        from Hql.Parser import Parser
+
+        if 'hql' not in conf:
+            raise hqle.ConfigException(f'Missing hql definition in config {src}')
+
+        logging.debug(conf['hql'])
+        parser = Parser(conf['hql'], src)
+
+        parser.assemble(targets=['pipeExpression'])
+
+        conf['hql'] = parser.assembly
+        return conf
     
     def is_database(self, name:str) -> bool:
         return name in self.conf['databases']

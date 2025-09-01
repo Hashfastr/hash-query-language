@@ -23,6 +23,7 @@ class InstructionSet():
 
         self.ops:list['Operator'] = operators if operators else []
         self.id = '%08x' % random.getrandbits(32)
+        self.attrs = dict()
 
     def add_op(self, op:Union['BranchDescriptor', 'Operator']):
         if isinstance(op, BranchDescriptor):

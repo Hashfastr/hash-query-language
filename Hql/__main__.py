@@ -55,6 +55,7 @@ def main():
     
     args = parser.parse_args()
     
+    profiler = None
     if args.profile:
         profiler = cProfile.Profile()
         profiler.enable()
@@ -126,6 +127,21 @@ def main():
             successes.append(i)
 
     logging.info(f'Finished execution {len(errors)} errors, {len(successes)} successes')
+    
+    #####################
+    ## Profiling stuff ##
+    #####################
+    
+    if args.profile:
+        assert profiler
+        profiler.disable()
+        
+        with open('./profile.txt', mode='w+') as f:
+            stats = pstats.Stats(profiler, stream=f)
+            stats.sort_stats('time')
+            stats.print_stats()
+            
+        logging.info("Performance metrics outputted to profile.txt")
 
     if errors:
         return -1
@@ -223,27 +239,14 @@ def run_query(text:str, args, src:Path, conf:Config) -> str:
     start = time.perf_counter()
     
     results = compiler.run().data
-    return json.dumps(results.to_dict(), default=repr)
    
     end = time.perf_counter() 
     logging.debug("Ran")
     logging.debug(f"Computation took {end - start}")
     
     logging.debug(f'Got {len(results)} results from query')
-
-    #####################
-    ## Profiling stuff ##
-    #####################
     
-    if args.profile:
-        profiler.disable()
-        
-        with open('./profile.txt', mode='w+') as f:
-            stats = pstats.Stats(profiler, stream=f)
-            stats.sort_stats('time')
-            stats.print_stats()
-            
-        print("Performance metrics outputted to profile.txt")
-        
+    return json.dumps(results.to_dict(), default=repr)
+    
 if __name__ == "__main__":
     main()
