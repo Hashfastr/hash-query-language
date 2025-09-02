@@ -74,7 +74,10 @@ class InstructionSet():
 
         sets = []
         for i in self.upstream:
-            sets.append(i.eval(Context(Data())))
+            up = i.eval(Context(Data()))
+            if isinstance(up, Data):
+                up = Context(up)
+            sets.append(up)
 
         ctx = Context.merge(sets)
 

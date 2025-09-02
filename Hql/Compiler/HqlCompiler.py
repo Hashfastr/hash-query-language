@@ -8,6 +8,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 if TYPE_CHECKING:
     from Hql.Query import Query
     from Hql.Config import Config
+    from Hql.Context import Context
     import Hql
 
 '''
@@ -26,6 +27,12 @@ class HqlCompiler(Compiler):
 
     def compile(self, src:Union['Hql.Operators.Operator', 'Hql.Expressions.Expression', 'Hql.Query.Statement']) -> BranchDescriptor:
         return self.from_name(src.type)(src)
+
+    def run(self, ctx: Union['Context', None] = None) -> 'Context':
+        ctx = ctx if ctx else self.ctx
+        if not self.root:
+            raise hqle.CompilerException('Attempting to run compiler with None-root')
+        return self.root.eval(ctx)
 
     # def is_breaking(self, op:'Operator') -> bool:
     #     breaking = self.compile(op).attrs.get('aggregate', False)
@@ -551,7 +558,7 @@ class HqlCompiler(Compiler):
             args.append(res.get_expr())
 
         desc.set_attr('functions', name.value)
-        desc.expr = FuncExpr(name, args)
+        desc.expr = FuncExpr(name, args).eval(self.ctx)
         return desc
 
     def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction') -> BranchDescriptor:

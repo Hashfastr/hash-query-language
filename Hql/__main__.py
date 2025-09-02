@@ -230,10 +230,8 @@ def run_query(text:str, args, src:Path, conf:Config) -> str:
         assert compiler.root
         return compiler.root.render()
 
-    return ''
-
-    if args.decompile:
-        return compiler.decompile()
+    # if args.decompile:
+    #     return compiler.decompile()
    
     if args.no_exec:
         return ''

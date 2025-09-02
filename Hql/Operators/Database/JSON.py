@@ -89,7 +89,7 @@ class JSON(Database):
 
         return data
     
-    def make_query(self) -> Data:
+    def exec_query(self) -> Data:
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to JSON database')
