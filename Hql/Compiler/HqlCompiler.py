@@ -19,7 +19,7 @@ class HqlCompiler(Compiler):
     def __init__(self, config:'Config', query:Union[None, 'Query']=None):
         Compiler.__init__(self)
         self.ctx.config = config
-        self.root = None
+        self.root:Union[None, InstructionSet] = None
 
         if query:
             self.Query(query)
@@ -43,8 +43,7 @@ class HqlCompiler(Compiler):
         res = self.compile(statement.root)
 
         if not isinstance(res, InstructionSet):
-            logging.warning(f'QueryStatement compiled to {type(res)} not InstructionSet, mistake?')
-            self.root = res.get_expr()
+            raise hqle.CompilerException(f'QueryStatement compiled to {type(res)} not InstructionSet, mistake?')
         else:
             self.root = res
 
@@ -130,8 +129,8 @@ class HqlCompiler(Compiler):
         pipes = []
         for i in expr.pipes:
             res = self.compile(i)
-            desc.merge_attrs(res.attrs)
-            pipes.append(i)
+            # desc.merge_attrs(res.attrs)
+            pipes.append(res)
 
         # Do basic optimization
         pipes = self.optimize(pipes)
@@ -142,9 +141,9 @@ class HqlCompiler(Compiler):
         idx = 0
         for idx, i in enumerate(pipes):
             if i.get_attr('requires_sync'):
-                groups.append(pipes[top:idx])
+                groups.append(pipes[top:idx+1])
                 top = idx
-        groups.append(pipes[top:idx])
+        groups.append(pipes[top:idx+1])
 
         # Compile first group
         sets = []
@@ -172,13 +171,13 @@ class HqlCompiler(Compiler):
 
     def optimize(self, ops: list[BranchDescriptor]) -> list[BranchDescriptor]:
         from Hql.Operators import Take
-        optimized = [ops[0]]
         
         logging.debug(f'Optimizing the following operators:')
         for op in ops:
             assert op.op
             logging.debug(f'    {op.op.id}: {op.op.type}')
-
+        
+        optimized = [ops[0]]
         for op in ops[1:]:
             i = -1
             while i >= -len(optimized):
@@ -194,8 +193,11 @@ class HqlCompiler(Compiler):
 
                 else:
                     break
-                
-            optimized.insert(i, op)
+            
+            if i == -1:
+                optimized.append(op)
+            else:
+                optimized.insert(i+1, op)
         
         logging.debug('Final optimized set:')
         for op in optimized:

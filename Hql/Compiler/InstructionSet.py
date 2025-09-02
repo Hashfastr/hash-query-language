@@ -2,10 +2,11 @@ from typing import TYPE_CHECKING, Union
 from Hql.Context import Context
 import logging
 import time
+import json
 
 if TYPE_CHECKING:
     from Hql.Operators import Database, Operator
-    from . import BranchDescriptor
+    from Hql.Compiler import BranchDescriptor
 
 class InstructionSet():
     def __init__(self, upstream:Union['Database', list['Database'], 'InstructionSet', list['InstructionSet']], operators:Union[None, list['Operator']]=None) -> None:
@@ -20,7 +21,30 @@ class InstructionSet():
         self.id = '%08x' % random.getrandbits(32)
         self.attrs = dict()
 
+        if len(self.upstream) == 1 and isinstance(self.upstream[0], InstructionSet):
+            self.ops = self.upstream[0].ops + self.ops
+            self.upstream = self.upstream[0].upstream
+
+    def to_dict(self):
+        ops = []
+        for i in self.ops:
+            op = i.to_dict()
+            op = {
+                'id': op.get('id', '????'),
+                'type': op.get('type')
+            }
+            ops.append(op)
+
+        return {
+            'id': self.id,
+            'attrs': self.attrs,
+            'upstream': [x.to_dict() for x in self.upstream],
+            'ops': ops,
+        }
+
     def add_op(self, op:Union['BranchDescriptor', 'Operator']):
+        from Hql.Compiler import BranchDescriptor
+
         if isinstance(op, BranchDescriptor):
             self.ops.append(op.get_op())
         else:
@@ -38,6 +62,9 @@ class InstructionSet():
         logging.debug(f'{inst.id} - {end - start}')
 
         return ctx
+
+    def render(self) -> str:
+        return json.dumps(self.to_dict(), indent=2)
 
     def eval(self, ctx:Context, **kwargs) -> Context:
         from Hql.Data import Data

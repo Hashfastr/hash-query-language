@@ -11,6 +11,7 @@ class Unnest(Operator):
         
     def to_dict(self):
         return {
+            'id': self.id,
             'type': self.type,
             'field': self.field.to_dict(),
             'tables': [x.to_dict() for x in self.tables]

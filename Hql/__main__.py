@@ -48,7 +48,8 @@ def main():
     parser.add_argument('-c', '--config', help="Location of the config file")
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
     parser.add_argument('-dpar', '--deparse', help="Deparse the program before compiling", action='store_true')
-    parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
+    # parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
+    parser.add_argument('-pl', '--plan', help="Prints the plan for the execution", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
     parser.add_argument('-sig', '--sigma', help="Input file is a Sigma file", action='store_true')
     parser.add_argument('-om', '--omni', help="Process both Sigma and Hql if given the input", action='store_true')
@@ -224,6 +225,12 @@ def run_query(text:str, args, src:Path, conf:Config) -> str:
     logging.debug("Done.")
     
     logging.debug(f"Compiling took {end - start}")
+
+    if args.plan:
+        assert compiler.root
+        return compiler.root.render()
+
+    return ''
 
     if args.decompile:
         return compiler.decompile()

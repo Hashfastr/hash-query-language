@@ -39,7 +39,7 @@ class Operator():
     def to_dict(self):
         if self.expr:
             return {
-        'id': self.id,
+                'id': self.id,
                 'type': self.type,
                 'expression': self.expr.to_dict()
             }

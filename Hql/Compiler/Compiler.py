@@ -78,8 +78,10 @@ class Compiler():
         return ''
 
     def decompile(self) -> str:
-        from Expressions import PipeExpression
-        return PipeExpression(pipes=self.ops).decompile(self.ctx)
+        from Hql.Expressions import PipeExpression
+        logging.critical("Decompilationg doesn't actually work right now, sorry")
+        # return PipeExpression(pipes=self.ops).decompile(self.ctx)
+        return ''
 
     '''
     By default, all of these return themselves as they are being
