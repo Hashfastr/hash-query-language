@@ -8,9 +8,8 @@ if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor
 
 class Database(Operator):
-    def __init__(self, config:dict):
+    def __init__(self, config:dict, name:str='unnamed-database'):
         from Hql.Compiler import Compiler
-
         Operator.__init__(self)
 
         self.type = self.__class__.__name__
@@ -18,9 +17,11 @@ class Database(Operator):
         self.ctx = None
         self.config = config
         self.compiler = Compiler()
+        self.name = name
 
     def add_op(self, op:Union['BranchDescriptor', Operator]):
-        self.compiler.add_op(op)
+        ...
+        # self.compiler.add_op(op)
 
     def exec_query(self) -> 'Data':
         from Hql.Data import Data
@@ -34,7 +35,7 @@ class Database(Operator):
         return {
             'id': self.id,
             'type': self.type,
-            'query': self.compiler.compile(),
+            # 'query': self.compiler.compile(),
             # 'ops': [x.to_dict() for x in self.ops]
         }
     
@@ -44,3 +45,7 @@ class Database(Operator):
     
     def get_variable(self, name:str) -> object:
         raise hqle.QueryException(f'{self.type} database has no variables')
+
+    def get_macro(self, name:str) -> Union[None, dict]:
+        macros = self.config.get('macro', dict())
+        return macros.get(name, None)

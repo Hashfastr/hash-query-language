@@ -164,7 +164,7 @@ class Compiler():
     Expressions
     '''
 
-    def Tabular(self, expr:'Hql.Expressions.Expression') -> Union['Hql.Expressions.Expression', 'Hql.Operators.Database']:
+    def Tabular(self, expr:'Hql.Expressions.Expression') -> Union['Hql.Expressions.Expression', 'Hql.Operators.Database', 'Hql.Compiler.InstructionSet']:
         return expr
 
     def PipeExpression(self, expr:'Hql.Expressions.PipeExpression') -> object:

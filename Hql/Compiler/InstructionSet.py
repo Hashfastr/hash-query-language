@@ -23,7 +23,6 @@ class InstructionSet():
     def add_op(self, op:Union['BranchDescriptor', 'Operator']):
         if isinstance(op, BranchDescriptor):
             self.ops.append(op.get_op())
-
         else:
             self.ops.append(op)
 

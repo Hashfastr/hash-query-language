@@ -11,4 +11,4 @@ let right = datatable (ham: string, apple: string)
     'c', 'z'
 ];
 left
-| join right on ham
+| join (right | where apple == 'x') on ham

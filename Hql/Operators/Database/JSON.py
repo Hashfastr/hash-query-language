@@ -13,31 +13,44 @@ from typing import Union
 # Index in a database to grab data from, extremely simple.
 @register_database('JSON')
 class JSON(Database):
-    def __init__(self, config:dict):
-        Database.__init__(self, config)
+    def __init__(self, config:dict, name:str='unnamed-json'):
+        Database.__init__(self, config, name=name)
         
+        self.name = name
         self.files:list[str] = []
         self.urls:list[str] = []
-        self.base_path = config.get('BASE_PATH', None)
-        if not self.base_path:
-            raise hqle.ConfigException('JSON database config missing base_path parameter.')
+        conf = config.get('conf', dict())
+        self.local_base = conf.get('local-base', None)
+        self.http_base = conf.get('http-base', None)
+
+        if not (self.local_base or self.http_base):
+            raise hqle.ConfigException('JSON database config missing both local-base and http-base params')
         
         self.methods = [
             'file',
-            'http'
+            'http',
+            'macro'
         ]
 
         self.limit:Union[None, int] = None
     
     def from_file(self, filename:str):
-        base = self.base_path if self.base_path else '.'
-        return open(f'{base}{os.sep}{filename}', mode='r')
+        if self.local_base:
+            path = f'{self.local_base}{os.sep}{filename}'
+        else:
+            path = filename
+
+        return open(path, mode='r')
         
     def from_url(self, url:str):
         from io import StringIO
 
-        url = f'{self.base_path}{url}' if self.base_path else url
-        
+        if self.http_base:
+            url = f'{self.http_base}{url}'
+        else:
+            if not url.startswith('http'):
+                raise hqle.ConfigException(f'Url is not a valid HTTP url: {url}')
+
         res = requests.get(url)
         if res.status_code != 200:
             raise hqle.QueryException(f'Could not query remote url {url}')

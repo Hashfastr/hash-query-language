@@ -2,15 +2,18 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql import Config
 from Hql.Context import register_func, Context
+from Hql.Expressions import StringLiteral
 
 # This is a meta function resolved while parsing
 @register_func('http')
 class http(Function):
     def __init__(self, args:list):
-        super().__init__(args, 1, -1)
+        Function.__init__(self, args, 1, -1)
+        self.preprocess = True
 
-        if self.args[0].type not in ('StringLiteral', 'EscapedName'):
-            raise hqle.ArgumentException(f'Bad database http argument datatype {args[0].type}')
+        for i in args:
+            if not isinstance(i, StringLiteral):
+                raise hqle.QueryException(f'Invalid argument type passed to macro function: {type(i)}')
         
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Operators.Database import Database
@@ -19,8 +22,8 @@ class http(Function):
         urls = [x.eval(ctx, as_str=True) for x in self.args]
         
         if not db:
-            dbconf = Config.HqlConfig.get_default_db()
-            db = ctx.get_db(dbconf['TYPE'])(dbconf)
+            dbconf = ctx.config.get_default_db()
+            db = ctx.get_db(dbconf['type'])(dbconf, name='default')
         
         if db and issubclass(type(db), Database) and db.has_method(self.name):
             db.urls = urls

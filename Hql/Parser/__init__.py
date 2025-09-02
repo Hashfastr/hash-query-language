@@ -16,7 +16,12 @@ from Hql.Parser.Logic import Logic as ParseLogic
 from Hql.Parser.Sigma import SigmaParser
 
 import logging
-from typing import Union
+from typing import Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Expressions import Expression
+    from Hql.Operators import Operator
+    from Hql.Query import Query, Statement
 
 class HqlErrorListener(ErrorListener):
     def __init__(self, text:str, filename:str):
@@ -33,7 +38,7 @@ class Parser():
         self.filename = filename
         self.text = text
         self.tree = None
-        self.assembly = None
+        self.assembly:Union[None, 'Query', 'Statement', 'Operator', 'Expression'] = None
     
     def parse_file(self) -> HqlParser:
         if not self.text:

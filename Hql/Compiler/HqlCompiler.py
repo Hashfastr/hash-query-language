@@ -1,7 +1,5 @@
-from os import stat
 from typing import Union, TYPE_CHECKING
 import logging
-import time
 import json
 
 from Hql.Compiler import Compiler, BranchDescriptor, InstructionSet
@@ -59,41 +57,40 @@ class HqlCompiler(Compiler):
 
         self.ctx.symbol_table[name] = res
 
-    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> Union['Hql.Operators.Database', 'Hql.Expressions.PipeExpression']:
+    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> InstructionSet:
         from Hql.Operators.Database import Database, Static
-        from Hql.Expressions import DotCompositeFunction, NamedReference, PipeExpression
+        from Hql.Expressions import DotCompositeFunction, NamedReference
         from Hql.Operators import Range
-
-        db = None
 
         if isinstance(expr, DotCompositeFunction):
             res = self.DotCompositeFunction(expr)
             res = res.get_expr().eval(self.ctx, preprocess=True)
-            print(type(res))
-
-            if isinstance(res.expr, PipeExpression):
-                return res.expr
-
-            db = res.db
 
         elif isinstance(expr, NamedReference):
-            db = self.ctx.symbol_table[expr.name]
+            res = self.ctx.symbol_table[expr.name]
 
-            if not isinstance(db, Database):
-                db = self.ctx.config.get_default_db()
-                db = db.get_variable(expr.name)
+            if not isinstance(res, Database):
+                # a little horrifying but gets the default db using the database function
+                res = self.ctx.get_func('database')([]).eval(self.ctx)
+                res = res.get_variable(expr.name)
 
         elif isinstance(expr, Range):
             op = self.Range(expr).op
             if not op:
                 raise hqle.CompilerException('Range precompile did not set op')
-            db = Static(op.eval(self.ctx))
+            res = Static(op.eval(self.ctx))
 
-        if not isinstance(db, Database):
+        else:
+            raise hqle.QueryException(f'Invalid tabular expression {type(expr)}')
+
+        if isinstance(res, Database):
+            res = InstructionSet(res)
+
+        if not isinstance(res, InstructionSet):
             logging.critical(json.dumps(expr.to_dict(), indent=2))
-            raise hqle.CompilerException(f'Tabular reference returns non-tabular expression {type(db)}')
+            raise hqle.CompilerException(f'Tabular reference returns non-tabular expression {type(res)}')
 
-        return db
+        return res
 
     def PrePipe(self, op: 'Hql.Operators.PrePipe'):
         return self.Tabular(op.expr)
@@ -173,9 +170,8 @@ class HqlCompiler(Compiler):
         comp.attrs = desc.attrs
         return comp
 
-    def optimize(self, ops: list[BranchDescriptor]):
+    def optimize(self, ops: list[BranchDescriptor]) -> list[BranchDescriptor]:
         from Hql.Operators import Take
-
         optimized = [ops[0]]
         
         logging.debug(f'Optimizing the following operators:')
@@ -184,7 +180,6 @@ class HqlCompiler(Compiler):
             logging.debug(f'    {op.op.id}: {op.op.type}')
 
         for op in ops[1:]:
-            assert op.op
             i = -1
             while i >= -len(optimized):
                 if not (optimized[i].get_attr('row_dependent') or optimized[i].get_attr('row_mutable')) and op.get_attr('row_reducing'):
@@ -192,6 +187,7 @@ class HqlCompiler(Compiler):
                         logging.debug(f'Maintaining Take as a priority operator')
                         continue
 
+                    # linter bitches here but we verify the non-None-ness of *.op earlier with an assert loop
                     logging.debug(f'Can optimize {op.op.id} passing {optimized[i].op.id}')
                     i -= 1
                     continue
@@ -424,7 +420,7 @@ class HqlCompiler(Compiler):
         else:
             res = self.Tabular(op.rh)
             desc.join_attrs = res.attrs
-            rh = res.get_expr()
+            rh = res
         assert isinstance(rh, InstructionSet)
 
         params = []

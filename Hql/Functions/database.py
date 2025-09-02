@@ -29,23 +29,13 @@ class database(Function):
         name = self.args[0].eval(None, as_str=True)
         if self.args == [] or name == '':
             dbconf = ctx.config.get_default_db()
+            name = 'default'
         else:
             dbconf = ctx.config.get_database(name)
         
-        # This will probably have some unintended consequences
-        # Enable when ready
-        # Enables dynamic conf changes to a dbconfig
-        # for i in self.args[1:]:
-        #     arg = i.get_value().split('=')
-            
-        #     if arg[0] in disallowed:
-        #         raise CompilerException(f'Invalid variable set in database call {arg[0]}')
-            
-        #     dbconf[arg[0]] = arg[1]
-        
-        if 'TYPE' not in dbconf:
+        if 'type' not in dbconf:
             logging.critical('Missing database type in database config')
             logging.critical(f"Available DB types: {', '.join(ctx.get_db_types())}")
             raise hqle.ConfigException(f'Missing TYPE definition in database config for {name}')
 
-        return ctx.get_db(dbconf['TYPE'])(dbconf)
+        return ctx.get_db(dbconf['type'])(dbconf, name=name)
