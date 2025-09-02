@@ -2,7 +2,7 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql import Config
 from Hql.Context import register_func, Context
-from Hql.Expressions import StringLiteral, Expression
+from Hql.Expressions import PipeExpression, StringLiteral, Expression, DotCompositeFunction
 from Hql.Compiler import InstructionSet, HqlCompiler
 
 @register_func('macro')
@@ -44,6 +44,10 @@ class macro(Function):
                 raise hqle.QueryException(f'Macro not found: {i}')
             parsed = self.parse_macro(macro, f'{db.name}/{i}')
 
-            upstream.append(compiler.compile(parsed))
+            if not isinstance(parsed, PipeExpression):
+                parsed = PipeExpression([], prepipe=parsed)
+
+            comp = compiler.compile(parsed)
+            upstream.append(comp)
 
         return InstructionSet(upstream)

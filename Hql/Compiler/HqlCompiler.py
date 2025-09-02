@@ -133,7 +133,8 @@ class HqlCompiler(Compiler):
             pipes.append(res)
 
         # Do basic optimization
-        pipes = self.optimize(pipes)
+        if pipes:
+            pipes = self.optimize(pipes)
 
         # Create groups where data needs to be sync'd
         groups:list[list[BranchDescriptor]] = []
