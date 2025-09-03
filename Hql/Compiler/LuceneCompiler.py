@@ -37,18 +37,18 @@ class LuceneCompiler(Compiler):
         return 
     '''
 
-    def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> Union[None, 'Hql.Operators.Where', str]:
+    def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[Union[None, 'Hql.Operators.Where', str], Union[None, 'Hql.Operators.Where', str]]:
         from Hql.Operators import Where
         res = self.compile(op.expr, preprocess=preprocess)
 
         if preprocess and res:
             assert isinstance(res, Expression)
-            return Where(res, op.parameters)
+            return Where(res, op.parameters), None
 
         assert isinstance(res, (type(None), str))
-        return res
+        return res, None
         
-    def BinaryLogic(self, expr: 'Hql.Expressions.BinaryLogic', preprocess: bool = True) -> Union[None, 'Hql.Expressions.BinaryLogic', str]:
+    def BinaryLogic(self, expr: 'Hql.Expressions.BinaryLogic', preprocess: bool = True) -> tuple[Union[None, 'Hql.Expressions.BinaryLogic', str], Union[None, 'Hql.Expressions.BinaryLogic', str]]:
         from Hql.Expressions import BinaryLogic
 
         exprs = [expr.lh] + expr.rh
@@ -58,10 +58,10 @@ class LuceneCompiler(Compiler):
             bitok = ' OR '
 
         ret = bitok.join([get_expr(x)(x) for x in exprs])
-        return f'({ret})'
+        return f'({ret})', None
 
 compiler_registry = {}
-def get_expr(expr:"Expr.Expression") -> func_temp:
+def get_expr(expr:"Hql.Expressions.Expression"):
     expr_str = f'{expr.type}_expr'
 
     if expr_str in compiler_registry:
@@ -76,44 +76,44 @@ def register(name:str):
     return decorator
 
 @register('Where_op')
-def Where_op(op:"Ops.Where") -> str:
+def Where_op(op:"Hql.Operators.Where") -> str:
     if op.expr == None:
         return ''
     return get_expr(op.expr)(op.expr)
 
 @register('StringLiteral_expr')
-def StringLiteral_expr(expr:"Expr.StringLiteral") -> str:
+def StringLiteral_expr(expr:"Hql.Expressions.StringLiteral") -> str:
     return f'"{expr.value}"'
 
 @register('Integer_expr')
 @register('Float_expr')
-def Float_expr(expr:"Expr.Float") -> str:
+def Float_expr(expr:"Hql.Expressions.Float") -> str:
     return f'{expr.value}'
 
 @register('Bool_expr')
-def Bool(expr:"Expr.Bool") -> str:
+def Bool(expr:"Hql.Expressions.Bool") -> str:
     return 'True' if expr.value else 'False'
 
 @register('Keyword_expr')
 @register('Identifier_expr')
-def BasicIdentifier(expr:"Expr.NamedReference") -> str:
+def BasicIdentifier(expr:"Hql.Expressions.NamedReference") -> str:
     if expr.name == None:
         raise hqle.CompilerException('NamedReference has null value')
     return expr.name
 
 @register('EscapedNamedReference_expr')
-def EscapedName(expr:"Expr.EscapedNamedReference") -> str:
+def EscapedName(expr:"Hql.Expressions.EscapedNamedReference") -> str:
     if expr.name == None:
         raise hqle.CompilerException('NamedReference has null value')
     return f'\"{expr.name}\"'
 
 @register('Path_expr')
-def Path(expr:"Expr.Path") -> str:
+def Path(expr:"Hql.Expressions.Path") -> str:
     path = [get_expr(x)(x) for x in expr.path]
     return '.'.join(path)
 
 @register('Equality_expr')
-def Equality(expr:"Expr.Equality") -> str:
+def Equality(expr:"Hql.Expressions.Equality") -> str:
     lh = get_expr(expr.lh)(expr.lh)
     
     exprs = []
@@ -129,13 +129,13 @@ def Equality(expr:"Expr.Equality") -> str:
     return f'(NOT {ret})' if expr.neq else ret
 
 @register('Relational_expr')
-def Relational(expr:"Expr.Relational") -> str:
+def Relational(expr:"Hql.Expressions.Relational") -> str:
     lh = get_expr(expr.lh)(expr.lh)
     rh = get_expr(expr.rh[0])(expr.rh[0])
     return f'{lh}:{expr.op}{rh}'
 
 @register('BetweenEquality_expr')
-def Between(expr:"Expr.BetweenEquality") -> str:
+def Between(expr:"Hql.Expressions.BetweenEquality") -> str:
     lh = get_expr(expr.lh)(expr.lh)
     start = get_expr(expr.start)(expr.start)
     end = get_expr(expr.end)(expr.end)
@@ -150,19 +150,19 @@ def Between(expr:"Expr.BetweenEquality") -> str:
 
 
 @register('BasicRange_expr')
-def Range(expr:"Expr.BasicRange") -> str:
+def Range(expr:"Hql.Expressions.BasicRange") -> str:
     start = get_expr(expr.start)(expr.start)
     end = get_expr(expr.end)(expr.end)
     return f'[{start} TO {end}]'
 
 @register('Regex_expr')
-def Regex(expr:"Expr.Regex") -> str:
+def Regex(expr:"Hql.Expressions.Regex") -> str:
     lh = get_expr(expr.lh)(expr.lh)
     rh = get_expr(expr.rh)(expr.rh)
     return f'{lh}:/{rh}/'
 
 @register('Substring_expr')
-def Substring(expr:"Expr.Substring") -> str:
+def Substring(expr:"Hql.Expressions.Substring") -> str:
     lh = get_expr(expr.lh)(expr.lh)
 
     rhs = []
