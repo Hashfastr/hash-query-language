@@ -26,8 +26,10 @@ class Compiler():
         ctx = ctx if ctx else self.ctx
         return self.ctx
 
-    def add_op(self, op:'BranchDescriptor') -> tuple[Union['Operator', None], Union['Operator', None]]:
-        return None, op.get_op()
+    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+        if isinstance(op, BranchDescriptor):
+            op = op.get_op()
+        return None, op
     
     def add_ops(self, ops:list['BranchDescriptor']) -> Union[list['Operator'], None]:
         for idx, op in enumerate(ops):

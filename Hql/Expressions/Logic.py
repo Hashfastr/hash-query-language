@@ -49,6 +49,9 @@ class Equality(Comparator):
 
         self.list = 'in' in op
 
+        if len(rh) > 1 and not self.list:
+            raise hqle.CompilerException('Non-list equality given more than one righthand')
+
     def as_pl(self, ctx:'Context'):
         lh = self.lh.eval(ctx, as_pl=True)
 
@@ -147,6 +150,9 @@ class Substring(Comparator):
         self.cs = op.endswith('_cs')
 
         self.list = ('all' in op or 'any' in op)
+
+        if len(rh) > 1 and not self.list:
+            raise hqle.CompilerException('Non-list substring given multiple rh expressions')
  
     def to_dict(self):
         return {

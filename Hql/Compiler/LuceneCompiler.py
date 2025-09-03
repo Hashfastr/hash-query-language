@@ -1,9 +1,11 @@
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import Callable, Union, TYPE_CHECKING
 from . import Compiler, HqlCompiler
+import logging
 
 if TYPE_CHECKING:
     import Hql
+    from Hql.Operators import Operator
     from Hql.Expressions import Expression
     from Hql.Compiler import BranchDescriptor
 
@@ -24,167 +26,378 @@ class LuceneCompiler(Compiler):
         }
         self.expr = None
 
-    '''
-    def add_op(self, op: 'BranchDescriptor') -> Union['BranchDescriptor', None]:
+    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Operators import Where
+        from Hql.Compiler import BranchDescriptor
+        if isinstance(op, BranchDescriptor):
+            op = op.get_op()
 
-        if not op.op:
-            return op
+        acc = None
+        rej = op
+        
+        if isinstance(op, Where):
+            acc, rej = self.Where(op, preprocess=True)
 
-        if isinstance(op.op, Where):
-            op.compatible(self.attrs)
-
-        return 
-    '''
+        assert not (isinstance(acc, str) or isinstance(rej, str))
+        return acc, rej
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[Union[None, 'Hql.Operators.Where', str], Union[None, 'Hql.Operators.Where', str]]:
         from Hql.Operators import Where
-        res = self.compile(op.expr, preprocess=preprocess)
+        from Hql.Expressions import BinaryLogic
 
-        if preprocess and res:
-            assert isinstance(res, Expression)
-            return Where(res, op.parameters), None
+        acc, rej = self.compile(op.expr, preprocess=preprocess)
 
-        assert isinstance(res, (type(None), str))
-        return res, None
+        if preprocess:
+            if acc != None:
+                assert isinstance(acc, Expression)
+                if self.expr == None:
+                    self.expr = acc
+                
+                elif isinstance(self.expr, BinaryLogic) and self.expr.bitype == 'and':
+                    self.expr.rh.append(acc)
+
+                else:
+                    self.expr = BinaryLogic(acc, [self.expr], 'and')
+                acc = None
+
+            if rej != None:
+                assert isinstance(rej, Expression)
+                rej = Where(rej, op.parameters)
+        
+        assert isinstance(acc, (type(None), Where, str)) and isinstance(rej, (type(None), Where, str))
+        return acc, rej
         
     def BinaryLogic(self, expr: 'Hql.Expressions.BinaryLogic', preprocess: bool = True) -> tuple[Union[None, 'Hql.Expressions.BinaryLogic', str], Union[None, 'Hql.Expressions.BinaryLogic', str]]:
         from Hql.Expressions import BinaryLogic
 
-        exprs = [expr.lh] + expr.rh
+        if preprocess:
+            rejs = []
+            accs = []
+            for i in [expr.lh] + expr.rh:
+                acc, rej = self.compile(i)
+                accs.append(acc)
+                rejs.append(rej)
+
+            # Cannot salvage
+            if rejs and expr.bitype == 'or':
+                return None, expr
+
+            acc = None
+            if accs:
+                acc = BinaryLogic(accs[0], accs[1:], bitype=expr.bitype)
+
+            rej = None
+            if rejs:
+                rej = BinaryLogic(rejs[0], rejs[1:], bitype=expr.bitype)
+
+            return acc, rej
+
+        exprs = []
+        for i in [expr.lh] + expr.rh:
+            acc, rej = self.compile(i, preprocess=False)
+            if rej:
+                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+            exprs.append(acc)
+
         if expr.bitype == 'and':
             bitok = ' AND '
         else:
             bitok = ' OR '
 
-        ret = bitok.join([get_expr(x)(x) for x in exprs])
+        ret = bitok.join(exprs)
         return f'({ret})', None
 
-compiler_registry = {}
-def get_expr(expr:"Hql.Expressions.Expression"):
-    expr_str = f'{expr.type}_expr'
+    def Equality(self, expr: 'Hql.Expressions.Equality', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import Equality, Expression
+        if expr.cs:
+            logging.warning('Case sensitive comparison in Lucene has inconsistent results')
+            logging.warning('For compatibility, assuming agnostic')
 
-    if expr_str in compiler_registry:
-        return compiler_registry[expr_str]
+        if preprocess:
+            acc, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            assert isinstance(acc, Expression)
+            lh = acc
 
-    raise hqle.CompilerException(f'Attempting to compile unimplemented parse object {expr.type}')
+            rh = []
+            for i in expr.rh:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, expr
+                rh.append(acc)
 
-def register(name:str):
-    def decorator(func):
-        compiler_registry[name] = func
-        return func
-    return decorator
+            return Equality(lh, expr.op, rh), None
 
-@register('Where_op')
-def Where_op(op:"Hql.Operators.Where") -> str:
-    if op.expr == None:
-        return ''
-    return get_expr(op.expr)(op.expr)
+        lh, rej = self.compile(expr.lh, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        
+        rhs = []
+        for i in expr.rh:
+            rh, rej = self.compile(i, preprocess=False)
+            if rej:
+                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+            ret = f'{lh}:{rh}'
+            rhs.append(ret)
 
-@register('StringLiteral_expr')
-def StringLiteral_expr(expr:"Hql.Expressions.StringLiteral") -> str:
-    return f'"{expr.value}"'
+        ret = ' OR '.join(rhs)
+        if len(rhs) > 1:
+            ret = f'({ret})'
 
-@register('Integer_expr')
-@register('Float_expr')
-def Float_expr(expr:"Hql.Expressions.Float") -> str:
-    return f'{expr.value}'
+        return f'(NOT {ret})' if expr.neq else ret, None
 
-@register('Bool_expr')
-def Bool(expr:"Hql.Expressions.Bool") -> str:
-    return 'True' if expr.value else 'False'
+    def StringLiteral(self, expr: 'Hql.Expressions.StringLiteral', preprocess: bool = True) -> tuple[object, object]:
+        if preprocess:
+            return expr, None
+        return f'"{expr.value}"', None
 
-@register('Keyword_expr')
-@register('Identifier_expr')
-def BasicIdentifier(expr:"Hql.Expressions.NamedReference") -> str:
-    if expr.name == None:
-        raise hqle.CompilerException('NamedReference has null value')
-    return expr.name
+    def Float(self, expr: 'Hql.Expressions.Float', preprocess: bool = True) -> tuple[object, object]:
+        if preprocess:
+            return expr, None
+        return f'{expr.value}', None
 
-@register('EscapedNamedReference_expr')
-def EscapedName(expr:"Hql.Expressions.EscapedNamedReference") -> str:
-    if expr.name == None:
-        raise hqle.CompilerException('NamedReference has null value')
-    return f'\"{expr.name}\"'
+    def Bool(self, expr: 'Hql.Expressions.Bool', preprocess: bool = True) -> tuple[object, object]:
+        if preprocess:
+            return expr, None
+        val = 'True' if expr.value else 'False'
+        return val, None
 
-@register('Path_expr')
-def Path(expr:"Hql.Expressions.Path") -> str:
-    path = [get_expr(x)(x) for x in expr.path]
-    return '.'.join(path)
+    def NamedReference(self, expr: 'Hql.Expressions.NamedReference', preprocess: bool = True) -> tuple[object, object]:
+        if preprocess:
+            if expr.name == None:
+                return None, expr
+            return expr, None
+        return expr.name, None
 
-@register('Equality_expr')
-def Equality(expr:"Hql.Expressions.Equality") -> str:
-    lh = get_expr(expr.lh)(expr.lh)
-    
-    exprs = []
-    for i in expr.rh:
-        rh = get_expr(i)(i)
-        ret = f'{lh}:{rh}'
-        exprs.append(ret)
+    def EscapedNamedReference(self, expr: 'Hql.Expressions.EscapedNamedReference', preprocess: bool = True) -> tuple[object, object]:
+        if preprocess:
+            if expr.name == None:
+                return None, expr
+            return expr, None
+        return f'"{expr.name}"', None
 
-    ret = ' OR '.join(exprs)
-    if len(exprs) > 1:
-        ret = f'({ret})'
+    def Path(self, expr: 'Hql.Expressions.Path', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import Path
+        if preprocess:
+            parts = []
+            for i in expr.path:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, expr
+                parts.append(acc)
+            return Path(parts), None
 
-    return f'(NOT {ret})' if expr.neq else ret
+        parts = []
+        for i in expr.path:
+            acc, rej = self.compile(i, preprocess=False)
+            if rej:
+                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+            assert isinstance(acc, str)
+            parts.append(acc)
 
-@register('Relational_expr')
-def Relational(expr:"Hql.Expressions.Relational") -> str:
-    lh = get_expr(expr.lh)(expr.lh)
-    rh = get_expr(expr.rh[0])(expr.rh[0])
-    return f'{lh}:{expr.op}{rh}'
+        return '.'.join(parts), None
 
-@register('BetweenEquality_expr')
-def Between(expr:"Hql.Expressions.BetweenEquality") -> str:
-    lh = get_expr(expr.lh)(expr.lh)
-    start = get_expr(expr.start)(expr.start)
-    end = get_expr(expr.end)(expr.end)
+    def Relational(self, expr: 'Hql.Expressions.Relational', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import Relational, Expression
+        if preprocess:
+            if expr.op not in ('<', '>', '<=', '>='):
+                return None, expr
 
-    ret = f'{lh}:[{start} TO {end}]'
+            acc, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            lh = acc
+            assert isinstance(lh, Expression)
 
-    if expr.negate:
-        return f'(NOT {ret})'
-    else:
-        return ret
+            acc, rej = self.compile(expr.rh[0])
+            if rej:
+                return None, expr
+            rh = acc
+            assert isinstance(rh, Expression)
 
+            return Relational(lh, expr.op, [rh]), None
 
+        acc, rej = self.compile(expr.lh, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        lh = acc
+        assert isinstance(lh, str)
 
-@register('BasicRange_expr')
-def Range(expr:"Hql.Expressions.BasicRange") -> str:
-    start = get_expr(expr.start)(expr.start)
-    end = get_expr(expr.end)(expr.end)
-    return f'[{start} TO {end}]'
+        acc, rej = self.compile(expr.rh[0], preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        rh = acc
+        assert isinstance(rh, str)
 
-@register('Regex_expr')
-def Regex(expr:"Hql.Expressions.Regex") -> str:
-    lh = get_expr(expr.lh)(expr.lh)
-    rh = get_expr(expr.rh)(expr.rh)
-    return f'{lh}:/{rh}/'
+        return f'{lh}:{expr.op}{rh}', None
 
-@register('Substring_expr')
-def Substring(expr:"Hql.Expressions.Substring") -> str:
-    lh = get_expr(expr.lh)(expr.lh)
+    def BetweenEquality(self, expr: 'Hql.Expressions.BetweenEquality', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import BetweenEquality, Expression
 
-    rhs = []
-    for i in expr.rh:
-        rhs.append(get_expr(i)(i))
+        if preprocess:
+            acc, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            lh = acc
+            assert isinstance(lh, Expression)
 
-    exprs = []
-    for i in rhs:
-        if 'startswith' in expr.op or 'prefix' in expr.op:
-            exprs.append(f'{lh}:/{i}.*/')
-        elif 'endswith' in expr.op or 'suffix' in expr.op:
-            exprs.append(f'{lh}:/.*{i}/')
+            acc, rej = self.compile(expr.start)
+            if rej:
+                return None, expr
+            start = acc
+            assert isinstance(start, Expression)
+
+            acc, rej = self.compile(expr.end)
+            if rej:
+                return None, expr
+            end = acc
+            assert isinstance(end, Expression)
+
+            return BetweenEquality(lh, start, end, op=expr.op), None
+
+        acc, rej = self.compile(expr.lh, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        lh = acc
+        assert isinstance(lh, str)
+
+        acc, rej = self.compile(expr.start, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        start = acc
+        assert isinstance(start, str)
+
+        acc, rej = self.compile(expr.end, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        end = acc
+        assert isinstance(end, str)
+
+        ret = f'{lh}:[{start} TO {end}]'
+        if expr.negate:
+            ret = f'(NOT {ret})'
+
+        return ret, None
+
+    def BasicRange(self, expr: 'Hql.Expressions.BasicRange', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import BasicRange, Expression
+        if preprocess:
+            acc, rej = self.compile(expr.start)
+            if rej:
+                return None, expr
+            start = acc
+            assert isinstance(start, Expression)
+
+            acc, rej = self.compile(expr.end)
+            if rej:
+                return None, expr
+            end = acc
+            assert isinstance(end, Expression)
+
+            return BasicRange(start, end), None
+
+        acc, rej = self.compile(expr.start, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        start = acc
+        assert isinstance(start, str)
+
+        acc, rej = self.compile(expr.end, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        end = acc
+        assert isinstance(end, str)
+
+        return f'[{start} TO {end}]', None
+
+    def Regex(self, expr: 'Hql.Expressions.Regex', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import Regex, Expression
+
+        if preprocess:
+            # No flags supported
+            if expr.i or expr.m or expr.s or expr.g:
+                return None, expr
+
+            acc, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            lh = acc
+            assert isinstance(lh, Expression)
+
+            acc, rej = self.compile(expr.rh)
+            if rej:
+                return None, expr
+            rh = acc
+            assert isinstance(rh, Expression)
+
+            return Regex(lh, rh), None
+
+        acc, rej = self.compile(expr.lh, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        lh = acc
+        assert isinstance(lh, str)
+
+        acc, rej = self.compile(expr.rh, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        rh = acc
+        assert isinstance(rh, str)
+
+        return f'{lh}:/{rh}/', None
+
+    def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import Substring
+
+        if preprocess:
+            acc, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            lh = acc
+            assert isinstance(lh, Expression)
+
+            rhs = []
+            for i in expr.rh:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, expr
+                rh = acc
+                assert isinstance(rh, Expression)
+                rhs.append(rh)
+
+            return Substring(lh, expr.op, rhs), None
+
+        acc, rej = self.compile(expr.lh, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        lh = acc
+        assert isinstance(lh, str)
+
+        exprs = []
+        for i in expr.rh:
+            acc, rej = self.compile(i, preprocess=False)
+            if rej:
+                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+            rh = acc
+            assert isinstance(rh, str)
+
+            if 'startswith' in expr.op or 'prefix' in expr.op:
+                exprs.append(f'{lh}:/{rh}.*/')
+            elif 'endswith' in expr.op or 'suffix' in expr.op:
+                exprs.append(f'{lh}:/.*{rh}/')
+            else:
+                exprs.append(f'{lh}:/.*{rh}.*/')
+
+        if 'all' in expr.op:
+            ret = ' AND '.join(exprs)
         else:
-            exprs.append(f'{lh}:/.*{i}.*/')
+            ret = ' OR '.join(exprs)
 
-    if 'all' in expr.op:
-        ret = ' AND '.join(exprs)
-    else:
-        ret = ' OR '.join(exprs)
-    ret = f'({ret})'
+        if len(exprs) > 1:
+            ret = f'({ret})'
 
-    if expr.neq:
-        ret = f'NOT {ret}'
+        if expr.neq:
+            ret = f'NOT {ret}'
 
-    return ret
+        return ret, None
