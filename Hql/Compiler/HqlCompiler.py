@@ -136,7 +136,8 @@ class HqlCompiler(Compiler):
         new = []
         for i in prepipe:
             if isinstance(i, PipeExpression):
-                new.append(self.PipeExpression(i))
+                acc, rej = self.PipeExpression(i)
+                new.append(acc)
             else:
                 new.append(i)
         prepipe = new

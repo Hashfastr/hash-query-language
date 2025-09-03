@@ -11,8 +11,12 @@ if TYPE_CHECKING:
 class InstructionSet():
     def __init__(self, upstream:Union['Database', list['Database'], 'InstructionSet', list['InstructionSet']], operators:Union[None, list['Operator']]=None) -> None:
         import random
-
+        from Hql.Operators import Database
+        from Hql.Compiler import InstructionSet
+        
+        assert isinstance(upstream, (Database, list, InstructionSet))
         if isinstance(upstream, list):
+            assert all(isinstance(item, (Database, InstructionSet)) for item in upstream)
             self.upstream = upstream
         else:
             self.upstream = [upstream]
