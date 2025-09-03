@@ -306,6 +306,7 @@ class BetweenEquality(Expression):
         self.lh = lh
         self.start = start
         self.end = end
+        self.op = op
         self.negate = '!' in op
     
     def to_dict(self):

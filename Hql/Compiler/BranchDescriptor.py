@@ -1,9 +1,11 @@
 from typing import Union, TYPE_CHECKING
 from Hql.Exceptions import HqlExceptions as hqle
+import logging
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Operators import Operator, Database
+    from Hql.Query import Query, Statement
 
 '''
 Wraps an Expression or Operator with some tagged metadata
@@ -16,6 +18,8 @@ class BranchDescriptor():
 
         self.expr:Union[None, 'Expression'] = None
         self.op:Union[None, 'Operator'] = None
+        self.statement:Union[None, 'Statement'] = None
+        self.query:Union[None, 'Query'] = None
         self.db:Union[None, 'Database'] = None
         self.str:str = ''
         self.join_attrs:dict = dict()
@@ -55,6 +59,14 @@ class BranchDescriptor():
             else:
                 self.attrs[i] = attrs[i]
 
+    def compatible(self, superset:dict) -> bool:
+        for i in self.attrs:
+            # Check if there's a feature this branch has that the superset doesn't
+            if self.attrs[i] and not superset.get(i, False):
+                logging.debug(f'{i}: {self.attrs[i]} breaks compatiblity')
+                return False
+        return True
+
     def get_expr(self) -> 'Expression':
         if isinstance(self.expr, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Expr')
@@ -64,3 +76,8 @@ class BranchDescriptor():
         if isinstance(self.op, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Op')
         return self.op
+
+    def get_statement(self) -> 'Statement':
+        if isinstance(self.statement, type(None)):
+            raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Statement')
+        return self.statement

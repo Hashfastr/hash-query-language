@@ -1,28 +1,64 @@
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import Callable, Union, TYPE_CHECKING
-from . import Compiler
+from . import Compiler, HqlCompiler
 
 if TYPE_CHECKING:
-    import Hql.Expressions as Expr
-    import Hql.Operators as Ops
-
-func_temp = Callable[[Union["Ops.Operator", "Expr.Expression"]], str]
+    import Hql
+    from Hql.Expressions import Expression
+    from Hql.Compiler import BranchDescriptor
 
 class LuceneCompiler(Compiler):
     def __init__(self) -> None:
+        Compiler.__init__(self)
+        self.attrs = {
+            'nested_objects': True,
+            'wildcards': True,
+            'wildcard_names': True,
+            'complex_names': True,
+            'row_reducing': True,
+            'regex_matching': True,
+            'regex_insensitive': False,
+            'regex_multiline': False,
+            'regex_dotall': False,
+            'regex_global': False
+        }
         self.expr = None
 
-    def integrate(self, expr:'Expr.Expression'):
-        ...
+    '''
+    def add_op(self, op: 'BranchDescriptor') -> Union['BranchDescriptor', None]:
+        from Hql.Operators import Where
 
-    def Where(self, op:'Ops.Where') -> Union[None, 'Ops.Where']:
-        if not hasattr(self, op.expr.type):
+        if not op.op:
             return op
-        method = getattr(self, op.expr.type)
 
-        acc, rej = method(op.expr)
-        self.expr = acc
+        if isinstance(op.op, Where):
+            op.compatible(self.attrs)
 
+        return 
+    '''
+
+    def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> Union[None, 'Hql.Operators.Where', str]:
+        from Hql.Operators import Where
+        res = self.compile(op.expr, preprocess=preprocess)
+
+        if preprocess and res:
+            assert isinstance(res, Expression)
+            return Where(res, op.parameters)
+
+        assert isinstance(res, (type(None), str))
+        return res
+        
+    def BinaryLogic(self, expr: 'Hql.Expressions.BinaryLogic', preprocess: bool = True) -> Union[None, 'Hql.Expressions.BinaryLogic', str]:
+        from Hql.Expressions import BinaryLogic
+
+        exprs = [expr.lh] + expr.rh
+        if expr.bitype == 'and':
+            bitok = ' AND '
+        else:
+            bitok = ' OR '
+
+        ret = bitok.join([get_expr(x)(x) for x in exprs])
+        return f'({ret})'
 
 compiler_registry = {}
 def get_expr(expr:"Expr.Expression") -> func_temp:
@@ -111,16 +147,7 @@ def Between(expr:"Expr.BetweenEquality") -> str:
     else:
         return ret
 
-@register('BinaryLogic_expr')
-def Binary(expr:"Expr.BinaryLogic") -> str:
-    exprs = [expr.lh] + expr.rh
-    if expr.bitype == 'and':
-        bitok = ' AND '
-    else:
-        bitok = ' OR '
 
-    ret = bitok.join([get_expr(x)(x) for x in exprs])
-    return f'({ret})'
 
 @register('BasicRange_expr')
 def Range(expr:"Expr.BasicRange") -> str:
