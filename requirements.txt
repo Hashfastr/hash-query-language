@@ -7,3 +7,4 @@ ndjson
 oyaml
 opensearch-py
 aiohttp
+boto3

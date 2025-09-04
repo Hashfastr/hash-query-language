@@ -531,6 +531,7 @@ class HqlCompiler(Compiler):
         if expr.expr:
             acc, rej = self.compile(expr.expr)
             desc.merge_attrs(acc.attrs)
+            ordered_expr = acc.get_expr()
 
         desc.expr = OrderedExpression(expr=ordered_expr, order=expr.order, nulls=expr.nulls)
         return desc, None

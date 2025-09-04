@@ -28,25 +28,16 @@ class Database(Operator):
     def add_index(self, index:str):
         self.index = index
 
-    def exec_query(self) -> 'Data':
-        from Hql.Data import Data
-
-        query = self.compiler.compile()
-        # ES.query(query)
-
-        return Data()
-
     def to_dict(self):
         return {
             'id': self.id,
             'type': self.type,
-            # 'query': self.compiler.compile(),
-            # 'ops': [x.to_dict() for x in self.ops]
         }
-    
-    def eval(self, ctx:'Context', **kwargs):
+
+    def eval(self, ctx:'Context', **kwargs) -> 'Data':
+        from Hql.Data import Data
         self.ctx = ctx
-        return self.exec_query()
+        return Data()
     
     def get_variable(self, name:str) -> object:
         raise hqle.QueryException(f'{self.type} database has no variables')

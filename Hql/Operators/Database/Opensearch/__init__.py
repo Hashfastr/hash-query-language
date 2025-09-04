@@ -2,7 +2,6 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
 from Hql.Operators.Database import Database
 
-from opensearchpy import AsyncOpenSearch
 from Hql.Compiler import LuceneCompiler
 
 from typing import TYPE_CHECKING, Union
@@ -10,12 +9,14 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     from Hql.Operators import Operator
     from Hql.Compiler import BranchDescriptor
+    from Hql.Data import Data
+    from Hql.Context import Context
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Opensearch')
 class Opensearch(Database):
     def __init__(self, config:dict, name:str='Opensearch'):
-        Database.__init__(self, config)
+        Database.__init__(self, config, name=name)
        
         # Default index pattern
         self.pattern = "*"
@@ -31,15 +32,50 @@ class Opensearch(Database):
         # 10000 is faster than 10x1000
         self.scroll_max = conf.get('scroll_max', 10000)
 
+        self.hosts:list[str] = conf.get('hosts', ['localhost:9200'])
+
+        self.headers = dict()
+        if 'api_key' in conf:
+            self.headers['X-API-Key'] = conf['api_key']
+        
+        self.auth = self.get_auth(conf)
+
         self.methods = [
             'index',
             'macro'
         ]
         
         # skips ssl verification for https
-        self.insecure = self.config.get('insecure', False)
+        self.verify_certs = conf.get('verify_certs', True)
+        self.use_ssl = conf.get('use_ssl', True)
 
         self.compiler = LuceneCompiler()
+
+    def get_auth(self, conf:dict):
+        from opensearchpy.helpers import AWSV4SignerAsyncAuth
+        import boto3
+
+        # Get amazon key or whatever
+        auth_type = conf.get('auth_type', 'userpass')
+
+        if auth_type == 'aws':
+            region = conf.get('aws_region', 'us-west-2')
+            creds = boto3.Session().get_credentials()
+            return AWSV4SignerAsyncAuth(creds, region)
+
+        elif auth_type == 'userpass':
+            user = conf.get('username', None)
+            if user == None:
+                raise hqle.ConfigException(f'Opensearch missing username in {self.name} configuration')
+            
+            passwd = conf.get('password', None)
+            if passwd == None:
+                raise hqle.ConfigException(f'Opensearch missing password in {self.name} configuration')
+
+            return (user, passwd)
+
+        else:
+            return None
 
     def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Compiler import BranchDescriptor
@@ -84,5 +120,48 @@ class Opensearch(Database):
     def get_variable(self, name:str):
         self.pattern = name
         return self
+
+    async def run_query(self) -> list[dict]:
+        from opensearchpy import AsyncOpenSearch
+
+        conf = self.config.get('conf', dict())
+        client = AsyncOpenSearch(
+            hosts=self.hosts,
+            http_auth=self.auth,
+            use_ssl=self.use_ssl,
+            verify_certs=self.verify_certs,
+            headers=self.headers
+        )
+
+        try:
+            is_available = await client.ping()
+
+            res = await client.search(
+                index=self.pattern,
+                body={
+                    'query': {
+                        'query_string': {
+                            'query': self.compile()
+                        }
+                    }
+                }
+            )
+
+            print(type(res))
+            print(len(res))
+
+        finally:
+            await client.close()
+
+        return []
     
 
+    def eval(self, ctx: 'Context', **kwargs) -> 'Data':
+        from Hql.Data import Data
+        import asyncio
+        
+        res = asyncio.run(self.run_query())
+        print(len(res))
+        print(res[0])
+
+        return Data()
