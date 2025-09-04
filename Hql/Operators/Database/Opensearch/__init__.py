@@ -1,244 +1,88 @@
-from typing import Union
-import json
-import logging
-
-from .. import Database
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
-from Hql.Data import Schema, Data, Table
-from Hql.Operators.Operator import Operator
-# from Hql.Types.Opensearch import SOTypes
-from Hql.Context import Context
-
-import Hql.Expressions as Expr
-import Hql.Operators as Ops
-
-# from .Compiler import get_expr
+from Hql.Operators.Database import Database
 
 from opensearchpy import AsyncOpenSearch
+from Hql.Compiler import LuceneCompiler
+
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from Hql.Operators import Operator
+    from Hql.Compiler import BranchDescriptor
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Opensearch')
 class Opensearch(Database):
-    def __init__(self, config:dict):
+    def __init__(self, config:dict, name:str='Opensearch'):
         Database.__init__(self, config)
        
         # Default index pattern
         self.pattern = "*"
 
-        self.expr:Union[None, Expr.Expression] = None
-        self.filters = []
+        conf = self.config.get('conf', dict())
 
         # Set to the config default to avoid DoS
         # Can be changed by the take operator for example.
-        self.limit:int = self.config.get('limit', 100000)
+        self.limit:int = conf.get('limit', 100000)
         
         # Default scroll max, cannot be higher than 10k
         # Higher values are generally better, each request has some time to it
         # 10000 is faster than 10x1000
-        self.scroll_max = self.config.get('scroll_max', 10000)
+        self.scroll_max = conf.get('scroll_max', 10000)
 
         self.methods = [
-            'index'
+            'index',
+            'macro'
         ]
-
-        self.query = ''
-
+        
+        # skips ssl verification for https
         self.insecure = self.config.get('insecure', False)
 
+        self.compiler = LuceneCompiler()
+
+    def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+        from Hql.Compiler import BranchDescriptor
+        from Hql.Operators import Take, Operator
+
+        if isinstance(op, BranchDescriptor):
+            op = op.get_op()
+
+        if isinstance(op, Take):
+            if op.tables:
+                return None, op
+
+            limit = op.expr.eval(self.ctx, as_str=True)
+            assert isinstance(limit, int)
+            self.limit = limit if limit < self.limit else self.limit
+
+            return op, None
+
+        acc, rej = self.compiler.compile(op)
+        assert isinstance(acc, (Operator, type(None)))
+        assert isinstance(rej, (Operator, type(None)))
+        return acc, rej
+
+    def add_index(self, index: str):
+        self.pattern = index
+
     def to_dict(self):
-        self.compile()
-        
         return {
             'id': self.id,
             'type': self.type,
             'index': self.pattern,
             'limit': self.limit,
-            'query': self.query
+            'query': self.compile()
         }
+
+    def compile(self) -> str:
+        query, rej = self.compiler.compile(None)
+        assert isinstance(query, str)
+        return query
     
     # I'll probably change how this works in the future
     def get_variable(self, name:str):
         self.pattern = name
         return self
     
-    def integrate(self, op:Operator) -> Union[None, Operator]:
-        if isinstance(op, Ops.Take):
-            return self.add_limit(op.expr)
-        
-        if isinstance(op, Ops.Where):
-            ret = self.add_filter(op.expr)
-            return Ops.Where(ret) if ret else None
 
-        return op
-
-    def add_limit(self, expr:Expr.Integer) -> None:
-        from Hql.Context import Context
-
-        # the ctx does not matter here, this is a literal int
-        ctx = self.ctx if self.ctx else Context(Data())
-        limit = expr.eval(ctx)
-
-        if not isinstance(limit, int):
-            raise hqle.CompilerException('Take passed non-int to Opensearch')
-
-        self.limit = limit
-
-        return None
-
-    def add_filter(self, expr:Union[None, Expr.Expression]) -> Union[None, Expr.Expression, Ops.Operator]:
-        if expr == None:
-            return expr
-
-        acc, unsupported = self.feature_set.validate_feature(expr)
-            
-        if isinstance(acc, Ops.Operator):
-            return acc
-
-        if self.expr == None:
-            self.expr = acc
-            return unsupported
-
-        acc, rej = self.feature_set.merge_binary(self.expr, acc, 'and')
-        # acc, rej = self.feature_set.merge_binary(self.expr, rej, 'or')
-        
-        # attempts to merge have failed
-        if rej:
-            self.expr = Expr.BinaryLogic(self.expr, [], 'and')
-            self.feature_set.merge_binary(self.expr, rej, 'and')
-
-        return unsupported
-
-    def add_index(self, pattern:str):
-        self.pattern = pattern
-    
-    def compile(self) -> str:
-        if self.expr == None:
-            query = ''
-        else:
-            query = get_expr(self.expr)(self.expr)
-
-        if not isinstance(query, str):
-            raise hqle.CompilerException('Elasticsearch compiler returned non-str')
-
-        self.query = query
-        return query
-
-    def gen_elastic_schema(self, props:dict) -> dict:
-        schema = {}
-        for i in props:
-            if 'properties' in props[i]:
-                schema[i] = self.gen_elastic_schema(props[i]['properties'])
-                continue
-            
-            schema[i] = ESTypes.from_name(props[i]['type'])()
-
-        return schema
-
-    def eval(self, ctx:Context, **kwargs):
-        if kwargs.get('preview', False):
-            return self.to_dict()
-
-        try:
-            return self.make_query()
-        except ESAuthExcept:
-            user = self.config.get('ELASTIC_USER', 'elastic')
-            raise hqle.ConfigException(f'Elasticsearch authentication with user {user} failed') from None
-
-    def make_query(self) -> Data:
-        # Host, or hosts, to use for the query.
-        # Should be in array format
-        HOSTS = self.config.get('ELASTIC_HOSTS', ['http://localhost:9200'])
-        # Elastic user to use
-        USER = self.config.get('ELASTIC_USER', 'elastic')
-        # Elastic user password to use
-        PASS = self.config.get('ELASTIC_PASS', 'changeme')
-        # SSL Validation
-        VALIDATE_CERTS = self.config.get('VALIDATE_CERTS', 'true')
-        # How long should the scroll session be kept alive?
-        SCROLL_TIME = self.config.get('SCROLL_TIME', '1m')
-        # Query results limit per scroll
-        # If the total limit is less than this number, it is set to the query limit.
-        SCROLL_MAX = self.scroll_max if self.limit >= self.scroll_max else self.limit
-        # Request timeout in seconds
-        TIMEOUT = self.config.get('TIMEOUT', 10)
-        
-        client = ES(
-            HOSTS,
-            basic_auth=(USER, PASS),
-            verify_certs=VALIDATE_CERTS,
-            request_timeout=TIMEOUT,
-            retry_on_timeout=True,
-        )
-        
-        logging.debug("Starting initial query")
-
-        logging.debug(f"{self.type} query, using the following Lucene:")
-        logging.debug(self.query)
-        logging.debug(f'Index pattern: {self.pattern}')
-        logging.debug(f'Limit: {self.limit}')
-        
-        res = requests.get(
-            f'{HOSTS[0]}/{self.pattern}',
-            auth=(USER, PASS)
-        )
-        index = json.loads(res.text)
-        
-        res = client.search(
-            index=self.pattern,
-            size=SCROLL_MAX,
-            scroll=SCROLL_TIME,
-            q=self.query
-        )
-        sid = res['_scroll_id']
-        
-        logging.debug("Start scrolling")
-        
-        # Will scroll through until we reach our limit, or no more results.
-        # Enables the take operator
-        remainder = self.limit
-        results = []
-        while len(results) < self.limit:            
-            if len(res['hits']['hits']) == 0:
-                logging.debug(f"No more results to evaluate")
-                logging.debug(f"Timed out? {res['timed_out']}")
-                break
-            
-            # Ensure that we only print the number of remaining rows
-            results += res['hits']['hits'][:remainder]
-            
-            remainder = self.limit - len(results)
-            
-            if len(results) >= self.limit:
-                logging.debug('Quota reached')
-                break
-            
-            logging.debug(f"Scroll {len(results)} < {self.limit} max")
-
-            res = client.scroll(
-                scroll_id=sid,
-                scroll=SCROLL_TIME,
-            )
-
-        client.clear_scroll(scroll_id=sid)
-
-        i = 0
-
-        result_sets = dict()
-        for i in results:
-            if i['_index'] not in result_sets:
-                result_sets[i['_index']] = []
-            result_sets[i['_index']].append(i['_source'])
-
-        tables = []
-        for i in result_sets:
-            table = Table(init_data=result_sets[i], name=i)
-
-            # schema = self.gen_elastic_schema(index[i]['mappings']['properties'])
-            # schema = Schema(schema=schema).convert_schema(target='hql')
-            # schema = Schema.merge([table.schema.schema, schema])
-
-            # table.set_schema(schema)
-            tables.append(table)
-
-        return Data(tables=tables)

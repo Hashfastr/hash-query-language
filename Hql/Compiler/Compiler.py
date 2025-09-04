@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from . import BranchDescriptor
     from Hql.Operators import Operator
     from Hql.Expressions import Expression
+    from Hql.Query import Statement
     import Hql
 
 class Compiler():
@@ -45,12 +46,14 @@ class Compiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self, src:Union['Expression', 'Operator'], preprocess:bool=True) -> tuple[object, object]:
+    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Union[object, None], Union[object, None]]:
+        if src == None:
+            raise hqle.CompilerException('Unimplemented root compile')
         return self.from_name(src.type)(src, preprocess=preprocess)
 
     def decompile(self) -> str:
         from Hql.Expressions import PipeExpression
-        logging.critical("Decompilationg doesn't actually work right now, sorry")
+        logging.critical("Decompilation doesn't actually work right now, sorry")
         # return PipeExpression(pipes=self.ops).decompile(self.ctx)
         return ''
 
@@ -188,16 +191,16 @@ class Compiler():
         return None, expr
 
     def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr)
+        return self.NamedReference(expr, preprocess=preprocess)
 
     def Keyword(self, expr:'Hql.Expressions.Keyword', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr)
+        return self.NamedReference(expr, preprocess=preprocess)
 
     def Identifier(self, expr:'Hql.Expressions.Identifier', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr)
+        return self.NamedReference(expr, preprocess=preprocess)
 
     def Wildcard(self, expr:'Hql.Expressions.Wildcard', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr)
+        return self.NamedReference(expr, preprocess=preprocess)
 
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[object, object]:
         return None, expr

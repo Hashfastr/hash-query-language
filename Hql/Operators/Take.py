@@ -18,6 +18,7 @@ class Take(Operator):
 
     def to_dict(self):
         return {
+            'id': self.id,
             'type': self.type,
             'limit': self.expr.to_dict(),
             'tables': [x.to_dict() for x in self.tables]

@@ -10,18 +10,23 @@ if TYPE_CHECKING:
 class Database(Operator):
     def __init__(self, config:dict, name:str='unnamed-database'):
         from Hql.Compiler import Compiler
+        from Hql.Context import Context
+        from Hql.Data import Data
         Operator.__init__(self)
 
         self.type = self.__class__.__name__
         
-        self.ctx = None
+        self.ctx = Context(Data())
         self.config = config
         self.compiler = Compiler()
         self.name = name
+        self.index = ''
 
-    def add_op(self, op:Union['BranchDescriptor', Operator]):
-        ...
-        # self.compiler.add_op(op)
+    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+        return self.compiler.add_op(op)
+
+    def add_index(self, index:str):
+        self.index = index
 
     def exec_query(self) -> 'Data':
         from Hql.Data import Data

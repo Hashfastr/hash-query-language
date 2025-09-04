@@ -46,15 +46,30 @@ class InstructionSet():
             'ops': ops,
         }
 
-    def add_op(self, op:Union['BranchDescriptor', 'Operator']):
+    def add_op(self, op:Union['BranchDescriptor', 'Operator']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Compiler import BranchDescriptor
-
         if isinstance(op, BranchDescriptor):
-            self.ops.append(op.get_op())
-        else:
-            self.ops.append(op)
+            op = op.get_op()
 
-        return None
+        if self.ops:
+            self.ops.append(op)
+            return None, None
+
+        new = []
+        for i in self.upstream:
+            acc, rej = i.add_op(op)
+            if rej:
+                if len(self.upstream) == 1:
+                    self.ops.append(rej)
+                    new.append(i)
+                else:
+                    new.append(InstructionSet(i, [rej]))
+            else:
+                new.append(i)
+
+        self.upstream = new
+
+        return None, None
 
     def exec(self, inst:Union['Database', 'Operator'], ctx:Context) -> Context:
         logging.debug(f'Executing {inst.type} - {inst.id}')

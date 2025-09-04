@@ -1,4 +1,4 @@
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, overload
 import logging
 import json
 
@@ -25,7 +25,10 @@ class HqlCompiler(Compiler):
         if query:
             self.Query(query)
 
-    def compile(self, src:Union['Hql.Operators.Operator', 'Hql.Expressions.Expression', 'Hql.Query.Statement'], preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+    def compile(self, src:Union['Hql.Operators.Operator', 'Hql.Expressions.Expression', 'Hql.Query.Statement', None], preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+        if not src:
+            logging.error('Access Hql root via HqlCompiler.root not default compiler')
+            raise hqle.CompilerException('Hql compiler with default parameter')
         return self.from_name(src.type)(src)
 
     def run(self, ctx: Union['Context', None] = None) -> 'Context':
@@ -133,7 +136,7 @@ class HqlCompiler(Compiler):
         if not isinstance(prepipe, list):
             prepipe = [prepipe]
 
-        new = []
+        new:list[InstructionSet] = []
         for i in prepipe:
             if isinstance(i, PipeExpression):
                 acc, rej = self.PipeExpression(i)
@@ -168,7 +171,7 @@ class HqlCompiler(Compiler):
         for i in prepipe:
             comp = i
             for idx, j in enumerate(groups[0]):
-                rej = comp.add_op(j)
+                acc, rej = comp.add_op(j)
 
                 if rej:
                     comp = InstructionSet(comp)
@@ -264,7 +267,7 @@ class HqlCompiler(Compiler):
     def Take(self, op: 'Hql.Operators.Take', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Take
         desc = BranchDescriptor()
-        desc.set_attr('row_mutable', True)
+        desc.set_attr('row_reducing', True)
 
         acc, rej = self.compile(op.expr)
         desc.merge_attrs(acc.attrs)
@@ -373,6 +376,7 @@ class HqlCompiler(Compiler):
         from Hql.Operators import Summarize
         from Hql.Expressions import ByExpression
         desc = BranchDescriptor()
+        desc.set_attr('row_dependent', True)
 
         exprs = []
         for i in op.aggregate_exprs:

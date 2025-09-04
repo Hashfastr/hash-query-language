@@ -1,12 +1,14 @@
 from Hql.Exceptions import HqlExceptions as hqle
-from typing import Callable, Union, TYPE_CHECKING
-from . import Compiler, HqlCompiler
+from typing import Union, TYPE_CHECKING
+
+from . import Compiler
 import logging
 
 if TYPE_CHECKING:
     import Hql
     from Hql.Operators import Operator
     from Hql.Expressions import Expression
+    from Hql.Query import Statement
     from Hql.Compiler import BranchDescriptor
 
 class LuceneCompiler(Compiler):
@@ -24,7 +26,19 @@ class LuceneCompiler(Compiler):
             'regex_dotall': False,
             'regex_global': False
         }
-        self.expr = None
+        self.expr:Union['Expression', None] = None
+
+    def compile(self, src: Union['Expression', 'Operator', 'Statement', None], preprocess: bool = True) -> tuple[Union[object, None], Union[object, None]]:
+        if src == None:
+            src = self.expr
+            preprocess = False
+
+        # still missing a root
+        if src == None:
+            return '', None
+
+        out = super().compile(src, preprocess=preprocess)
+        return out
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Operators import Where
@@ -43,7 +57,7 @@ class LuceneCompiler(Compiler):
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[Union[None, 'Hql.Operators.Where', str], Union[None, 'Hql.Operators.Where', str]]:
         from Hql.Operators import Where
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions import BinaryLogic, Expression
 
         acc, rej = self.compile(op.expr, preprocess=preprocess)
 
@@ -75,8 +89,10 @@ class LuceneCompiler(Compiler):
             accs = []
             for i in [expr.lh] + expr.rh:
                 acc, rej = self.compile(i)
-                accs.append(acc)
-                rejs.append(rej)
+                if acc:
+                    accs.append(acc)
+                if rej:
+                    rejs.append(rej)
 
             # Cannot salvage
             if rejs and expr.bitype == 'or':
