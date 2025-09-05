@@ -19,11 +19,16 @@ class Function():
         # Can disable by passing -1
         self.max = max
         self.preprocess = False
+        self.type = 'Function'
         
         if len(args) < min:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
         if max != -1 and len(args) > max:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at most {self.max}')
+
+    def decompile(self, ctx:'Context'):
+        args = ', '.join([x.decompile(ctx) for x in self.args])
+        return f'{self.name}({args})'
         
     def to_dict(self):
         return {

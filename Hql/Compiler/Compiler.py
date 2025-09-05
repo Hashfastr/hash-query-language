@@ -142,6 +142,9 @@ class Compiler():
     def ByExpression(self, expr:'Hql.Expressions.ByExpression', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 
+    def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True) -> tuple[object, object]:
+        return None, expr
+
     def FuncExpr(self, expr:'Hql.Expressions.FuncExpr', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 

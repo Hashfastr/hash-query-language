@@ -30,12 +30,16 @@ class InstructionSet():
             self.upstream = self.upstream[0].upstream
 
     def to_dict(self):
+        from Hql.Context import Context
+        from Hql.Data import Data
+
         ops = []
         for i in self.ops:
             op = i.to_dict()
             op = {
                 'id': op.get('id', '????'),
-                'type': op.get('type')
+                'type': op.get('type'),
+                'decomp': i.decompile(Context(Data()))
             }
             ops.append(op)
 
