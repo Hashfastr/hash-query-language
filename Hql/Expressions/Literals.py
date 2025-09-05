@@ -141,3 +141,12 @@ class Bool(Literal):
             return pl.lit(self.value)
 
         return self.value
+
+class Multivalue(Literal):
+    def __init__(self, value:list[Expression]) -> None:
+        Literal.__init__(self)
+        self.value = value
+
+    def decompile(self, ctx: 'Context') -> str:
+        dec = [x.decompile(ctx) for x in self.value]
+        return 'make_mv(' + ', '.join(dec) + ')'

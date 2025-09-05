@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Union
 from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
-    from Hql.Data import Data
+    from Hql.Data import Data, Series
     from Hql.Context import Context
     from Hql.Expressions import Expression as Expression
     from Hql.Compiler import InstructionSet
@@ -20,6 +20,7 @@ class Function():
         self.max = max
         self.preprocess = False
         self.type = 'Function'
+        self.static = False
         
         if len(args) < min:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
@@ -43,7 +44,7 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Expression', 'InstructionSet']:
+    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet']:
         from Hql.Data import Data
         return Data()
 
