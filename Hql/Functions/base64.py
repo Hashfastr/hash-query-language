@@ -1,7 +1,7 @@
 from Hql.Functions import Function
 from Hql.Context import register_func, Context
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Expressions import StringLiteral
+from Hql.Expressions import StringLiteral, Multivalue
 from Hql.Data import Series
 import polars as pl
 
@@ -45,7 +45,7 @@ class base64enc(Function):
         if not isinstance(encoding, str):
             raise hqle.CompilerException(f'Static evaluation of encoding argument {type(self.encoding)} to {self.name} returned {type(encoding)} not str')
 
-        val = b64encode(bytes(val, encoding)).decode('ascii')
+        val = b64encode(bytes(val, encoding)).decode()
         return StringLiteral(val)
        
     def eval(self, ctx: 'Context', **kwargs) -> Union['Data', 'Expression']:
@@ -118,8 +118,23 @@ class base64off(Function):
         else:
             self.encoding = StringLiteral('ascii')
 
-    def static_eval(self, ctx:Context) -> Series:
+    def calc_offset(self, val:str, encoding:str) -> list[StringLiteral]:
         from base64 import b64encode
+        from Hql.Expressions import StringLiteral
+        
+        start_offsets = (0, 2, 3)
+        end_offsets = (None, -3, -2)
+
+        parts = []
+        for i in range(3):
+            part = b64encode(i * b" " + bytes(val, 'utf-8'))[
+                start_offsets[i] : end_offsets[(len(val) + i) % 3]
+            ].decode()
+            parts.append(StringLiteral(part))
+
+        return parts
+
+    def static_eval(self, ctx:Context) -> Multivalue:
         from Hql.Types.Hql import HqlTypes as hqlt
 
         val = self.val.eval(ctx, as_str=True)
@@ -130,14 +145,9 @@ class base64off(Function):
         if not isinstance(encoding, str):
             raise hqle.CompilerException(f'Static evaluation of encoding argument {type(self.encoding)} to {self.name} returned {type(encoding)} not str')
 
-        vals = []
-        for i in range(3):
-            val = b64encode(bytes(val, encoding)).decode('ascii')
-            vals.append(StringLiteral(val))
-
-        stype = hqlt.multivalue(hqlt.string)
-        s = Series(pl.Series(values=[vals], dtype=stype.pl_schema()), stype=stype)
-        return s
+        offsets = self.calc_offset(val, encoding)
+        mv = Multivalue(offsets)
+        return mv
        
     def eval(self, ctx: 'Context', **kwargs) -> Union['Data', Series, 'Expression']:
         if self.static:
