@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     from Hql.Data import Data
     from Hql.Expressions import Expression
 
-@register_func('base64enc')
 @register_func('base64')
+@register_func('b64')
 class base64enc(Function):
     def __init__(self, args: list):
         from Hql.Expressions import StringLiteral, NamedReference, Path
@@ -55,6 +55,7 @@ class base64enc(Function):
         return StringLiteral('')
 
 @register_func('base64dec')
+@register_func('b64dec')
 class base64dec(Function):
     def __init__(self, args: list):
         from Hql.Expressions import StringLiteral, NamedReference, Path
@@ -97,6 +98,7 @@ class base64dec(Function):
         return StringLiteral('')
 
 @register_func('base64off')
+@register_func('b64off')
 class base64off(Function):
     def __init__(self, args: list):
         from Hql.Expressions import StringLiteral, NamedReference, Path

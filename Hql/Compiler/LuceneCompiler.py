@@ -148,20 +148,39 @@ class LuceneCompiler(Compiler):
         lh, rej = self.compile(expr.lh, preprocess=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        
-        rhs = []
+
+        rh = []
         for i in expr.rh:
-            rh, rej = self.compile(i, preprocess=False)
+            acc, rej = self.compile(i, preprocess=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-            ret = f'{lh}:{rh}'
-            rhs.append(ret)
-
-        ret = ' OR '.join(rhs)
-        if len(rhs) > 1:
+            if isinstance(acc, list):
+                rh += acc
+            else:
+                rh.append(acc)
+        
+        eqs = [f'{lh}:{x}' for x in rh]
+        ret = ' OR '.join(eqs)
+        if len(eqs) > 1:
             ret = f'({ret})'
 
         return f'(NOT {ret})' if expr.neq else ret, None
+
+    # only executes static functions on preprocess and sees if we can handle the result
+    def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True) -> tuple[object, object]:
+        from Hql.Expressions import Expression
+
+        if not expr.static:
+            return None, expr
+
+        res = expr.eval(self.ctx)
+        assert isinstance(res, Expression)
+        acc, rej = self.compile(res, preprocess=True)
+
+        if rej:
+            return None, expr
+
+        return acc, None
 
     def StringLiteral(self, expr: 'Hql.Expressions.StringLiteral', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:
@@ -178,6 +197,21 @@ class LuceneCompiler(Compiler):
             return expr, None
         val = 'True' if expr.value else 'False'
         return val, None
+
+    def Multivalue(self, expr: 'Hql.Expressions.Multivalue', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import Multivalue
+
+        exprs = []
+        for i in expr.value:
+            acc, rej = self.compile(i, preprocess=preprocess)
+            if rej:
+                return None, expr
+            exprs.append(acc)
+
+        if preprocess:
+            return Multivalue(exprs), None
+
+        return exprs, None
 
     def NamedReference(self, expr: 'Hql.Expressions.NamedReference', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:

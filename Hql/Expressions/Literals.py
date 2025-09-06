@@ -143,7 +143,7 @@ class Bool(Literal):
         return self.value
 
 class Multivalue(Literal):
-    def __init__(self, value:list[Union[Literal, Expression]]) -> None:
+    def __init__(self, value:list[Literal]) -> None:
         Literal.__init__(self)
         self.value = value
 
