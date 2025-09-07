@@ -12,4 +12,4 @@ let shapes = datatable (name: string, sideCount: int)
 ];
 shapes
 | take 5
-| where sideCount =~ 'triangle'
+| where name =~ 'triangle'
