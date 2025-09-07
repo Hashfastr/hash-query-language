@@ -1,7 +1,7 @@
 from . import Database
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data
-from Hql.Context import register_database 
+from Hql.Context import register_database, Context
 
 '''
 Static DB, just give it a data object and it'll act like a Database.
@@ -13,5 +13,5 @@ class Static(Database):
         Database.__init__(self, dict())
         self.data = data
      
-    def make_query(self) -> Data:
+    def eval(self, ctx: Context, **kwargs) -> Data:
         return self.data

@@ -60,18 +60,22 @@ class Parser():
         if not targets:
             targets = [target]
         
+        traces = []
         for i in targets:
             try:
                 self.tree = self.parse_file()
                 visitor = Visitor(self.filename)
                 target = getattr(self.tree, i)()
                 self.assembly = visitor.visit(target)
-            except:
+            except Exception as e:
+                import traceback
+                traces.append(traceback.format_exc())
                 continue
 
             break
 
         if not self.assembly:
+            [logging.critical(x) for x in traces]
             logging.critical(f'Failed to parse query {self.filename}')
             raise hqle.CompilerException(f'Could not parse\n{self.text}')
     
@@ -128,7 +132,10 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         from Hql.Operators import PrePipe
         
         prepipe = PrePipe(self.visit(ctx.Expression))
-        pipes = self.visit(ctx.PipedOperators).pipes
+        if ctx.PipedOperators:
+            pipes = self.visit(ctx.PipedOperators).pipes
+        else:
+            pipes = []
         
         return PipeExpression(pipes, prepipe=prepipe)
 

@@ -57,7 +57,7 @@ class Datatable(Operator):
         schema = dict()
         for i in self.schema:
             name = i[0].eval(ctx, as_str=True)
-            t = i[1]
+            t = i[1].eval(ctx)
             schema[name] = t
 
         keys = list(schema.keys())

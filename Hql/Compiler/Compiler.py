@@ -4,7 +4,7 @@ from Hql.Context import Context
 import logging
 
 if TYPE_CHECKING:
-    from . import BranchDescriptor
+    from Hql.Compiler import BranchDescriptor
     from Hql.Operators import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
@@ -28,6 +28,7 @@ class Compiler():
         return self.ctx
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+        from Hql.Compiler import BranchDescriptor
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
         return None, op

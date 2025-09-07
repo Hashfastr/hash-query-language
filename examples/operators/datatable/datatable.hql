@@ -1,6 +1,6 @@
 let shapes = datatable (name: string, sideCount: int)
 [
-    "triangle", 3,
+    "Triangle", 3,
     "square", 4,
     "rectangle", 4,
     "pentagon", 5,
@@ -11,3 +11,5 @@ let shapes = datatable (name: string, sideCount: int)
     "decagon", 10
 ];
 shapes
+| take 5
+| where sideCount =~ 'triangle'

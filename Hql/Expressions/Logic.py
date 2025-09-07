@@ -53,6 +53,7 @@ class Equality(Comparator):
             raise hqle.CompilerException('Non-list equality given more than one righthand')
 
     def as_pl(self, ctx:'Context'):
+        from Hql.Expressions import Literal, StringLiteral
         lh = self.lh.eval(ctx, as_pl=True)
 
         if not isinstance(lh, pl.Expr):
@@ -60,16 +61,14 @@ class Equality(Comparator):
         
         rh = []
         for i in self.rh:
-            rh.append(i.eval(ctx, as_pl=self.cs, as_str=not self.cs))
+            rh.append(i.eval(ctx, as_pl=True))
 
         expr = None
         for i in rh:
-            i = pl.regex_escape(i)
-
             if self.cs:
-                new = (lh == rh)
+                new = (lh == i)
             else:
-                # rh is evaluated as a string here
+                i = pl.select(i.str.escape_regex()).item()
                 regex = f'(?i)^{i}$'
                 new = lh.str.contains(regex)
 

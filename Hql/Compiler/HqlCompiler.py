@@ -77,16 +77,16 @@ class HqlCompiler(Compiler):
     def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> InstructionSet:
         from Hql.Operators.Database import Database, Static
         from Hql.Expressions import DotCompositeFunction, NamedReference
-        from Hql.Operators import Range
+        from Hql.Operators import Range, Datatable
 
         if isinstance(expr, DotCompositeFunction):
             acc, rej = self.DotCompositeFunction(expr)
             acc = acc.get_expr().eval(self.ctx, preprocess=True)
 
         elif isinstance(expr, NamedReference):
-            acc, rej = self.ctx.symbol_table[expr.name]
+            acc = self.ctx.symbol_table[expr.name]
 
-            if not isinstance(acc, Database):
+            if not isinstance(acc, (Database, InstructionSet)):
                 # a little horrifying but gets the default db using the database function
                 acc = self.ctx.get_func('database')([]).eval(self.ctx)
                 acc = acc.get_variable(expr.name)
@@ -96,6 +96,13 @@ class HqlCompiler(Compiler):
             op = acc.get_op()
             if not op:
                 raise hqle.CompilerException('Range precompile did not set op')
+            acc = Static(op.eval(self.ctx))
+
+        elif isinstance(expr, Datatable):
+            acc, rej = self.Datatable(expr)
+            op = acc.get_op()
+            if not op:
+                raise hqle.CompilerException('Datatable precompile did not set op')
             acc = Static(op.eval(self.ctx))
 
         else:
@@ -204,7 +211,7 @@ class HqlCompiler(Compiler):
                 if not (optimized[i].get_attr('row_dependent') or optimized[i].get_attr('row_mutable')) and op.get_attr('row_reducing'):
                     if isinstance(optimized[i].op, Take):
                         logging.debug(f'Maintaining Take as a priority operator')
-                        continue
+                        break
 
                     logging.debug(f'Can optimize {op.get_op().id} passing {optimized[i].get_op().id}')
                     i -= 1
@@ -720,7 +727,7 @@ class HqlCompiler(Compiler):
         from Hql.Types.Hql import HqlTypes as hqlt
         
         desc = BranchDescriptor()
-        desc.set_attr('types', hqlt.from_name(expr.type))
+        desc.set_attr('types', expr.eval(self.ctx))
         desc.expr = expr
         
         return desc, None
