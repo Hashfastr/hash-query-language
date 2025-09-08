@@ -10,7 +10,6 @@
 #     "Take",
 #     "Count",
 #     "Extend",
-#     "PrePipe",
 #     "Range",
 #     "Top",
 #     "Unnest",
@@ -29,7 +28,6 @@ from Hql.Operators.Project import Project, ProjectAway, ProjectKeep, ProjectReor
 from Hql.Operators.Take import Take
 from Hql.Operators.Count import Count
 from Hql.Operators.Extend import Extend
-from Hql.Operators.PrePipe import PrePipe
 from Hql.Operators.Range import Range
 from Hql.Operators.Top import Top
 from Hql.Operators.Unnest import Unnest

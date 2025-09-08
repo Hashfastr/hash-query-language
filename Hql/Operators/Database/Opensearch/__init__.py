@@ -23,14 +23,6 @@ class Opensearch(Database):
 
         conf = self.config.get('conf', dict())
 
-        # Set to the config default to avoid DoS
-        # Can be changed by the take operator for example.
-        self.limit:int = conf.get('limit', 100000)
-        
-        # Default scroll max, cannot be higher than 10k
-        # Higher values are generally better, each request has some time to it
-        # 10000 is faster than 10x1000
-        self.scroll_max = conf.get('scroll_max', 10000)
 
         self.hosts:list[str] = conf.get('hosts', ['localhost:9200'])
 
@@ -49,6 +41,7 @@ class Opensearch(Database):
         self.verify_certs = conf.get('verify_certs', True)
         self.use_ssl = conf.get('use_ssl', True)
 
+        self.query = ''
         self.compiler = LuceneCompiler()
 
     def get_auth(self, conf:dict):
@@ -141,7 +134,7 @@ class Opensearch(Database):
                 body={
                     'query': {
                         'query_string': {
-                            'query': self.compile()
+                            'query': self.query
                         }
                     }
                 }
@@ -159,6 +152,7 @@ class Opensearch(Database):
     def eval(self, ctx: 'Context', **kwargs) -> 'Data':
         from Hql.Data import Data
         import asyncio
+        self.query = self.compile()
         
         res = asyncio.run(self.run_query())
         print(len(res))

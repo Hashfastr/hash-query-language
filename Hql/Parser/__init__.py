@@ -129,9 +129,8 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
 
     def visitPipeExpression(self, ctx: HqlParser.PipeExpressionContext):
         from Hql.Expressions import PipeExpression
-        from Hql.Operators import PrePipe
         
-        prepipe = PrePipe(self.visit(ctx.Expression))
+        prepipe = self.visit(ctx.Expression)
         if ctx.PipedOperators:
             pipes = self.visit(ctx.PipedOperators).pipes
         else:

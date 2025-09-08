@@ -10,6 +10,7 @@ let shapes = datatable (name: string, sideCount: int)
     "nonagon", 9,
     "decagon", 10
 ];
+let specialshape = 'triangle';
 shapes
 | take 5
-| where name =~ 'triangle'
+| where name =~ specialshape

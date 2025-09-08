@@ -4,7 +4,7 @@ from Hql.Context import Context
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Compiler import BranchDescriptor
+    from Hql.Compiler import BranchDescriptor, InstructionSet
     from Hql.Operators import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
@@ -67,9 +67,6 @@ class Compiler():
     Operators
     '''
 
-    def PrePipe(self, op:'Hql.Operators.PrePipe', preprocess:bool=True) -> tuple[object, object]:
-        return None, op
-
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[object, object]:
         return None, op
 
@@ -125,8 +122,8 @@ class Compiler():
     Expressions
     '''
 
-    def Tabular(self, expr:'Hql.Expressions.Expression') -> Union['Hql.Expressions.Expression', 'Hql.Operators.Database', 'Hql.Compiler.InstructionSet']:
-        return expr
+    def Tabular(self, expr:'Hql.Expressions.Expression') -> tuple[Union['InstructionSet', None], Union[None, 'Hql.Expressions.Expression']]:
+        return None, expr
 
     def PipeExpression(self, expr:'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[object, object]:
         return None, expr

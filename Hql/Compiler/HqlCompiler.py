@@ -71,10 +71,12 @@ class HqlCompiler(Compiler):
         if not isinstance(acc, InstructionSet):
             acc = acc.get_expr()
 
+        print(acc)
+
         self.ctx.symbol_table[name] = acc
         return None
 
-    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> InstructionSet:
+    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> tuple[Union[InstructionSet, None], Union[None, 'Hql.Expressions.Expression']]:
         from Hql.Operators.Database import Database, Static
         from Hql.Expressions import DotCompositeFunction, NamedReference
         from Hql.Operators import Range, Datatable
@@ -94,59 +96,53 @@ class HqlCompiler(Compiler):
         elif isinstance(expr, Range):
             acc, rej = self.Range(expr)
             op = acc.get_op()
-            if not op:
-                raise hqle.CompilerException('Range precompile did not set op')
             acc = Static(op.eval(self.ctx))
 
         elif isinstance(expr, Datatable):
             acc, rej = self.Datatable(expr)
             op = acc.get_op()
-            if not op:
-                raise hqle.CompilerException('Datatable precompile did not set op')
             acc = Static(op.eval(self.ctx))
 
         else:
-            raise hqle.QueryException(f'Invalid tabular expression {type(expr)}')
+            return None, expr
 
         if isinstance(acc, Database):
             acc = InstructionSet(acc)
 
         if not isinstance(acc, InstructionSet):
-            logging.critical(json.dumps(expr.to_dict(), indent=2))
-            raise hqle.CompilerException(f'Tabular reference returns non-tabular expression {type(acc)}')
+            assert not isinstance(expr, Range)
+            return None, expr
 
-        return acc
+        return acc, None
 
-    def PrePipe(self, op: 'Hql.Operators.PrePipe', preprocess:bool=True) -> tuple[InstructionSet, None]:
-        return self.Tabular(op.expr), None
-
-    def PipeExpression(self, expr: 'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[InstructionSet, None]:
-        from Hql.Operators import PrePipe
+    def PipeExpression(self, expr: 'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[Union[InstructionSet, BranchDescriptor], None]:
         from Hql.Expressions import Expression, PipeExpression
         desc = BranchDescriptor()
 
         if expr.prepipe:
-            if isinstance(expr.prepipe, PrePipe):
-                prepipe, rej = self.PrePipe(expr.prepipe)
-
-            elif isinstance(expr.prepipe, Expression):
-                prepipe = self.Tabular(expr.prepipe)
-
+            acc, rej = self.Tabular(expr.prepipe)
+            if rej:
+                return self.compile(rej)
+            elif not acc:
+                prepipe = []
             else:
-                logging.critical(json.dumps(expr.prepipe.to_dict(), indent=2))
-                raise hqle.CompilerException(f'Invalid prepipe expression type {type(expr.prepipe)}')
+                prepipe = acc
 
         else:
-            logging.warning('Preprocessing PipeExpression had None prepipe')
             prepipe = []
+            
 
         if not isinstance(prepipe, list):
             prepipe = [prepipe]
+            
+        if len(prepipe) == 0:
+            logging.warning('Preprocessing PipeExpression with empty prepipe')
 
         new:list[InstructionSet] = []
         for i in prepipe:
             if isinstance(i, PipeExpression):
                 acc, rej = self.PipeExpression(i)
+                assert not isinstance(acc, BranchDescriptor)
                 new.append(acc)
             else:
                 new.append(i)

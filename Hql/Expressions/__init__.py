@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 from Hql.Exceptions import HqlExceptions as hqle
 
 class PipeExpression(Expression):
-    def __init__(self, pipes:list['Operator'], prepipe:Union['Operator', Expression, None]=None):
+    def __init__(self, pipes:list['Operator'], prepipe:Union['Expression', None]=None):
         Expression.__init__(self)
         self.prepipe                = prepipe
         self.pipes:list['Operator'] = pipes
@@ -52,31 +52,6 @@ class PipeExpression(Expression):
             out += f'| {i}'
 
         return out
-    
-    # Takes pipes and puts them into a compiler set
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Operators import Operator
-        from Hql.Operators.Database import Database
-        from Hql.Compiler import CompilerSet
-
-        no_exec = kwargs.get('no_exec', False)
-
-        # Resolve database references
-        prepipe = self.prepipe.eval(ctx, tabular=True)
-
-        if isinstance(prepipe, type(None)):
-            raise hqle.CompilerException(f'Prepipe evaluation returned None')
-        
-        if not isinstance(prepipe, (Operator, CompilerSet)):
-            raise hqle.CompilerException(f'Prepipe returned non-operator/cs, got {prepipe}')
-        
-        # can add more tabular prepipe types here
-        if not isinstance(prepipe, (Database, Operator, CompilerSet)) and self.pipes != []:
-            raise hqle.CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
-
-        ops = [prepipe] + self.pipes
-
-        return cs.eval(ctx)
 
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
