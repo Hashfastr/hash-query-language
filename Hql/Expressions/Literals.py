@@ -48,7 +48,6 @@ class StringLiteral(Literal):
     def eval(self, ctx:'Context', **kwargs):
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
-
         return self.value
 
 # Integer

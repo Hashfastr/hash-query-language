@@ -249,7 +249,7 @@ class LuceneCompiler(Compiler):
         return '.'.join(parts), None
 
     def Relational(self, expr: 'Hql.Expressions.Relational', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Relational, Expression
+        from Hql.Expressions import Relational, Expression, StringLiteral
         if preprocess:
             if expr.op not in ('<', '>', '<=', '>='):
                 return None, expr
@@ -362,7 +362,7 @@ class LuceneCompiler(Compiler):
         return f'[{start} TO {end}]', None
 
     def Regex(self, expr: 'Hql.Expressions.Regex', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Regex, Expression
+        from Hql.Expressions import Regex, Expression, StringLiteral
 
         if preprocess:
             # No flags supported
@@ -389,23 +389,25 @@ class LuceneCompiler(Compiler):
         lh = acc
         assert isinstance(lh, str)
 
-        acc, rej = self.compile(expr.rh, preprocess=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        rh = acc
+        if isinstance(expr.rh, StringLiteral):
+            rh = expr.rh.eval(self.ctx, as_str=True)
+        else:
+            acc, rej = self.compile(expr.rh, preprocess=False)
+            if rej:
+                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+            rh = acc
         assert isinstance(rh, str)
 
         return f'{lh}:/{rh}/', None
 
     def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Substring
+        from Hql.Expressions import Substring, Expression, StringLiteral
 
         if preprocess:
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
             lh = acc
-            assert isinstance(lh, Expression)
 
             rhs = []
             for i in expr.rh:
@@ -413,7 +415,6 @@ class LuceneCompiler(Compiler):
                 if rej:
                     return None, expr
                 rh = acc
-                assert isinstance(rh, Expression)
                 rhs.append(rh)
 
             return Substring(lh, expr.op, rhs), None
@@ -426,10 +427,13 @@ class LuceneCompiler(Compiler):
 
         exprs = []
         for i in expr.rh:
-            acc, rej = self.compile(i, preprocess=False)
-            if rej:
-                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-            rh = acc
+            if isinstance(i, StringLiteral):
+                rh = i.eval(self.ctx, as_str=True)
+            else:
+                acc, rej = self.compile(i, preprocess=False)
+                if rej:
+                    raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+                rh = acc
             assert isinstance(rh, str)
 
             if 'startswith' in expr.op or 'prefix' in expr.op:
