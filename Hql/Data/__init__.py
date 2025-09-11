@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Union
+from fnmatch import fnmatch
 
 from .Table import Table
 from .Schema import Schema
@@ -71,22 +72,11 @@ class Data():
     so-network-2022.10
     Just gets the table named so-network-2022.10
     '''
-    def get_tables(self, name:str):
-        if '*' not in name:
-            table = self.tables.get(name, None)
-            
-            if not table:
-                raise hqle.QueryException(f'Unknown table {name} referenced')
-            
-            return [table]
-        
-        prefix = name.split('*')[0]
-        
+    def get_tables(self, pattern:str) -> list[Table]:
         tables = []
         for table in self:
-            if table.name.startswith(prefix):
+            if fnmatch(table.name, pattern):
                 tables.append(table)
-                
         return tables
     
     def table_by_index(self, idx:int):

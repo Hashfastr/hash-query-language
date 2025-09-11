@@ -1,4 +1,4 @@
-from typing import Union, TYPE_CHECKING, Callable
+from typing import Optional, Union, TYPE_CHECKING, Callable
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 import logging
@@ -27,7 +27,7 @@ class Compiler():
         ctx = ctx if ctx else self.ctx
         return self.ctx
 
-    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
         from Hql.Compiler import BranchDescriptor
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
@@ -47,7 +47,7 @@ class Compiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Union[object, None], Union[object, None]]:
+    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
         if src == None:
             raise hqle.CompilerException('Unimplemented root compile')
         return self.from_name(src.type)(src, preprocess=preprocess)
@@ -103,6 +103,9 @@ class Compiler():
     def Unnest(self, op:'Hql.Operators.Unnest', preprocess:bool=True) -> tuple[object, object]:
         return None, op
 
+    def Union(self, op:'Hql.Operators.Union', preprocess:bool=True) -> tuple[object, object]:
+        return None, op
+
     def Summarize(self, op:'Hql.Operators.Summarize', preprocess:bool=True) -> tuple[object, object]:
         return None, op
 
@@ -122,7 +125,7 @@ class Compiler():
     Expressions
     '''
 
-    def Tabular(self, expr:'Hql.Expressions.Expression') -> tuple[Union['InstructionSet', None], Union[None, 'Hql.Expressions.Expression']]:
+    def Tabular(self, expr:'Hql.Expressions.Expression') -> tuple[Optional['InstructionSet'], Optional['Hql.Expressions.Expression']]:
         return None, expr
 
     def PipeExpression(self, expr:'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[object, object]:

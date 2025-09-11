@@ -1,4 +1,4 @@
-from typing import Union, TYPE_CHECKING, overload
+from typing import Optional, Union, TYPE_CHECKING
 import logging
 import json
 
@@ -17,10 +17,10 @@ Hql preprocessor
 Works out preprocessor functions
 '''
 class HqlCompiler(Compiler):
-    def __init__(self, config:'Config', query:Union[None, 'Query']=None):
+    def __init__(self, config:'Config', query:Optional['Query']=None):
         Compiler.__init__(self)
         self.ctx.config = config
-        self.root:Union[None, InstructionSet] = None
+        self.root:Optional[InstructionSet] = None
 
         if query:
             self.Query(query)
@@ -31,7 +31,7 @@ class HqlCompiler(Compiler):
             raise hqle.CompilerException('Hql compiler with default parameter')
         return self.from_name(src.type)(src)
 
-    def run(self, ctx: Union['Context', None] = None) -> 'Context':
+    def run(self, ctx: Optional['Context'] = None) -> 'Context':
         ctx = ctx if ctx else self.ctx
         if not self.root:
             raise hqle.CompilerException('Attempting to run compiler with None-root')
@@ -49,7 +49,7 @@ class HqlCompiler(Compiler):
                 break
         return res
 
-    def Statement(self, statement: 'Hql.Query.Statement', preprocess:bool=True) -> Union[InstructionSet, None]:
+    def Statement(self, statement: 'Hql.Query.Statement', preprocess:bool=True) -> Optional[InstructionSet]:
         logging.error("This shouldn't trigger? Compiling Statement directly")
         acc, rej = self.compile(statement.root)
         assert isinstance(acc, InstructionSet)
@@ -71,15 +71,13 @@ class HqlCompiler(Compiler):
         if not isinstance(acc, InstructionSet):
             acc = acc.get_expr()
 
-        print(acc)
-
         self.ctx.symbol_table[name] = acc
         return None
 
-    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> tuple[Union[InstructionSet, None], Union[None, 'Hql.Expressions.Expression']]:
+    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> tuple[Optional[InstructionSet], Optional['Hql.Expressions.Expression']]:
         from Hql.Operators.Database import Database, Static
         from Hql.Expressions import DotCompositeFunction, NamedReference
-        from Hql.Operators import Range, Datatable
+        from Hql.Operators import Range, Datatable, Union
 
         if isinstance(expr, DotCompositeFunction):
             acc, rej = self.DotCompositeFunction(expr)
@@ -102,6 +100,15 @@ class HqlCompiler(Compiler):
             acc, rej = self.Datatable(expr)
             op = acc.get_op()
             acc = Static(op.eval(self.ctx))
+
+        elif isinstance(expr, Union):
+            upstream = []
+            for i in expr.exprs:
+                acc, rej = self.Tabular(i)
+                if rej:
+                    return None, expr
+                upstream.append(acc)
+            acc = InstructionSet(upstream=upstream)
 
         else:
             return None, expr
@@ -375,6 +382,14 @@ class HqlCompiler(Compiler):
         desc.op = Unnest(field, tables)
         return desc, None
 
+    def Union(self, op: 'Hql.Operators.Union', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Operators import Union
+
+        exprs = []
+        for i in op.exprs:
+            exprs.append(self.compile(i))
+        return Union(exprs)
+
     def Summarize(self, op: 'Hql.Operators.Summarize', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Summarize
         from Hql.Expressions import ByExpression
@@ -436,9 +451,11 @@ class HqlCompiler(Compiler):
         elif isinstance(op.rh, PipeExpression):
             acc, rej = self.compile(op.rh)
             desc.join_attrs = acc.attrs
+            rh = acc
 
         else:
             acc, rej = self.Tabular(op.rh)
+            assert acc != None
             desc.join_attrs = acc.attrs
             rh = acc
         assert isinstance(rh, InstructionSet)

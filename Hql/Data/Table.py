@@ -150,8 +150,6 @@ class Table():
 
     @staticmethod
     def merge(tables:list["Table"]):
-        max_cols = 100
-        
         if not tables:
             return Table()
         
@@ -165,58 +163,26 @@ class Table():
         for table in tables:
             schemas.append(table.schema)
         schema = Schema.merge(schemas).schema
-        
-        # generate col groups
-        col_groups = dict()
+
+        # Makes an assumption that the above merge converted field names accurately
+        # in the case of a conflict, e.g. they get split into types.
+        new = []
         for table in tables:
-            # skip empty dataframes
-            if isinstance(table.df, type(None)) or table.df.is_empty():
-                continue
+            cur = table.df
+            curs = table.schema.schema
+            for key in curs:
+                if isinstance(curs[key], dict):
+                    new_key = f'{key}_object'
+                else:
+                    new_key = f'{key}_{curs[key].name}'
 
-            for col in table.df:
-                if col.name not in col_groups:
-                    col_groups[col.name] = []
-                    
-                col_groups[col.name].append(col)
-
-        new = dict()
-        for key in col_groups:
-            for col in col_groups[key]:
-                if key not in new:
-                    new[key] = col
-                    continue
+                if key not in schema:
+                    cur = cur.rename({key: new_key})
+            new.append(cur)
                 
-                # Canon conflict
-                if new[key].dtype == pl.Struct and col.dtype == pl.Struct:
-                    l = Table(df=new[key].struct.unnest(), name=name)
-                    r = Table(df=col.struct.unnest(), name=name)
-                    
-                    new[key] = Table.merge([l, r]).df.to_struct()
-                    continue
-                
-                for i in range(max_cols):
-                    name = f'{key}_{i}'
-                    
-                    if name not in new:
-                        new[name] = col
-                        break
-                    
-                    if i == max_cols - 1:
-                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
-                        logging.critical(f'Applicable field: {key}')
-                        raise hqle.QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
-                
-        df = pl.DataFrame(new)
+        df = pl.concat(new, how='diagonal')
         schema = Schema(schema=schema)
                 
-        return Table(df=df, schema=schema, name=name)
-    
-    @staticmethod
-    def concat(tables:list["Table"]):
-        df = pl.concat([x.df for x in tables])
-        schema = tables[0].schema
-        name = tables[0].name
-
         return Table(df=df, schema=schema, name=name)
 
     '''

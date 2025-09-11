@@ -31,6 +31,7 @@ from Hql.Operators.Extend import Extend
 from Hql.Operators.Range import Range
 from Hql.Operators.Top import Top
 from Hql.Operators.Unnest import Unnest
+from Hql.Operators.Union import Union
 from Hql.Operators.Summarize import Summarize
 from Hql.Operators.Datatable import Datatable
 from Hql.Operators.Join import Join

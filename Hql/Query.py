@@ -27,7 +27,7 @@ class Query():
         statements = []
         for i in self.statements:
             statements.append(i.decompile(ctx))
-        return ';\n\n'.join(statements)
+        return ';\n'.join(statements)
 
     def to_dict(self):
         return {

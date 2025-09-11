@@ -3,6 +3,7 @@ from Hql.Context import Context
 import logging
 import time
 import json
+from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Operators import Database, Operator
@@ -16,7 +17,9 @@ class InstructionSet():
         
         assert isinstance(upstream, (Database, list, InstructionSet))
         if isinstance(upstream, list):
-            assert all(isinstance(item, (Database, InstructionSet)) for item in upstream)
+            for i in upstream:
+                if not isinstance(i, (Database, InstructionSet)):
+                    raise hqle.CompilerException(f'Invalid upstream type {type(i)}')
             self.upstream = upstream
         else:
             self.upstream = [upstream]
