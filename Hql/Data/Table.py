@@ -25,7 +25,7 @@ class Table():
             name:Union[str, None]=None
         ):
         
-        if not isinstance(df, type(None)):
+        if isinstance(df, pl.DataFrame):
             self.df = df
         else:
             self.df = pl.DataFrame()

@@ -107,7 +107,13 @@ class HqlCompiler(Compiler):
                 acc, rej = self.Tabular(i)
                 if rej:
                     return None, expr
-                upstream.append(acc)
+                assert acc
+                
+                if not acc.ops:
+                    upstream += acc.upstream
+                else:
+                    upstream.append(acc)
+            
             acc = InstructionSet(upstream=upstream)
 
         else:
@@ -435,7 +441,13 @@ class HqlCompiler(Compiler):
             desc.merge_attrs(acc.attrs)
             values.append(acc.get_expr())
 
-        desc.op = Datatable(schema, values)
+        name = None
+        if op.name:
+            acc, rej = self.compile(op.name)
+            desc.merge_attrs(acc.attrs)
+            name = acc.get_expr()
+
+        desc.op = Datatable(schema, values, name=name)
         return desc, None
 
     def Join(self, op: 'Hql.Operators.Join', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
@@ -516,6 +528,20 @@ class HqlCompiler(Compiler):
 
         desc.op = Sort(exprs)
         return desc, None
+
+    def Rename(self, op: 'Hql.Operators.Rename', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Operators import Rename
+        desc = BranchDescriptor()
+        desc.set_attr('table_mutable', True)
+
+        exprs = []
+        for i in op.exprs:
+            acc, rej = self.compile(i)
+            desc.merge_attrs(acc.attrs)
+            exprs.append(acc.get_expr())
+
+        desc.op = Rename(exprs)
+        return desc, None
     
     def OpParameter(self, expr: 'Hql.Expressions.OpParameter', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import OpParameter
@@ -529,16 +555,26 @@ class HqlCompiler(Compiler):
 
     def ToClause(self, expr: 'Hql.Expressions.ToClause', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import ToClause
+        from Hql.Types.Hql import HqlTypes as hqlt
         desc = BranchDescriptor()
 
-        if expr.to:
+        if isinstance(expr.to, hqlt.HqlType):
             desc.set_attr('type_casting', True)
             desc.set_attr('types', expr.to)
+            to = expr.to
+        
+        elif expr.to:
+            acc, rej = self.compile(expr.to)
+            desc.merge_attrs(acc.attrs)
+            to = acc.get_expr()
+
+        else:
+            to = None
 
         acc, rej = self.compile(expr.expr)
         desc.merge_attrs(acc.attrs)
     
-        desc.expr = ToClause(acc.get_expr(), to=expr.to)
+        desc.expr = ToClause(acc.get_expr(), to=to)
         return desc, None
 
     def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:

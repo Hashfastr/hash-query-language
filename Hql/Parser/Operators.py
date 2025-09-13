@@ -31,6 +31,15 @@ class Operators(HqlVisitor):
             value = self.visit(ctx.LiteralValue)
         
         return Exprs.OpParameter(name, value)
+
+    def visitRenameOperator(self, ctx: HqlParser.RenameOperatorContext):
+        exprs = [self.visit(x) for x in ctx.Expressions]
+        return Ops.Rename(exprs)
+
+    def visitRenameToExpression(self, ctx: HqlParser.RenameToExpressionContext):
+        src = self.visit(ctx.Source)
+        dst = self.visit(ctx.Destination)
+        return Exprs.ToClause(src, dst)
     
     def visitWhereOperator(self, ctx: HqlParser.WhereOperatorContext):
         predicate = self.visit(ctx.Predicate)
@@ -154,8 +163,12 @@ class Operators(HqlVisitor):
         values = []
         for i in ctx.Values:
             values.append(self.visit(i))
+
+        name = None
+        if ctx.TableName:
+            name = self.visit(ctx.TableName)
         
-        return Ops.Datatable(schema, values)
+        return Ops.Datatable(schema, values, name=name)
     
     def visitRowSchema(self, ctx: HqlParser.RowSchemaContext):
         schema = []

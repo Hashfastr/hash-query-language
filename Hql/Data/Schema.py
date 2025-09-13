@@ -464,7 +464,7 @@ class Schema():
     If a col is not defined in the schema, then it just skips over it
     Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:pl.DataFrame, schema:Union[None, dict, CompilerType]=None):
+    def apply(self, df:Union[pl.DataFrame, pl.Series], schema:Union[None, dict, 'Schema', CompilerType]=None):
         if isinstance(schema, Schema):
             schema = schema.schema
         
@@ -472,8 +472,9 @@ class Schema():
             schema = self.schema
         
         # Single value schema
-        if not isinstance(schema, dict):
-            print(type(df))
+        if isinstance(schema, CompilerType):
+            if not isinstance(df, pl.Series):
+                raise hqle.CompilerException('Attempting singular type cast on a dataframe ')
             return schema.cast(df)
         
         new = {}

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from .__proto__ import Expression
 from .Logic import *
@@ -70,7 +70,7 @@ class OpParameter(Expression):
         }
 
 class ToClause(Expression):
-    def __init__(self, expr:Expression, to:Union[None, hqlt.HqlType]=None):
+    def __init__(self, expr:Expression, to:Union[None, Expression, hqlt.HqlType]=None):
         Expression.__init__(self)
         self.expr = expr
         self.to = to
@@ -81,16 +81,23 @@ class ToClause(Expression):
             'expr': self.expr.to_dict(),
         }
 
-        if self.to:
+        if isinstance(self.to, hqlt.HqlType):
             d['to'] = self.to.name
+
+        elif self.to:
+            d['to'] = self.to.to_dict()
 
         return d
 
     def decompile(self, ctx: 'Context') -> str:
         expr = self.expr.decompile(ctx)
 
-        if self.to:
+        if isinstance(self.to, hqlt.HqlType):
             to = self.to.name
+            expr += f' to {to}'
+
+        elif self.to:
+            to = self.to.decompile(ctx)
             expr += f' to {to}'
 
         return expr

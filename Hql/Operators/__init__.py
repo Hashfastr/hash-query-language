@@ -37,3 +37,4 @@ from Hql.Operators.Datatable import Datatable
 from Hql.Operators.Join import Join
 from Hql.Operators.MvExpand import MvExpand
 from Hql.Operators.Sort import Sort
+from Hql.Operators.Rename import Rename

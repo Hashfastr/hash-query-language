@@ -121,6 +121,9 @@ class Compiler():
     def Sort(self, op:'Hql.Operators.Sort', preprocess:bool=True) -> tuple[object, object]:
         return None, op
 
+    def Rename(self, op:'Hql.Operators.Rename', preprocess:bool=True) -> tuple[object, object]:
+        return None, op
+
     '''
     Expressions
     '''

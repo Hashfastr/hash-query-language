@@ -9,7 +9,7 @@ let shapes = datatable (name: string, sideCount: int)
     "octagon", 8,
     "nonagon", 9,
     "decagon", 10
-];
+] as shapes;
 let numberNames = datatable (sideCount: int, sideName: string)
 [
     3, 'three',
@@ -21,5 +21,6 @@ let numberNames = datatable (sideCount: int, sideName: string)
     8, 'eight',
     9, 'nine',
     10, 'ten'
-];
+] as names;
 union shapes, numberNames
+| rename shapes to bapes, names to crepes

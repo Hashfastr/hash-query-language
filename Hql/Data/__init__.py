@@ -60,6 +60,15 @@ class Data():
             return True
         return False
 
+    def __contains__(self, key:str):
+        return key in self.tables
+
+    def __setitem__(self, key:str, item:Table):
+        self.tables[key] = item
+
+    def __getitem__(self, key:str) -> Table:
+        return self.tables[key]
+
     '''
     Gets tables relevant to a given table pattern
     
