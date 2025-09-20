@@ -1,1 +1,7 @@
-database('json').http('tf11-so-beats-large.json')
+product('windows').category('process_creation')
+
+
+database('tf11-elastic')
+
+
+

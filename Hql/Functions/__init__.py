@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Expressions import Expression as Expression
     from Hql.Compiler import InstructionSet
+    from Hql.Hac import Source
 
 class Function():
     def __init__(self, args:list, min:int, max:int):
@@ -44,7 +45,7 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet']:
+    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet', 'Source']:
         from Hql.Data import Data
         return Data()
 

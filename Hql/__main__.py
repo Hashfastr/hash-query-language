@@ -1,17 +1,12 @@
 import sys    
 
-from Hql.Parser import Parser, SigmaParser
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Exceptions import HacExceptions as hace
-from Hql.Compiler import Compiler, HqlCompiler
-from Hql.Query import Query
-from Hql.Hac import Parser as HaCParser
 from Hql.Config import Config
+from Hql import run_query
 
 import json
 import logging
 import argparse, sys
-import cProfile, pstats, time
+import cProfile, pstats
 from pathlib import Path
 
 def config_logging(level:int):
@@ -103,7 +98,8 @@ def main():
                 txt = f.read()
 
             try:
-                print(run_query(txt, args, i, conf))
+                data = run_query(txt, conf, src=i, **vars(args))
+                print(json.dumps(data.to_dict(), default=repr))
             except Exception as e:
                 logging.critical('Exception caught when running query')
                 logging.critical(e)
@@ -118,7 +114,8 @@ def main():
                 txt = f.read()
 
             try:
-                print(run_query(txt, args, i, conf))
+                data = run_query(txt, conf, src=i, **vars(args))
+                print(json.dumps(data.to_dict(), default=repr))
             except Exception as e:
                 logging.exception('Exception caught when running query')
                 # logging.critical(e.__traceback__)
@@ -147,111 +144,5 @@ def main():
     if errors:
         return -1
         
-def run_query(text:str, args, src:Path, conf:Config) -> str:
-    from Hql.Context import Context
-    from Hql.Data import Data
-
-    ##################################
-    ## Generate HaC (if applicable) ##
-    ##################################
-
-    logging.debug(f'Parsing HaC for {src.as_posix()}...')
-    if args.sigma:
-        parser = SigmaParser(text)
-        hac = parser.gen_hac()
-
-    else:
-        try:
-            parser = HaCParser.Parser(text=text)
-            hac = parser.assemble()
-        except hace.LexerException:
-            hac = None
-
-    if args.render_hac:
-        if not hac:
-            logging.critical('Hql file does not contain a valid HaC comment!')
-            return ''
-
-        return hac.render(args.render_hac)
-
-    #######################
-    ## Generate Assembly ##
-    #######################
-    
-    logging.debug(f'Parsing {src.as_posix()}...')
-    start = time.perf_counter()
-
-    if args.sigma or args.omni:
-        parser = SigmaParser(text)
-    else:
-        parser = Parser(text)
-    parser.assemble()
-    
-    logging.debug('Done.')
-    
-    end = time.perf_counter()
-    logging.debug(f'Parsing took {end - start}')
-    
-    if args.asm_show:
-        # Use print to give a raw output
-        return str(parser.assembly)
-
-    if args.deparse:
-        deparse = ''
-
-        if hac:
-            deparse += hac.render(target='decompile')
-            deparse += '\n'
-
-        if not isinstance(parser.assembly, Query):
-            raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
-
-        deparse += parser.assembly.decompile(Context(Data()))
-        return deparse
-        
-    ######################
-    ## Compile Assembly ##
-    ######################
-    
-    logging.debug("Compiling...")
-    start = time.perf_counter()
-
-    if not isinstance(parser.assembly, Query):
-        raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
-    
-    compiler = HqlCompiler(conf, parser.assembly)
-    
-    end = time.perf_counter()
-    logging.debug("Done.")
-    
-    logging.debug(f"Compiling took {end - start}")
-
-    if args.plan:
-        assert compiler.root
-        return compiler.root.render()
-
-    # if args.decompile:
-    #     return compiler.decompile()
-   
-    if args.no_exec:
-        return ''
-    
-    #############
-    ## Queries ##
-    #############
-
-    logging.debug("Running")
-    start = time.perf_counter()
-    
-    results = compiler.run().data
-   
-    end = time.perf_counter() 
-    logging.debug("Ran")
-    logging.debug(f"Computation took {end - start}")
-    
-    logging.debug(f'Got {len(results)} results from query')
-    
-    return json.dumps(results.to_dict(), default=repr)
-    
 if __name__ == "__main__":
     main()

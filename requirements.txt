@@ -8,3 +8,4 @@ oyaml
 opensearch-py
 aiohttp
 boto3
+tabulate

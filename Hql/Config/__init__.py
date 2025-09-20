@@ -1,19 +1,17 @@
 import json
 import logging
-from typing import TYPE_CHECKING, Union
-from pathlib import Path, PurePath
+from typing import Union
+from pathlib import Path
 import oyaml as yaml
 from Hql.Exceptions import HqlExceptions as hqle
-
-if TYPE_CHECKING:
-    from Hql.Operators import Database
 
 class Config():
     def __init__(self, path:Union[Path, None]=None):
         # skeleton
         self.conf = {
             'general': {},
-            'databases': {}
+            'databases': {},
+            'products': {}
         }
 
         if path:
@@ -40,7 +38,8 @@ class Config():
         if not parsed:
             return
 
-        # elevate to the generic config format
+        # Elevate to the generic config format
+        # That is, a top level 'config' with a list of dicts
         if 'config' not in parsed:
             parsed = {'config': [parsed]}
 
@@ -55,6 +54,11 @@ class Config():
 
                 if j == 'general':
                     self.load_general(src, i[j])
+
+                if j == 'product':
+                    self.load_product(src, i[j], j)
+
+                logging.error(f'Invalid config block {j}')
 
     def add_database(self, src:str, config:dict):
         for i in ['name', 'type', 'conf']:
@@ -93,5 +97,19 @@ class Config():
         name = self.conf['general']['default_db']
         return self.get_database(name)
 
-# global HqlConfig
-# HqlConfig = Config()
+    def load_product(self, src:str, config:dict, name:str):
+        if not config.get('configured', True):
+            return
+
+        if 'hql' not in config:
+            raise hqle.ConfigException(f'Product missing Hql definition: {name} in {src}')
+
+        if name in self.conf['products']:
+            raise hqle.ConfigException(f'Duplicate product definition: {name} in {src}')
+
+        self.conf['products'][name] = config
+
+    def get_product(self, name:str) -> dict:
+        if name in self.conf['products']:
+            return self.conf['products'][name]
+        raise hqle.ConfigException(f'Attempting to get undefined product {name}')

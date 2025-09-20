@@ -390,11 +390,16 @@ class HqlCompiler(Compiler):
 
     def Union(self, op: 'Hql.Operators.Union', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Operators import Union
+        desc = BranchDescriptor()
 
         exprs = []
         for i in op.exprs:
-            exprs.append(self.compile(i))
-        return Union(exprs)
+            acc, rej = self.compile(i)
+            desc.merge_attrs(acc.attrs)
+            exprs.append(acc)
+        
+        desc.op = Union(exprs)
+        return desc, None
 
     def Summarize(self, op: 'Hql.Operators.Summarize', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Summarize
