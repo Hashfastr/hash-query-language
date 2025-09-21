@@ -52,13 +52,14 @@ class Config():
                 if j == 'database':
                     self.add_database(src, i[j])
 
-                if j == 'general':
+                elif j == 'general':
                     self.load_general(src, i[j])
 
-                if j == 'product':
-                    self.load_product(src, i[j], j)
+                elif j == 'product':
+                    self.load_product(src, i[j])
 
-                logging.error(f'Invalid config block {j}')
+                else:
+                    logging.error(f'Invalid config block {j}')
 
     def add_database(self, src:str, config:dict):
         for i in ['name', 'type', 'conf']:
@@ -97,12 +98,14 @@ class Config():
         name = self.conf['general']['default_db']
         return self.get_database(name)
 
-    def load_product(self, src:str, config:dict, name:str):
+    def load_product(self, src:str, config:dict):
         if not config.get('configured', True):
             return
 
-        if 'hql' not in config:
-            raise hqle.ConfigException(f'Product missing Hql definition: {name} in {src}')
+        for i in ['name', 'hql']:
+            if i not in config:
+                raise hqle.ConfigException(f'Product config {src} missing required key {i}')
+        name = config['name']
 
         if name in self.conf['products']:
             raise hqle.ConfigException(f'Duplicate product definition: {name} in {src}')

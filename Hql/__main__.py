@@ -2,6 +2,7 @@ import sys
 
 from Hql.Config import Config
 from Hql import run_query
+from Hql.Data import Data
 
 import json
 import logging
@@ -99,7 +100,10 @@ def main():
 
             try:
                 data = run_query(txt, conf, src=i, **vars(args))
-                print(json.dumps(data.to_dict(), default=repr))
+                if isinstance(data, Data):
+                    print(json.dumps(data.to_dict(), default=repr))
+                else:
+                    print(data)
             except Exception as e:
                 logging.critical('Exception caught when running query')
                 logging.critical(e)
@@ -115,7 +119,10 @@ def main():
 
             try:
                 data = run_query(txt, conf, src=i, **vars(args))
-                print(json.dumps(data.to_dict(), default=repr))
+                if isinstance(data, Data):
+                    print(json.dumps(data.to_dict(), default=repr))
+                else:
+                    print(data)
             except Exception as e:
                 logging.exception('Exception caught when running query')
                 # logging.critical(e.__traceback__)
