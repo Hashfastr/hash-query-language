@@ -57,7 +57,9 @@ class Statement():
 
 class QueryStatement(Statement):
     def __init__(self, root):
+        from Hql.Expressions import PipeExpression
         Statement.__init__(self, root)
+        assert isinstance(self.root, PipeExpression)
 
 class LetStatement(Statement):
     def __init__(self, name:Expression, value:Union[Expression, list[Operator]], lettype:str):
