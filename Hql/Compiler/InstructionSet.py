@@ -32,6 +32,9 @@ class InstructionSet():
             self.ops = self.upstream[0].ops + self.ops
             self.upstream = self.upstream[0].upstream
 
+    def is_empty(self) -> bool:
+        return not (self.upstream or self.ops)
+
     def to_dict(self):
         from Hql.Context import Context
         from Hql.Data import Data

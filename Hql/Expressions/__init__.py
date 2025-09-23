@@ -19,7 +19,7 @@ class PipeExpression(Expression):
         self.pipes:list['Operator'] = pipes
 
     def __bool__(self):
-        return bool(self.prepipe)
+        return bool(self.prepipe) or bool(self.pipes)
         
     def to_dict(self):
         d:dict = {

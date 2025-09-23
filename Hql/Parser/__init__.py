@@ -40,7 +40,7 @@ class Parser():
         self.tree = None
         self.assembly:Union[None, 'Query', 'Statement', 'Operator', 'Expression'] = None
     
-    def parse_file(self) -> HqlParser:
+    def parse_text(self) -> HqlParser:
         if not self.text:
             logging.error(f'Given query is empty: {self.filename}')
             raise hqle.QueryException('Empty query given')
@@ -63,20 +63,21 @@ class Parser():
         traces = []
         for i in targets:
             try:
-                self.tree = self.parse_file()
+                self.tree = self.parse_text()
                 visitor = Visitor(self.filename)
                 target = getattr(self.tree, i)()
                 self.assembly = visitor.visit(target)
-            except Exception as e:
-                import traceback
-                traces.append(traceback.format_exc())
+            except:
+                # import traceback
+                # traces.append(traceback.format_exc())
                 continue
-
             break
 
         if not self.assembly:
-            [logging.critical(x) for x in traces]
-            logging.critical(f'Failed to parse query {self.filename}')
+            # [logging.critical(x) for x in traces]
+            if self.filename:
+                logging.critical(self.filename)
+            logging.critical(f'Failed to parse with targets {targets}')
             raise hqle.CompilerException(f'Could not parse\n{self.text}')
     
     @staticmethod

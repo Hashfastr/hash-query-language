@@ -6,6 +6,7 @@ from Hql.Context import register_func, Context
 class category(Function):
     def __init__(self, args:list):
         Function.__init__(self, args, 1, -1)
+        self.preprocess = True
         
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Hac import Source

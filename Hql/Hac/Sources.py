@@ -12,7 +12,16 @@ class Source():
         self.products:list[Product] = []
 
     def assemble(self):
-        return [x.assemble() for x in self.products]
+        from Hql.Compiler import InstructionSet
+
+        isets = []
+        for i in self.products:
+            iset = i.assemble()
+            if iset.is_empty():
+                continue
+            isets.append(iset)
+
+        return InstructionSet(isets)
 
     def product(self, pattern:str):
         from fnmatch import fnmatch
@@ -38,7 +47,9 @@ class Splits():
         self.cur:list[HaCStatement] = []
 
     def add_level(self):
-        self.parent = self.cur
+        # create new list for this
+        self.parent = [x for x in self.cur]
+        self.cur = []
 
     def add_query(self, query:Query):
         from copy import deepcopy
@@ -94,7 +105,6 @@ class HaCStatement():
                 self.query.pipes += pipes.pipes
         elif pipes.prepipe:
             self.query = pipes
-            return
         else:
             raise hqle.ConfigException('Attempting to add empty pipes to empty query with HaC')
 
@@ -104,7 +114,9 @@ class Product():
         self.ctx = ctx
         self.conf = ctx.config.get_product(name)
         self.services = self.conf.get('services', dict())
+        self.set_services = False
         self.categories = self.conf.get('categories', dict())
+        self.set_categories = False
         self.splits = Splits()
         
         parser = Parser(self.conf['hql'])
@@ -130,10 +142,10 @@ class Product():
         try:
             parser.assemble(targets=['query', 'emptyPipedExpression'])
         except:
-            logging.critical(f'Failed to parse Hql in category {name}')
+            logging.critical(f'Failed to parse Hql in service {name}')
 
         if not parser.assembly:
-            raise hqle.ConfigException(f'Invalid Hql definition in category {name}')
+            raise hqle.ConfigException(f'Invalid Hql definition in service {name}')
 
         return parser.assembly
 
@@ -142,10 +154,10 @@ class Product():
         try:
             parser.assemble(targets=['query', 'emptyPipedExpression'])
         except:
-            logging.critical(f'Failed to parse Hql in service {name}')
+            logging.critical(f'Failed to parse Hql in category {name}')
 
         if not parser.assembly:
-            raise hqle.ConfigException(f'Invalid Hql definition in service {name}')
+            raise hqle.ConfigException(f'Invalid Hql definition in category {name}')
 
         return parser.assembly
 
@@ -163,6 +175,8 @@ class Product():
 
         # Assume using all services
         if not self.selection['services']:
+            if self.set_services:
+                return InstructionSet([])
             self.service('*')
 
         for i in self.selection['services']:
@@ -170,11 +184,12 @@ class Product():
         self.splits.add_level()
         
         if not self.selection['categories']:
+            if self.set_categories:
+                return InstructionSet([])
             self.category('*')
 
         for i in self.selection['categories']:
             self.integrate(i)
-        self.splits.add_level()
 
         isets = []
         for i in self.splits.cur:
@@ -190,6 +205,7 @@ class Product():
 
     def service(self, pat:str) -> 'Product':
         from fnmatch import fnmatch
+        self.set_categories = True
 
         services = []
         for i in self.services:
@@ -207,6 +223,7 @@ class Product():
 
     def category(self, pat:str) -> 'Product':
         from fnmatch import fnmatch
+        self.set_categories = True
 
         categories = []
         for i in self.categories:

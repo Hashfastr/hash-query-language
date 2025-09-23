@@ -78,10 +78,14 @@ class HqlCompiler(Compiler):
         from Hql.Operators.Database import Database, Static
         from Hql.Expressions import DotCompositeFunction, NamedReference
         from Hql.Operators import Range, Datatable, Union
+        from Hql.Hac import Source
 
         if isinstance(expr, DotCompositeFunction):
             acc, rej = self.DotCompositeFunction(expr)
             acc = acc.get_expr().eval(self.ctx, preprocess=True)
+            
+            if isinstance(acc, Source):
+                acc = acc.assemble()
 
         elif isinstance(expr, NamedReference):
             acc = self.ctx.symbol_table[expr.name]
@@ -218,8 +222,11 @@ class HqlCompiler(Compiler):
             i = -1
             while i >= -len(optimized):
                 if not (optimized[i].get_attr('row_dependent') or optimized[i].get_attr('row_mutable')) and op.get_attr('row_reducing'):
-                    if isinstance(optimized[i].op, Take):
+                    if isinstance(optimized[i].get_op(), Take):
                         logging.debug(f'Maintaining Take as a priority operator')
+                        break
+
+                    if type(optimized[i].get_op()) == type(op.get_op()):
                         break
 
                     logging.debug(f'Can optimize {op.get_op().id} passing {optimized[i].get_op().id}')
