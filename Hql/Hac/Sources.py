@@ -34,8 +34,8 @@ class Source():
 
 class Splits():
     def __init__(self):
-        self.parent:list[StatementSplit] = []
-        self.cur:list[StatementSplit] = []
+        self.parent:list[HaCStatement] = []
+        self.cur:list[HaCStatement] = []
 
     def add_level(self):
         self.parent = self.cur
@@ -44,7 +44,7 @@ class Splits():
         from copy import deepcopy
 
         if not self.parent:
-            new = StatementSplit()
+            new = HaCStatement()
             new.add_query(query)
             self.cur.append(new)
             return
@@ -65,7 +65,7 @@ class Splits():
             new.add_pipes(pipes)
             self.cur.append(new)
 
-class StatementSplit():
+class HaCStatement():
     def __init__(self):
         # all statements pre the root query
         self.pre = []
@@ -156,6 +156,8 @@ class Product():
             self.splits.add_pipes(expr)
 
     def assemble(self):
+        from Hql.Query import Query, QueryStatement
+        from Hql.Compiler import InstructionSet, HqlCompiler
         self.splits.add_query(self.product)
         self.splits.add_level()
 
@@ -174,9 +176,17 @@ class Product():
             self.integrate(i)
         self.splits.add_level()
 
+        isets = []
+        for i in self.splits.cur:
+            # Skip over useless stuff
+            if not i.query:
+                continue
+            
+            query = Query(i.pre + [QueryStatement(i.query)])
+            iset = HqlCompiler(self.ctx.config, query).root
+            isets.append(iset)
 
-
-
+        return InstructionSet(isets)
 
     def service(self, pat:str) -> 'Product':
         from fnmatch import fnmatch
