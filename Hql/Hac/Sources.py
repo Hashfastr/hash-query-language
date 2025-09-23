@@ -4,7 +4,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Query import Query, QueryStatement
 from Hql.Expressions import PipeExpression
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 class Source():
     def __init__(self, ctx:Context) -> None:
@@ -105,6 +105,7 @@ class Product():
         self.conf = ctx.config.get_product(name)
         self.services = self.conf.get('services', dict())
         self.categories = self.conf.get('categories', dict())
+        self.splits = Splits()
         
         parser = Parser(self.conf['hql'])
         try:
@@ -148,47 +149,32 @@ class Product():
 
         return parser.assembly
 
-
-
-    def integrate(self, expr:Union[Query, PipeExpression], top:list[]):
+    def integrate(self, expr:Union[Query, PipeExpression]):
         if isinstance(expr, Query):
-            split = self.split(expr.statements)
-
+            self.splits.add_query(expr)
         else:
-            if expr.prepipe and query:
-                raise hqle.ConfigException(f'Service has a tabular expression in main expression in {self.name}')
-            elif expr.prepipe:
-
+            self.splits.add_pipes(expr)
 
     def assemble(self):
-        from Hql.Compiler import InstructionSet, HqlCompiler
-        from Hql.Query import Query, QueryStatement
-        from Hql.Expressions import PipeExpression
-
-        split = self.split(self.product.statements)
-        pre = split[0]
-        query = split[1]
-        post = split[2]
-        assert isinstance(query, (type(None), QueryStatement))
+        self.splits.add_query(self.product)
+        self.splits.add_level()
 
         # Assume using all services
         if not self.selection['services']:
             self.service('*')
 
         for i in self.selection['services']:
-            if isinstance(i, Query):
-                split = self.split(i.statements)
+            self.integrate(i)
+        self.splits.add_level()
+        
+        if not self.selection['categories']:
+            self.category('*')
 
-            elif isinstance(i, PipeExpression):
-                if i.prepipe and query:
-                    raise hqle.ConfigException(f'Service has a tabular expression in main expression in {self.name}')
-                if i.prepipe:
-                    
-                ...
-            
-            else:
-                hqle.CompilerException(f'Invalid service Hql compiled type {type(i)}')
-                
+        for i in self.selection['categories']:
+            self.integrate(i)
+        self.splits.add_level()
+
+
 
 
 

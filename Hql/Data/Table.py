@@ -149,7 +149,10 @@ class Table():
         return pltools.get_element_value(self.df, path)
 
     @staticmethod
-    def merge(tables:list["Table"]):
+    def merge(tables:list["Table"], interlace:bool=True):
+        if interlace:
+            return Table.interlace(tables)
+
         if not tables:
             return Table()
         
@@ -171,16 +174,81 @@ class Table():
             cur = table.df
             curs = table.schema.schema
             for key in curs:
+                # Generate a new key name if needed
                 if isinstance(curs[key], dict):
                     new_key = f'{key}_object'
                 else:
                     new_key = f'{key}_{curs[key].name}'
 
+                # If need new, rename to new
                 if key not in schema:
                     cur = cur.rename({key: new_key})
             new.append(cur)
-                
+        
         df = pl.concat(new, how='diagonal')
+        schema = Schema(schema=schema)
+                
+        return Table(df=df, schema=schema, name=name)
+
+    @staticmethod
+    def interlace(tables:list['Table']):
+        max_cols = 100
+        
+        if not tables:
+            return Table()
+        
+        # Quick short circuit
+        if len(tables) == 1:
+            return tables[0]
+        
+        name = tables[0].name
+        
+        schemas = []
+        for table in tables:
+            schemas.append(table.schema)
+        schema = Schema.merge(schemas).schema
+        
+        # generate col groups
+        col_groups = dict()
+        for table in tables:
+            # skip empty dataframes
+            if isinstance(table.df, type(None)) or table.df.is_empty():
+                continue
+
+            for col in table.df:
+                if col.name not in col_groups:
+                    col_groups[col.name] = []
+                    
+                col_groups[col.name].append(col)
+
+        new = dict()
+        for key in col_groups:
+            for col in col_groups[key]:
+                if key not in new:
+                    new[key] = col
+                    continue
+                
+                # Canon conflict
+                if new[key].dtype == pl.Struct and col.dtype == pl.Struct:
+                    l = Table(df=new[key].struct.unnest(), name=name)
+                    r = Table(df=col.struct.unnest(), name=name)
+                    
+                    new[key] = Table.merge([l, r]).df.to_struct()
+                    continue
+                
+                for i in range(max_cols):
+                    name = f'{key}_{i}'
+                    
+                    if name not in new:
+                        new[name] = col
+                        break
+                    
+                    if i == max_cols - 1:
+                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
+                        logging.critical(f'Applicable field: {key}')
+                        raise hqle.QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
+                
+        df = pl.DataFrame(new)
         schema = Schema(schema=schema)
                 
         return Table(df=df, schema=schema, name=name)

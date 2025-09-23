@@ -17,12 +17,12 @@ class Schema():
             schema:Union[dict, None]=None,
             sample_size:int=1
         ):
+        from Hql.Types.Compiler import CompilerType
         
         self.schema:dict = dict()
 
         if schema:
             normalized = self.normalize(schema)
-            assert isinstance(normalized, dict)
             self.schema = normalized
 
         # This is in the case of sample json data
@@ -93,6 +93,7 @@ class Schema():
         for key in keygroups:
             if len(keygroups[key]) == 1:
                 new[key] = keygroups[key][0]
+                continue
 
             for schema in keygroups[key]:
                 if isinstance(schema, CompilerType):
@@ -100,7 +101,10 @@ class Schema():
                     new[new_key] = schema
                 else:
                     new_key = f'{key}_object'
-                    new[new_key] = Schema.merge([new[new_key], schema]).schema
+                    if new_key not in new:
+                        new[new_key] = schema
+                    else:
+                        new[new_key] = Schema.merge([new[new_key], schema]).schema
 
         return Schema(schema=new)
 

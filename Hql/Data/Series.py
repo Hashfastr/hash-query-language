@@ -25,4 +25,5 @@ class Series():
 
     def cast(self, target:"hqlt.HqlType"):
         self.series = target.cast(self.series)
+        self.type = target
         return self

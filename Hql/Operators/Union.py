@@ -33,7 +33,7 @@ class Union(Operator):
                 if j.name in ignore:
                     merge.append(ignore.pop(j.name))
 
-        tables = [Table.merge(merge)]
+        tables = [Table.merge(merge, interlace=False)]
         for i in ignore:
             tables.append(ignore[i])
 
