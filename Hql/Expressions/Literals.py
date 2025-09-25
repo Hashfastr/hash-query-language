@@ -16,15 +16,15 @@ class Literal(Expression):
         return str(self.value)
 
 class TypeExpression(Literal):
-    def __init__(self, etype:str):
+    def __init__(self, hql_type:str):
         Literal.__init__(self)
-        self.type = etype
+        self.hql_type = hql_type
 
     def decompile(self, ctx: 'Context') -> str:
-        return self.type
+        return self.hql_type
         
     def eval(self, ctx:'Context', **kwargs):
-        return hqlt.from_name(self.type)
+        return hqlt.from_name(self.hql_type)()
 
 # A string literal
 # literally a string
@@ -48,7 +48,6 @@ class StringLiteral(Literal):
     def eval(self, ctx:'Context', **kwargs):
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
-
         return self.value
 
 # Integer
@@ -141,3 +140,12 @@ class Bool(Literal):
             return pl.lit(self.value)
 
         return self.value
+
+class Multivalue(Literal):
+    def __init__(self, value:list[Literal]) -> None:
+        Literal.__init__(self)
+        self.value = value
+
+    def decompile(self, ctx: 'Context') -> str:
+        dec = [x.decompile(ctx) for x in self.value]
+        return 'make_mv(' + ', '.join(dec) + ')'

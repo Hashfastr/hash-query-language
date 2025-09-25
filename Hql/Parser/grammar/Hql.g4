@@ -205,6 +205,7 @@ afterPipeOperator:
     | projectReorderOperator
     | projectKeepOperator
     | reduceByOperator
+    | renameOperator
     | renderOperator
     | sampleOperator
     | sampleDistinctOperator
@@ -619,6 +620,12 @@ reduceByOperator:
 
 reduceByWithClause:
     WITH Expressions+=namedExpression (',' Expressions+=namedExpression)*;
+
+renameOperator:
+    RENAME Expressions+=renameToExpression (',' Expressions+=renameToExpression)*;
+
+renameToExpression:
+    Source=tableNameReference TO Destination=tableNameReference;
 
 renderOperator:
     RENDER 
@@ -1159,13 +1166,11 @@ wildcardedPathName:
     | entityName
     ;
 
-
-
 contextualDataTableExpression:
     CONTEXTUAL_DATATABLE Id=GUIDLITERAL Schema=rowSchema;
 
 dataTableExpression:
-    DATATABLE (Parameters+=relaxedQueryOperatorParameter)* Schema=rowSchema '[' (Values+=literalExpression)? (',' Values+=literalExpression)* (',')? ']';
+    DATATABLE (Parameters+=relaxedQueryOperatorParameter)* Schema=rowSchema '[' (Values+=literalExpression)? (',' Values+=literalExpression)* (',')? ']' (AS TableName=tableNameReference)?;
 
 rowSchema:
     '('  (Columns+=rowSchemaColumnDeclaration)? (',' Columns+=rowSchemaColumnDeclaration)* (',')? ')';

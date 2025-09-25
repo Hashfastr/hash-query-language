@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
+
+from Hql.Compiler.InstructionSet import InstructionSet
 
 from .__proto__ import Expression
 from .Logic import *
@@ -8,18 +10,19 @@ from .Functions import *
 from .Aggregation import *
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators import Operator, Database
+    from Hql.Compiler import InstructionSet
 
 from Hql.Exceptions import HqlExceptions as hqle
 
 class PipeExpression(Expression):
-    def __init__(self, pipes:list['Operator'], prepipe:Union['Operator', Expression, None]=None):
+    def __init__(self, pipes:list['Operator'], prepipe:Union['Expression', None]=None):
         Expression.__init__(self)
         self.prepipe                = prepipe
         self.pipes:list['Operator'] = pipes
 
     def __bool__(self):
-        return bool(self.prepipe)
+        return bool(self.prepipe) or bool(self.pipes)
         
     def to_dict(self):
         d:dict = {
@@ -52,31 +55,6 @@ class PipeExpression(Expression):
             out += f'| {i}'
 
         return out
-    
-    # Takes pipes and puts them into a compiler set
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Operators import Operator
-        from Hql.Operators.Database import Database
-        from Hql.Compiler import CompilerSet
-
-        no_exec = kwargs.get('no_exec', False)
-
-        # Resolve database references
-        prepipe = self.prepipe.eval(ctx, tabular=True)
-
-        if isinstance(prepipe, type(None)):
-            raise hqle.CompilerException(f'Prepipe evaluation returned None')
-        
-        if not isinstance(prepipe, (Operator, CompilerSet)):
-            raise hqle.CompilerException(f'Prepipe returned non-operator/cs, got {prepipe}')
-        
-        # can add more tabular prepipe types here
-        if not isinstance(prepipe, (Database, Operator, CompilerSet)) and self.pipes != []:
-            raise hqle.CompilerException(f'Attempting to use a non-tabular expression with pipe expression {self.pipes[0].type}')
-
-        ops = [prepipe] + self.pipes
-
-        return cs.eval(ctx)
 
 class OpParameter(Expression):
     def __init__(self, name:str, value:Expression):
@@ -95,7 +73,7 @@ class OpParameter(Expression):
         }
 
 class ToClause(Expression):
-    def __init__(self, expr:Expression, to:Union[None, hqlt.HqlType]=None):
+    def __init__(self, expr:Expression, to:Union[None, Expression, hqlt.HqlType]=None):
         Expression.__init__(self)
         self.expr = expr
         self.to = to
@@ -106,16 +84,23 @@ class ToClause(Expression):
             'expr': self.expr.to_dict(),
         }
 
-        if self.to:
+        if isinstance(self.to, hqlt.HqlType):
             d['to'] = self.to.name
+
+        elif self.to:
+            d['to'] = self.to.to_dict()
 
         return d
 
     def decompile(self, ctx: 'Context') -> str:
         expr = self.expr.decompile(ctx)
 
-        if self.to:
+        if isinstance(self.to, hqlt.HqlType):
             to = self.to.name
+            expr += f' to {to}'
+
+        elif self.to:
+            to = self.to.decompile(ctx)
             expr += f' to {to}'
 
         return expr

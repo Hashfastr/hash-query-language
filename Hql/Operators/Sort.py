@@ -1,11 +1,15 @@
-from Hql.Expressions import Expression
 from Hql.Operators import Operator
 from Hql.Context import register_op, Context
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Expressions import OrderedExpression
+
 
 # @register_op('Sort')
 # @register_op('Order')
 class Sort(Operator):
-    def __init__(self, exprs:list[Expression]):
+    def __init__(self, exprs:list['OrderedExpression']):
         Operator.__init__(self)
         self.exprs = exprs
 
@@ -24,17 +28,10 @@ class Sort(Operator):
         orders = []
         nulls = []
         for expr in self.exprs:
+            assert expr.expr
             exprs.append(expr.expr.eval(ctx, as_pl=True))
-            
-            if expr.order == 'desc':
-                orders.append(True)
-            else:
-                orders.append(False)
-                
-            if expr.nulls == 'last':
-                nulls.append(True)
-            else:
-                nulls.append(False)
+            orders.append(expr.order == 'desc')
+            nulls.append(expr.nulls == 'last')
 
         for table in ctx.data:
             table.sort(exprs, orders, nulls)

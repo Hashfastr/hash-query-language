@@ -1,16 +1,13 @@
 import sys    
 
-from Hql.Parser import Parser, SigmaParser
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Exceptions import HacExceptions as hace
-from Hql.Compiler import Compiler
-from Hql.Query import Query
-from Hql.Hac import Parser as HaCParser
+from Hql.Config import Config
+from Hql import run_query
+from Hql.Data import Data
 
 import json
 import logging
 import argparse, sys
-import cProfile, pstats, time
+import cProfile, pstats
 from pathlib import Path
 
 def config_logging(level:int):
@@ -47,13 +44,15 @@ def main():
     parser.add_argument('-c', '--config', help="Location of the config file")
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
     parser.add_argument('-dpar', '--deparse', help="Deparse the program before compiling", action='store_true')
-    parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
+    # parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
+    parser.add_argument('-pl', '--plan', help="Prints the plan for the execution", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
     parser.add_argument('-sig', '--sigma', help="Input file is a Sigma file", action='store_true')
     parser.add_argument('-om', '--omni', help="Process both Sigma and Hql if given the input", action='store_true')
     
     args = parser.parse_args()
     
+    profiler = None
     if args.profile:
         profiler = cProfile.Profile()
         profiler.enable()
@@ -67,7 +66,7 @@ def main():
         conf_path = "./conf"
     else:
         conf_path = args.config
-    conf_path = Path(conf_path)
+    conf = Config(Path(conf_path))
         
     sigma_files:list[Path] = []
     hql_files:list[Path] = []
@@ -99,13 +98,17 @@ def main():
             with i.open(mode='r') as f:
                 txt = f.read()
 
-            try:
-                print(run_query(txt, args, i, conf_path))
-            except Exception as e:
-                logging.critical('Exception caught when running query')
-                logging.critical(e)
-                errors.append(i)
-                continue
+            # try:
+            data = run_query(txt, conf, src=i, **vars(args))
+            if isinstance(data, Data):
+                print(json.dumps(data.to_dict(), default=repr))
+            else:
+                print(data)
+            # except Exception as e:
+            #     logging.critical('Exception caught when running query')
+            #     logging.critical(e)
+            #     errors.append(i)
+            #     continue
 
             successes.append(i)
     
@@ -115,124 +118,27 @@ def main():
                 txt = f.read()
 
             try:
-                print(run_query(txt, args, i, conf_path))
+                data = run_query(txt, conf, src=i, **vars(args))
+                if isinstance(data, Data):
+                    print(json.dumps(data.to_dict(), default=repr))
+                else:
+                    print(data)
             except Exception as e:
-                logging.critical('Exception caught when running query')
-                logging.critical(e)
+                logging.exception('Exception caught when running query')
+                # logging.critical(e.__traceback__)
                 errors.append(i)
                 continue
 
             successes.append(i)
 
     logging.info(f'Finished execution {len(errors)} errors, {len(successes)} successes')
-
-    if errors:
-        return -1
-        
-def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
-    ##################################
-    ## Generate HaC (if applicable) ##
-    ##################################
-
-    logging.debug(f'Parsing HaC for {src_path.as_posix()}...')
-    if args.sigma:
-        parser = SigmaParser(text)
-        hac = parser.gen_hac()
-
-    else:
-        try:
-            parser = HaCParser.Parser(text=text)
-            hac = parser.assemble()
-        except hace.LexerException:
-            hac = None
-
-    if args.render_hac:
-        if not hac:
-            logging.critical('Hql file does not contain a valid HaC comment!')
-            return ''
-
-        return hac.render(args.render_hac)
-
-    #######################
-    ## Generate Assembly ##
-    #######################
     
-    logging.debug(f'Parsing {src_path.as_posix()}...')
-    start = time.perf_counter()
-
-    if args.sigma or args.omni:
-        parser = SigmaParser(text)
-    else:
-        parser = Parser(text)
-    parser.assemble()
-    
-    logging.debug('Done.')
-    
-    end = time.perf_counter()
-    logging.debug(f'Parsing took {end - start}')
-    
-    if args.asm_show:
-        # Use print to give a raw output
-        return str(parser.assembly)
-
-    if args.deparse:
-        deparse = ''
-
-        if hac:
-            deparse += hac.render(target='decompile')
-            deparse += '\n'
-
-        if not isinstance(parser.assembly, Query):
-            raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
-
-        deparse += Compiler(conf_path, parser.assembly).decompile()
-        return deparse
-        
-    ######################
-    ## Compile Assembly ##
-    ######################
-    
-    logging.debug("Compiling...")
-    start = time.perf_counter()
-
-    if not isinstance(parser.assembly, Query):
-        raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
-    
-    compiler = Compiler(conf_path, parser.assembly)
-    compiler.compile()
-    
-    end = time.perf_counter()
-    logging.debug("Done.")
-    
-    logging.debug(f"Compiling took {end - start}")
-
-    if args.decompile:
-        return compiler.decompile()
-   
-    if args.no_exec:
-        return ''
-    
-    #############
-    ## Queries ##
-    #############
-
-    logging.debug("Running")
-    start = time.perf_counter()
-    
-    results = compiler.run()
-    return json.dumps(results.to_dict(), default=repr)
-   
-    end = time.perf_counter() 
-    logging.debug("Ran")
-    logging.debug(f"Computation took {end - start}")
-    
-    logging.debug(f'Got {len(results)} results from query')
-
     #####################
     ## Profiling stuff ##
     #####################
     
     if args.profile:
+        assert profiler
         profiler.disable()
         
         with open('./profile.txt', mode='w+') as f:
@@ -240,7 +146,10 @@ def run_query(text:str, args, src_path:Path, conf_path:Path) -> str:
             stats.sort_stats('time')
             stats.print_stats()
             
-        print("Performance metrics outputted to profile.txt")
+        logging.info("Performance metrics outputted to profile.txt")
+
+    if errors:
+        return -1
         
 if __name__ == "__main__":
     main()

@@ -1,26 +1,23 @@
 import json
 import logging
-from typing import TYPE_CHECKING, Union
-from pathlib import Path, PurePath
+from typing import Union
+from pathlib import Path
 import oyaml as yaml
 from Hql.Exceptions import HqlExceptions as hqle
 
-if TYPE_CHECKING:
-    from Hql.Operators import Database
-
 class Config():
-    def __init__(self, conf_path:str):
+    def __init__(self, path:Union[Path, None]=None):
         # skeleton
         self.conf = {
             'general': {},
-            'databases': {}
+            'databases': {},
+            'products': {}
         }
 
-        self.load(conf_path)
+        if path:
+            self.load(path)
 
-    def load(self, conf_path:str):
-        path = Path(conf_path)
-
+    def load(self, path:Path):
         files = []
 
         # If this triggers, the below loop won't run
@@ -41,7 +38,8 @@ class Config():
         if not parsed:
             return
 
-        # elevate to the generic config format
+        # Elevate to the generic config format
+        # That is, a top level 'config' with a list of dicts
         if 'config' not in parsed:
             parsed = {'config': [parsed]}
 
@@ -54,8 +52,14 @@ class Config():
                 if j == 'database':
                     self.add_database(src, i[j])
 
-                if j == 'general':
+                elif j == 'general':
                     self.load_general(src, i[j])
+
+                elif j == 'product':
+                    self.load_product(src, i[j])
+
+                else:
+                    logging.error(f'Invalid config block {j}')
 
     def add_database(self, src:str, config:dict):
         for i in ['name', 'type', 'conf']:
@@ -71,7 +75,7 @@ class Config():
     def is_database(self, name:str) -> bool:
         return name in self.conf['databases']
     
-    def get_database(self, dbname:str) -> 'Database':
+    def get_database(self, dbname:str) -> dict:
         if dbname not in self.conf['databases']:
             logging.critical(f'Config file for {dbname} is missing databases definition')
             logging.critical('Check that your config contains a database under that name')
@@ -85,7 +89,7 @@ class Config():
 
         self.conf['general'] = config
         
-    def get_default_db(self) -> 'Database':
+    def get_default_db(self) -> dict:
         if 'default_db' not in self.conf['general']:
             logging.critical('Config file is missing databases definition')
             logging.critical('Check that your config contains a database')
@@ -94,5 +98,21 @@ class Config():
         name = self.conf['general']['default_db']
         return self.get_database(name)
 
-# global HqlConfig
-# HqlConfig = Config()
+    def load_product(self, src:str, config:dict):
+        if not config.get('configured', True):
+            return
+
+        for i in ['name', 'hql']:
+            if i not in config:
+                raise hqle.ConfigException(f'Product config {src} missing required key {i}')
+        name = config['name']
+
+        if name in self.conf['products']:
+            raise hqle.ConfigException(f'Duplicate product definition: {name} in {src}')
+
+        self.conf['products'][name] = config
+
+    def get_product(self, name:str) -> dict:
+        if name in self.conf['products']:
+            return self.conf['products'][name]
+        raise hqle.ConfigException(f'Attempting to get undefined product {name}')

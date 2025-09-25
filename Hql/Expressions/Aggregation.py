@@ -13,14 +13,13 @@ class OrderedExpression(Expression):
         Expression.__init__(self)
         self.expr = expr
         self.order = order
+        self.nulls = nulls
         
         if nulls == '':
             if order == 'asc':
                 self.nulls = 'first'
             if order == 'desc':
                 self.nulls = 'last'
-        else:
-            self.nulls = nulls
 
     def decompile(self, ctx: 'Context') -> str:
         if not self.expr:
@@ -43,7 +42,7 @@ class OrderedExpression(Expression):
 
 class ByExpression(Expression):
     def __init__(self, exprs:list[Expression]):
-        super().__init__()
+        Expression.__init__(self)
         self.exprs = exprs
         
     def build_table_agg(self, ctx:'Context', table:'Table'):

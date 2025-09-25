@@ -25,7 +25,7 @@ class Table():
             name:Union[str, None]=None
         ):
         
-        if not isinstance(df, type(None)):
+        if isinstance(df, pl.DataFrame):
             self.df = df
         else:
             self.df = pl.DataFrame()
@@ -149,7 +149,49 @@ class Table():
         return pltools.get_element_value(self.df, path)
 
     @staticmethod
-    def merge(tables:list["Table"]):
+    def merge(tables:list["Table"], interlace:bool=True):
+        if interlace:
+            return Table.interlace(tables)
+
+        if not tables:
+            return Table()
+        
+        # Quick short circuit
+        if len(tables) == 1:
+            return tables[0]
+        
+        name = tables[0].name
+        
+        schemas = []
+        for table in tables:
+            schemas.append(table.schema)
+        schema = Schema.merge(schemas).schema
+
+        # Makes an assumption that the above merge converted field names accurately
+        # in the case of a conflict, e.g. they get split into types.
+        new = []
+        for table in tables:
+            cur = table.df
+            curs = table.schema.schema
+            for key in curs:
+                # Generate a new key name if needed
+                if isinstance(curs[key], dict):
+                    new_key = f'{key}_object'
+                else:
+                    new_key = f'{key}_{curs[key].name}'
+
+                # If need new, rename to new
+                if key not in schema:
+                    cur = cur.rename({key: new_key})
+            new.append(cur)
+        
+        df = pl.concat(new, how='diagonal')
+        schema = Schema(schema=schema)
+                
+        return Table(df=df, schema=schema, name=name)
+
+    @staticmethod
+    def interlace(tables:list['Table']):
         max_cols = 100
         
         if not tables:
@@ -209,14 +251,6 @@ class Table():
         df = pl.DataFrame(new)
         schema = Schema(schema=schema)
                 
-        return Table(df=df, schema=schema, name=name)
-    
-    @staticmethod
-    def concat(tables:list["Table"]):
-        df = pl.concat([x.df for x in tables])
-        schema = tables[0].schema
-        name = tables[0].name
-
         return Table(df=df, schema=schema, name=name)
 
     '''

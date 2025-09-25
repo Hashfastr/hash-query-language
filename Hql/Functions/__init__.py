@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING, Union
 from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
-    from Hql.Data import Data
+    from Hql.Data import Data, Series
     from Hql.Context import Context
     from Hql.Expressions import Expression as Expression
+    from Hql.Compiler import InstructionSet
+    from Hql.Hac import Source
 
 class Function():
     def __init__(self, args:list, min:int, max:int):
@@ -17,11 +19,18 @@ class Function():
         self.min = min
         # Can disable by passing -1
         self.max = max
+        self.preprocess = False
+        self.type = 'Function'
+        self.static = False
         
         if len(args) < min:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
         if max != -1 and len(args) > max:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at most {self.max}')
+
+    def decompile(self, ctx:'Context'):
+        args = ', '.join([x.decompile(ctx) for x in self.args])
+        return f'{self.name}({args})'
         
     def to_dict(self):
         return {
@@ -36,7 +45,7 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Expression']:
+    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet', 'Source']:
         from Hql.Data import Data
         return Data()
 

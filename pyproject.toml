@@ -25,12 +25,16 @@ dependencies = [
     "elasticsearch",
     "numpy",
     "requests",
-    "ndjson"
+    "ndjson",
+    "oyaml",
+    "opensearch-py",
+    "aiohttp",
+    "boto3"
 ]
 
 [project.urls]
-Homepage = "https://github.com/Hashfastr/hash-query-language"
-Issues = "https://github.com/Hashfastr/hash-query-language/issues"
+Homepage = "https://github.com/Hashfastr/Hql"
+Issues = "https://github.com/Hashfastr/Hql/issues"
 
 [build-system]
 requires = ["hatchling >= 1.26"]

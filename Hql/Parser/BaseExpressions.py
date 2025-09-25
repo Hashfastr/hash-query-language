@@ -156,8 +156,7 @@ class BaseExpressions(HqlVisitor):
     def visitScalarType(self, ctx: HqlParser.ScalarTypeContext):
         if ctx.Token == None:
             raise hqle.ParseException('ScalarType has no string token', ctx)
-
-        return hqlt.from_name(ctx.Token.text)()
+        return Expr.TypeExpression(ctx.Token.text)
 
     def visitStaticNamedExpression(self, ctx: HqlParser.StaticNamedExpressionContext):
         name = self.visit(ctx.Name)

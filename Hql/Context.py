@@ -1,5 +1,6 @@
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import TYPE_CHECKING, Union
+from Hql.Config import Config
 
 if TYPE_CHECKING:
     from Hql.Data import Data
@@ -43,28 +44,28 @@ def get_func(name):
     else:
         raise hqle.CompilerException(f"Unknown function {name} referenced")
     
-# op_registry = {}
-#
-# def register_op(name):
-#     def decorator(cls):
-#         from Hql.Operators import Operator
-#         from Hql.Operators.Database import Database
-#
-#         if not issubclass(cls, Operator):
-#             raise hqle.CompilerException(f'Attempting to register non-operator class {name} as an operator')
-#
-#         if issubclass(cls, Database):
-#             raise hqle.CompilerException(f'Attempting to register database class {name} as an operator, use @register_database')
-#
-#         op_registry[name] = cls
-#         return cls
-#     return decorator
-#
-# def get_op(name):
-#     if name in op_registry:
-#         return op_registry[name]
-#     else:
-#         raise hqle.CompilerException(f"Unknown operator {name} referenced")
+op_registry = {}
+
+def register_op(name):
+    def decorator(cls):
+        from Hql.Operators import Operator
+        from Hql.Operators.Database import Database
+
+        if not issubclass(cls, Operator):
+            raise hqle.CompilerException(f'Attempting to register non-operator class {name} as an operator')
+
+        if issubclass(cls, Database):
+            raise hqle.CompilerException(f'Attempting to register database class {name} as an operator, use @register_database')
+
+        op_registry[name] = cls
+        return cls
+    return decorator
+
+def get_op(name):
+    if name in op_registry:
+        return op_registry[name]
+    else:
+        raise hqle.CompilerException(f"Unknown operator {name} referenced")
 
 '''
 The naming scheme here is 
@@ -97,7 +98,7 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data:'Data', symbol_table:Union[dict, None]=None, macros:Union[dict, None]=None) -> None:
+    def __init__(self, data:'Data', symbol_table:Union[dict, None]=None, macros:Union[dict, None]=None, config:Union[Config, None]=None) -> None:
         from copy import copy
 
         self.dbs = copy(database_registry)
@@ -106,10 +107,31 @@ class Context():
         self.data = data
         self.symbol_table = symbol_table if symbol_table else dict()
         self.macros = macros if macros else dict()
-        self.root = None
+        self.config = config if config else Config()
+        # self.root = None
 
     def __bool__(self):
         return self.data.__bool__()
+
+    @staticmethod
+    def merge(ctxs:list['Context']):
+        from Hql.Data import Data
+        
+        if len(ctxs) == 1:
+            return ctxs[0]
+
+        data = Data.merge([x.data for x in ctxs])
+
+        syms = dict()
+        macros = dict()
+        for i in ctxs:
+            for j in i.symbol_table:
+                syms[j] = i.symbol_table[j]
+            
+            for j in i.macros:
+                macros[j] = i.macros[j]
+
+        return Context(data, symbol_table=syms, macros=macros)
 
     def get_db(self, name:str):
         if name in self.dbs:

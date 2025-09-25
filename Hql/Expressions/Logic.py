@@ -49,7 +49,11 @@ class Equality(Comparator):
 
         self.list = 'in' in op
 
+        if len(rh) > 1 and not self.list:
+            raise hqle.CompilerException('Non-list equality given more than one righthand')
+
     def as_pl(self, ctx:'Context'):
+        from Hql.Expressions import Literal, StringLiteral
         lh = self.lh.eval(ctx, as_pl=True)
 
         if not isinstance(lh, pl.Expr):
@@ -57,16 +61,14 @@ class Equality(Comparator):
         
         rh = []
         for i in self.rh:
-            rh.append(i.eval(ctx, as_pl=self.cs, as_str=not self.cs))
+            rh.append(i.eval(ctx, as_pl=True))
 
         expr = None
         for i in rh:
-            i = pl.regex_escape(i)
-
             if self.cs:
-                new = (lh == rh)
+                new = (lh == i)
             else:
-                # rh is evaluated as a string here
+                i = pl.select(i.str.escape_regex()).item()
                 regex = f'(?i)^{i}$'
                 new = lh.str.contains(regex)
 
@@ -147,6 +149,9 @@ class Substring(Comparator):
         self.cs = op.endswith('_cs')
 
         self.list = ('all' in op or 'any' in op)
+
+        if len(rh) > 1 and not self.list:
+            raise hqle.CompilerException('Non-list substring given multiple rh expressions')
  
     def to_dict(self):
         return {
@@ -306,6 +311,7 @@ class BetweenEquality(Expression):
         self.lh = lh
         self.start = start
         self.end = end
+        self.op = op
         self.negate = '!' in op
     
     def to_dict(self):

@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING
 from Hql.Operators import Operator
 from Hql.Data import Data
 from Hql.Expressions import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_op, Context
 import polars as pl
+
+if TYPE_CHECKING:
+    from Hql.Expressions import ByExpression
 
 '''
 Give the top, or bottom, x values for a given field in a dataframe
@@ -23,7 +27,7 @@ https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
 # @register_op('Top')
 class Top(Operator):
-    def __init__(self, expr:Expression, by:Expression):
+    def __init__(self, expr:Expression, by:'ByExpression'):
         Operator.__init__(self)
         self.expr = expr
         self.by = by

@@ -1,4 +1,5 @@
 from Hql.Exceptions import HacExceptions as hace
+from Hql.Hac.Sources import Source, Product
 
 class Hac():
     '''

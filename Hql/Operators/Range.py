@@ -23,7 +23,7 @@ https://learn.microsoft.com/en-us/kusto/query/range-operator
 # @register_op('Range')
 class Range(Operator):
     def __init__(self, name:'Expression', start:'Expression', end:'Expression', step:'Expression'):
-        super().__init__()
+        Operator.__init__(self)
         self.name = name
         self.start = start
         self.end = end

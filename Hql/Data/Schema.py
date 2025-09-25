@@ -8,6 +8,7 @@ from Hql.Types.Compiler import CompilerType
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
+    from Hql.Types.Compiler import CompilerType
 
 class Schema():
     def __init__(
@@ -16,12 +17,13 @@ class Schema():
             schema:Union[dict, None]=None,
             sample_size:int=1
         ):
+        from Hql.Types.Compiler import CompilerType
         
         self.schema:dict = dict()
 
         if schema:
-            self.schema = schema
-            self.schema = self.normalize()
+            normalized = self.normalize(schema)
+            self.schema = normalized
 
         # This is in the case of sample json data
         # A list of dicts
@@ -74,18 +76,13 @@ class Schema():
         return out
     
     @staticmethod
-    def merge(schemata:list):
-        if len(schemata) == 1:
-            return schemata[0]
-        
-        max_cols = 100
-        
+    def merge(schemata:list[Union['Schema', dict]]) -> 'Schema':
+        from Hql.Types.Compiler import CompilerType
+
         # Gen keygroups
         keygroups = dict()
         for schema in schemata:
-            if isinstance(schema, Schema):
-                schema = schema.schema
-            
+            schema = schema if isinstance(schema, dict) else schema.schema
             for key in schema:
                 if key not in keygroups:
                     keygroups[key] = [schema[key]]
@@ -94,29 +91,20 @@ class Schema():
 
         new = dict()
         for key in keygroups:
+            if len(keygroups[key]) == 1:
+                new[key] = keygroups[key][0]
+                continue
+
             for schema in keygroups[key]:
-                if key not in new:
-                    new[key] = schema
-                    continue
-            
-                # Canon conflict
-                if isinstance(new[key], dict) and isinstance(schema, dict):
-                    new[key] = Schema.merge([new[key], schema]).schema
-                    continue
-                
-                # Find a free name
-                for j in range(max_cols):
-                    name = f'{key}_{j}'
-                    
-                    # This is the case that all previous cols were conflicting
-                    if name not in new:
-                        new[name] = schema
-                        break
-                    
-                    if j == max_cols - 1:
-                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
-                        logging.critical(f'Applicable field: {key}')
-                        raise hqle.QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}')
+                if isinstance(schema, CompilerType):
+                    new_key = f'{key}_{schema.name}'
+                    new[new_key] = schema
+                else:
+                    new_key = f'{key}_object'
+                    if new_key not in new:
+                        new[new_key] = schema
+                    else:
+                        new[new_key] = Schema.merge([new[new_key], schema]).schema
 
         return Schema(schema=new)
 
@@ -124,21 +112,22 @@ class Schema():
     Created to solve the problem of nested Schema objects in a schema dict.
     Just unnests them such that we have a pure dict structure.
     '''
-    def normalize(self, node:Union[dict, "Schema", None]=None):
+    def normalize(self, node:Union[dict, 'Schema', None]=None) -> Union[dict, 'CompilerType']:
+        from Hql.Types.Compiler import CompilerType
+
         if node == None:
             node = self.schema
 
         if isinstance(node, Schema):
             node = node.schema
-        
-        if isinstance(node, dict):
-            new = dict()
-            for key in node:
-                new[key] = self.normalize(node=node[key])
-            return new
-        
-        else:
+
+        if isinstance(node, CompilerType):
             return node
+
+        new = dict()
+        for key in node:
+            new[key] = self.normalize(node[key])
+        return new
 
     # Isolate the schema at a given path
     def select(self, path:list[str]) -> "Schema":
@@ -479,7 +468,7 @@ class Schema():
     If a col is not defined in the schema, then it just skips over it
     Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:pl.DataFrame, schema:Union[None, dict, CompilerType]=None):
+    def apply(self, df:Union[pl.DataFrame, pl.Series], schema:Union[None, dict, 'Schema', CompilerType]=None):
         if isinstance(schema, Schema):
             schema = schema.schema
         
@@ -487,8 +476,9 @@ class Schema():
             schema = self.schema
         
         # Single value schema
-        if not isinstance(schema, dict):
-            print(type(df))
+        if isinstance(schema, CompilerType):
+            if not isinstance(df, pl.Series):
+                raise hqle.CompilerException('Attempting singular type cast on a dataframe ')
             return schema.cast(df)
         
         new = {}

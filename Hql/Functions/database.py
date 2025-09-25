@@ -2,6 +2,7 @@ from . import Function
 from Hql import Config
 from Hql.Context import register_func, Context
 from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Expressions import StringLiteral
 
 import logging
 
@@ -9,42 +10,30 @@ import logging
 @register_func('database')
 class database(Function):
     def __init__(self, args:list):
-        super().__init__(args, 0, 1)
-        
-        # later feature to use, maybe
-        self.disallowed = (
-            'HOSTS',
-            'HOST',
-            'USER',
-            'PASS',
-            'VALIDATE_CERTS',
-            'TYPE'
-        )
+        Function.__init__(self, args, 0, 1)
+        self.preprocess = True
 
-        if self.args != [] and self.args[0].type != 'StringLiteral':
+        if args and not isinstance(args[0], StringLiteral):
             raise hqle.ArgumentException(f'Bad database argument datatype {args[0].type}')
+
+        if args:
+            self.dbname = self.args[0].eval(None, as_str=True)
+            self.default = self.dbname == ''
+        else:
+            self.dbname = ''
+            self.default = True
             
     def eval(self, ctx:'Context', **kwargs):
-        name = self.args[0].eval(None, as_str=True)
-        if self.args == [] or name == '':
-            dbconf = Config.HqlConfig.get_default_db()
+        if self.default:
+            dbconf = ctx.config.get_default_db()
+            name = 'default'
         else:
-            dbconf = Config.HqlConfig.get_database(name)
+            dbconf = ctx.config.get_database(self.dbname)
+            name = self.dbname
         
-        # This will probably have some unintended consequences
-        # Enable when ready
-        # Enables dynamic conf changes to a dbconfig
-        # for i in self.args[1:]:
-        #     arg = i.get_value().split('=')
-            
-        #     if arg[0] in disallowed:
-        #         raise CompilerException(f'Invalid variable set in database call {arg[0]}')
-            
-        #     dbconf[arg[0]] = arg[1]
-        
-        if 'TYPE' not in dbconf:
+        if 'type' not in dbconf:
             logging.critical('Missing database type in database config')
             logging.critical(f"Available DB types: {', '.join(ctx.get_db_types())}")
             raise hqle.ConfigException(f'Missing TYPE definition in database config for {name}')
 
-        return ctx.get_db(dbconf['TYPE'])(dbconf)
+        return ctx.get_db(dbconf['type'])(dbconf, name=name)

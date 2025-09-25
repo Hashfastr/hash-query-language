@@ -7,10 +7,11 @@ from typing import Union, TYPE_CHECKING
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Expressions import OpParameter
+    from Hql.Compiler import InstructionSet
 
 # @register_op('Join')
 class Join(Operator):
-    def __init__(self, rh:'Expression', params:Union[None, list['OpParameter']]=None, on:Union[None, list['Expression']]=None, where:Union[None, 'Expression']=None):
+    def __init__(self, rh:Union['Expression', 'InstructionSet'], params:Union[None, list['OpParameter']]=None, on:Union[None, list['Expression']]=None, where:Union[None, 'Expression']=None):
         Operator.__init__(self)
         self.rh = rh
         self.params:list = params if params else []

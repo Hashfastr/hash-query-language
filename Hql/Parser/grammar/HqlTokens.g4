@@ -313,6 +313,7 @@ YMAX: 'ymax';
 YMIN: 'ymin';
 YSPLIT: 'ysplit';
 YTITLE: 'ytitle';
+RENAME: 'rename';
 
 // types
 BOOL: 'bool';

@@ -17,7 +17,7 @@ class FuncExpr(Expression):
         else:
             self.name = name
 
-        self.args = args if args else []
+        self.args:list[Expression] = args if args else []
 
     def __bool__(self):
         return self.name.__bool__()
@@ -96,6 +96,7 @@ class DotCompositeFunction(Expression):
 
         receiver = kwargs.get('receiver', None)
         no_exec = kwargs.get('no_exec', False)
+        preprocess = kwargs.get('preprocess', False)
         
         # Do we even need this? Doesn't make any sense.
         '''
@@ -105,10 +106,17 @@ class DotCompositeFunction(Expression):
         if kwargs.get('as_str', False):
             return '.'.join(self.gen_list(ctx))
         '''
+        
+        funcs:list[Function] = []
+        for func in self.funcs:
+            if isinstance(func, FuncExpr):
+                func = func.eval(ctx)
+            funcs.append(func)
 
         func_list = []
-        for i in self.funcs:
-            func = i.eval(ctx)
+        for func in funcs:
+            if preprocess and not func.preprocess:
+                raise hqle.QueryException(f'Attempting to use function {func.name} in a preprocess context')
             func_list.append(func)
             
             if not no_exec:

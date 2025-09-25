@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     import Hql.Expressions as Expr
 
 class Selection():
-    def __init__(self, name:str, selection:dict):
+    def __init__(self, selection:Union[list, dict], name:str=''):
         from Hql.Context import Context
         from Hql.Data import Data
 
@@ -17,23 +17,26 @@ class Selection():
         self.selection = selection
         self.fields = []
 
-    def process_fields(self):
-        for i in self.selection:
-            field = self.process_field(i, self.selection[i])
-            self.fields.append(field)
-        return self.build_selection()
-
     def build_selection(self):
         from Hql.Expressions import BinaryLogic
-
         exprs = []
-        for i in self.fields:
-            exprs.append(i)
+
+        if isinstance(self.selection, list):
+            op = 'or'
+            for i in self.selection:
+                expr = Selection(i).build_selection()
+                exprs.append(expr)
+
+        else:
+            op = 'and'
+            for i in self.selection:
+                expr = self.process_field(i, self.selection[i])
+                exprs.append(expr)
 
         if len(exprs) == 1:
             return exprs[0]
 
-        return BinaryLogic(exprs[0], exprs[1:], 'and')
+        return BinaryLogic(exprs[0], exprs[1:], op)
 
     def to_literal_object(self, value, modifiers:list[str]):
         from Hql.Expressions.Literals import StringLiteral, Integer, Float

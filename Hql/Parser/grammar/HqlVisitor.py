@@ -729,6 +729,16 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#renameOperator.
+    def visitRenameOperator(self, ctx:HqlParser.RenameOperatorContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#renameToExpression.
+    def visitRenameToExpression(self, ctx:HqlParser.RenameToExpressionContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#renderOperator.
     def visitRenderOperator(self, ctx:HqlParser.RenderOperatorContext):
         return self.visitChildren(ctx)

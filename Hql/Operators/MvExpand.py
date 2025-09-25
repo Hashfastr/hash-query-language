@@ -11,16 +11,16 @@ if TYPE_CHECKING:
 
 # @register_op('MvExpand')
 class MvExpand(Operator):
-    def __init__(self, to_exprs:list['ToClause'], limit:Union[None, 'Integer']=None):
+    def __init__(self, exprs:list['ToClause'], limit:Union[None, 'Integer']=None):
         Operator.__init__(self)
-        self.to_exprs = to_exprs
+        self.exprs = exprs
         self.limit = limit
         
-    def explode_table(self, ctx:'Context', table:Table):
+    def explode_table(self, ctx:'Context', table:Table, limit:int):
         schema = table.schema
         df = table.df
 
-        for to in self.to_exprs:
+        for to in self.exprs:
             path = to.expr.eval(ctx, as_list=True)
             if not isinstance(path, list):
                 raise hqle.CompilerException(f'To expression return non-list type {type(path)}')
@@ -37,7 +37,7 @@ class MvExpand(Operator):
             
             new_type = to_schema.inner
             df = df.with_columns(
-                pl_expr.list.slice(0, self.limit)
+                pl_expr.list.slice(0, limit)
             ).explode(pl_expr)
 
             if to.to:
@@ -51,7 +51,7 @@ class MvExpand(Operator):
         out = 'mvexpand '
 
         exprs = []
-        for i in self.to_exprs:
+        for i in self.exprs:
             exprs.append(i.decompile(ctx))
         out += ', '.join(exprs)
         
@@ -63,10 +63,13 @@ class MvExpand(Operator):
 
     def eval(self, ctx:'Context', **kwargs):
         # Long literal, just get us the number
-        self.limit = self.limit.eval(ctx)
+        limit = -1
+        if self.limit:
+            limit = self.limit.eval(ctx)
+            assert isinstance(limit, int)
 
         new = []
         for table in ctx.data:
-            new.append(self.explode_table(ctx, table))
+            new.append(self.explode_table(ctx, table, limit))
         
         return Data(tables=new)
