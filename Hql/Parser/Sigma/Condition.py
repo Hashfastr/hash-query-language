@@ -96,8 +96,9 @@ class Visitor(SigmaVisitor):
         target = self.visit(ctx.Target)
 
         if len(target) == 1:
-            return target[0]
+            return target[0].build_selection()
         else:
+            target = [x.build_selection() for x in target]
             return BinaryLogic(target[0], target[1:], op)
 
     def visitOfSpecifier(self, ctx: SigmaParser.OfSpecifierContext):
@@ -107,7 +108,7 @@ class Visitor(SigmaVisitor):
         if ctx.All:
             return ctx.All.text
 
-    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext):
+    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list['Selection']:
         # pattern or 'them'
         # 'them' means all selections
         if ctx.Pattern:
@@ -120,13 +121,12 @@ class Visitor(SigmaVisitor):
         if not target:
             raise Exception(f'Specifier {pat} matches nothing')
 
-        return [x.process_fields() for x in target]
+        return target
 
     def visitSelectionIdentifier(self, ctx: SigmaParser.SelectionIdentifierContext):
         if ctx.Basic:
             identifier = self.visit(ctx.Basic)
-            sel = self.condition.get_sel(identifier)[0]
-            return sel.process_fields()
+            return self.condition.get_sel(identifier)[0].build_selection()
 
         else:
             return None

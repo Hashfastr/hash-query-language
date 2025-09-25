@@ -98,17 +98,17 @@ def main():
             with i.open(mode='r') as f:
                 txt = f.read()
 
-            try:
-                data = run_query(txt, conf, src=i, **vars(args))
-                if isinstance(data, Data):
-                    print(json.dumps(data.to_dict(), default=repr))
-                else:
-                    print(data)
-            except Exception as e:
-                logging.critical('Exception caught when running query')
-                logging.critical(e)
-                errors.append(i)
-                continue
+            # try:
+            data = run_query(txt, conf, src=i, **vars(args))
+            if isinstance(data, Data):
+                print(json.dumps(data.to_dict(), default=repr))
+            else:
+                print(data)
+            # except Exception as e:
+            #     logging.critical('Exception caught when running query')
+            #     logging.critical(e)
+            #     errors.append(i)
+            #     continue
 
             successes.append(i)
     

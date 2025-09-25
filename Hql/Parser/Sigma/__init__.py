@@ -46,7 +46,7 @@ class SigmaParser():
 
         prepipe = self.gen_src(src)
         pipe = self.parse_dac(dac)
-        expr = PipeExpression(prepipe, [pipe])
+        expr = PipeExpression([pipe], prepipe=prepipe)
 
         statement = QueryStatement(expr)
         self.assembly = Query([statement])
@@ -60,7 +60,7 @@ class SigmaParser():
         Products contain a set of services, can be used to narrow down categories
         Services filter down logs from a product
         '''
-        order = ['category', 'product', 'service']
+        order = ['product', 'service', 'category']
         funcs = []
 
         for i in order:
@@ -80,7 +80,7 @@ class SigmaParser():
             if i == 'condition':
                 continue
 
-            selections.append(Selection(i, dac[i]))
+            selections.append(Selection(dac[i], name=i))
 
         condition = Condition(dac['condition'], selections)
         expr = Where(condition.assemble())

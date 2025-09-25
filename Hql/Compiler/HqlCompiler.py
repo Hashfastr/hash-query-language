@@ -251,7 +251,6 @@ class HqlCompiler(Compiler):
 
         return optimized
 
-
     def Where(self, op: 'Hql.Operators.Where', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Where
         desc = BranchDescriptor()
