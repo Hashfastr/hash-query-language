@@ -40,7 +40,8 @@ class Compiler():
                 return [rej] + [x.get_op() for x in ops[idx+1:]]
         return None
 
-    def optimize(self, ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
+    @staticmethod
+    def optimize(ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
         return ops
 
     '''

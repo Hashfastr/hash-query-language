@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Optional, Union
 
+from Hql.Compiler.InstructionSet import InstructionSet
+
 from .__proto__ import Expression
 from .Logic import *
 from .References import *
@@ -8,7 +10,8 @@ from .Functions import *
 from .Aggregation import *
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators import Operator, Database
+    from Hql.Compiler import InstructionSet
 
 from Hql.Exceptions import HqlExceptions as hqle
 

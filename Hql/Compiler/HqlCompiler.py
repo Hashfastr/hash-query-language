@@ -74,13 +74,16 @@ class HqlCompiler(Compiler):
         self.ctx.symbol_table[name] = acc
         return None
 
-    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression']) -> tuple[Optional[InstructionSet], Optional['Hql.Expressions.Expression']]:
+    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression', InstructionSet]) -> tuple[Optional[InstructionSet], Optional['Hql.Expressions.Expression']]:
         from Hql.Operators.Database import Database, Static
         from Hql.Expressions import DotCompositeFunction, NamedReference
         from Hql.Operators import Range, Datatable, Union
         from Hql.Hac import Source
 
-        if isinstance(expr, DotCompositeFunction):
+        if isinstance(expr, InstructionSet):
+            return expr, None
+        
+        elif isinstance(expr, DotCompositeFunction):
             acc, rej = self.DotCompositeFunction(expr)
             acc = acc.get_expr().eval(self.ctx, preprocess=True)
             
@@ -133,9 +136,7 @@ class HqlCompiler(Compiler):
         return acc, None
 
     def PipeExpression(self, expr: 'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[Union[InstructionSet, BranchDescriptor], None]:
-        from Hql.Expressions import Expression, PipeExpression
-        desc = BranchDescriptor()
-
+        from Hql.Expressions import PipeExpression
         if expr.prepipe:
             acc, rej = self.Tabular(expr.prepipe)
             if rej:
@@ -144,16 +145,11 @@ class HqlCompiler(Compiler):
                 prepipe = []
             else:
                 prepipe = acc
-
         else:
             prepipe = []
             
-
         if not isinstance(prepipe, list):
             prepipe = [prepipe]
-            
-        if len(prepipe) == 0:
-            logging.warning('Preprocessing PipeExpression with empty prepipe')
 
         new:list[InstructionSet] = []
         for i in prepipe:
@@ -164,17 +160,23 @@ class HqlCompiler(Compiler):
             else:
                 new.append(i)
         prepipe = new
+        
+        if len(prepipe) == 0:
+            logging.warning('Preprocessing  with empty prepipe')
 
+        instr = InstructionSet(prepipe, expr.pipes)
+        return self.InstructionSet(instr), None
+
+    def InstructionSet(self, instr: InstructionSet, preprocess:bool=True) -> InstructionSet:
         # Preprocess all pipes
         pipes = []
-        for i in expr.pipes:
+        for i in instr.ops:
             acc, rej = self.compile(i)
-            # desc.merge_attrs(acc.attrs)
             pipes.append(acc)
 
         # Do basic optimization
         if pipes:
-            pipes = self.optimize(pipes)
+            pipes = HqlCompiler.optimize(pipes)
 
         # Create groups where data needs to be sync'd
         groups:list[list[BranchDescriptor]] = []
@@ -188,7 +190,7 @@ class HqlCompiler(Compiler):
 
         # Compile first group
         sets = []
-        for i in prepipe:
+        for i in instr.upstream:
             comp = i
             for idx, j in enumerate(groups[0]):
                 acc, rej = comp.add_op(j)
@@ -205,12 +207,13 @@ class HqlCompiler(Compiler):
         comp = InstructionSet(sets)
         # If needed I can compile the other groups separate in the future
         for i in groups[1:]:
-            comp.ops += [x.get_op() for x in i]
+            for j in i:
+                comp.add_op(j.get_op())
 
-        comp.attrs = desc.attrs
-        return comp, None
+        return comp
 
-    def optimize(self, ops: list[BranchDescriptor]) -> list[BranchDescriptor]:
+    @staticmethod
+    def optimize(ops: list[BranchDescriptor]) -> list[BranchDescriptor]:
         from Hql.Operators import Take
         
         logging.debug(f'Optimizing the following operators:')

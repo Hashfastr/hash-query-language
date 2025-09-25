@@ -187,6 +187,11 @@ class LuceneCompiler(Compiler):
             return expr, None
         return f'"{expr.value}"', None
 
+    def Integer(self, expr: 'Hql.Expressions.Integer', preprocess: bool = True) -> tuple[object, object]:
+        if preprocess:
+            return expr, None
+        return f'{expr.value}', None
+
     def Float(self, expr: 'Hql.Expressions.Float', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:
             return expr, None
