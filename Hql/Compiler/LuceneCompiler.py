@@ -68,7 +68,10 @@ class LuceneCompiler(Compiler):
                     self.expr = acc
                 
                 elif isinstance(self.expr, BinaryLogic) and self.expr.bitype == 'and':
-                    self.expr.rh.append(acc)
+                    if isinstance(acc, BinaryLogic) and acc.bitype == 'and':
+                        self.expr.rh += [acc.lh] + acc.rh
+                    else:
+                        self.expr.rh.append(acc)
 
                 else:
                     self.expr = BinaryLogic(acc, [self.expr], 'and')
@@ -125,11 +128,12 @@ class LuceneCompiler(Compiler):
 
     def Equality(self, expr: 'Hql.Expressions.Equality', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Equality, Expression
-        if expr.cs:
-            logging.warning('Case sensitive comparison in Lucene has inconsistent results')
-            logging.warning('For compatibility, assuming agnostic')
 
         if preprocess:
+            if expr.cs:
+                logging.warning('Case sensitive comparison in Lucene has inconsistent results')
+                logging.warning('For compatibility, assuming agnostic')
+
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
