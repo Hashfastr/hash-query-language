@@ -1,4 +1,3 @@
-from unicodedata import decomposition
 from .__proto__ import Expression
 from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
@@ -96,6 +95,9 @@ class Identifier(NamedReference):
     ...
     
 class Wildcard(NamedReference):
+    ...
+
+class HacNamedReference(NamedReference):
     ...
 
 class Path(Expression):
