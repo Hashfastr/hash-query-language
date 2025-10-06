@@ -9,4 +9,4 @@ grammar/*.java
 grammar/.antlr
 grammar/*.interp
 grammar/*.tokens
-grammar/HqlListener.py
+grammar/HacListener.py
