@@ -28,7 +28,7 @@ class Tag():
     def get_val(self) -> Union[str, list]:
         if self.list:
             return self.list
-        return self.text
+        return self.text.strip(' \n')
 
 class Parser():
     @staticmethod
