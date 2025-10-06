@@ -1,7 +1,8 @@
-# Hac Grammar
+# Regex Grammar
+Grammar has be derived from PCRE grammar.
 No need to recompile, this dir contains the compiled base files.
 Just need the Lexer, Parser, and Visitor python files, the two g4 files, 
-Hac.g4 and HacTokens.g4 are all that's needed to compile those files.
+RegexParser.g4 and RegexLexer.g4 are all that's needed to compile those files.
 Recompiling should not modify anything as if modifications are needed to these
 files then they are just made in a subclass file inheiriting the original.
 
@@ -11,17 +12,17 @@ files then they are just made in a subclass file inheiriting the original.
 source ./setup-antlr4.sh
 
 # Generates the python files needed
-antlr4 -Dlanguage=Python3 -visitor ./Hac.g4
+antlr4 -Dlanguage=Python3 -visitor ./RegexParser.g4
 ```
 
 This will generate some other files that I've ignored that are not needed.
 
 ```
-Hac.interp
-Hac.tokens
-HacLexer.interp
-HacLexer.tokens
-HacListener.py
+Hql.interp
+Hql.tokens
+HqlLexer.interp
+HqlLexer.tokens
+HqlListener.py
 ```
 
 We use the Visitor not the Listener so it's ignored and removed from this repo.
@@ -45,11 +46,11 @@ Make sure you already setup antlr4 using the setup script as seen in the previou
 ```
 # this generates *a lot* of java and class files
 cd grammar
-antlr4 -Dlanguage=Java -visitor Hac.g4
-javac -cp ./antlr4/antlr-*-complete.jar Hac*.java
+antlr4 -Dlanguage=Java -visitor Hql.g4
+javac -cp ./antlr4/antlr-*-complete.jar Hql*.java
 
 # runs until you kill / Ctrl-C / close the window
-grun Hac top ../tests/simple.txt -gui
+grun Hql top ../tests/simple.txt -gui
 
 # Clean up via
 rm *.java *.class

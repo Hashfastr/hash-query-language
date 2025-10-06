@@ -1,5 +1,6 @@
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Hac.Sources import Source, Product
+from Hql.Hac.Parser import Tag, Parser
 
 class Hac():
     '''
@@ -27,7 +28,6 @@ class Hac():
 
     def render(self, target:str='md'):
         from .Doc import HacDoc
-        from .Dag import Dag
 
         hd = HacDoc(self)
         
@@ -36,10 +36,6 @@ class Hac():
 
         if target == 'json':
             return hd.json()
-
-        if target == 'dag':
-            dag = Dag(self)
-            return dag.gen_dag()
 
         if target == 'decompile':
             return hd.decompile()

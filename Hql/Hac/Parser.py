@@ -1,195 +1,99 @@
-from antlr4 import InputStream, CommonTokenStream
-from antlr4.error.ErrorListener import ErrorListener
-from . import Hac
-from .grammar.HacLexer import HacLexer
-from .grammar.HacParser import HacParser
-from .grammar.HacVisitor import HacVisitor
 import logging
-
+import re
+from typing import Optional, TYPE_CHECKING, Union
 from Hql.Exceptions import HacExceptions as hace
 
-class HqlErrorListener(ErrorListener):
-    def __init__(self, text:str, filename:str):
-        ErrorListener.__init__(self)
-        self.text = text
-        self.filename = filename
-
-    def syntaxError(self, recognizer:HacParser, offendingSymbol, line, column, msg, e):
-        e = hace.LexerException(msg, self.text, line, column, offendingSymbol, filename=self.filename)
-        Parser.handleException(recognizer, e)
-        
-class Parser():
-    def __init__(self, text:str='', filename:str=''):
-        if not text and filename:
-            with open(filename, mode='r') as f:
-                text = f.read()
-
-        self.text = text
-        self.filename = filename
-        self.tree = self.parse_file()
-    
-    def parse_file(self):
-        self.err_listener = HqlErrorListener(self.text, self.filename)
-        
-        lexer = HacLexer(InputStream(self.text))
-        token_stream = CommonTokenStream(lexer)
-        parser = HacParser(token_stream)
-
-        parser.removeErrorListeners()
-        parser.addErrorListener(self.err_listener)
-         
-        return parser.dacBlock()
-
-    def assemble(self):
-        visitor = Visitor(self.filename)
-        assembly = visitor.visit(self.tree)
-        
-        if assembly == None:
-            logging.error("Compiler error!")
-            logging.error("Parser returned None instead of valid assembly")
-            logging.error("Import error?")
-            raise Exception("Compiler error, visitor returned None")
-
-        self.hac = Hac(assembly, self.filename)
-
-        return self.hac
-    
-    @staticmethod
-    def getText(ctx):
-        stream = ctx.parser.getTokenStream()
-        start = ctx.start.tokenIndex
-        stop = ctx.stop.tokenIndex
-
-        return stream.getText(start, stop)
-    
-    @staticmethod
-    def handleException(ctx, e):
-        text = f'Failed to parse HaC {e.filename}\n'
-        
-        if isinstance(e, hace.LexerException):
-            text += e.text.split('\n')[e.line - 1]
-            
-        else:
-            text += Parser.getText(ctx)
-        
-        text += '\n'
-        text += (' ' * e.col) + '^'
-        e.text = text
-        raise e
+if TYPE_CHECKING:
+    from Hql.Hac import Hac
 
 class Tag():
-    def __init__(self, name:str) -> None:
+    def __init__(self, name:str):
         self.name = name
-      
-class ListTag(Tag):
-    def __init__(self, name: str) -> None:
-        Tag.__init__(self, name)
-        self.type = 'list'
-        self.items = []
-
-class TextTag(Tag):
-    def __init__(self, name: str) -> None:
-        Tag.__init__(self, name)
-        self.type = 'text'
         self.text = ''
+        self.list = []
 
-# Overrides the HqlVisitor templates
-# If not defined here, each node only returns its children.
-class Visitor(HacVisitor):
-    def __init__(self, filename:str):
-        self.filename = filename
+    def add_item(self, item:str):
+        if self.text:
+            raise hace.HacException(f'Attempting to add item to text tag {self.name}')
+        self.list.append(item)
 
-    def visitDacBlock(self, ctx: HacParser.DacBlockContext):
-        tags = []
-        for i in ctx.Tags:
-            new = self.visit(i)
-            if new != None:
-                tags.append(new)
+    def add_text(self, text:str):
+        if self.list:
+            raise hace.HacException(f'Attempting to add text to list tag {self.name}')
+        text = text.strip(' \t')
+        if self.text:
+            self.text += '\n'
+        self.text += text
 
-        tag_dict = dict()
-        for i in tags:
-            if i.name in tag_dict:
-                logging.warning(f'Multiple definitions of {i.name}, overwriting definition')
+    def get_val(self) -> Union[str, list]:
+        if self.list:
+            return self.list
+        return self.text.strip(' \n')
 
-            if i.type == 'list':
-                tag_dict[i.name] = i.items
+class Parser():
+    @staticmethod
+    def parse_file(filename:str) -> 'Hac':
+        with open(filename, mode='r') as f:
+            return Parser.parse_text(f.read(), src=filename)
 
-            elif i.type == 'text':
-                tag_dict[i.name] = i.text
+    @staticmethod   
+    def parse_text(text:str, src:str='') -> 'Hac':
+        from Hql.Hac import Hac
+        tags:list[Tag] = []
+        comment = Parser.get_comment(text).split('\n')
 
-        if ctx.Hql:
-            hql = self.visit(ctx.Hql)
-            tag_dict['hql'] = hql
+        padding = r'[\s\* ]*'
 
-        return tag_dict
+        tag:Optional[Tag] = None
+        for i in comment:
+            # tag
+            match = re.search(r'^' + padding + r'@([a-z]+)(\s+(.*))?', i)
+            if match:
+                if tag:
+                    tags.append(tag)
 
-    def visitTagSection(self, ctx: HacParser.TagSectionContext):
-        if ctx.List:
-            return self.visit(ctx.List)
+                tag = Tag(match.group(1))
+                if match.group(3):
+                    tag.add_text(match.group(3))
 
-        if ctx.Text:
-            return self.visit(ctx.Text)
+                continue
 
-        return None
+            if not tag:
+                # skip leading empty lines
+                if re.match(r'^' + padding + r'$', i):
+                    continue
+                raise hace.HacException('HaC content added without tag')
 
-    def visitListStart(self, ctx: HacParser.ListStartContext):
-        name = self.visit(ctx.Name)
+            # list item
+            match = re.search(r'^' + padding + r'-\s*(.*)', i)
+            if match:
+                tag.add_item(match.group(1))
+                continue
 
-        tag = ListTag(name)
-        for i in ctx.Items:
-            tag.items.append(self.visit(i))
-        return tag
+            # text line
+            match = re.search(r'^' + padding + r'(.*)', i)
+            if match and match.group(1):
+                tag.add_text(match.group(1))
+                continue
 
-    def visitListTag(self, ctx: HacParser.ListTagContext):
-        return ctx.Name.__getattribute__('text')
+            if tag.text:
+                # empty line
+                tag.add_text('')
 
-    def visitListLine(self, ctx: HacParser.ListLineContext):
-        return self.visit(ctx.Item)
+        if tag:
+            tags.append(tag)
 
-    def visitListItem(self, ctx: HacParser.ListItemContext):
-        return self.visit(ctx.Data)
+        asm = dict()
+        for tag in tags:
+            asm[tag.name] = tag.get_val()
 
-    def visitTextStart(self, ctx: HacParser.TextStartContext):
-        name = self.visit(ctx.Name)
-        tag = TextTag(name)
+        return Hac(asm, src)
 
-        if ctx.Root:
-            tag.text += self.visit(ctx.Root)
+    @staticmethod
+    def get_comment(text:str) -> str:
+        pattern = r'/\*\*.*?\n(.*?)\*/'
 
-        for i in ctx.Lines:
-            tag.text += '\n'
-            tag.text += self.visit(i)
-
-        tag.text = tag.text.strip('\n')
-
-        return tag
-
-    def visitTextTag(self, ctx: HacParser.TextTagContext):
-        return ctx.Name.__getattribute__('text')
-
-    def visitSingleTextLine(self, ctx: HacParser.SingleTextLineContext):
-        return self.visit(ctx.Line)
-
-    def visitTextLine(self, ctx: HacParser.TextLineContext):
-        return self.visit(ctx.Line) if ctx.Line else ''
-
-    def visitData(self, ctx: HacParser.DataContext):
-        data = ''
-        for i in range(ctx.getChildCount()):
-            data += ctx.getChild(i).getText()
-        return data
-
-    def visitAllData(self, ctx: HacParser.AllDataContext):
-        data = ''
-        for i in range(ctx.getChildCount()):
-            data += ctx.getChild(i).getText()
-        return data
-
-    def visitHqlText(self, ctx: HacParser.HqlTextContext):
-        lines = []
-        for i in ctx.Lines:
-            lines.append(self.visit(i))
-        return '\n'.join(lines)
-
-    def visitHqlLine(self, ctx: HacParser.HqlLineContext):
-        return self.visit(ctx.Data)
+        finds = re.findall(pattern, text, flags=re.DOTALL)
+        if not finds:
+            return ''
+        return finds[0]

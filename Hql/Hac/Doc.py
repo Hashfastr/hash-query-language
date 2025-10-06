@@ -70,14 +70,14 @@ class HacDoc():
 
         references = self.hac.get('references')
         if references:
-            md += '### References'
+            md += '### References\n'
             for i in references:
                 md += f'- {i}\n'
             md += '\n'
 
         changelog = self.hac.get('changelog')
         if changelog:
-            md += '### Change Log'
+            md += '### Change Log\n'
             for i in changelog:
                 md += f'- {i}\n'
             md += '\n'
