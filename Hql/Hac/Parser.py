@@ -43,7 +43,7 @@ class Parser():
         tags:list[Tag] = []
         comment = self.get_comment(text).split('\n')
 
-        padding = r'[\s\*]*'
+        padding = r'[\s\* ]*'
 
         tag:Optional[Tag] = None
         for i in comment:
@@ -57,7 +57,12 @@ class Parser():
                 if match.group(3):
                     tag.add_text(match.group(3))
 
+                continue
+
             if not tag:
+                # skip leading empty lines
+                if re.match(r'^' + padding + r'$', i):
+                    continue
                 raise hace.HacException('HaC content added without tag')
 
             # list item
@@ -68,12 +73,13 @@ class Parser():
 
             # text line
             match = re.search(r'^' + padding + r'(.*)', i)
-            if match:
+            if match and match.group(1):
                 tag.add_text(match.group(1))
                 continue
 
-            # empty line
-            tag.add_text('')
+            if tag.text:
+                # empty line
+                tag.add_text('')
 
         if tag:
             tags.append(tag)
@@ -87,7 +93,7 @@ class Parser():
     def get_comment(self, text:str) -> str:
         pattern = r'/\*\*.*?\n(.*?)\*/'
 
-        finds = re.findall(pattern, text, flags=re.DOTALL)[0]
+        finds = re.findall(pattern, text, flags=re.DOTALL)
         if not finds:
             return ''
         return finds[0]
