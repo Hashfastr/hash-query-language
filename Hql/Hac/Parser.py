@@ -31,17 +31,16 @@ class Tag():
         return self.text
 
 class Parser():
-    def __init__(self):
-        ...
-
-    def parse_file(self, filename:str) -> 'Hac':
+    @staticmethod
+    def parse_file(filename:str) -> 'Hac':
         with open(filename, mode='r') as f:
-            return self.parse_text(f.read(), src=filename)
+            return Parser.parse_text(f.read(), src=filename)
 
-    def parse_text(self, text:str, src:str='') -> 'Hac':
+    @staticmethod   
+    def parse_text(text:str, src:str='') -> 'Hac':
         from Hql.Hac import Hac
         tags:list[Tag] = []
-        comment = self.get_comment(text).split('\n')
+        comment = Parser.get_comment(text).split('\n')
 
         padding = r'[\s\* ]*'
 
@@ -90,7 +89,8 @@ class Parser():
 
         return Hac(asm, src)
 
-    def get_comment(self, text:str) -> str:
+    @staticmethod
+    def get_comment(text:str) -> str:
         pattern = r'/\*\*.*?\n(.*?)\*/'
 
         finds = re.findall(pattern, text, flags=re.DOTALL)

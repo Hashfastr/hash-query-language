@@ -28,8 +28,7 @@ def run_query(text:str, conf:Config, src:Union[str, Path]='', **kwargs) -> Union
 
     else:
         try:
-            parser = HaCParser()
-            hac = parser.parse_text(text, str(src))
+            hac = HaCParser.parse_text(text, str(src))
         except hace.LexerException:
             hac = None
 
