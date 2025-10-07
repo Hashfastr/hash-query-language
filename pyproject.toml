@@ -1,5 +1,5 @@
 [project]
-name = "Hql"
+name = "pyhql"
 version = "0.0.1"
 authors = [
     { name="Sylvain Jones", email="sylvainjones+hql@hashfastr.com" },
@@ -40,3 +40,5 @@ Issues = "https://github.com/Hashfastr/Hql/issues"
 requires = ["hatchling >= 1.26"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["Hql"]
