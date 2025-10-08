@@ -31,7 +31,7 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     try:
         parser = SigmaParser(text)
         hac = parser.gen_hac()
-    except hqle.QueryException:
+    except Exception:
         # We're just skipping over to HaC Parsing then
         try:
             hac = HaCParser.parse_text(text, name)

@@ -95,6 +95,8 @@ def main():
     successes = []
     
     pool = QueryPool()
+    kwargs = vars(args)
+    kwargs.pop('config')
 
     '''
     Run query files
@@ -102,7 +104,7 @@ def main():
     for i in files:
         with i.open(mode='r') as f:
             txt = f.read()
-        pool.add_query(txt, conf, name=str(i), **vars(args))
+        pool.add_query(txt, conf, name=str(i), **kwargs)
 
     '''
     Sync and get output
