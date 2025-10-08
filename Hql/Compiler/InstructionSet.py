@@ -93,7 +93,6 @@ class InstructionSet():
 
     def eval(self, ctx:Context, **kwargs) -> Context:
         from Hql.Data import Data
-        from Hql.Operators import Database
         from Hql.Threading import InstructionPool
 
         logging.debug(f'Starting InstructionSet {self.id}')

@@ -148,8 +148,12 @@ class Table():
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, path)
 
+    # Matches rows and merges them if interlacing
+    # Otherwise, split rows between tables into their own rows
     @staticmethod
     def merge(tables:list["Table"], interlace:bool=True):
+        from Hql.Types.Compiler import CompilerType
+
         if interlace:
             return Table.interlace(tables)
 
@@ -174,15 +178,14 @@ class Table():
             cur = table.df
             curs = table.schema.schema
             for key in curs:
-                # Generate a new key name if needed
-                if isinstance(curs[key], dict):
-                    new_key = f'{key}_object'
+                if isinstance(curs[key], CompilerType):
+                    dup_key = f'{key}_{curs[key].name}'
                 else:
-                    new_key = f'{key}_{curs[key].name}'
+                    dup_key = f'{key}_object'
 
-                # If need new, rename to new
-                if key not in schema:
-                    cur = cur.rename({key: new_key})
+                # Linter hates this one simple trick!
+                if dup_key in schema:
+                    cur = cur.rename({key: dup_key})
             new.append(cur)
         
         df = pl.concat(new, how='diagonal')

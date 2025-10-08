@@ -39,7 +39,7 @@ class Data():
 
         # Merge table groups
         for name in table_groups:
-            self.tables[name] = Table.merge(tables=table_groups[name])
+            self.tables[name] = Table.merge(tables=table_groups[name], interlace=False)
             
     def __len__(self):
         length = 0

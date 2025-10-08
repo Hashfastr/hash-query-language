@@ -1,5 +1,5 @@
-union database('json').macro('all'), database('json').macro('all')
+union database('json').macro('host'), database('json').macro('host')
 | project ['@timestamp'], src_ip=toip4(source.ip), src_port=source.port, dest_ip=toip4(destination.ip), dest_port=destination.port
-| extend _time = ['@timestamp']
-| take 10
 //| summarize count() by src_ip
+| take 10
+//| count
