@@ -120,6 +120,10 @@ class Context():
         if len(ctxs) == 1:
             return ctxs[0]
 
+        for i in ctxs:
+            for j in i.data:
+                print(j.name)
+
         data = Data.merge([x.data for x in ctxs])
 
         syms = dict()

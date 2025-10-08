@@ -70,7 +70,6 @@ class InstructionSet():
         from Hql.Compiler import HqlCompiler
 
         return HqlCompiler(config).InstructionSet(self)
-            
 
     def exec(self, inst:Union['Database', 'Operator'], ctx:Context) -> Context:
         logging.debug(f'Executing {inst.type} - {inst.id}')

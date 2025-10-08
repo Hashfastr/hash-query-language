@@ -2,7 +2,7 @@ from .__proto__ import Expression
 from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
     from Hql.Context import Context
@@ -45,7 +45,7 @@ class ByExpression(Expression):
         Expression.__init__(self)
         self.exprs = exprs
         
-    def build_table_agg(self, ctx:'Context', table:'Table'):
+    def build_table_agg(self, ctx:'Context', table:'Table') -> Optional['Table']:
         from Hql.Data import Schema
 
         if table.schema == None:
@@ -73,6 +73,9 @@ class ByExpression(Expression):
         for path in paths:
             pl_expr = pltools.path_to_expr(path)
             pl_exprs.append(pl_expr)
+
+        if not pl_exprs:
+            return None
         
         # Groups and coelesces the schemas together for each field
         # Probably need to rework and change maintain_order here in the future
@@ -94,8 +97,9 @@ class ByExpression(Expression):
         from Hql.Data import Data
 
         new = []
-        
         for table in ctx.data:
-            new.append(self.build_table_agg(ctx, table))
+            agg = self.build_table_agg(ctx, table)
+            if agg:
+                new.append(agg)
             
         return Data(tables=new)
