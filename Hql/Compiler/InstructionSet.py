@@ -68,7 +68,6 @@ class InstructionSet():
 
     def recompile(self, config:'Config') -> 'InstructionSet':
         from Hql.Compiler import HqlCompiler
-
         return HqlCompiler(config).InstructionSet(self)
 
     def exec(self, inst:Union['Database', 'Operator'], ctx:Context) -> Context:
@@ -85,19 +84,31 @@ class InstructionSet():
     def render(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
 
+    def run_upstream(self, up:Union['Database', 'InstructionSet']) -> 'Context':
+        from Hql.Data import Data
+        out = up.eval(Context(Data()))
+        if isinstance(out, Data):
+            out = Context(out)
+        return out
+
     def eval(self, ctx:Context, **kwargs) -> Context:
         from Hql.Data import Data
+        from Hql.Operators import Database
+        from Hql.Threading import InstructionPool
 
         logging.debug(f'Starting InstructionSet {self.id}')
         start = time.perf_counter()
+   
+        pool = InstructionPool(auto_run=False)
+        for i in self.upstream:
+            pool.add_instruction(i, Context(Data()))
+
+        pool.start()
 
         sets = []
-        for i in self.upstream:
-            up = i.eval(Context(Data()))
-            if isinstance(up, Data):
-                up = Context(up)
-            sets.append(up)
-
+        while not pool.is_idle():
+            completed = pool.get_completed()
+            sets += [x.output for x in completed]
         ctx = Context.merge(sets)
 
         for i in self.ops:
