@@ -35,7 +35,7 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
         # We're just skipping over to HaC Parsing then
         try:
             hac = HaCParser.parse_text(text, name)
-        except hace.LexerException:
+        except (hace.LexerException, hace.HacException):
             hac = None
 
     if kwargs.get('render_hac', ''):
