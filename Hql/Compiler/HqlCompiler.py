@@ -325,17 +325,13 @@ class HqlCompiler(Compiler):
 
     def Extend(self, op: 'Hql.Operators.Extend', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Extend
-
-        parts = []
-        for i in op.exprs:
-            handler = self.from_name(i.type)
-            parts.append(handler(i))
-
         desc = BranchDescriptor()
+
         exprs = []
-        for i in parts:
-            desc.merge_attrs(i.attrs)
-            exprs.append(i.get_expr())
+        for i in op.exprs:
+            acc, rej = self.compile(i)
+            desc.merge_attrs(acc.attrs)
+            exprs.append(acc.get_expr())
 
         desc.op = Extend(exprs)
         return desc, None
