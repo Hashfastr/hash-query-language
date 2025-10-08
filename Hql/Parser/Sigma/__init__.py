@@ -16,6 +16,9 @@ class SigmaParser():
         import yaml
 
         self.loaded = yaml.load(txt, yaml.SafeLoader)
+        if isinstance(self.loaded, str):
+            raise hqle.QueryException('Invalid sigma supplied to parser')
+
         self.assembly:Union[None, Query] = None
 
         if self.loaded.get('status', '') == 'deprecated':
