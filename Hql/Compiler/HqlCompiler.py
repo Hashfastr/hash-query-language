@@ -162,7 +162,7 @@ class HqlCompiler(Compiler):
         prepipe = new
         
         if len(prepipe) == 0:
-            logging.warning('Preprocessing  with empty prepipe')
+            logging.warning('Preprocessing with empty prepipe')
 
         instr = InstructionSet(prepipe, expr.pipes)
         return self.InstructionSet(instr), None
@@ -184,7 +184,7 @@ class HqlCompiler(Compiler):
         idx = 0
         for idx, i in enumerate(pipes):
             if i.get_attr('requires_sync'):
-                groups.append(pipes[top:idx+1])
+                groups.append(pipes[top:idx])
                 top = idx
         groups.append(pipes[top:idx+1])
 
@@ -204,11 +204,14 @@ class HqlCompiler(Compiler):
 
             sets.append(comp)
 
-        comp = InstructionSet(sets)
-        # If needed I can compile the other groups separate in the future
+        comp = sets
         for i in groups[1:]:
+            comp = InstructionSet(comp)
             for j in i:
                 comp.add_op(j.get_op())
+
+        if isinstance(comp, list):
+            comp = InstructionSet(comp)
 
         return comp
 
@@ -411,6 +414,7 @@ class HqlCompiler(Compiler):
         from Hql.Expressions import ByExpression
         desc = BranchDescriptor()
         desc.set_attr('row_dependent', True)
+        desc.set_attr('requires_sync', True)
 
         exprs = []
         for i in op.aggregate_exprs:
