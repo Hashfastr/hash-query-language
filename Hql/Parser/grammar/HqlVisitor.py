@@ -1394,16 +1394,6 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#wildcardedNamePrefix.
-    def visitWildcardedNamePrefix(self, ctx:HqlParser.WildcardedNamePrefixContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#wildcardedNameSegment.
-    def visitWildcardedNameSegment(self, ctx:HqlParser.WildcardedNameSegmentContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by HqlParser#literalExpression.
     def visitLiteralExpression(self, ctx:HqlParser.LiteralExpressionContext):
         return self.visitChildren(ctx)

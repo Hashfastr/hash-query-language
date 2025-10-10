@@ -1464,20 +1464,22 @@ pathOrExtendedKeyword:
 //     ;
 
 wildcardedName:
-    (Prefix=wildcardedNamePrefix)? '*' (Segments+=wildcardedNameSegment)*;
-
-wildcardedNamePrefix:
-      Identifier=IDENTIFIER 
-    | Keyword=keywordName
-    | ExtendedKeyword=extendedKeywordName
+      Name=WILDCARD
     ;
-
-wildcardedNameSegment:
-      Identifier=IDENTIFIER 
-    | Keyword=keywordName
-    | ExtendedKeyword=extendedKeywordName
-    | Number=LONGLITERAL 
-    | Star='*';
+//     (Prefix=wildcardedNamePrefix)? '*' (Segments+=wildcardedNameSegment)*;
+//
+// wildcardedNamePrefix:
+//       Identifier=IDENTIFIER 
+//     | Keyword=keywordName
+//     | ExtendedKeyword=extendedKeywordName
+//     ;
+//
+// wildcardedNameSegment:
+//       Identifier=IDENTIFIER 
+//     | Keyword=keywordName
+//     | ExtendedKeyword=extendedKeywordName
+//     | Number=LONGLITERAL 
+//     | Star='*';
 
 
 ///////////////////////////////////////
