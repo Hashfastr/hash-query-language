@@ -861,7 +861,20 @@ class HqlCompiler(Compiler):
         return desc, None
     
     def NamedReference(self, expr:'Hql.Expressions.NamedReference', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Expressions import PipeExpression
+        from Hql.Operators.Database import Database
+
         desc = BranchDescriptor()
+
+        if expr.name in self.ctx.symbol_table:
+            res = self.ctx.symbol_table[expr.name]
+
+            if not isinstance(res, (PipeExpression, Database, InstructionSet)):
+                acc, rej = self.compile(res)
+                desc.expr = acc.get_expr()
+                desc.merge(desc)
+                return desc, None
+
         desc.expr = expr
         desc.references = [expr.name]
         return desc, None
