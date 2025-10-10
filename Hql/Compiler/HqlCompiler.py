@@ -896,17 +896,21 @@ class HqlCompiler(Compiler):
         return acc, None
 
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import Path
+        from Hql.Expressions import Path, EscapedNamedReference, Wildcard
         desc = BranchDescriptor()
         desc.set_attr('nested_objects', True)
         
         path = []
         str_path:list[str] = []
         for i in expr.path:
-            acc, rej = self.compile(i)
-            desc.merge(acc)
-            path.append(acc.get_expr())
-            str_path += acc.references
+            if isinstance(i, EscapedNamedReference):
+                desc.set_attr('complex_names', True)
+            
+            if isinstance(i, Wildcard):
+                desc.set_attr('wildcards', True)
+
+            path.append(i)
+            str_path.append(i.name)
 
         desc.expr = Path(path)
         # overwrite existing references for path parts
