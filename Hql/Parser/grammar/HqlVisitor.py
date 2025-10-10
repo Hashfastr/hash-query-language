@@ -909,6 +909,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#unionAsOperator.
+    def visitUnionAsOperator(self, ctx:HqlParser.UnionAsOperatorContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#whereOperator.
     def visitWhereOperator(self, ctx:HqlParser.WhereOperatorContext):
         return self.visitChildren(ctx)
@@ -1356,6 +1361,11 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#tableNameReference.
     def visitTableNameReference(self, ctx:HqlParser.TableNameReferenceContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#dynamicTableNameReference.
+    def visitDynamicTableNameReference(self, ctx:HqlParser.DynamicTableNameReferenceContext):
         return self.visitChildren(ctx)
 
 

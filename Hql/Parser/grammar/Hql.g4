@@ -785,9 +785,13 @@ topNestedOperatorPart:
 topNestedOperatorWithOthersClause:
     WITH OTHERS '=' Expression=namedExpression;
 
-
 unionOperator:
-    UNION (Parameters+=relaxedQueryOperatorParameter)* Expressions+=tableNameReference (',' Expressions+=tableNameReference)* (AS TableName=tableNameReference)?;
+    UNION (Parameters+=relaxedQueryOperatorParameter)* Expressions+=dynamicTableNameReference (',' Expressions+=dynamicTableNameReference)* (TableName=unionAsOperator)?
+    ;
+
+unionAsOperator:
+    AS TableName=dynamicTableNameReference
+    ;
 
 whereOperator:
     Keyword=(FILTER | WHERE) (Parameters+=strictQueryOperatorParameter)* Predicate=namedExpression;
@@ -1297,6 +1301,11 @@ tableNameReference:
       WildcardName=wildcardedName
     | IdentifierName=identifierName
     | EscapedName=escapedName
+    ;
+
+dynamicTableNameReference:
+      TableName=tableNameReference
+    | DotFunction=dotCompositeFunctionCallExpression
     ;
 
 ///////////////////////////////////////
