@@ -148,15 +148,8 @@ class Table():
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, path)
 
-    # Matches rows and merges them if interlacing
-    # Otherwise, split rows between tables into their own rows
     @staticmethod
-    def merge(tables:list["Table"], interlace:bool=True):
-        from Hql.Types.Compiler import CompilerType
-
-        if interlace:
-            return Table.interlace(tables)
-
+    def merge_rows(tables:list['Table']):
         if not tables:
             return Table()
         
@@ -164,6 +157,72 @@ class Table():
         if len(tables) == 1:
             return tables[0]
         
+        name = tables[0].name
+        
+        schemas = []
+        for table in tables:
+            schemas.append(table.schema)
+        schema = Schema.merge(schemas).schema
+        
+        # generate col groups
+        col_groups = dict()
+        for table in tables:
+            # skip empty dataframes
+            if isinstance(table.df, type(None)) or table.df.is_empty():
+                continue
+
+            for col in table.df:
+                if col.name not in col_groups:
+                    col_groups[col.name] = []
+                col_groups[col.name].append(col)
+
+        new = dict()
+        for key in col_groups:
+            for col in col_groups[key]:
+                if key not in new:
+                    new[key] = col
+                    continue
+                
+                # Canon conflict
+                if not isinstance(new[key], list) and new[key].dtype == pl.Struct and col.dtype == pl.Struct:
+                    l = Table(df=new[key].struct.unnest(), name=name)
+                    r = Table(df=col.struct.unnest(), name=name)
+                    
+                    new[key] = Table.merge_rows([l, r]).df.to_struct()
+                    continue
+
+                if not isinstance(schema[key], hqlt.multivalue):
+                    schema[key] = hqlt.multivalue(schema[key])
+                    new[key] = [new[key], col]
+                else:
+                    new[key].append(col)                
+                
+        df = pl.DataFrame(new)
+        schema = Schema(schema=schema)
+                
+        return Table(df=df, schema=schema, name=name)
+
+    @staticmethod
+    def merge(tables:list["Table"], merge_rows=True):
+        from Hql.Types.Compiler import CompilerType
+
+        if merge_rows:
+            return Table.merge_rows(tables)
+
+        if not tables:
+            return Table()
+        
+        # Quick short circuit
+        if len(tables) == 1:
+            return tables[0]
+
+        groups = dict()
+        for table in tables:
+            if table.name in groups:
+                groups[table.name].append(table)
+            else:
+                groups[table.name] = [table]
+
         name = tables[0].name
         
         schemas = []
@@ -189,71 +248,6 @@ class Table():
             new.append(cur)
         
         df = pl.concat(new, how='diagonal')
-        schema = Schema(schema=schema)
-                
-        return Table(df=df, schema=schema, name=name)
-
-    @staticmethod
-    def interlace(tables:list['Table']):
-        max_cols = 100
-        
-        if not tables:
-            return Table()
-        
-        # Quick short circuit
-        if len(tables) == 1:
-            return tables[0]
-        
-        name = tables[0].name
-        
-        schemas = []
-        for table in tables:
-            schemas.append(table.schema)
-        schema = Schema.merge(schemas).schema
-        
-        # generate col groups
-        col_groups = dict()
-        for table in tables:
-            # skip empty dataframes
-            if isinstance(table.df, type(None)) or table.df.is_empty():
-                continue
-
-            for col in table.df:
-                if col.name not in col_groups:
-                    col_groups[col.name] = []
-                    
-                col_groups[col.name].append(col)
-
-        new = dict()
-        for key in col_groups:
-            for col in col_groups[key]:
-                if key not in new:
-                    new[key] = col
-                    continue
-                
-                # Canon conflict
-                if new[key].dtype == pl.Struct and col.dtype == pl.Struct:
-                    l = Table(df=new[key].struct.unnest(), name=name)
-                    r = Table(df=col.struct.unnest(), name=name)
-                    
-                    new[key] = Table.merge([l, r]).df.to_struct()
-                    continue
-                
-                for i in range(max_cols):
-                    name = f'{key}_{i}'
-                    
-                    if name not in new:
-                        new[name] = col
-                        break
-                    
-                    if i == max_cols - 1:
-                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
-                        logging.critical(f'Applicable field: {key}')
-                        raise hqle.QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
-                
-        df = pl.DataFrame(new)
-        schema = Schema(schema=schema)
-                
         return Table(df=df, schema=schema, name=name)
 
     '''

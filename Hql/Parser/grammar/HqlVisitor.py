@@ -909,11 +909,6 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#unionOperatorExpression.
-    def visitUnionOperatorExpression(self, ctx:HqlParser.UnionOperatorExpressionContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by HqlParser#whereOperator.
     def visitWhereOperator(self, ctx:HqlParser.WhereOperatorContext):
         return self.visitChildren(ctx)

@@ -89,7 +89,9 @@ class BaseExpressions(HqlVisitor):
         
         for i in ctx.Parts:
             parts.append(self.visit(i))
-        
+
+        if len(parts) == 1:
+            return parts[0]
         return Expr.Path(parts)
 
     '''

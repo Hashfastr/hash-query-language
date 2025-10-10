@@ -108,7 +108,7 @@ class InstructionSet():
         while not pool.is_idle():
             completed = pool.get_completed()
             sets += [x.output for x in completed]
-        ctx = Context.merge(sets)
+        ctx = Context.merge(sets, merge_rows=False)
 
         for i in self.ops:
             ctx = self.exec(i, ctx)

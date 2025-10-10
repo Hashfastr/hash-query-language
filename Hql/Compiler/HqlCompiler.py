@@ -4,6 +4,7 @@ import json
 
 from Hql.Compiler import Compiler, BranchDescriptor, InstructionSet
 from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Types.Hql import HqlTypes as hqlt
 
 if TYPE_CHECKING:
     from Hql.Query import Query
@@ -235,6 +236,15 @@ class HqlCompiler(Compiler):
                     if type(optimized[i].get_op()) == type(op.get_op()):
                         break
 
+                    name_deps = []
+                    for ref in op.references:
+                        if ref in optimized[i].provides:
+                            name_deps.append(ref)
+
+                    if name_deps:
+                        logging.debug(f'{op.get_op().id} references names provided by {optimized[i].get_op().id}: {name_deps}')
+                        break
+
                     logging.debug(f'Can optimize {op.get_op().id} passing {optimized[i].get_op().id}')
                     i -= 1
                     continue
@@ -263,7 +273,7 @@ class HqlCompiler(Compiler):
         op = Where(acc.get_expr(), op.parameters)
 
         desc.op = op
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         return desc, None
 
     def Project(self, op: 'Hql.Operators.Project', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
@@ -273,7 +283,7 @@ class HqlCompiler(Compiler):
         exprs = []
         for i in op.exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             exprs.append(acc.get_expr())
 
         op = Project(op.optok, exprs)
@@ -298,13 +308,13 @@ class HqlCompiler(Compiler):
         desc.set_attr('row_reducing', True)
 
         acc, rej = self.compile(op.expr)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         expr = acc.get_expr()
 
         tables = []
         for i in op.tables:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             tables.append(acc.get_expr())
 
         desc.op = Take(expr, tables)
@@ -318,7 +328,7 @@ class HqlCompiler(Compiler):
 
         if op.name:
             acc, rej = self.compile(op.name)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             expr = acc.get_expr()
         else:
             expr = None
@@ -333,7 +343,7 @@ class HqlCompiler(Compiler):
         exprs = []
         for i in op.exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             exprs.append(acc.get_expr())
 
         desc.op = Extend(exprs)
@@ -344,19 +354,19 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         acc, rej = self.compile(op.name)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         name = acc.get_expr()
         
         acc, rej = self.compile(op.start)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         start = acc.get_expr()
         
         acc, rej = self.compile(op.end)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         end = acc.get_expr()
 
         acc, rej = self.compile(op.step)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         step = acc.get_expr()
         
         desc.op = Range(name, start, end, step)
@@ -368,11 +378,11 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         acc, rej = self.compile(op.expr)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         expr = acc.get_expr()
 
         acc, rej = self.compile(op.by)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         by = acc.get_expr()
         assert isinstance(by, ByExpression)
 
@@ -384,13 +394,13 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         acc, rej = self.compile(op.field)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         field = acc.get_expr()
 
         tables = []
         for i in op.tables:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             tables.append(acc.get_expr())
 
         desc.op = Unnest(field, tables)
@@ -399,14 +409,23 @@ class HqlCompiler(Compiler):
     def Union(self, op: 'Hql.Operators.Union', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Operators import Union
         desc = BranchDescriptor()
+        desc.set_attr('requires_sync', True)
 
         exprs = []
         for i in op.exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
-            exprs.append(acc)
+            desc.merge(acc)
+            exprs.append(acc.get_expr())
+
+        name = None
+        if op.name:
+            acc, rej = self.compile(op.name)
+            acc.provides = acc.references
+            acc.references = []
+            desc.merge(acc)
+            name = acc.get_expr()
         
-        desc.op = Union(exprs)
+        desc.op = Union(exprs, name=name)
         return desc, None
 
     def Summarize(self, op: 'Hql.Operators.Summarize', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
@@ -419,11 +438,11 @@ class HqlCompiler(Compiler):
         exprs = []
         for i in op.aggregate_exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             exprs.append(acc.get_expr())
 
         acc, rej = self.ByExpression(op.by_expr)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         by_expr = acc.get_expr()
 
         # Mostly done to shut my linter up
@@ -440,11 +459,11 @@ class HqlCompiler(Compiler):
         schema = []
         for i in op.schema:
             acc, rej = self.compile(i[0])
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             name = acc.get_expr()
 
             acc, rej = self.compile(i[1])
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             t = acc.get_expr()
             
             schema.append([name, t])
@@ -452,13 +471,13 @@ class HqlCompiler(Compiler):
         values = []
         for i in op.values:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             values.append(acc.get_expr())
 
         name = None
         if op.name:
             acc, rej = self.compile(op.name)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             name = acc.get_expr()
 
         desc.op = Datatable(schema, values, name=name)
@@ -489,19 +508,19 @@ class HqlCompiler(Compiler):
         params = []
         for i in op.params:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             params.append(acc.get_expr())
         
         on = []
         for i in op.on:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             on.append(acc.get_expr())
 
         where = None
         if op.where:
             acc, rej = self.compile(op.where)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             where = acc.get_expr()
 
         desc.op = Join(rh, params=params, on=on, where=where)
@@ -516,13 +535,13 @@ class HqlCompiler(Compiler):
         exprs = []
         for i in op.exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             exprs.append(acc.get_expr())
         
         limit = None
         if op.limit:
             acc, rej = self.compile(op.limit)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             limit = acc.get_expr()
             assert isinstance(limit, Integer)
 
@@ -537,7 +556,7 @@ class HqlCompiler(Compiler):
         exprs = []
         for i in op.exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             exprs.append(acc.get_expr())
 
         desc.op = Sort(exprs)
@@ -551,7 +570,7 @@ class HqlCompiler(Compiler):
         exprs = []
         for i in op.exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             exprs.append(acc.get_expr())
 
         desc.op = Rename(exprs)
@@ -562,7 +581,7 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         acc, rej = self.compile(expr.value)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
 
         desc.expr = OpParameter(expr.name, acc.get_expr())
         return desc, None
@@ -579,14 +598,14 @@ class HqlCompiler(Compiler):
         
         elif expr.to:
             acc, rej = self.compile(expr.to)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             to = acc.get_expr()
 
         else:
             to = None
 
         acc, rej = self.compile(expr.expr)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
     
         desc.expr = ToClause(acc.get_expr(), to=to)
         return desc, None
@@ -600,7 +619,7 @@ class HqlCompiler(Compiler):
         ordered_expr = None
         if expr.expr:
             acc, rej = self.compile(expr.expr)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             ordered_expr = acc.get_expr()
 
         desc.expr = OrderedExpression(expr=ordered_expr, order=expr.order, nulls=expr.nulls)
@@ -614,7 +633,7 @@ class HqlCompiler(Compiler):
         by_exprs = []
         for i in expr.exprs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             by_exprs.append(acc.get_expr())
 
         desc.expr = ByExpression(by_exprs)
@@ -625,14 +644,15 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         acc, rej = self.compile(expr.name)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
+        desc.references = []
         name = acc.get_expr()
         assert isinstance(name, NamedReference)
 
         args = []
         for i in expr.args:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             args.append(acc.get_expr())
 
         desc.set_attr('functions', name.value)
@@ -646,7 +666,7 @@ class HqlCompiler(Compiler):
         funcs = []
         for i in expr.funcs:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             funcs.append(acc.get_expr())
 
         if len(funcs) > 1:
@@ -664,13 +684,13 @@ class HqlCompiler(Compiler):
         desc.set_attr('case_insensitive_compare', not expr.cs)
 
         acc, rej = self.compile(expr.lh)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         lh = acc.get_expr()
 
         rh = []
         for i in expr.rh:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             rh.append(acc.get_expr())
 
         desc.expr = Equality(lh, expr.op, rh)
@@ -684,13 +704,13 @@ class HqlCompiler(Compiler):
         desc.set_attr('substring_matching', True)
 
         acc, rej = self.compile(expr.lh)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         lh = acc.get_expr()
 
         rh = []
         for i in expr.rh:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             rh.append(acc.get_expr())
 
         desc.expr = Substring(lh, expr.op, rh)
@@ -701,13 +721,13 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         acc, rej = self.compile(expr.lh)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         lh = acc.get_expr()
 
         rh = []
         for i in expr.rh:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             rh.append(acc.get_expr())
 
         desc.expr = Relational(lh, expr.op, rh)
@@ -719,15 +739,15 @@ class HqlCompiler(Compiler):
         desc.set_attr('range_compare', True)
 
         acc, rej = self.compile(expr.lh)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         lh = acc.get_expr()
 
         acc, rej = self.compile(expr.start)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         start = acc.get_expr()
         
         acc, rej = self.compile(expr.end)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         end = acc.get_expr()
 
         desc.expr = BetweenEquality(lh, start, end, expr.op)
@@ -738,13 +758,13 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         acc, rej = self.compile(expr.lh)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         lh = acc.get_expr()
 
         rh = []
         for i in expr.rh:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             rh.append(acc.get_expr())
 
         desc.expr = BinaryLogic(lh, rh, expr.bitype)
@@ -756,11 +776,11 @@ class HqlCompiler(Compiler):
         desc.set_attr('range_compare', True)
 
         acc, rej = self.compile(expr.start)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         start = acc.get_expr()
         
         acc, rej = self.compile(expr.end)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         end = acc.get_expr()
 
         desc.expr = BasicRange(start, end)
@@ -776,11 +796,11 @@ class HqlCompiler(Compiler):
         desc.set_attr('regex_global', expr.g)
 
         acc, rej = self.compile(expr.lh)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         lh = acc.get_expr()
         
         acc, rej = self.compile(expr.rh)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         rh = acc.get_expr()
 
         desc.expr = Regex(lh, rh, expr.i, expr.m, expr.s, expr.g)
@@ -843,13 +863,13 @@ class HqlCompiler(Compiler):
     def NamedReference(self, expr:'Hql.Expressions.NamedReference', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.expr = expr
+        desc.references = [expr.name]
         return desc, None
 
     def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        desc = BranchDescriptor()
-        desc.set_attr('complex_names', True)
-        desc.expr = expr
-        return desc, None
+        acc, rej = self.NamedReference(expr)
+        acc.set_attr('complex_names', True)
+        return acc, None
 
     def Keyword(self, expr:'Hql.Expressions.Keyword', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         return self.NamedReference(expr)
@@ -868,12 +888,16 @@ class HqlCompiler(Compiler):
         desc.set_attr('nested_objects', True)
         
         path = []
+        str_path:list[str] = []
         for i in expr.path:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             path.append(acc.get_expr())
+            str_path += acc.references
 
         desc.expr = Path(path)
+        # overwrite existing references for path parts
+        desc.references = [str_path]
         return desc, None
 
     def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
@@ -882,14 +906,17 @@ class HqlCompiler(Compiler):
         desc.set_attr('assignment', True)
 
         paths = []
+        assignments = []
         for i in expr.paths:
             acc, rej = self.compile(i)
-            desc.merge_attrs(acc.attrs)
+            desc.merge(acc)
             paths.append(acc.get_expr())
+            assignments += acc.references
 
         acc, rej = self.compile(expr.value)
-        desc.merge_attrs(acc.attrs)
+        desc.merge(acc)
         value = acc.get_expr()
 
+        desc.provides = assignments
         desc.expr = NamedExpression(paths, value)
         return desc, None

@@ -787,13 +787,7 @@ topNestedOperatorWithOthersClause:
 
 
 unionOperator:
-    UNION (Parameters+=relaxedQueryOperatorParameter)* Expressions+=unionOperatorExpression (',' Expressions+=unionOperatorExpression)*;
-
-unionOperatorExpression:
-      wildcardedEntityExpression
-    | entityNameReference
-    | parenthesizedExpression
-    ;
+    UNION (Parameters+=relaxedQueryOperatorParameter)* Expressions+=tableNameReference (',' Expressions+=tableNameReference)* (AS TableName=tableNameReference)?;
 
 whereOperator:
     Keyword=(FILTER | WHERE) (Parameters+=strictQueryOperatorParameter)* Predicate=namedExpression;

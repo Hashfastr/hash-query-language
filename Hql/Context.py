@@ -114,13 +114,13 @@ class Context():
         return self.data.__bool__()
 
     @staticmethod
-    def merge(ctxs:list['Context']):
+    def merge(ctxs:list['Context'], merge_rows=True):
         from Hql.Data import Data
         
         if len(ctxs) == 1:
             return ctxs[0]
 
-        data = Data.merge([x.data for x in ctxs])
+        data = Data.merge([x.data for x in ctxs], merge_rows=merge_rows)
 
         syms = dict()
         macros = dict()

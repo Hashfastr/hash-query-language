@@ -27,7 +27,7 @@ class isnotempty(Function):
             if isinstance(expr, type(None)):
                 expr = cur
             else:
-                expr = expr & cur
+                expr = expr.and_(cur)
 
         assert isinstance(expr, pl.Expr)
         return expr

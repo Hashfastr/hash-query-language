@@ -138,7 +138,9 @@ class Operators(HqlVisitor):
 
     def visitUnionOperator(self, ctx: HqlParser.UnionOperatorContext):
         exprs = [self.visit(x) for x in ctx.Expressions]
-        return Ops.Union(exprs)
+        name = self.visit(ctx.TableName) if ctx.TableName else None
+
+        return Ops.Union(exprs, name=name)
 
     def visitSummarizeOperator(self, ctx: HqlParser.SummarizeOperatorContext):
         by = None

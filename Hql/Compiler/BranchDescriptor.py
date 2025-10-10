@@ -13,6 +13,8 @@ Helpful for finding out if we can compile something
 '''
 class BranchDescriptor():
     def __init__(self):
+        from Hql.Data import Schema
+
         # contains a timeseries element
         self.attrs:dict = dict()
 
@@ -27,6 +29,11 @@ class BranchDescriptor():
             'types',
             'functions'
         ]
+        # Incomplete solution, just name checking
+        self.provides:list = []
+        self.references:list = []
+        self.removes:list = []
+        self.full_schema = False
 
     def set_attr(self, name:str, value):
         self.attrs[name] = value
@@ -58,6 +65,12 @@ class BranchDescriptor():
             # Default catchall for now
             else:
                 self.attrs[i] = attrs[i]
+
+    def merge(self, desc:'BranchDescriptor'):
+        self.merge_attrs(desc.attrs)
+        self.provides += desc.provides
+        self.references += desc.references
+        self.removes += desc.removes
 
     def compatible(self, superset:dict) -> bool:
         for i in self.attrs:
