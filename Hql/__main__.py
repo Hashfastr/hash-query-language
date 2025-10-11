@@ -63,6 +63,8 @@ def main():
         config_logging(args.l__logging_level)
     elif args.verbose:
         config_logging(5)
+    else:
+        config_logging(4)
         
     if args.config == None:
         conf_path = "./conf"

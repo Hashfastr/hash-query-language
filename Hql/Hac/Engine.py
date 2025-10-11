@@ -228,6 +228,8 @@ class HacEngine():
                 txt = f.read()    
             detections.append(Detection(txt, str(i), self.config))
 
+        logging.info(f'HaC engine found {len(detections)} detections')
+
         return detections
 
     def wait_till(self, stamp:int, pad:int=0):
@@ -239,6 +241,8 @@ class HacEngine():
         sleep(delta)
 
     def run(self):
+        logging.info(f'Starting HaC engine with {len(self.detections)} detections')
+
         while True:
             # adding 1 seconds for a time buffer
             dt = datetime.datetime.now(tz=self.tz) + datetime.timedelta(seconds=1)
