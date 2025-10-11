@@ -2,7 +2,8 @@ import sys
 
 from Hql.Config import Config
 from Hql.Data import Data
-from Hql.Threading import QueryThread, QueryPool
+from Hql.Threading import QueryPool
+from Hql.Hac.Engine import HacEngine
 
 import json
 import time
@@ -49,8 +50,7 @@ def main():
     # parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
     parser.add_argument('-pl', '--plan', help="Prints the plan for the execution", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
-    # parser.add_argument('-sig', '--sigma', help="Input file is a Sigma file", action='store_true')
-    # parser.add_argument('-om', '--omni', help="Process both Sigma and Hql if given the input", action='store_true')
+    parser.add_argument('-eng', '--hac-engine', help="Runs as the hac engine", action='store_true')
     
     args = parser.parse_args()
     
@@ -68,13 +68,21 @@ def main():
         conf_path = "./conf"
     else:
         conf_path = args.config
+    
+    if args.hac_engine:
+        if args.directory:
+            engine = HacEngine(Path(args.directory), True, Path(conf_path))
+        else:
+            engine = HacEngine(Path(args.file), False, Path(conf_path))
+        engine.run()
+        return
+    
     conf = Config(Path(conf_path))
-        
-    files:list[Path] = []
 
     '''
     Loading files
     '''
+    files:list[Path] = []
     if args.directory:
         path = Path(args.directory)
 
