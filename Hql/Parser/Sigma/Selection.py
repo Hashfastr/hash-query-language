@@ -42,7 +42,7 @@ class Selection():
         from Hql.Expressions.Literals import StringLiteral, Integer, Float
         
         if isinstance(value, str):
-            value = value.replace('\\', '\\\\')
+            # value = value.replace('\\', '\\\\')
             value = value.replace('\'', '\\\'')
             expr = StringLiteral(value)
 
