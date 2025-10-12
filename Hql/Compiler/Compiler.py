@@ -33,7 +33,7 @@ class Compiler():
             op = op.get_op()
         return None, op
     
-    def add_ops(self, ops:list['BranchDescriptor']) -> Union[list['Operator'], None]:
+    def add_ops(self, ops:list['BranchDescriptor']) -> Optional[list['Operator']]:
         for idx, op in enumerate(ops):
             acc, rej = self.add_op(op)
             if rej:

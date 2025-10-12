@@ -43,6 +43,9 @@ class Expression():
     def __bool__(self) -> bool:
         return True
 
+    def __eq__(self, value: object, /) -> bool:
+        return NotImplemented
+
     def features(self):
         return []
 

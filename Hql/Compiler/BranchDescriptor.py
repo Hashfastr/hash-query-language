@@ -3,7 +3,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression
+    from Hql.Expressions import Expression, NamedReference, Path
     from Hql.Operators import Operator, Database
     from Hql.Query import Query, Statement
 
@@ -34,9 +34,13 @@ class BranchDescriptor():
         self.references:list = []
         self.removes:list = []
         self.full_schema = False
+        self.mapping:dict[Union['NamedReference', 'Path'], Union['NamedReference', 'Path']] = dict()
 
     def set_attr(self, name:str, value):
         self.attrs[name] = value
+
+    def add_mapping(self, dest:Union['NamedReference', 'Path'], src:Union['NamedReference', 'Path']):
+        self.mapping[dest] = src
 
     def get_attr(self, name:str):
         return self.attrs.get(name, None)
@@ -71,6 +75,8 @@ class BranchDescriptor():
         self.provides += desc.provides
         self.references += desc.references
         self.removes += desc.removes
+        for i in desc.mapping:
+            self.add_mapping(i, desc.mapping[i])
 
     def compatible(self, superset:dict) -> bool:
         for i in self.attrs:
