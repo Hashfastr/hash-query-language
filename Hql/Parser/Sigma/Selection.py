@@ -42,9 +42,10 @@ class Selection():
         from Hql.Expressions.Literals import StringLiteral, Integer, Float
         
         if isinstance(value, str):
-            # value = value.replace('\\', '\\\\')
-            value = value.replace('\'', '\\\'')
-            expr = StringLiteral(value)
+            value = repr(value)
+            lquote = value[0]
+            value = value[1:-1]
+            expr = StringLiteral(value, lquote=lquote, rquote=lquote, sanitized=True)
 
         elif isinstance(value, int):
             expr = Integer(value)
