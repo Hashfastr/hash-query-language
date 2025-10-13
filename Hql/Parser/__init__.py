@@ -68,13 +68,13 @@ class Parser():
                 target = getattr(self.tree, i)()
                 self.assembly = visitor.visit(target)
             except:
-                # import traceback
-                # traces.append(traceback.format_exc())
+                import traceback
+                traces.append(traceback.format_exc())
                 continue
             break
 
         if not self.assembly:
-            # [logging.critical(x) for x in traces]
+            [logging.critical(x) for x in traces]
             if self.filename:
                 logging.critical(self.filename)
             logging.critical(f'Failed to parse with targets {targets}')

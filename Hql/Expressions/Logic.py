@@ -480,3 +480,17 @@ class Regex(Expression):
             raise hqle.CompilerException(f'Passed regex is not a string {rh}')
 
         return lh.str.contains(rh)
+
+class Not(Expression):
+    def __init__(self, expr:Expression) -> None:
+        Expression.__init__(self)
+        self.expr = expr
+
+    def decompile(self, ctx: 'Context') -> str:
+        expr = self.expr.decompile(ctx)
+        return f'not({expr})'
+
+    def eval(self, ctx: 'Context', **kwargs) -> Union[pl.Expr, 'Expression']:
+        expr = self.expr.eval(ctx, as_pl=True)
+        assert isinstance(expr, pl.Expr)
+        return expr.not_()

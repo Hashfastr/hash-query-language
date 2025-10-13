@@ -70,12 +70,7 @@ class Visitor(SigmaVisitor):
 
     def visitNotStatement(self, ctx: SigmaParser.NotStatementContext):
         from Hql.Expressions import FuncExpr
-
-        if ctx.Bracket:
-            inner = self.visit(ctx.Bracket)
-        else:
-            inner = self.visit(ctx.Selection)
-
+        inner = self.visit(ctx.Statement)
         return FuncExpr('not', [inner])
 
     def visitBracketStatement(self, ctx: SigmaParser.BracketStatementContext):

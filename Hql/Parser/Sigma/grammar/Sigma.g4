@@ -19,7 +19,7 @@ statement:
     ;
     
 notStatement:
-    NOT (Bracket=bracketStatement | Selection=selectionIdentifier);
+    NOT Statement=statement;
 
 bracketStatement:
     LP Statement=condition RP;

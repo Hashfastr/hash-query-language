@@ -126,6 +126,19 @@ class LuceneCompiler(Compiler):
         ret = bitok.join(exprs)
         return f'({ret})', None
 
+    def Not(self, expr: 'Hql.Expressions.Not', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import Not, Expression
+
+        if preprocess:
+            acc, rej = self.compile(expr.expr)
+            if rej:
+                return None, expr
+            assert isinstance(acc, Expression)
+            return Not(acc), None
+
+        inner = self.compile(expr.expr, preprocess=False)
+        return f'(NOT {inner})', None
+
     def Equality(self, expr: 'Hql.Expressions.Equality', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Equality, Expression
 
@@ -190,6 +203,14 @@ class LuceneCompiler(Compiler):
         if preprocess:
             return expr, None
         return f'"{expr.value}"', None
+
+    def MultiString(self, expr: 'Hql.Expressions.MultiString', preprocess: bool = True) -> tuple[object, object]:
+        if preprocess:
+            return expr, None
+        value = expr.eval(self.ctx)
+        assert isinstance(value, str)
+        value = value.encode('unicode_escape').decode('utf-8')
+        return f'{value}', None
 
     def Integer(self, expr: 'Hql.Expressions.Integer', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:
@@ -411,6 +432,7 @@ class LuceneCompiler(Compiler):
 
     def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Substring, Expression, StringLiteral
+        import re
 
         if preprocess:
             acc, rej = self.compile(expr.lh)
@@ -445,6 +467,7 @@ class LuceneCompiler(Compiler):
                     raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
                 rh = acc
             assert isinstance(rh, str)
+            re.escape
 
             if 'startswith' in expr.op or 'prefix' in expr.op:
                 exprs.append(f'{lh}:/{rh}.*/')

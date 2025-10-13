@@ -45,7 +45,7 @@ class Selection():
             value = repr(value)
             lquote = value[0]
             value = value[1:-1]
-            expr = StringLiteral(value, lquote=lquote, rquote=lquote, sanitized=True)
+            expr = StringLiteral(value, lquote=lquote, rquote=lquote)
 
         elif isinstance(value, int):
             expr = Integer(value)
@@ -68,26 +68,26 @@ class Selection():
         from Hql.Expressions.Logic import Substring
         rh_list = True
         if not isinstance(rh, list):
-            rh_list = False
             rh = [rh]
+        if len(rh) == 1:
+            rh_list = False
 
         exprs = []
         for i in rh:
             exprs.append(self.to_literal_object(i, modifiers))
 
         if 'contains' in modifiers:
-            if 'all' in modifiers:
-                op = 'contains_all'
-            elif rh_list:
-                op = 'contains_any'
-            else:
-                op = 'contains'
-
+            op = 'contains'
         elif 'endswith' in modifiers:
             op = 'endswith'
-
         else:
             op = 'startswith'
+
+        if rh_list:
+            if 'all' in modifiers:
+                op += '_all'
+            else:
+                op += '_any'
 
         op += '_cs' if 'cased' in modifiers else ''
         return Substring(lh, op, exprs)

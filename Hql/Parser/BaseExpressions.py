@@ -133,7 +133,7 @@ class BaseExpressions(HqlVisitor):
 
             parts.append(Expr.StringLiteral(cur, lquote=lquote, rquote=rquote))
 
-        if len(parts) == 0:
+        if len(parts) == 1:
             return parts[0]
         else:
             return Expr.MultiString(parts)

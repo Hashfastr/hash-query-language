@@ -30,16 +30,12 @@ class TypeExpression(Literal):
 # literally a string
 # we strip off quotes when constructing as the parser doesn't remove them for us.
 class StringLiteral(Literal):
-    def __init__(self, value:str, lquote:str="'", rquote:str="'", sanitized=False):
+    def __init__(self, value:str, lquote:str="'", rquote:str="'"):
         Literal.__init__(self)
-
-        if not sanitized and '@' not in lquote and value != value.encode('unicode_escape').decode('utf-8'):
-            lquote = '@' + lquote
 
         self.lquote = lquote
         self.rquote = rquote
         self.value = value
-        self.sanitized = sanitized
     
     def to_dict(self):
         return {
@@ -48,24 +44,15 @@ class StringLiteral(Literal):
         }
 
     def decompile(self, ctx: 'Context') -> str:
-        if len(self.rquote) == 3:
-            return self.lquote + self.value + self.rquote
-
-        if '@' in self.lquote:
-            return self.lquote + self.value + self.rquote
-
-        value = self.value
-        if not self.sanitized:
-            value = value.encode('unicode_escape').decode('utf-8')
-        return self.lquote + value + self.rquote
+        return self.lquote + self.value + self.rquote
         
     def eval(self, ctx:'Context', **kwargs):
         value = self.value
         if '@' not in self.lquote:
             value = value.encode('utf-8').decode('unicode_escape')
 
-        if 'h' in self.lquote.lower():
-            value = bytes.fromhex(value).decode('utf-8')
+        # if 'h' in self.lquote.lower():
+        #     value = bytes.fromhex(value).decode('utf-8')
 
         if kwargs.get('as_pl', False):
             return pl.lit(value)
@@ -73,6 +60,7 @@ class StringLiteral(Literal):
 
 class MultiString(Literal):
     def __init__(self, strlits:Optional[list[StringLiteral]]=None):
+        Literal.__init__(self)
         self.strlits = strlits if strlits else []
     
     def to_dict(self) -> Union[None, dict]:

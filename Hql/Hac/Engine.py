@@ -160,6 +160,8 @@ class Detection():
         from Hql.Query import Query
         from Hql.Compiler import HqlCompiler
 
+        logging.debug(f'Compiling {self.src}')
+
         if not self.parser:
             self.parser = Parser(self.txt, self.src)
         self.parser.assemble()
