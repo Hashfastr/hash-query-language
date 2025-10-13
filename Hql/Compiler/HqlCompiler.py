@@ -300,7 +300,7 @@ class HqlCompiler(Compiler):
     def Where(self, op: 'Hql.Operators.Where', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Where
         desc = BranchDescriptor()
-        desc.set_attr('row_reducing', True)
+        desc.set_attr('row_reducing')
 
         acc, rej = self.compile(op.expr)
         op = Where(acc.get_expr(), op.parameters)
@@ -341,7 +341,7 @@ class HqlCompiler(Compiler):
     def Take(self, op: 'Hql.Operators.Take', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Take
         desc = BranchDescriptor()
-        desc.set_attr('row_reducing', True)
+        desc.set_attr('row_reducing')
 
         acc, rej = self.compile(op.expr)
         desc.merge(acc)
@@ -359,8 +359,8 @@ class HqlCompiler(Compiler):
     def Count(self, op: 'Hql.Operators.Count', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Count
         desc = BranchDescriptor()
-        desc.set_attr('row_dependent', True)
-        desc.set_attr('row_mutable', True)
+        desc.set_attr('row_dependent')
+        desc.set_attr('row_mutable')
 
         if op.name:
             acc, rej = self.compile(op.name)
@@ -445,7 +445,7 @@ class HqlCompiler(Compiler):
     def Union(self, op: 'Hql.Operators.Union', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Operators import Union
         desc = BranchDescriptor()
-        desc.set_attr('requires_sync', True)
+        desc.set_attr('requires_sync')
 
         exprs = []
         for i in op.exprs:
@@ -468,8 +468,8 @@ class HqlCompiler(Compiler):
         from Hql.Operators import Summarize
         from Hql.Expressions import ByExpression
         desc = BranchDescriptor()
-        desc.set_attr('row_dependent', True)
-        desc.set_attr('requires_sync', True)
+        desc.set_attr('row_dependent')
+        desc.set_attr('requires_sync')
 
         exprs = []
         for i in op.aggregate_exprs:
@@ -566,7 +566,7 @@ class HqlCompiler(Compiler):
         from Hql.Operators import MvExpand
         from Hql.Expressions import Integer
         desc = BranchDescriptor()
-        desc.set_attr('row_mutable', True)
+        desc.set_attr('row_mutable')
 
         exprs = []
         for i in op.exprs:
@@ -587,7 +587,7 @@ class HqlCompiler(Compiler):
     def Sort(self, op: 'Hql.Operators.Sort', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Sort
         desc = BranchDescriptor()
-        desc.set_attr('row_dependent', True)
+        desc.set_attr('row_dependent')
 
         exprs = []
         for i in op.exprs:
@@ -601,7 +601,7 @@ class HqlCompiler(Compiler):
     def Rename(self, op: 'Hql.Operators.Rename', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Operators import Rename
         desc = BranchDescriptor()
-        desc.set_attr('table_mutable', True)
+        desc.set_attr('table_mutable')
 
         exprs = []
         for i in op.exprs:
@@ -628,7 +628,7 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
 
         if isinstance(expr.to, hqlt.HqlType):
-            desc.set_attr('type_casting', True)
+            desc.set_attr('type_casting')
             desc.set_attr('types', expr.to)
             to = expr.to
         
@@ -649,8 +649,8 @@ class HqlCompiler(Compiler):
     def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import OrderedExpression
         desc = BranchDescriptor()
-        desc.set_attr('null_ordering', True)
-        desc.set_attr('ordering', True)
+        desc.set_attr('null_ordering')
+        desc.set_attr('ordering')
 
         ordered_expr = None
         if expr.expr:
@@ -664,7 +664,7 @@ class HqlCompiler(Compiler):
     def ByExpression(self, expr:'Hql.Expressions.ByExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import ByExpression
         desc = BranchDescriptor()
-        desc.set_attr('aggregation', True)
+        desc.set_attr('aggregation')
 
         by_exprs = []
         for i in expr.exprs:
@@ -730,7 +730,7 @@ class HqlCompiler(Compiler):
             return res, None
 
         if len(funcs) > 1:
-            desc.set_attr('dot_functions', True)
+            desc.set_attr('dot_functions')
             desc.expr = DotCompositeFunction(funcs)
         else:
             # Breakdown a dot function to a normal function
@@ -761,7 +761,7 @@ class HqlCompiler(Compiler):
         desc = BranchDescriptor()
         desc.set_attr('case_insensitive_compare', not expr.cs)
         desc.set_attr('term_matching', expr.term)
-        desc.set_attr('substring_matching', True)
+        desc.set_attr('substring_matching')
 
         acc, rej = self.compile(expr.lh)
         desc.merge(acc)
@@ -796,7 +796,7 @@ class HqlCompiler(Compiler):
     def BetweenEquality(self, expr:'Hql.Expressions.BetweenEquality', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import BetweenEquality
         desc = BranchDescriptor()
-        desc.set_attr('range_compare', True)
+        desc.set_attr('range_compare')
 
         acc, rej = self.compile(expr.lh)
         desc.merge(acc)
@@ -844,7 +844,7 @@ class HqlCompiler(Compiler):
     def BasicRange(self, expr:'Hql.Expressions.BasicRange', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import BasicRange
         desc = BranchDescriptor()
-        desc.set_attr('range_compare', True)
+        desc.set_attr('range_compare')
 
         acc, rej = self.compile(expr.start)
         desc.merge(acc)
@@ -860,7 +860,7 @@ class HqlCompiler(Compiler):
     def Regex(self, expr:'Hql.Expressions.Regex', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import Regex
         desc = BranchDescriptor()
-        desc.set_attr('regex_matching', True)
+        desc.set_attr('regex_matching')
         desc.set_attr('regex_insensitive', expr.i)
         desc.set_attr('regex_multiline', expr.m)
         desc.set_attr('regex_dotall', expr.s)
@@ -965,7 +965,7 @@ class HqlCompiler(Compiler):
 
     def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         acc, rej = self.NamedReference(expr)
-        acc.set_attr('complex_names', True)
+        acc.set_attr('complex_names')
         return acc, None
 
     def Keyword(self, expr:'Hql.Expressions.Keyword', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
@@ -976,21 +976,21 @@ class HqlCompiler(Compiler):
 
     def Wildcard(self, expr:'Hql.Expressions.Wildcard', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         acc, rej = self.NamedReference(expr)
-        acc.set_attr('wildcards', True)
+        acc.set_attr('wildcards')
         return acc, None
 
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import Path, EscapedNamedReference, Wildcard
         desc = BranchDescriptor()
-        desc.set_attr('nested_objects', True)
+        desc.set_attr('nested_objects')
         
         path = []
         for i in expr.path:
             if isinstance(i, EscapedNamedReference):
-                desc.set_attr('complex_names', True)
+                desc.set_attr('complex_names')
             
             if isinstance(i, Wildcard):
-                desc.set_attr('wildcards', True)
+                desc.set_attr('wildcards')
 
             path.append(i)
 
@@ -1001,7 +1001,7 @@ class HqlCompiler(Compiler):
     def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import NamedExpression, NamedReference, Path
         desc = BranchDescriptor()
-        desc.set_attr('assignment', True)
+        desc.set_attr('assignment')
 
         acc, rej = self.compile(expr.value)
         desc.merge(acc)
@@ -1023,4 +1023,10 @@ class HqlCompiler(Compiler):
             paths.append(dest)
 
         desc.expr = NamedExpression(paths, value)
+        return desc, None
+
+    def Null(self, expr: 'Hql.Expressions.Null', preprocess: bool = True) -> tuple[BranchDescriptor, None]:
+        desc = BranchDescriptor()
+        desc.set_attr('null_values')
+        desc.expr = expr
         return desc, None

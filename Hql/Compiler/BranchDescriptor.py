@@ -36,7 +36,7 @@ class BranchDescriptor():
         self.full_schema = False
         self.mapping:dict[Union['NamedReference', 'Path'], Union['NamedReference', 'Path']] = dict()
 
-    def set_attr(self, name:str, value):
+    def set_attr(self, name:str, value:object=True):
         self.attrs[name] = value
 
     def add_mapping(self, dest:Union['NamedReference', 'Path'], src:Union['NamedReference', 'Path']):

@@ -49,8 +49,37 @@ class Equality(Comparator):
 
         self.list = 'in' in op
 
+        self.rebuild_op()
+
         if len(rh) > 1 and not self.list:
             raise hqle.CompilerException('Non-list equality given more than one righthand')
+        
+    def add_rh(self, rh:Expression):
+        self.rh.append(rh)
+        self.rebuild_op()
+
+    def rebuild_op(self):
+        op = ''
+        if len(self.rh) > 1:
+            if self.neq:
+                op += '!'
+            op += 'in'
+            if not self.cs:
+                op += '~'
+            self.list = True
+        else:
+            if self.neq:
+                if self.cs:
+                    op += '!~'
+                else:
+                    op += '!='
+            else:
+                if not self.cs:
+                    op += '=~'
+                else:
+                    op += '=='
+            self.list = False
+        self.op = op
 
     def as_pl(self, ctx:'Context'):
         from Hql.Expressions import Literal, StringLiteral
@@ -368,10 +397,40 @@ class BetweenEquality(Expression):
 # a and b and c and d
 class BinaryLogic(Expression):
     def __init__(self, lh:Expression, rh:list[Expression], bitype:str):
+        from Hql.Expressions import Equality
         Expression.__init__(self)
         self.bitype = bitype.lower()
-        self.lh = lh
-        self.rh = rh
+        exprs = [lh] + rh
+
+        if bitype == 'or':
+            exprs = self.condense(exprs, Equality, ('==', 'in'))
+        
+        self.lh = exprs[0]
+        self.rh = exprs[1:]
+
+    def condense(self, exprs:list, target:type, ops:tuple) -> list:
+        from Hql.Expressions import NamedReference, Path
+
+        # Make things a bit nicer
+        eq:dict[Union[NamedReference, Path], object] = dict()
+        other = []
+        for i in exprs:
+            if isinstance(i, target) and i.op in ops:
+                if not isinstance(i.lh, (NamedReference, Path)):
+                    other.append(i)
+
+                elif i.lh in eq:
+                    [eq[i.lh].add_rh(x) for x in i.rh]
+
+                else:
+                    eq[i.lh] = i
+            else:
+                other.append(i)
+
+        total = other + [eq[x] for x in eq]
+
+        return total
+        
         
     def to_dict(self):
         return {
@@ -474,7 +533,7 @@ class Regex(Expression):
             raise hqle.QueryException(f'Dynamic right hands not supported in {self.type} just yet')
 
         if not isinstance(lh, pl.Expr):
-            raise hqle.CompilerException(f'String binary left hand {self.lh.type} returned a non-polars expression ')
+            raise hqle.CompilerException(f'String inary left hand {self.lh.type} returned a non-polars expression ')
 
         if not (isinstance(rh, pl.Expr) or isinstance(rh, str)):
             raise hqle.CompilerException(f'Passed regex is not a string {rh}')

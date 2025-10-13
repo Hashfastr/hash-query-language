@@ -26,7 +26,6 @@ class Selection():
             for i in self.selection:
                 expr = Selection(i).build_selection()
                 exprs.append(expr)
-
         else:
             op = 'and'
             for i in self.selection:
@@ -39,7 +38,7 @@ class Selection():
         return BinaryLogic(exprs[0], exprs[1:], op)
 
     def to_literal_object(self, value, modifiers:list[str]):
-        from Hql.Expressions.Literals import StringLiteral, Integer, Float
+        from Hql.Expressions.Literals import StringLiteral, Integer, Float, Null
         
         if isinstance(value, str):
             value = repr(value)
@@ -52,6 +51,9 @@ class Selection():
 
         elif isinstance(value, float):
             expr = Float(value)
+
+        elif value == None:
+            expr = Null()
         
         else:
             raise hqle.CompilerException(f'Unhandled literal object type {type(value)} in Sigma parse')
@@ -105,7 +107,7 @@ class Selection():
 
             exprs.append(expr)
 
-        if len(field) == 1:
+        if len(exprs) == 1:
             return Equality(name, '==', exprs)
         else:
             return Equality(name, 'in', exprs)
@@ -169,7 +171,10 @@ class Selection():
         for i in field:
             rhs.append(self.to_literal_object(i, []))
 
-        return Equality(name, 'in', rhs)
+        if len(rhs) == 1:
+            return Equality(name, '==', rhs)
+        else:
+            return Equality(name, 'in', rhs)
 
     def process_field(self, field_name:str, field):
         import Hql.Expressions as Expr

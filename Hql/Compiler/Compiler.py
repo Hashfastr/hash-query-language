@@ -223,3 +223,6 @@ class Compiler():
 
     def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
+    
+    def Null(self, expr:'Hql.Expressions.Null', preprocess:bool=True) -> tuple[object, object]:
+        return None, expr

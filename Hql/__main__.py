@@ -135,6 +135,8 @@ def main():
             
         time.sleep(0.1)
 
+    for i in errors:
+        logging.error(f'Failed executing {i}')
     logging.info(f'Finished execution {len(errors)} errors, {len(successes)} successes')
     
     #####################
