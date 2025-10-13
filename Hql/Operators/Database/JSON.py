@@ -8,7 +8,7 @@ import requests
 import logging
 import polars as pl
 
-from typing import Union
+from typing import Union, Optional
 
 # Index in a database to grab data from, extremely simple.
 @register_database('JSON')
@@ -32,7 +32,7 @@ class JSON(Database):
             'macro'
         ]
 
-        self.limit:Union[None, int] = None
+        self.limits:dict[str, int] = dict()
     
     def from_file(self, filename:str):
         if self.local_base:
@@ -61,20 +61,11 @@ class JSON(Database):
     # Attempt to load as normal json then fall back to ndjson
     # We could use polars but it sucks in that it can't handle ambiguous multi-value
     # Maybe a rust rewrite problem? Or someone is smarter than me
-    def load_data(self, f, src:str) -> list[dict]:
+    def load_data(self, f, name:str) -> list[dict]:
         import json, ndjson
 
         try:
-            '''
-            df = pl.read_json(data, infer_schema_length=1000000)
-            if self.limit != None:
-                df = df.limit(self.limit)
-            '''
-
             data = json.loads(f.read())
-            if self.limit != None:
-                data = data[:self.limit]
-
         except:
             try:
                 # df = pl.read_ndjson(data, n_rows=self.limit)
@@ -82,14 +73,39 @@ class JSON(Database):
                 data = [x for x in reader]
             except:
                 f.close()
-                logging.critical(f'Could not load json or ndjson from {src}')
+                logging.critical(f'Could not load json or ndjson from {name}')
                 raise hqle.QueryException('JSON database not given valid json data')
 
         f.close()
 
+        limit = self.get_limit(name)
+        if limit != None:
+            data = data[:limit]
+
         return data
+
+    def get_limit(self, name:str) -> Optional[int]:
+        from fnmatch import fnmatch
+
+        cur = None
+        for i in self.limits:
+            if fnmatch(name, i):
+                if cur == None:
+                    cur = self.limits[i]
+                    continue
+                cur = self.limits[i] if self.limits[i] < cur else cur
+
+        return cur
+
+    def set_limit(self, name:str, limit:int):
+        cur = self.get_limit(name)
+        if cur == None:
+            self.limits[name] = limit
+        else:
+            # Ensure we don't override a smaller take
+            self.limits[name] = limit if limit < cur else cur
     
-    def exec_query(self) -> Data:
+    def eval(self, ctx:Context, **kwargs) -> Data:
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to JSON database')

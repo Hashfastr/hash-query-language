@@ -4,7 +4,12 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data, Table, Schema
 from Hql.Context import register_database
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
+    from Hql.Operators import Operator
+    from Hql.Compiler import BranchDescriptor
 
 import os
 import polars as pl
@@ -26,33 +31,28 @@ class CSV(Database):
         
         self.methods = [
             'file',
-            'http'
+            'http',
+            'macro'
         ]
         
-        self.compatible = [
-            'Take'
-        ]
-        
-        self.take_sets = []
-    
-    def eval_ops(self):
-        for op in self.ops:
-            if op.type == 'Take':
-                self.take_sets.append(op.get_limits())
-    
-    def from_file(self, filename:str, limit:Union[None, int]=None) -> Table:
+        self.limits:dict[str, int] = dict()
+
+    def from_file(self, filename:str, limit:Optional[int]=None) -> Table:
         try:
             base = self.base_path if self.base_path else '.'
             
             with open(f'{base}{os.sep}{filename}', mode='r') as f:
-                data = pl.read_csv(f, n_rows=limit)
+                if limit != None:
+                    data = pl.read_csv(f, n_rows=limit)
+                else:
+                    data = pl.read_csv(f)
         except:
             logging.critical(f'Could not load csv from {filename}')
             raise hqle.QueryException('CSV databse not given valid csv data')
                 
         return Table(df=data, name=filename)
         
-    def from_url(self, url:str, limit:Union[None, int]=None) -> Table:
+    def from_url(self, url:str, limit:Optional[int]=None) -> Table:
         try:
             url = f'{self.base_path}/{url}' if self.base_path else url
             
@@ -62,32 +62,62 @@ class CSV(Database):
             
             name = url.split('/')[-1]
             reader = StringIO(res.text)
-            data = pl.read_csv(reader, n_rows=limit)
+
+            if limit != None:
+                data = pl.read_csv(reader, n_rows=limit)
+            else:
+                data = pl.read_csv(reader)
         
             return Table(df=data, name=name)
         except:
             logging.critical(f'Could not load csv from {url}')
             raise hqle.QueryException('CSV databse not given valid csv data')
 
-    def limit(self, name:str):
-        min_limit = None
-        for take_set in self.take_sets:
-            limit = take_set['limit']
+    def get_limit(self, name:str) -> Optional[int]:
+        from fnmatch import fnmatch
 
-            # In the case of no tables specified, meaning all tables
-            if len(take_set['tables']) == 0:
-                min_limit = limit
-                continue
+        cur = None
+        for i in self.limits:
+            if fnmatch(name, i):
+                if cur == None:
+                    cur = self.limits[i]
+                    continue
+                cur = self.limits[i] if self.limits[i] < cur else cur
 
-            for table in take_set['tables']:
-                if name.startswith(table.split('*')[0]) and not min_limit:
-                    min_limit = limit
-                elif limit < min_limit:
-                    min_limit = limit
+        return cur
 
-        return min_limit
+    def set_limit(self, name:str, limit:int):
+        cur = self.get_limit(name)
+        if cur == None:
+            self.limits[name] = limit
+        else:
+            # Ensure we don't override a smaller take
+            self.limits[name] = limit if limit < cur else cur
+
+    def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+        from Hql.Compiler import BranchDescriptor
+        from Hql.Operators import Take, Operator
+
+        if isinstance(op, BranchDescriptor):
+            op = op.get_op()
+
+        if isinstance(op, Take):
+            limit = op.expr.eval(self.ctx)
+            assert isinstance(limit, int)
+
+            if not op.tables:
+                self.set_limit('*', limit)
+
+            for i in op.tables:
+                name = i.eval(self.ctx, as_str=True)
+                assert isinstance(name, str)
+                self.set_limit(name, limit)
+
+            return op, None
+
+        return None, op
                 
-    def make_query(self) -> Data:
+    def eval(self, ctx:'Context', **kwargs) -> Data:
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to CSV database')
@@ -97,18 +127,16 @@ class CSV(Database):
             logging.critical('Where filename exists relative to the configured base_path')
             raise hqle.QueryException('No file provided to CSV database')
         
-        self.eval_ops()
-        
         self.files = self.files if self.files else []
         self.urls = self.urls if self.urls else []
         
         tables = []
         for file in self.files:
-            limit = self.limit(file)
+            limit = self.get_limit(file)
             tables.append(self.from_file(file, limit=limit))
 
         for url in self.urls:
-            limit = self.limit(url.split('/')[-1])
+            limit = self.get_limit(url.split('/')[-1])
             tables.append(self.from_url(url, limit=limit))
                 
         return Data(tables=tables)

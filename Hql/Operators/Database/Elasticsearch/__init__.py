@@ -93,7 +93,7 @@ class Elasticsearch(Database):
             if op.tables:
                 return None, op
 
-            limit = op.expr.eval(self.ctx, as_str=True)
+            limit = op.expr.eval(self.ctx)
             assert isinstance(limit, int)
             self.limit = limit if limit < self.limit else self.limit
 

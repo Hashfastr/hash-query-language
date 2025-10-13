@@ -4,7 +4,13 @@ from Hql.Data import Data
 import logging, time
 from typing import Union
 
-def run_query(text:str, conf:Config, src:Union[str, Path]='', **kwargs) -> Union[Data, str]:
+def can_thread():
+    import sys
+    if hasattr(sys, '_is_gil_enabled') and not sys._is_gil_enabled():
+        return True
+    return False
+
+def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     from Hql.Exceptions import HqlExceptions as hqle
     from Hql.Exceptions import HacExceptions as hace
     from Hql.Context import Context
@@ -18,18 +24,18 @@ def run_query(text:str, conf:Config, src:Union[str, Path]='', **kwargs) -> Union
     ## Generate HaC (if applicable) ##
     ##################################
 
-    if isinstance(src, Path):
-        src = src.as_posix()
+    logging.debug(f'Parsing HaC for {name}...')
 
-    logging.debug(f'Parsing HaC for {src}...')
-    if kwargs.get('sigma', False):
+    parser = None
+
+    try:
         parser = SigmaParser(text)
         hac = parser.gen_hac()
-
-    else:
+    except Exception:
+        # We're just skipping over to HaC Parsing then
         try:
-            hac = HaCParser.parse_text(text, str(src))
-        except hace.LexerException:
+            hac = HaCParser.parse_text(text, name)
+        except (hace.LexerException, hace.HacException):
             hac = None
 
     if kwargs.get('render_hac', ''):
@@ -43,12 +49,10 @@ def run_query(text:str, conf:Config, src:Union[str, Path]='', **kwargs) -> Union
     ## Generate Assembly ##
     #######################
     
-    logging.debug(f'Parsing {src}...')
+    logging.debug(f'Parsing {name}...')
     start = time.perf_counter()
 
-    if kwargs.get('sigma', False) or kwargs.get('omni', False):
-        parser = SigmaParser(text)
-    else:
+    if not parser:
         parser = Parser(text)
     parser.assemble()
     

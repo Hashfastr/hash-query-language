@@ -9,9 +9,11 @@ class Hac():
     default_schedule is if there is an undefined schedule, safe defaults to hourly
     '''
     def __init__(self, asm:dict, src:str, default_schedule:str='0 * * * *') -> None:
+        import uuid
+
         self.asm = asm
         self.src = src
-        self.default_schedule = default_schedule
+        self.schedule = default_schedule
 
         # Required tags from a HaC definition
         self.required = [
@@ -25,6 +27,8 @@ class Hac():
 
         self.validate()
         self.reorder_keys()
+
+        self.id = str(uuid.uuid4())
 
     def render(self, target:str='md'):
         from .Doc import HacDoc
@@ -62,14 +66,16 @@ class Hac():
         for i in self.required:
             if i not in self.asm:
                 if i == 'schedule':
-                    self.asm['schedule'] = self.default_schedule
+                    self.asm['schedule'] = self.schedule
 
                 elif i == 'author':
                     self.asm['author'] = 'Unknown'
 
                 elif i == 'id':
-                    import uuid
-                    self.asm['id'] = str(uuid.uuid4())
+                    self.asm['id'] = self.id
 
                 else:
                     raise hace.HacException(f'Missing required field {i} in {self.src}')
+
+        self.id = self.asm['id']
+        self.schedule = self.asm['schedule']

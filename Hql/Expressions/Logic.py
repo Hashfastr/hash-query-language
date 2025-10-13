@@ -166,7 +166,7 @@ class Substring(Comparator):
         if not isinstance(rh_str, str):
             raise hqle.CompilerException(f'Substring righthand returned non-str {type(rh_str)}')
 
-        rh_str = pl.regex_escape(rh_str)
+        rh_str = pl.escape_regex(rh_str)
 
         regex = '' if self.cs else '(?i)'
         regex += rh_str
@@ -180,7 +180,7 @@ class Substring(Comparator):
             raise hqle.CompilerException(f'Substring righthand returned non-str {type(rh_str)}')
 
         # regex escape
-        rh_str = pl.regex_escape(rh_str)
+        rh_str = pl.escape_regex(rh_str)
         
         regex = '' if self.cs else '(?i)'
         regex += '^' if prefix else ''

@@ -1,12 +1,14 @@
+from typing import Optional
 from Hql.Operators import Operator
 from Hql.Expressions import Expression
 from Hql.Context import register_op, Context
 from Hql.Exceptions import HqlExceptions as hqle
 
 class Union(Operator):
-    def __init__(self, exprs:list[Expression]):
+    def __init__(self, exprs:list[Expression], name:Optional[Expression]=None):
         Operator.__init__(self)
         self.exprs = exprs
+        self.name = name
 
     def decompile(self, ctx: 'Context', split: bool = False) -> str:
         exprs = []
@@ -33,7 +35,13 @@ class Union(Operator):
                 if j.name in ignore:
                     merge.append(ignore.pop(j.name))
 
-        tables = [Table.merge(merge, interlace=False)]
+        new = Table.merge(merge, merge_rows=False)
+        if self.name:
+            name = self.name.eval(ctx, as_str=True)
+            assert isinstance(name, str)
+            new.name = name
+
+        tables = [new]
         for i in ignore:
             tables.append(ignore[i])
 

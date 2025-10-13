@@ -1,6 +1,7 @@
 import importlib, pkgutil
 
 import json
+import polars as pl
 from typing import TYPE_CHECKING, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
@@ -45,7 +46,7 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet', 'Source']:
+    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet', 'Source', pl.Expr]:
         from Hql.Data import Data
         return Data()
 

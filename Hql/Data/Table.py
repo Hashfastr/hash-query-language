@@ -149,51 +149,7 @@ class Table():
         return pltools.get_element_value(self.df, path)
 
     @staticmethod
-    def merge(tables:list["Table"], interlace:bool=True):
-        if interlace:
-            return Table.interlace(tables)
-
-        if not tables:
-            return Table()
-        
-        # Quick short circuit
-        if len(tables) == 1:
-            return tables[0]
-        
-        name = tables[0].name
-        
-        schemas = []
-        for table in tables:
-            schemas.append(table.schema)
-        schema = Schema.merge(schemas).schema
-
-        # Makes an assumption that the above merge converted field names accurately
-        # in the case of a conflict, e.g. they get split into types.
-        new = []
-        for table in tables:
-            cur = table.df
-            curs = table.schema.schema
-            for key in curs:
-                # Generate a new key name if needed
-                if isinstance(curs[key], dict):
-                    new_key = f'{key}_object'
-                else:
-                    new_key = f'{key}_{curs[key].name}'
-
-                # If need new, rename to new
-                if key not in schema:
-                    cur = cur.rename({key: new_key})
-            new.append(cur)
-        
-        df = pl.concat(new, how='diagonal')
-        schema = Schema(schema=schema)
-                
-        return Table(df=df, schema=schema, name=name)
-
-    @staticmethod
-    def interlace(tables:list['Table']):
-        max_cols = 100
-        
+    def merge_rows(tables:list['Table']):
         if not tables:
             return Table()
         
@@ -218,7 +174,6 @@ class Table():
             for col in table.df:
                 if col.name not in col_groups:
                     col_groups[col.name] = []
-                    
                 col_groups[col.name].append(col)
 
         new = dict()
@@ -229,28 +184,70 @@ class Table():
                     continue
                 
                 # Canon conflict
-                if new[key].dtype == pl.Struct and col.dtype == pl.Struct:
+                if not isinstance(new[key], list) and new[key].dtype == pl.Struct and col.dtype == pl.Struct:
                     l = Table(df=new[key].struct.unnest(), name=name)
                     r = Table(df=col.struct.unnest(), name=name)
                     
-                    new[key] = Table.merge([l, r]).df.to_struct()
+                    new[key] = Table.merge_rows([l, r]).df.to_struct()
                     continue
-                
-                for i in range(max_cols):
-                    name = f'{key}_{i}'
-                    
-                    if name not in new:
-                        new[name] = col
-                        break
-                    
-                    if i == max_cols - 1:
-                        logging.critical(f'Attempting to create more duplicate columns than allowed: {max_cols}')
-                        logging.critical(f'Applicable field: {key}')
-                        raise hqle.QueryException(f'Attempting to create more duplicate columns than allowed: {max_cols}') 
+
+                if not isinstance(schema[key], hqlt.multivalue):
+                    schema[key] = hqlt.multivalue(schema[key])
+                    new[key] = [new[key], col]
+                else:
+                    new[key].append(col)                
                 
         df = pl.DataFrame(new)
         schema = Schema(schema=schema)
                 
+        return Table(df=df, schema=schema, name=name)
+
+    @staticmethod
+    def merge(tables:list["Table"], merge_rows=True):
+        from Hql.Types.Compiler import CompilerType
+
+        if merge_rows:
+            return Table.merge_rows(tables)
+
+        if not tables:
+            return Table()
+        
+        # Quick short circuit
+        if len(tables) == 1:
+            return tables[0]
+
+        groups = dict()
+        for table in tables:
+            if table.name in groups:
+                groups[table.name].append(table)
+            else:
+                groups[table.name] = [table]
+
+        name = tables[0].name
+        
+        schemas = []
+        for table in tables:
+            schemas.append(table.schema)
+        schema = Schema.merge(schemas).schema
+
+        # Makes an assumption that the above merge converted field names accurately
+        # in the case of a conflict, e.g. they get split into types.
+        new = []
+        for table in tables:
+            cur = table.df
+            curs = table.schema.schema
+            for key in curs:
+                if isinstance(curs[key], CompilerType):
+                    dup_key = f'{key}_{curs[key].name}'
+                else:
+                    dup_key = f'{key}_object'
+
+                # Linter hates this one simple trick!
+                if dup_key in schema:
+                    cur = cur.rename({key: dup_key})
+            new.append(cur)
+        
+        df = pl.concat(new, how='diagonal')
         return Table(df=df, schema=schema, name=name)
 
     '''

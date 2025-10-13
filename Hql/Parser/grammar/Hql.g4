@@ -785,14 +785,12 @@ topNestedOperatorPart:
 topNestedOperatorWithOthersClause:
     WITH OTHERS '=' Expression=namedExpression;
 
-
 unionOperator:
-    UNION (Parameters+=relaxedQueryOperatorParameter)* Expressions+=unionOperatorExpression (',' Expressions+=unionOperatorExpression)*;
+    UNION (Parameters+=relaxedQueryOperatorParameter)* Expressions+=dynamicTableNameReference (',' Expressions+=dynamicTableNameReference)* (TableName=unionAsOperator)?
+    ;
 
-unionOperatorExpression:
-      wildcardedEntityExpression
-    | entityNameReference
-    | parenthesizedExpression
+unionAsOperator:
+    AS TableName=dynamicTableNameReference
     ;
 
 whereOperator:
@@ -1305,6 +1303,11 @@ tableNameReference:
     | EscapedName=escapedName
     ;
 
+dynamicTableNameReference:
+      TableName=tableNameReference
+    | DotFunction=dotCompositeFunctionCallExpression
+    ;
+
 ///////////////////////////////////////
 // names
 
@@ -1470,20 +1473,22 @@ pathOrExtendedKeyword:
 //     ;
 
 wildcardedName:
-    (Prefix=wildcardedNamePrefix)? '*' (Segments+=wildcardedNameSegment)*;
-
-wildcardedNamePrefix:
-      Identifier=IDENTIFIER 
-    | Keyword=keywordName
-    | ExtendedKeyword=extendedKeywordName
+      Name=WILDCARD
     ;
-
-wildcardedNameSegment:
-      Identifier=IDENTIFIER 
-    | Keyword=keywordName
-    | ExtendedKeyword=extendedKeywordName
-    | Number=LONGLITERAL 
-    | Star='*';
+//     (Prefix=wildcardedNamePrefix)? '*' (Segments+=wildcardedNameSegment)*;
+//
+// wildcardedNamePrefix:
+//       Identifier=IDENTIFIER 
+//     | Keyword=keywordName
+//     | ExtendedKeyword=extendedKeywordName
+//     ;
+//
+// wildcardedNameSegment:
+//       Identifier=IDENTIFIER 
+//     | Keyword=keywordName
+//     | ExtendedKeyword=extendedKeywordName
+//     | Number=LONGLITERAL 
+//     | Star='*';
 
 
 ///////////////////////////////////////

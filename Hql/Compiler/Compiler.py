@@ -33,15 +33,14 @@ class Compiler():
             op = op.get_op()
         return None, op
     
-    def add_ops(self, ops:list['BranchDescriptor']) -> Union[list['Operator'], None]:
+    def add_ops(self, ops:list['BranchDescriptor']) -> Optional[list['Operator']]:
         for idx, op in enumerate(ops):
             acc, rej = self.add_op(op)
             if rej:
                 return [rej] + [x.get_op() for x in ops[idx+1:]]
         return None
 
-    @staticmethod
-    def optimize(ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
+    def optimize(self, ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
         return ops
 
     '''

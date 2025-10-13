@@ -1,13 +1,16 @@
 import sys    
 
 from Hql.Config import Config
-from Hql import run_query
 from Hql.Data import Data
+from Hql.Threading import QueryPool
+from Hql.Hac.Engine import HacEngine
 
 import json
+import time
 import logging
 import argparse, sys
 import cProfile, pstats
+from typing import Union
 from pathlib import Path
 
 def config_logging(level:int):
@@ -47,8 +50,7 @@ def main():
     # parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
     parser.add_argument('-pl', '--plan', help="Prints the plan for the execution", action='store_true')
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
-    parser.add_argument('-sig', '--sigma', help="Input file is a Sigma file", action='store_true')
-    parser.add_argument('-om', '--omni', help="Process both Sigma and Hql if given the input", action='store_true')
+    parser.add_argument('-eng', '--hac-engine', help="Runs as the hac engine", action='store_true')
     
     args = parser.parse_args()
     
@@ -61,75 +63,77 @@ def main():
         config_logging(args.l__logging_level)
     elif args.verbose:
         config_logging(5)
+    else:
+        config_logging(4)
         
     if args.config == None:
         conf_path = "./conf"
     else:
         conf_path = args.config
+    
+    if args.hac_engine:
+        if args.directory:
+            engine = HacEngine(Path(args.directory), True, Path(conf_path))
+        else:
+            engine = HacEngine(Path(args.file), False, Path(conf_path))
+        engine.run()
+        return
+    
     conf = Config(Path(conf_path))
-        
-    sigma_files:list[Path] = []
-    hql_files:list[Path] = []
 
+    '''
+    Loading files
+    '''
+    files:list[Path] = []
     if args.directory:
         path = Path(args.directory)
 
         # Hql
         for file in path.rglob('*.hql'):
             if file.is_file():
-                hql_files.append(file)
+                files.append(file)
 
         # yml
         for file in path.rglob('*.yml'):
             if file.is_file():
-                sigma_files.append(file)
+                files.append(file)
 
     else:
-        if args.sigma:
-            sigma_files.append(Path(args.file))
-        else:
-            hql_files.append(Path(args.file))
+        files.append(Path(args.file))
 
     errors = []
     successes = []
-
-    if args.sigma or args.omni:
-        for i in sigma_files:
-            with i.open(mode='r') as f:
-                txt = f.read()
-
-            # try:
-            data = run_query(txt, conf, src=i, **vars(args))
-            if isinstance(data, Data):
-                print(json.dumps(data.to_dict(), default=repr))
-            else:
-                print(data)
-            # except Exception as e:
-            #     logging.critical('Exception caught when running query')
-            #     logging.critical(e)
-            #     errors.append(i)
-            #     continue
-
-            successes.append(i)
     
-    if not args.sigma or args.omni:
-        for i in hql_files:
-            with i.open(mode='r') as f:
-                txt = f.read()
+    pool = QueryPool()
+    kwargs = vars(args)
+    kwargs.pop('config')
 
-            try:
-                data = run_query(txt, conf, src=i, **vars(args))
-                if isinstance(data, Data):
-                    print(json.dumps(data.to_dict(), default=repr))
-                else:
-                    print(data)
-            except Exception as e:
-                logging.exception('Exception caught when running query')
-                # logging.critical(e.__traceback__)
-                errors.append(i)
-                continue
+    '''
+    Run query files
+    '''
+    for i in files:
+        with i.open(mode='r') as f:
+            txt = f.read()
+        pool.add_query(txt, conf, name=str(i), **kwargs)
 
-            successes.append(i)
+    '''
+    Sync and get output
+    '''
+    while not pool.is_idle():
+        completed = pool.get_completed()
+
+        for i in completed:
+            if i.failed:
+                errors.append(i.name)
+            else:
+                successes.append(i.name)
+
+            if isinstance(i.output, Data):
+                print(json.dumps(i.output.to_dict(), indent=2))
+            elif isinstance(i.output, str):
+                print(i.output)
+            
+        time.sleep(0.1)
 
     logging.info(f'Finished execution {len(errors)} errors, {len(successes)} successes')
     
@@ -150,6 +154,6 @@ def main():
 
     if errors:
         return -1
-        
+
 if __name__ == "__main__":
     main()

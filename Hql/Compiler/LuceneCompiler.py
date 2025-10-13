@@ -1,5 +1,5 @@
 from Hql.Exceptions import HqlExceptions as hqle
-from typing import Union, TYPE_CHECKING
+from typing import Union, Optional, TYPE_CHECKING
 
 from . import Compiler
 import logging
@@ -40,7 +40,7 @@ class LuceneCompiler(Compiler):
         out = super().compile(src, preprocess=preprocess)
         return out
 
-    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
         from Hql.Operators import Where
         from Hql.Compiler import BranchDescriptor
         if isinstance(op, BranchDescriptor):
@@ -417,6 +417,7 @@ class LuceneCompiler(Compiler):
             if rej:
                 return None, expr
             lh = acc
+            assert isinstance(lh, Expression)
 
             rhs = []
             for i in expr.rh:

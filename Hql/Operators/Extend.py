@@ -19,7 +19,11 @@ class Extend(Operator):
         return ', '.join(x.decompile(ctx) for x in self.exprs)
             
     def eval(self, ctx:'Context', **kwargs):
+        from Hql.Data import Data
+
+        data:list[Data] = [ctx.data]
         for i in self.exprs:
-            i.eval(ctx)
-        
-        return ctx.data
+            datum = i.eval(ctx)
+            assert isinstance(datum, Data)
+            data.append(datum)
+        return Data.merge(data)

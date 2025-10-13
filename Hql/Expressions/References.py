@@ -28,6 +28,14 @@ class NamedReference(Expression):
 
         return d
 
+    def __eq__(self, value: object, /) -> bool:
+        if isinstance(value, NamedReference):
+            return self.name == value.name
+        return super().__eq__(value)
+
+    def __hash__(self):
+        return hash((self.name))
+
     def decompile(self, ctx: 'Context') -> str:
         decomp = self.name
         
@@ -120,7 +128,22 @@ class Path(Expression):
 
     def gen_list(self, ctx:'Context'):
         return [x.eval(ctx, as_str=True) for x in self.path]
-    
+
+    def __eq__(self, value: object, /) -> bool:
+        if isinstance(value, Path):
+            if len(self.path) != len(value.path):
+                return False
+
+            for i in range(len(self.path)):
+                if self.path[i] != value.path[i]:
+                    return False
+
+            return True
+        return super().__eq__(value)
+
+    def __hash__(self):
+        return hash(tuple([x.__hash__() for x in self.path]))
+
     def eval(self, ctx:'Context', **kwargs):
         decomp = kwargs.get('decomp', False)
         as_list = kwargs.get('as_list', False)
@@ -197,6 +220,29 @@ class NamedExpression(Expression):
             'name': [x.to_dict() for x in self.paths],
             'value': self.value.to_dict()
         }
+
+    def __eq__(self, value: object, /) -> bool:
+        if isinstance(value, NamedExpression):
+            if len(self.paths) != len(value.paths):
+                return False
+
+            # Create a shallow copy
+            # Unordered comparison
+            value_paths = [x for x in value.paths]
+            for i in self.paths:
+                for j in value_paths:
+                    if i == j:
+                        value_paths.remove(j)
+                        break
+
+            if value_paths:
+                return False
+
+            if self.value != value.value:
+                return False
+
+            return True
+        return super().__eq__(value)
 
     def decompile(self, ctx: 'Context') -> str:
         paths = []

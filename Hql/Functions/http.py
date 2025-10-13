@@ -26,8 +26,9 @@ class http(Function):
             db = ctx.get_db(dbconf['type'])(dbconf, name='default')
         
         if db and issubclass(type(db), Database) and db.has_method(self.name):
-            db.urls = urls
+            db.urls += urls
         else:
             raise hqle.CompilerException(f'Function {self.name} cannot be called on {type(db)}')
+
         
         return db

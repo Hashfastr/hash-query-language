@@ -26,24 +26,27 @@ class BaseExpressions(HqlVisitor):
         return Expr.EscapedNamedReference(literal.value)
 
     def visitWildcardedName(self, ctx: HqlParser.WildcardedNameContext):
-        prefix = self.visit(ctx.Prefix) if ctx.Prefix else ''
-        segments = []
-        for i in ctx.Segments:
-            segments.append(self.visit(i))
+        assert ctx.Name != None
+        return Expr.Wildcard(ctx.Name.getText())
 
-        name = prefix + '*' + ''.join(segments)
-        
-        return Expr.Wildcard(name)
+        # prefix = self.visit(ctx.Prefix) if ctx.Prefix else ''
+        # segments = []
+        # for i in ctx.Segments:
+        #     segments.append(self.visit(i))
+        #
+        # name = prefix + '*' + ''.join(segments)
+        #
+        # return Expr.Wildcard(name)
     
-    def visitWildcardedNamePrefix(self, ctx: HqlParser.WildcardedNamePrefixContext):
-        if ctx.Identifier:
-            return ctx.getText()
-        
-        if ctx.Keyword:
-            return self.visit(ctx.Keyword)
-        
-        if ctx.ExtendedKeyword:
-            return self.visit(ctx.ExtendedKeyword)
+    # def visitWildcardedNamePrefix(self, ctx: HqlParser.WildcardedNamePrefixContext):
+    #     if ctx.Identifier:
+    #         return ctx.getText()
+    #
+    #     if ctx.Keyword:
+    #         return self.visit(ctx.Keyword)
+    #
+    #     if ctx.ExtendedKeyword:
+    #         return self.visit(ctx.ExtendedKeyword)
         
     def visitKeywordName(self, ctx: HqlParser.KeywordNameContext):
         if ctx.Token == None:
@@ -89,7 +92,9 @@ class BaseExpressions(HqlVisitor):
         
         for i in ctx.Parts:
             parts.append(self.visit(i))
-        
+
+        if len(parts) == 1:
+            return parts[0]
         return Expr.Path(parts)
 
     '''
@@ -101,17 +106,37 @@ class BaseExpressions(HqlVisitor):
     Ints
     '''
     def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
-        text = ""
-        quote = "'"
+        parts = []
         
         # how do you handle multiple tokens in a string literal? Unsure.
         # Just quits after the one
         for i in ctx.Tokens:
-            quote = i.text[0]
-            text += i.text[1:-1]
-            break
-        
-        return Expr.StringLiteral(text, quote=quote)
+            cur = i.text
+            lquote = ''
+            rquote = ''
+            if i.text[0] in ('h', 'H'):
+                lquote += 'h'
+                cur = cur[1:]
+
+            if i.text[0] == '@':
+                lquote += '@'
+                cur = cur[1:]
+
+            if i.text[:3] == '```' or i.text[:3] == '~~~':
+                lquote += i.text[:3]
+                rquote = i.text[:3]
+                cur = cur[3:-3]
+            else:
+                lquote += cur[0]
+                rquote = cur[0]
+                cur = cur[1:-1]
+
+            parts.append(Expr.StringLiteral(cur, lquote=lquote, rquote=rquote))
+
+        if len(parts) == 0:
+            return parts[0]
+        else:
+            return Expr.MultiString(parts)
 
     def visitLongLiteralExpression(self, ctx: HqlParser.LongLiteralExpressionContext):
         if ctx.Token == None:

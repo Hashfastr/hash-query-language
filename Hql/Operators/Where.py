@@ -69,7 +69,6 @@ class Where(Operator):
 
         for table in ctx.data:
             try:
-                print(pl_filter)
                 table.filter(pl_filter)
             except hqle.QueryException as e:
                 logging.warning(e)

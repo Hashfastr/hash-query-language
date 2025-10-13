@@ -91,20 +91,25 @@ class Schema():
 
         new = dict()
         for key in keygroups:
+            new[key] = keygroups[key][0]
+
             if len(keygroups[key]) == 1:
-                new[key] = keygroups[key][0]
                 continue
 
-            for schema in keygroups[key]:
+            for schema in keygroups[key][1:]:
                 if isinstance(schema, CompilerType):
+                    if type(schema) == type(new[key]):
+                        continue
                     new_key = f'{key}_{schema.name}'
                     new[new_key] = schema
-                else:
+                elif isinstance(new[key], CompilerType) and isinstance(schema, dict):
                     new_key = f'{key}_object'
                     if new_key not in new:
                         new[new_key] = schema
                     else:
                         new[new_key] = Schema.merge([new[new_key], schema]).schema
+                else:
+                    new[key] = Schema.merge([new[key], schema]).schema
 
         return Schema(schema=new)
 

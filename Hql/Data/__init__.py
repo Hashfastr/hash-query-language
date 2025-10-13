@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
 
 class Data():
-    def __init__(self, tables:Union[list[Table], None]=None):
+    def __init__(self, tables:Union[list[Table], None]=None, merge_rows=True):
         self.tables = dict()
 
         # empty base case
@@ -39,7 +39,7 @@ class Data():
 
         # Merge table groups
         for name in table_groups:
-            self.tables[name] = Table.merge(tables=table_groups[name])
+            self.tables[name] = Table.merge(tables=table_groups[name], merge_rows=merge_rows)
             
     def __len__(self):
         length = 0
@@ -140,7 +140,7 @@ class Data():
         return dataset
    
     @staticmethod
-    def merge(data:list["Data"]):
+    def merge(data:list["Data"], merge_rows=True):
         if len(data) == 1:
             return data[0]
         
@@ -149,7 +149,7 @@ class Data():
             for table in datum:
                 tables.append(table)
 
-        return Data(tables=tables)
+        return Data(tables=tables, merge_rows=merge_rows)
 
     # Ensures that the field exists in at least one table
     # Returns the tables where it does exists

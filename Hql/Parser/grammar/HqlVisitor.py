@@ -909,8 +909,8 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#unionOperatorExpression.
-    def visitUnionOperatorExpression(self, ctx:HqlParser.UnionOperatorExpressionContext):
+    # Visit a parse tree produced by HqlParser#unionAsOperator.
+    def visitUnionAsOperator(self, ctx:HqlParser.UnionAsOperatorContext):
         return self.visitChildren(ctx)
 
 
@@ -1364,6 +1364,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#dynamicTableNameReference.
+    def visitDynamicTableNameReference(self, ctx:HqlParser.DynamicTableNameReferenceContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#identifierName.
     def visitIdentifierName(self, ctx:HqlParser.IdentifierNameContext):
         return self.visitChildren(ctx)
@@ -1396,16 +1401,6 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#wildcardedName.
     def visitWildcardedName(self, ctx:HqlParser.WildcardedNameContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#wildcardedNamePrefix.
-    def visitWildcardedNamePrefix(self, ctx:HqlParser.WildcardedNamePrefixContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#wildcardedNameSegment.
-    def visitWildcardedNameSegment(self, ctx:HqlParser.WildcardedNameSegmentContext):
         return self.visitChildren(ctx)
 
 

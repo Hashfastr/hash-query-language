@@ -14,3 +14,4 @@ let specialshape = 'triangle';
 shapes
 | take 5
 | where name =~ specialshape
+| where test.specialshape == 1

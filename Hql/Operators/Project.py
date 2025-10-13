@@ -39,7 +39,11 @@ class Project(Operator):
     def eval(self, ctx:'Context', **kwargs):
         datasets = []
         for i in self.exprs:
-            datasets.append(i.eval(ctx, as_value=False))
+            try:
+                datasets.append(i.eval(ctx, as_value=False))
+            except:
+                # if we fail a project, just skip it
+                ...
                 
         return Data.merge(datasets)
 
