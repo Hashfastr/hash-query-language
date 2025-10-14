@@ -400,13 +400,20 @@ class BinaryLogic(Expression):
         from Hql.Expressions import Equality
         Expression.__init__(self)
         self.bitype = bitype.lower()
-        exprs = [lh] + rh
+        exprs:list[Expression] = [lh] + rh
 
         if bitype == 'or':
             exprs = self.condense(exprs, Equality, ('==', 'in'))
+
+        condensed = []
+        for i in exprs:
+            if isinstance(i, BinaryLogic) and i.bitype == self.bitype:
+                condensed += [i.lh] + i.rh
+            else:
+                condensed.append(i)
         
-        self.lh = exprs[0]
-        self.rh = exprs[1:]
+        self.lh = condensed[0]
+        self.rh = condensed[1:]
 
     def condense(self, exprs:list, target:type, ops:tuple) -> list:
         from Hql.Expressions import NamedReference, Path
@@ -508,6 +515,17 @@ class Regex(Expression):
         self.m = m
         self.s = s
         self.g = g
+
+    def to_dict(self) -> Union[None, dict]:
+        return {
+            'type': self.type,
+            'lh': self.lh.to_dict(),
+            'rh': self.rh.to_dict(),
+            'i': self.i,
+            'm': self.m,
+            's': self.s,
+            'g': self.g,
+        }
 
     def decompile(self, ctx: 'Context') -> str:
         lh = self.lh.decompile(ctx)

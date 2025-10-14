@@ -181,10 +181,3 @@ class Multivalue(Literal):
     def decompile(self, ctx: 'Context') -> str:
         dec = [x.decompile(ctx) for x in self.value]
         return 'make_mv(' + ', '.join(dec) + ')'
-
-class Null(Literal):
-    def __init__(self) -> None:
-        Literal.__init__(self)
-
-    def decompile(self, ctx: 'Context') -> str:
-        return 'null()'

@@ -145,7 +145,6 @@ class HqlCompiler(Compiler):
         from Hql.Expressions import PipeExpression
         if expr.prepipe:
             acc, rej = self.Tabular(expr.prepipe)
-            print(acc, rej)
             if rej:
                 return self.compile(rej)
             elif not acc:
@@ -276,15 +275,12 @@ class HqlCompiler(Compiler):
         from copy import deepcopy
 
         # Should use this to do allow for more more error checking here
-        if type(upstream.op) in (Project, ProjectRename):
+        if type(upstream.op) == Project:
             for i in integrating.references:
                 if i not in upstream.provides and i not in self.ctx.symbol_table:
-                    print(upstream.provides)
-                    print(self.ctx.symbol_table)
-                    print(i)
                     return 2, integrating
 
-        elif type(upstream.op) == Extend:
+        elif type(upstream.op) in (Extend, ProjectRename):
             ...
             
         else:
@@ -674,6 +670,10 @@ class HqlCompiler(Compiler):
 
         desc.expr = ByExpression(by_exprs)
         return desc, None
+
+    def Function(self, expr: 'Hql.Functions.Function', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Expressions import FuncExpr
+        return self.compile(FuncExpr(expr.name, expr.args))
 
     def FuncExpr(self, expr:'Hql.Expressions.FuncExpr', preprocess:bool=True, dotcomp:bool=False) -> tuple[object, None]:
         from Hql.Expressions import FuncExpr, NamedReference, Expression

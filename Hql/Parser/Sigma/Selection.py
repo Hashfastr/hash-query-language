@@ -38,7 +38,7 @@ class Selection():
         return BinaryLogic(exprs[0], exprs[1:], op)
 
     def to_literal_object(self, value, modifiers:list[str]):
-        from Hql.Expressions.Literals import StringLiteral, Integer, Float, Null
+        from Hql.Expressions.Literals import StringLiteral, Integer, Float
         
         if isinstance(value, str):
             value = repr(value)
@@ -51,9 +51,6 @@ class Selection():
 
         elif isinstance(value, float):
             expr = Float(value)
-
-        elif value == None:
-            expr = Null()
         
         else:
             raise hqle.CompilerException(f'Unhandled literal object type {type(value)} in Sigma parse')
@@ -76,6 +73,8 @@ class Selection():
 
         exprs = []
         for i in rh:
+            if i == None:
+                continue
             exprs.append(self.to_literal_object(i, modifiers))
 
         if 'contains' in modifiers:
@@ -99,6 +98,9 @@ class Selection():
 
         exprs = []
         for i in field:
+            if i == None:
+                continue
+
             expr = self.to_literal_object(i, [])
             if ':' in field:
                 expr = FuncExpr('ip6subnet', [expr]).eval(self.faux_ctx)
@@ -117,6 +119,8 @@ class Selection():
 
         exprs = []
         for i in field:
+            if i == None:
+                continue
             exprs.append(self.to_literal_object(i, modifiers))
 
         if 'lt' in modifiers:
@@ -150,6 +154,8 @@ class Selection():
 
         patterns = []
         for i in field:
+            if i == None:
+                continue
             patterns.append(self.to_literal_object(i, modifiers))
         
         exprs = []
@@ -165,16 +171,29 @@ class Selection():
         return BinaryLogic(name, exprs, 'or')
 
     def equality(self, name:'Expr.NamedReference', field:list):
-        from Hql.Expressions import Equality
+        from Hql.Expressions import Equality, BinaryLogic, Expression
 
         rhs = []
+        other = []
         for i in field:
-            rhs.append(self.to_literal_object(i, []))
+            if i == None:
+                other.append(FuncExpr('isnull', [name]))
+            else:
+                rhs.append(self.to_literal_object(i, []))
 
-        if len(rhs) == 1:
-            return Equality(name, '==', rhs)
+        if len(rhs) == 0:
+            exprs = other
+        elif len(rhs) == 1:
+            exprs:list[Expression] = [Equality(name, '==', rhs)] + other
         else:
-            return Equality(name, 'in', rhs)
+            exprs:list[Expression] = [Equality(name, 'in', rhs)] + other
+
+        if len(exprs) > 1:
+            expr = BinaryLogic(exprs[0], exprs[1:], 'or')
+        else:
+            expr = exprs[0]
+
+        return expr
 
     def process_field(self, field_name:str, field):
         import Hql.Expressions as Expr

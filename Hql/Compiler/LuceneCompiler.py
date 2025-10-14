@@ -136,7 +136,7 @@ class LuceneCompiler(Compiler):
             assert isinstance(acc, Expression)
             return Not(acc), None
 
-        inner = self.compile(expr.expr, preprocess=False)
+        inner, rej = self.compile(expr.expr, preprocess=False)
         return f'(NOT {inner})', None
 
     def Equality(self, expr: 'Hql.Expressions.Equality', preprocess: bool = True) -> tuple[object, object]:
@@ -185,7 +185,12 @@ class LuceneCompiler(Compiler):
 
     # only executes static functions on preprocess and sees if we can handle the result
     def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import Expression
+        from Hql.Expressions import Expression, Regex, StringLiteral, Not
+
+        if expr.name == 'isnull':
+            rexpr = Regex(expr.args[0], StringLiteral('.*'))
+            rexpr = Not(rexpr)
+            return self.compile(rexpr)
 
         if not expr.static:
             return None, expr
@@ -427,11 +432,12 @@ class LuceneCompiler(Compiler):
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             rh = acc
         assert isinstance(rh, str)
+        rh = rh.replace('/', '\\/')
 
         return f'{lh}:/{rh}/', None
 
     def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Substring, Expression, StringLiteral
+        from Hql.Expressions import Substring, Expression, StringLiteral, Regex
         import re
 
         if preprocess:
@@ -451,11 +457,11 @@ class LuceneCompiler(Compiler):
 
             return Substring(lh, expr.op, rhs), None
 
-        acc, rej = self.compile(expr.lh, preprocess=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        lh = acc
-        assert isinstance(lh, str)
+        # acc, rej = self.compile(expr.lh, preprocess=False)
+        # if rej:
+        #     raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        # lh = acc
+        # assert isinstance(lh, str)
 
         exprs = []
         for i in expr.rh:
@@ -467,14 +473,17 @@ class LuceneCompiler(Compiler):
                     raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
                 rh = acc
             assert isinstance(rh, str)
-            re.escape
-
+            
             if 'startswith' in expr.op or 'prefix' in expr.op:
-                exprs.append(f'{lh}:/{rh}.*/')
+                rh = f'{rh}.*'
             elif 'endswith' in expr.op or 'suffix' in expr.op:
-                exprs.append(f'{lh}:/.*{rh}/')
+                rh = f'.*{rh}'
             else:
-                exprs.append(f'{lh}:/.*{rh}.*/')
+                rh = f'.*{rh}.*'
+            rh = StringLiteral(rh, lquote='@')
+            
+            acc, rej = self.Regex(Regex(expr.lh, rh), preprocess=False)
+            exprs.append(acc)
 
         if 'all' in expr.op:
             ret = ' AND '.join(exprs)
