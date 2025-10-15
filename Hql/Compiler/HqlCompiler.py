@@ -94,12 +94,12 @@ class HqlCompiler(Compiler):
             acc, rej = self.DotCompositeFunction(expr)
 
         elif isinstance(expr, NamedReference):
-            acc = self.ctx.symbol_table[expr.name]
+            acc = self.ctx.symbol_table[expr]
 
             if not isinstance(acc, (Database, InstructionSet)):
                 # a little horrifying but gets the default db using the database function
                 acc = self.ctx.get_func('database')([]).eval(self.ctx)
-                acc = acc.get_variable(expr.name)
+                acc = acc.get_variable(expr)
 
         elif isinstance(expr, Range):
             acc, rej = self.Range(expr)
@@ -222,7 +222,7 @@ class HqlCompiler(Compiler):
         return comp
 
     def optimize(self, ops: list[BranchDescriptor]) -> list[BranchDescriptor]:
-        from Hql.Operators import Take
+        from Hql.Operators import Take, Union
         
         logging.debug(f'Optimizing the following operators:')
         for op in ops:
@@ -238,6 +238,9 @@ class HqlCompiler(Compiler):
                         break
 
                     if type(optimized[i].get_op()) == type(op.get_op()):
+                        break
+
+                    if optimized[i].get_attr('requires_sync') and isinstance(op.get_op(), Take):
                         break
 
                     can_map, mapped = self.apply_map(optimized[i], op)
@@ -277,7 +280,7 @@ class HqlCompiler(Compiler):
         # Should use this to do allow for more more error checking here
         if type(upstream.op) == Project:
             for i in integrating.references:
-                if i not in upstream.provides and i not in self.ctx.symbol_table:
+                if i not in upstream.mapping and i not in self.ctx.symbol_table:
                     return 2, integrating
 
         elif type(upstream.op) in (Extend, ProjectRename):
@@ -1023,10 +1026,4 @@ class HqlCompiler(Compiler):
             paths.append(dest)
 
         desc.expr = NamedExpression(paths, value)
-        return desc, None
-
-    def Null(self, expr: 'Hql.Expressions.Null', preprocess: bool = True) -> tuple[BranchDescriptor, None]:
-        desc = BranchDescriptor()
-        desc.set_attr('null_values')
-        desc.expr = expr
         return desc, None

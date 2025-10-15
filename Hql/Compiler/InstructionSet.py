@@ -106,8 +106,14 @@ class InstructionSet():
 
         sets = []
         while not pool.is_idle():
+            time.sleep(0.1)
             completed = pool.get_completed()
             sets += [x.output for x in completed]
+
+        if None in sets:
+            logging.error(f'Failed upstreams: {[x.id for x in self.upstream]}')
+            raise hqle.CompilerException('One or more upstream instruction sets failed to execute')
+
         ctx = Context.merge(sets, merge_rows=False)
 
         for i in self.ops:

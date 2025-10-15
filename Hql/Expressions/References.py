@@ -1,7 +1,8 @@
 from .__proto__ import Expression
 from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Data import Data, Table
+from Hql.Data import Data, Table, Series
+import polars as pl
 
 from typing import TYPE_CHECKING, Union
 import logging
@@ -255,12 +256,20 @@ class NamedExpression(Expression):
         return f'{lh} = {value}'
         
     def eval(self, ctx:'Context', **kwargs):
+        from Hql.Expressions import Literal
         insert = kwargs.get('insert', False)
         as_value = kwargs.get('as_value', False)
-        value = self.value.eval(ctx)
+
+        if isinstance(self.value, Literal):
+            series = self.value.make_series()
+            value = Data()
+            for i in ctx.data:
+                value.add_table(Table(name=i.name, series=series))
+        else:
+            value = self.value.eval(ctx)
 
         if not isinstance(value, Data):
-            raise hqle.CompilerException(f'Named expression right hand returned non-Data object {type(value)}')
+            raise hqle.CompilerException(f'Named expression right hand {self.value} returned non-Data object {type(value)}')
         
         if as_value:
             return value
@@ -303,5 +312,7 @@ class NamedExpression(Expression):
 
                 # Insert properly
                 data.tables[table.name].insert(path, cur, schema)
+
+        # print(data.to_dict())
 
         return data

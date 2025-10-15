@@ -71,3 +71,10 @@ class toip4(Typecast):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.ip4()
         self.expr = Expr.IP4
+
+@register_func('todatetime')
+class todatetime(Typecast):
+    def __init__(self, args:list):
+        Typecast.__init__(self, args)
+        self.cast_type = hqlt.datetime()
+        self.expr = Expr.Datetime

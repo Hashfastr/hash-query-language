@@ -1,6 +1,10 @@
-from Hql.Expressions import Expression
+from typing import TYPE_CHECKING, Union
+from Hql.Expressions import Expression, NamedExpression, NamedReference, Path
 from Hql.Operators import Operator
 from Hql.Context import register_op, Context
+
+if TYPE_CHECKING:
+    from Hql.Data import Data
 
 # Creates a field with a value in the extend
 #
@@ -17,13 +21,26 @@ class Extend(Operator):
 
     def decompile(self, ctx: 'Context') -> str:
         return ', '.join(x.decompile(ctx) for x in self.exprs)
+
+    def remove_old(self, ctx:Context, expr:Union[NamedReference, Path], data:'Data') -> 'Data':
+        path = expr.eval(ctx, as_list=True)
+        assert isinstance(path, list)
+        return data.drop(path)
             
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Data import Data
 
-        data:list[Data] = [ctx.data]
+        orig:Data = ctx.data
+        data:list[Data] = []
         for i in self.exprs:
             datum = i.eval(ctx)
             assert isinstance(datum, Data)
             data.append(datum)
+
+            if isinstance(i, NamedExpression):
+                for j in i.paths:
+                    assert isinstance(j, (Path, NamedReference))
+                    orig = self.remove_old(ctx, j, orig)
+        
+        data.append(orig)
         return Data.merge(data)

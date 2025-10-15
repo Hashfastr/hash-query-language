@@ -16,6 +16,7 @@ from elasticsearch import AuthenticationException as ESAuthExcept
 if TYPE_CHECKING:
     from Hql.Operators import Operator
     from Hql.Compiler import BranchDescriptor
+    from Hql.Expressions import NamedReference
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Elasticsearch')
@@ -75,8 +76,8 @@ class Elasticsearch(Database):
         assert isinstance(query, str)
         return query
             
-    def get_variable(self, name:str):
-        self.pattern = name
+    def get_variable(self, name:NamedReference):
+        self.pattern = name.name
         return self
 
     def add_index(self, index:str):

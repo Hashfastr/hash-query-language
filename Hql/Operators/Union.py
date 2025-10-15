@@ -3,6 +3,7 @@ from Hql.Operators import Operator
 from Hql.Expressions import Expression
 from Hql.Context import register_op, Context
 from Hql.Exceptions import HqlExceptions as hqle
+import json
 
 class Union(Operator):
     def __init__(self, exprs:list[Expression], name:Optional[Expression]=None):
@@ -17,7 +18,7 @@ class Union(Operator):
         return 'union ' + ', '.join(exprs)
 
     def eval(self, ctx:'Context', **kwargs):
-        from Hql.Data import Data, Table
+        from Hql.Data import Data, Table, Schema
         patterns = []
         for i in self.exprs:
             pattern = i.eval(ctx, as_str=True)
@@ -35,6 +36,7 @@ class Union(Operator):
                 if j.name in ignore:
                     merge.append(ignore.pop(j.name))
 
+        #print(json.dumps(Schema.merge([x.schema for x in merge]).schema, default=repr))
         new = Table.merge(merge, merge_rows=False)
         if self.name:
             name = self.name.eval(ctx, as_str=True)

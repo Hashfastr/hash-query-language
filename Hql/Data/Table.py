@@ -143,7 +143,7 @@ class Table():
         try:
             self.df = self.df.filter(expr)
         except pl.exceptions.ColumnNotFoundError as e:
-            raise hqle.QueryException(e.args[0])
+            raise hqle.UnreferencedFieldException(e.args[0])
         
     def get_value(self, path:list[str]):
         return pltools.get_element_value(self.df, path)
@@ -165,6 +165,7 @@ class Table():
         schema = Schema.merge(schemas).schema
         
         # generate col groups
+        longest_len = 0
         col_groups = dict()
         for table in tables:
             # skip empty dataframes
@@ -172,6 +173,7 @@ class Table():
                 continue
 
             for col in table.df:
+                longest_len = len(col) if len(col) > longest_len else longest_len
                 if col.name not in col_groups:
                     col_groups[col.name] = []
                 col_groups[col.name].append(col)
@@ -179,6 +181,13 @@ class Table():
         new = dict()
         for key in col_groups:
             for col in col_groups[key]:
+                if longest_len > len(col):
+                    if len(col) == 1:
+                        col = pl.Series([col[0]] * longest_len)
+                    else:
+                        pad = longest_len - len(col)
+                        col = col.extend(pl.Series([None] * pad))
+
                 if key not in new:
                     new[key] = col
                     continue

@@ -44,7 +44,7 @@ class HqlTypes():
         return get_type(f'hql_{name}')
     
     @staticmethod
-    def resolve_conflict(types:list[HqlType]):
+    def resolve_conflict(types:list[HqlType]) -> HqlType:
         if len(types) == 1:
             return types[0]
         
@@ -229,6 +229,16 @@ class HqlTypes():
     class datetime(HqlType):
         def __init__(self):
             HqlTypes.HqlType.__init__(self, pl.Datetime())
+            self.complex = True
+
+        def human(self, series:pl.Series):
+            dates = []
+            for i in series:
+                if i == None:
+                    dates.append(None)
+                    continue
+                dates.append(i.isoformat())
+            return pl.Series(dates, dtype=pl.String)
         
     @register_type('hql_duration')
     class duration(HqlType):

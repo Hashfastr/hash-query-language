@@ -46,6 +46,10 @@ class HqlExceptions():
         def __init__(self, message:str="A query error has occurred"):
             super().__init__(f"{message}")
 
+    class UnreferencedFieldException(HqlException):
+        def __init__(self, message:str="Unreferenced field referenced"):
+            super().__init__(f"{message}")
+
     class DecompileStringException(HqlException):
         def __init__(self, dtype:type, rtype:type):
             HqlExceptions.HqlException.__init__(self, f"Decompile for {dtype} returned non-str {rtype}")

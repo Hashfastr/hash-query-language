@@ -103,6 +103,8 @@ class InstructionPool():
     def start(self):
         # Don't thread if we don't need to
         if len(self.pool) == 1:
+            instid = self.pool[0].id
+            logging.debug(f'No need to thread {instid}, only one instruction in the pool')
             self.pool[0].run()
             return
 
@@ -132,6 +134,7 @@ class InstructionThread():
         self.started = False
         self.thread = None
         self.output:Optional['Context'] = None
+        self.id = self.inst.id
 
     # Starts the thread and sets values in the class
     def start(self) -> None:

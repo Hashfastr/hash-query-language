@@ -60,17 +60,34 @@ class Where(Operator):
 
         return out
 
+    def integrate(self, op: 'Operator'):
+        from Hql.Expressions import BinaryLogic
+
+        if not isinstance(op, Where):
+            return op
+
+        if isinstance(self.expr, BinaryLogic):
+            self.expr = BinaryLogic(self.expr.lh, self.expr.rh + [op.expr], 'and')
+        else:
+            self.expr = BinaryLogic(self.expr, [op.expr], 'and')
+
+        return None
+
     '''
-    Counts each table and replaces the contents of that table with the count.
-    Adds an additional meta * table for the total count of all tables.
+    Applies a polars filter expression
+    If there is a field reference error, the filter does not apply to that table
+    so drop it
     '''
     def eval(self, ctx:'Context', **kwargs):
+        from Hql.Data import Data
         pl_filter = self.expr.eval(ctx, as_pl=True)
 
+        new = []
         for table in ctx.data:
             try:
                 table.filter(pl_filter)
-            except hqle.QueryException as e:
+                new.append(table)
+            except hqle.UnreferencedFieldException as e:
                 logging.warning(e)
 
-        return ctx.data
+        return Data(new)

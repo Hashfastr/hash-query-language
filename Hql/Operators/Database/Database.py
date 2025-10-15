@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from Hql.Data import Data
     from Hql.Context import Context
     from Hql.Compiler import BranchDescriptor
+    from Hql.Expressions import NamedReference
 
 class Database(Operator):
     def __init__(self, config:dict, name:str='unnamed-database'):
@@ -39,7 +40,7 @@ class Database(Operator):
         self.ctx = ctx
         return Data()
     
-    def get_variable(self, name:str) -> object:
+    def get_variable(self, name:'NamedReference') -> object:
         raise hqle.QueryException(f'{self.type} database has no variables')
 
     def get_macro(self, name:str) -> Union[None, dict]:

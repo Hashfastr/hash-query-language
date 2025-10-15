@@ -39,7 +39,25 @@
  * - 2022-12-31 Cyb3rWardog: Some sort of update
  * - 2025-06-23 Hashfastr:   Hql conversion
  */
-union database('json').macro('all'), database('json').macro('all'), database('json').macro('all'), database('json').macro('all')
-| project ['@timestamp'], src_ip=toip4(source.ip), src_port=source.port, dest_ip=toip4(destination.ip), dest_port=destination.port
-| union * as test
+let A = database('json').macro('host')
+| union * as A
+| extend name='A', ['@timestamp'] = todatetime(['@timestamp'])
+;
+let B = database('json').macro('network')
+| union * as B
+| extend name='B'
+;
+/*
+let C = database('json').macro('all')
+| union * as C
+| extend name='C'
+;
+let D = database('json').macro('all')
+| union * as D
+| extend name='D'
+;
+*/
+union A, B
+| project ['@timestamp'], original_name=name, src_ip=toip4(source.ip), src_port=source.port, dest_ip=toip4(destination.ip), dest_port=destination.port
+| union * as final
 | take 10

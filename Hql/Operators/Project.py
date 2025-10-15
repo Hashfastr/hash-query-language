@@ -3,6 +3,7 @@ from Hql.Data import Schema, Data, Table
 from Hql.Context import register_op, Context
 from Hql.Operators import Operator
 import polars as pl
+import logging
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.
@@ -41,7 +42,8 @@ class Project(Operator):
         for i in self.exprs:
             try:
                 datasets.append(i.eval(ctx, as_value=False))
-            except:
+            except Exception as e:
+                logging.warning(e)
                 # if we fail a project, just skip it
                 ...
                 

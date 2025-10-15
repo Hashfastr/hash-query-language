@@ -6,18 +6,27 @@ from Hql.Types.Hql import HqlTypes as hqlt
 
 if TYPE_CHECKING:
     from Hql.Context import Context
+    from Hql.Data import Series
+    import datetime
 
 class Literal(Expression):
-    def __init__(self) -> None:
+    def __init__(self, hql_type:hqlt.HqlType) -> None:
         Expression.__init__(self)
+        assert isinstance(hql_type, hqlt.HqlType)
         self.literal = True
+        self.hql_type = hql_type
+
+    def make_series(self) -> 'Series':
+        from Hql.Data import Series
+        series = Series(pl.Series([self.value]), self.hql_type)
+        return series.cast()
 
     def decompile(self, ctx: 'Context') -> str:
         return str(self.value)
 
 class TypeExpression(Literal):
     def __init__(self, hql_type:str):
-        Literal.__init__(self)
+        Literal.__init__(self, hqlt.HqlType(pl.String()))
         self.hql_type = hql_type
 
     def decompile(self, ctx: 'Context') -> str:
@@ -31,7 +40,7 @@ class TypeExpression(Literal):
 # we strip off quotes when constructing as the parser doesn't remove them for us.
 class StringLiteral(Literal):
     def __init__(self, value:str, lquote:str="'", rquote:str="'"):
-        Literal.__init__(self)
+        Literal.__init__(self, hqlt.string())
 
         self.lquote = lquote
         self.rquote = rquote
@@ -60,8 +69,15 @@ class StringLiteral(Literal):
 
 class MultiString(Literal):
     def __init__(self, strlits:Optional[list[StringLiteral]]=None):
-        Literal.__init__(self)
+        from Hql.Context import Context
+        from Hql.Data import Data
+        Literal.__init__(self, hqlt.string())
         self.strlits = strlits if strlits else []
+        
+        running = ''
+        for i in self.strlits:
+            running += i.eval(Context(Data()))
+        self.value = running
     
     def to_dict(self) -> Union[None, dict]:
         return {
@@ -73,14 +89,9 @@ class MultiString(Literal):
         return ' '.join([x.decompile(ctx) for x in self.strlits])
 
     def eval(self, ctx:'Context', **kwargs):
-        running = ''
-        for i in self.strlits:
-            running += i.eval(ctx)
-
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
-        return running
-
+        return self.value
 
 # Integer
 # An integer
@@ -88,7 +99,7 @@ class MultiString(Literal):
 # unreal, not real
 class Integer(Literal):
     def __init__(self, value:Union[str, int]):
-        Literal.__init__(self)
+        Literal.__init__(self, hqlt.int())
         self.value = int(value)
     
     def to_dict(self):
@@ -103,12 +114,11 @@ class Integer(Literal):
     def eval(self, ctx:'Context', **kwargs):
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
-
         return self.value
 
 class IP4(Literal):
     def __init__(self, value:int):
-        Literal.__init__(self)
+        Literal.__init__(self, hqlt.ip4())
         self.value = value
         
     def to_dict(self):
@@ -135,7 +145,7 @@ class IP4(Literal):
 
 class Float(Literal):
     def __init__(self, value:Union[str, float]):
-        Literal.__init__(self)
+        Literal.__init__(self, hqlt.float())
         self.value = float(value)
         
     def to_dict(self):
@@ -150,12 +160,11 @@ class Float(Literal):
     def eval(self, ctx:'Context', **kwargs):
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
-
         return self.value
 
 class Bool(Literal):
     def __init__(self, value:str):
-        Literal.__init__(self)
+        Literal.__init__(self, hqlt.bool())
         self.value = value.lower() == 'true'
         
     def to_dict(self):
@@ -170,14 +179,31 @@ class Bool(Literal):
     def eval(self, ctx:'Context', **kwargs):
         if kwargs.get('as_pl', False):
             return pl.lit(self.value)
-
         return self.value
 
 class Multivalue(Literal):
     def __init__(self, value:list[Literal]) -> None:
-        Literal.__init__(self)
-        self.value = value
+        self.super_type = hqlt.resolve_conflict([x.hql_type for x in value])
+        Literal.__init__(self, hqlt.multivalue(type(self.super_type)))
+
+        series = pl.Series([x.value for x in value])
+        self.value = self.hql_type.cast(series)
 
     def decompile(self, ctx: 'Context') -> str:
         dec = [x.decompile(ctx) for x in self.value]
         return 'make_mv(' + ', '.join(dec) + ')'
+
+class Datetime(Literal):
+    def __init__(self, value:Union[StringLiteral, 'datetime.datetime']) -> None:
+        from dateutil import parser
+        Literal.__init__(self, hqlt.datetime())
+
+        if isinstance(value, StringLiteral):
+            self.value:'datetime.datetime' = parser.parse(value.value)
+        else:
+            self.value = value
+
+    def decompile(self, ctx: 'Context') -> str:
+        inner = StringLiteral(self.value.isoformat())
+        return 'datetime(' + inner.decompile(ctx) + ')'
+
