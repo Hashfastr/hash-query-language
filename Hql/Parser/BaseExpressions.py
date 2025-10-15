@@ -26,8 +26,13 @@ class BaseExpressions(HqlVisitor):
         return Expr.EscapedNamedReference(literal.value)
 
     def visitWildcardedName(self, ctx: HqlParser.WildcardedNameContext):
-        assert ctx.Name != None
-        return Expr.Wildcard(ctx.Name.getText())
+        if ctx.Star:
+            txt = ctx.Star.getText()
+        elif ctx.Name:
+            txt = ctx.Name.getText()
+        else:
+            raise hqle.ParseException("Wildcarded name given nothing", ctx)
+        return Expr.Wildcard(txt)
 
         # prefix = self.visit(ctx.Prefix) if ctx.Prefix else ''
         # segments = []

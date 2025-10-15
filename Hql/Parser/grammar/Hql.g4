@@ -1474,6 +1474,7 @@ pathOrExtendedKeyword:
 
 wildcardedName:
       Name=WILDCARD
+    | Star=starExpression
     ;
 //     (Prefix=wildcardedNamePrefix)? '*' (Segments+=wildcardedNameSegment)*;
 //
