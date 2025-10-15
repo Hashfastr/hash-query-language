@@ -9,7 +9,8 @@ import polars as pl
 @register_func('ip4subnet')
 class ip4subnet(Function):
     def __init__(self, args:list):
-        super().__init__(args, 1, 1)
+        Function.__init__(self, args, 1, 1)
+        self.preprocess = True
     
     def eval(self, ctx:'Context', **kwargs) -> BasicRange:
         import re

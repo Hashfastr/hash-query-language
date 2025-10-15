@@ -1,6 +1,10 @@
+from typing import TYPE_CHECKING
 from Hql.Expressions import Expression
 from Hql.Operators import Operator
 from Hql.Context import register_op, Context
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 # @register_op('Unnest')
 class Unnest(Operator):
@@ -29,6 +33,12 @@ class Unnest(Operator):
             out += ', '.join(exprs)
 
         return out
+
+    def gets_all(self, ctx:Context) -> bool:
+        for i in self.tables:
+            if i.decompile(ctx) == '*':
+                return True
+        return False
             
     def eval(self, ctx:'Context', **kwargs):
         self.ctx = ctx

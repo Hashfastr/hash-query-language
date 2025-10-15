@@ -90,6 +90,9 @@ class Equality(Comparator):
         
         rh = []
         for i in self.rh:
+            if i.requires_lh:
+                expr = i.eval(ctx, lh=lh, as_pl=True)
+                return expr
             rh.append(i.eval(ctx, as_pl=True))
 
         expr = None
@@ -488,22 +491,31 @@ class BasicRange(Expression):
         self.start = start
         self.end = end
         self.logic = True
+        self.requires_lh = True
 
     def decompile(self, ctx: 'Context') -> str:
         start = self.start.decompile(ctx)
         end = self.end.decompile(ctx)
 
-        return f'{start} .. {end}'
+        return f'({start} .. {end})'
     
     def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, "Expression", list[str], str]:
         lh = kwargs.get('lh', None)
         start = self.start.eval(ctx, as_pl=True)
         end = self.end.eval(ctx, as_pl=True)
-
+        
         if isinstance(lh, type(None)):
             raise hqle.CompilerException('BasicRange given a NoneType left-hand expression!')
+        
+        if isinstance(lh, Expression):
+            lh = self.eval(ctx, as_pl=True)
 
-        return (lh > start).and_(lh < end)
+        assert isinstance(lh, pl.Expr)
+        assert isinstance(start, pl.Expr)
+        assert isinstance(end, pl.Expr)
+
+        lh = pl.col('source').struct['ip']
+        return lh.is_between(start, end)
 
 class Regex(Expression):
     def __init__(self, lh:Expression, rh:Expression, i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:

@@ -18,11 +18,12 @@ if TYPE_CHECKING:
 class Expression():
     def __init__(self)-> None:
         self.type = self.__class__.__name__
-        self.escaped = False
-        self.literal = False
-        self.logic   = False
-        self.value   = None
-        self.tabular = False
+        self.escaped     = False
+        self.literal     = False
+        self.logic       = False
+        self.value       = None
+        self.tabular     = False
+        self.requires_lh = False
     
     def to_dict(self) -> Union[None, dict]:
         return {

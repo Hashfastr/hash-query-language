@@ -96,8 +96,10 @@ class Table():
 
         if isinstance(df, type(None)):
             self.schema.drop(path)
+            assert isinstance(self.df, pl.DataFrame)
             df = self.df
-        
+        assert not isinstance(df, type(None))
+
         new = {}
         for col in df:
             if col.name == path[idx]:
@@ -112,7 +114,7 @@ class Table():
                         raise hqle.CompilerException('Logic error? Final recursion step hit before end.')
 
                     if not rec.is_empty():
-                        new[col.name] = rec
+                        new[col.name] = rec.to_struct()
                 
             # Not dropping
             else:

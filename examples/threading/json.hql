@@ -41,23 +41,22 @@
  */
 let A = database('json').macro('host')
 | union * as A
-| extend name='A', ['@timestamp'] = todatetime(['@timestamp'])
+| extend name='A'
 ;
 let B = database('json').macro('network')
 | union * as B
 | extend name='B'
 ;
-/*
-let C = database('json').macro('all')
+let C = database('json').macro('host')
 | union * as C
 | extend name='C'
 ;
-let D = database('json').macro('all')
-| union * as D
-| extend name='D'
+let D = database('json').macro('network')
+//| union * as D
+| extend name='D', source.ip = toip4(source.ip)
+| where source.ip == ip4subnet('192.168.0.0/16')
 ;
-*/
-union A, B
+union A, B, C, D
 | project ['@timestamp'], original_name=name, src_ip=toip4(source.ip), src_port=source.port, dest_ip=toip4(destination.ip), dest_port=destination.port
 | union * as final
-| take 10
+| summarize count() by original_name

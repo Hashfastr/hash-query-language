@@ -222,7 +222,7 @@ class HqlCompiler(Compiler):
         return comp
 
     def optimize(self, ops: list[BranchDescriptor]) -> list[BranchDescriptor]:
-        from Hql.Operators import Take, Union
+        from Hql.Operators import Take, Unnest
         
         logging.debug(f'Optimizing the following operators:')
         for op in ops:
@@ -241,6 +241,9 @@ class HqlCompiler(Compiler):
                         break
 
                     if optimized[i].get_attr('requires_sync') and isinstance(op.get_op(), Take):
+                        break
+
+                    if optimized[i].get_attr('type_casting'):
                         break
 
                     can_map, mapped = self.apply_map(optimized[i], op)
@@ -276,6 +279,9 @@ class HqlCompiler(Compiler):
     def apply_map(self, upstream:BranchDescriptor, integrating:BranchDescriptor) -> tuple[int, BranchDescriptor]:
         from Hql.Operators import Project, ProjectRename, Extend
         from copy import deepcopy
+
+        if not upstream.mapping:
+            return 0, integrating
 
         # Should use this to do allow for more more error checking here
         if type(upstream.op) == Project:
@@ -427,6 +433,7 @@ class HqlCompiler(Compiler):
     def Unnest(self, op: 'Hql.Operators.Unnest', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Unnest
         desc = BranchDescriptor()
+        desc.set_attr('row_mutable')
 
         acc, rej = self.compile(op.field)
         desc.merge(acc)
@@ -680,7 +687,7 @@ class HqlCompiler(Compiler):
 
     def FuncExpr(self, expr:'Hql.Expressions.FuncExpr', preprocess:bool=True, dotcomp:bool=False) -> tuple[object, None]:
         from Hql.Expressions import FuncExpr, NamedReference, Expression
-        from Hql.Functions import Function
+        from Hql.Functions import Function, typecasting
         from Hql.Operators import Operator, Database
         desc = BranchDescriptor()
 
@@ -699,6 +706,9 @@ class HqlCompiler(Compiler):
         desc.set_attr('functions', name.value)
         desc.expr = FuncExpr(name, args).eval(self.ctx)
         assert isinstance(desc.expr, Function)
+
+        if isinstance(desc.expr, typecasting.Typecast):
+            desc.set_attr('type_casting')
 
         if desc.expr.preprocess and preprocess and not dotcomp:
             res = desc.expr.eval(self.ctx, preprocess=True)
