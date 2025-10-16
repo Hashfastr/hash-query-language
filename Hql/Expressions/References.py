@@ -253,7 +253,7 @@ class NamedExpression(Expression):
         lh = ', '.join(paths)
         value = self.value.decompile(ctx)
 
-        return f'{lh} = {value}'
+        return f'{lh}={value}'
         
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Expressions import Literal

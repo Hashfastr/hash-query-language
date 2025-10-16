@@ -5,9 +5,23 @@ import threading
 from Hql.Helpers import can_thread
 from Hql.Exceptions import HqlExceptions as hqle
 import json
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from Hql.Hac.Engine import HacEngine
+
+class HqlRequest(BaseModel):
+    hql: str
+    run: bool = True
+    save: bool = False
+    plan: bool = False
+
+class SigmaRequest(BaseModel):
+    sigma: Union[dict, None] = None
+    sigma_text: str = ''
+    run: bool = True
+    save: bool = False
+    plan: bool = False
 
 class Apiserver():
     def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8080):
@@ -40,16 +54,26 @@ class Apiserver():
                 detections.append(det.hac.asm)
             return detections
 
-        @self.app.get('/runs/{tid}')
+        @self.app.get('/hql/runs/{tid}')
         def get_run_by_id(tid:str):
             run = self.hacengine.get_by_id(tid)
             if run == None:
                 raise HTTPException(status_code=404, detail=f'Run {tid} not found')
             return run.to_dict()
 
-        @self.app.get('/runs')
+        @self.app.get('/hql/runs')
         def get_runs():
             return self.hacengine.get_runs()
+
+        @self.app.post('/hql/runs')
+        def submit_hql_query(hql:HqlRequest):
+            from Hql.Hac.Engine import Detection
+            if not hql.run:
+                return {'id': ''}
+            
+            det = Detection(hql.hql, 'api', self.hacengine.config, no_hac=True)
+            rid = self.hacengine.run_detection(det)
+            return {'id': rid}
 
     def start(self):
         self.thread = threading.Thread(target=self.run, daemon=True)

@@ -124,7 +124,9 @@ class Schedule():
         return out_set
 
 class Detection():
-    def __init__(self, txt:str, src:str, config:'Config') -> None:
+    def __init__(self, txt:str, src:str, config:'Config', no_hac:bool=False) -> None:
+        import uuid
+
         self.src = src
         self.txt = txt
         self.config = config
@@ -140,7 +142,14 @@ class Detection():
         if self.hac:
             self.id = self.hac.id
             self.compiler = self.compile()
-            self.schedule = Schedule(self.hac.schedule)
+
+            # Just don't schedule if not a hac run
+            if not no_hac:
+                self.schedule = Schedule(self.hac.schedule)
+
+        elif no_hac:
+            self.id = str(uuid.uuid4())
+            self.compiler = self.compile()
 
     def gen_hac(self) -> tuple[Optional['Hac'], Optional['SigmaParser']]:
         from Hql.Hac import Parser as HaCParser
@@ -294,10 +303,14 @@ class HacEngine():
                 'run_date': i.run_date.isoformat(),
                 'started': i.started,
                 'failed': i.failed,
-                'completed': i.completed
+                'completed': i.completed,
+                'num_results': i.num_results
             })
         runs += self.pool.get_runs()
         return runs
+
+    def run_detection(self, detection:Detection):
+        return self.pool.add_detection(detection)
 
     def run(self):
         logging.info(f'Starting HaC engine with {len(self.detections)} detections')

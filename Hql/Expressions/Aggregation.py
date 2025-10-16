@@ -90,8 +90,9 @@ class ByExpression(Expression):
         exprs = []
         for i in self.exprs:
             exprs.append(i.decompile(ctx))
-
-        return ', '.join(exprs)
+        out = 'by '
+        out += ', '.join(exprs)
+        return out
     
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Data import Data

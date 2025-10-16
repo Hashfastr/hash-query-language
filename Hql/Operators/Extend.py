@@ -20,7 +20,7 @@ class Extend(Operator):
         self.exprs = exprs
 
     def decompile(self, ctx: 'Context') -> str:
-        return ', '.join(x.decompile(ctx) for x in self.exprs)
+        return 'extend ' + ', '.join(x.decompile(ctx) for x in self.exprs)
 
     def remove_old(self, ctx:Context, expr:Union[NamedReference, Path], data:'Data') -> 'Data':
         path = expr.eval(ctx, as_list=True)

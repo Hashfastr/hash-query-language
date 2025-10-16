@@ -15,7 +15,11 @@ class Union(Operator):
         exprs = []
         for i in self.exprs:
             exprs.append(i.decompile(ctx))
-        return 'union ' + ', '.join(exprs)
+        out = 'union ' + ', '.join(exprs)
+        if self.name:
+            out += ' as '
+            out += self.name.decompile(ctx)
+        return out
 
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Data import Data, Table, Schema

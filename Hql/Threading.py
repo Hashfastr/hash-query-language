@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Union, Optional
 import logging
 import random
-import datetime
+import datetime, time
 
 if TYPE_CHECKING:
     from Hql.Config import Config
@@ -193,11 +193,12 @@ class HacPool():
             })
         return runs
 
-    def add_detection(self, detection:'Detection') -> None:
+    def add_detection(self, detection:'Detection') -> str:
         t = HacThread(detection)
         if self.auto_run:
             t.start()
         self.pool.append(t)
+        return t.id
 
     def is_idle(self) -> bool:
         return not self.pool
@@ -236,9 +237,11 @@ class HacThread():
         self.thread = None
         self.output = None
         self.failed = False
+        self.num_results = 0
 
         self.id = '%08x' % random.getrandbits(32)
         self.run_date = datetime.datetime.now()
+        self.duration = 0
 
     def to_dict(self):
         from Hql.Data import Data
@@ -246,8 +249,10 @@ class HacThread():
             'run_id': self.id,
             'run_date': self.run_date.isoformat(),
             'started': self.started,
+            'duration': self.duration,
             'failed': self.failed,
-            'completed': self.completed
+            'completed': self.completed,
+            'num_results': self.num_results
         }
 
         if self.detection.hac:
@@ -273,10 +278,17 @@ class HacThread():
 
     # Runs the query, function that is threaded
     def run(self) -> None:
+        from Hql.Data import Data
         try:
+            start = time.perf_counter()
             self.output = self.detection.run()
-            logging.info(f'{self.detection.id} - {len(self.output)} results')
+            end = time.perf_counter()
+            
+            self.duration = end - start
             self.completed = True
+            self.num_results = len(self.output) if isinstance(self.output, Data) else 0
+
+            logging.info(f'{self.detection.id} - {len(self.output)} results')
         except Exception as e:
             import traceback
             self.failed = True
