@@ -52,7 +52,6 @@ let C = database('json').macro('host')
 | extend name='C'
 ;
 let D = database('json').macro('network')
-//| union * as D
 | extend name='D', source.ip = toip4(source.ip)
 | where source.ip == ip4subnet('192.168.0.0/16')
 ;

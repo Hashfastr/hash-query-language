@@ -5,6 +5,9 @@ from Hql.Compiler import InstructionSet
 from pathlib import Path
 import datetime
 import logging
+import time
+
+from Hql.Helpers import can_thread
 
 if TYPE_CHECKING:
     from Hql.Config import Config
@@ -129,6 +132,9 @@ class Detection():
         self.compiler = None
         self.schedule = None
         self.id = ''
+        
+        self.run_history:list[dict] = []
+        self.max_runs = 10
 
         # skip instruction compiling if we don't have hac
         if self.hac:
@@ -177,25 +183,50 @@ class Detection():
             return False
         return self.schedule.should_fire(time_parts)
 
+    def add_run(self, run:dict):
+        if len(self.run_history) >= 10:
+            diff = len(self.run_history) - 9
+            self.run_history = self.run_history[diff:]
+        self.run_history.append(run)
+
     def run(self) -> 'Data':
         if not self.compiler:
             raise Exception('Attempting to run detection without instructions!')
+        
+        start = time.perf_counter()
         ctx = self.compiler.run()
+        end = time.perf_counter()
+
+        run = {
+            'id': self.id,
+            'duration': end - start,
+            'results': len(ctx.data)
+        }
+        self.add_run(run)
+
         return ctx.data
 
 class HacEngine():
     def __init__(self, path:Path, directory:bool, conf_path:Path, tz:Optional[datetime.tzinfo]=None) -> None:
-        from Hql.Threading import HacPool
+        from Hql.Threading import HacPool, HacThread
+        from Hql.Apiserver import Apiserver
 
         self.path = path
         self.directory = directory
         self.files:list[Path] = self.scan_files()
         self.conf_path = conf_path
         self.config = self.load_conf()
-        self.detections = self.load_files()
+        self.detections:dict[str, Detection] = self.load_files()
         self.tz = tz
 
+        if can_thread():
+            self.apiserver = Apiserver(self)
+        else:
+            self.apiserver = None
+
         self.pool = HacPool()
+        self.completed:list[HacThread] = []
+        self.clean_time = datetime.timedelta(days=1)
 
     def time_parts(self, ts:int) -> tuple[int, int, int, int, int]:
         dt = datetime.datetime.fromtimestamp(ts, tz=self.tz)
@@ -222,13 +253,14 @@ class HacEngine():
 
         return files
 
-    def load_files(self) -> list[Detection]:
-        detections = []
+    def load_files(self) -> dict[str, Detection]:
+        detections = dict()
 
         for i in self.files:
             with open(i, mode='r') as f:
                 txt = f.read()    
-            detections.append(Detection(txt, str(i), self.config))
+            detection = Detection(txt, str(i), self.config)
+            detections[detection.id] = detection
 
         logging.info(f'HaC engine found {len(detections)} detections')
 
@@ -242,8 +274,36 @@ class HacEngine():
         delta = (stamp - cur) - pad
         sleep(delta)
 
+    def clean_old(self):
+        for t in self.completed:
+            if (datetime.datetime.now() - t.run_date) > self.clean_time:
+                logging.info(f'HaC thread {t.id} expired, cleaning')
+                self.completed.remove(t)
+                
+    def get_by_id(self, tid:str):
+        for i in self.completed:
+            if i.id == tid:
+                return i
+        return self.pool.get_by_id(tid)
+
+    def get_runs(self):
+        runs = []
+        for i in self.completed:
+            runs.append({
+                'run_id': i.id,
+                'run_date': i.run_date.isoformat(),
+                'started': i.started,
+                'failed': i.failed,
+                'completed': i.completed
+            })
+        runs += self.pool.get_runs()
+        return runs
+
     def run(self):
         logging.info(f'Starting HaC engine with {len(self.detections)} detections')
+
+        if self.apiserver:
+            self.apiserver.start()
 
         while True:
             # adding 1 seconds for a time buffer
@@ -253,7 +313,11 @@ class HacEngine():
             self.wait_till(ts)
 
             for i in self.detections:
-                if not i.should_fire(self.time_parts(ts)):
-                    logging.debug(f'Skipping {i.id}, not their time')
+                det = self.detections[i]
+                if not det.should_fire(self.time_parts(ts)):
+                    logging.debug(f'Skipping {det.id}, not their time')
                     continue
-                self.pool.add_detection(i)
+                self.pool.add_detection(det)
+
+            self.completed += self.pool.get_completed()
+            self.clean_old()

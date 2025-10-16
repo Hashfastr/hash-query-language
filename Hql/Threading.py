@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Union, Optional
 import logging
+import random
+import datetime
 
 if TYPE_CHECKING:
     from Hql.Config import Config
@@ -170,6 +172,26 @@ class HacPool():
     def __init__(self, auto_run:bool=True) -> None:
         self.auto_run = auto_run
         self.pool:list[HacThread] = []
+        self.clean_time = datetime.timedelta(days=1)
+        # self.max_retained = 1000
+
+    def get_by_id(self, tid:str):
+        for i in self.pool:
+            if i.id == tid:
+                return i
+        return None
+
+    def get_runs(self):
+        runs = []
+        for i in self.pool:
+            runs.append({
+                'run_id': i.id,
+                'run_date': i.run_date.isoformat(),
+                'started': i.started,
+                'failed': i.failed,
+                'completed': i.completed
+            })
+        return runs
 
     def add_detection(self, detection:'Detection') -> None:
         t = HacThread(detection)
@@ -184,6 +206,13 @@ class HacPool():
         for t in self.pool:
             if not t.started:
                 t.start()
+
+    def clean_old(self):
+        for t in self.pool:
+            if not t.is_alive() and (datetime.datetime.now() - t.run_date) > self.clean_time:
+                logging.info(f'HaC thread {t.id} expired, cleaning')
+                t.join()
+                self.pool.remove(t)
 
     # Gets completed threads and frees them from the pool
     def get_completed(self) -> list['HacThread']:
@@ -203,9 +232,31 @@ class HacThread():
         self.detection = detection
 
         self.started = False
+        self.completed = False
         self.thread = None
         self.output = None
         self.failed = False
+
+        self.id = '%08x' % random.getrandbits(32)
+        self.run_date = datetime.datetime.now()
+
+    def to_dict(self):
+        from Hql.Data import Data
+        d = {
+            'run_id': self.id,
+            'run_date': self.run_date.isoformat(),
+            'started': self.started,
+            'failed': self.failed,
+            'completed': self.completed
+        }
+
+        if self.detection.hac:
+            d['hac'] = self.detection.hac.asm
+
+        d['results'] = self.output.to_dict() if isinstance(self.output, Data) else {}
+        d['str_out'] = self.output if isinstance(self.output, str) else ''
+
+        return d
 
     # Starts the thread and sets values in the class
     def start(self) -> None:
@@ -225,6 +276,7 @@ class HacThread():
         try:
             self.output = self.detection.run()
             logging.info(f'{self.detection.id} - {len(self.output)} results')
+            self.completed = True
         except Exception as e:
             import traceback
             self.failed = True

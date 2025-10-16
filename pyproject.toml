@@ -29,7 +29,9 @@ dependencies = [
     "oyaml",
     "opensearch-py",
     "aiohttp",
-    "boto3"
+    "boto3",
+    "fastapi",
+    "uvicorn"
 ]
 
 [project.urls]

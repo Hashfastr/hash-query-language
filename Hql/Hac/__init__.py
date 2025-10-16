@@ -1,6 +1,7 @@
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Hac.Sources import Source, Product
 from Hql.Hac.Parser import Tag, Parser
+import json
 
 class Hac():
     '''
@@ -25,10 +26,10 @@ class Hac():
             'author',
         ]
 
+        self.id = str(uuid.uuid4())
+
         self.validate()
         self.reorder_keys()
-
-        self.id = str(uuid.uuid4())
 
     def render(self, target:str='md'):
         from .Doc import HacDoc
