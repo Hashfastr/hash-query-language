@@ -88,6 +88,10 @@ class HacDoc():
         from copy import deepcopy
         asm:dict = deepcopy(self.hac.asm)
         long = False
+        extra_space = [
+            'id',
+            'description',
+        ]
 
         out = '/**\n'
         for i in asm:
@@ -118,7 +122,7 @@ class HacDoc():
                 logging.critical(f'Attempting to decompile impossible Hac datatype {type(asm[i])}, skipping')
                 out += '\n'
 
-            if long or i == 'schedule':
+            if long or i in extra_space:
                 out += ' * \n'
                 long = False
 

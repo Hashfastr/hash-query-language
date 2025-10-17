@@ -49,7 +49,8 @@ def main():
     parser.add_argument('-dpar', '--deparse', help="Deparse the program before compiling", action='store_true')
     # parser.add_argument('-dec', '--decompile', help="Decompile the program before running", action='store_true')
     parser.add_argument('-pl', '--plan', help="Prints the plan for the execution", action='store_true')
-    parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json)")
+    parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json, decompile)")
+    parser.add_argument('--init-hac', help="Adds a hac comment and deparses", action='store_true')
     parser.add_argument('-eng', '--hac-engine', help="Runs as the hac engine", action='store_true')
     
     args = parser.parse_args()

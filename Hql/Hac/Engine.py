@@ -182,6 +182,27 @@ class Detection():
 
         return hac, parser
 
+    def deparse(self) -> str:
+        from Hql.Query import Query
+        from Hql.Context import Context
+        from Hql.Data import Data
+
+        deparse = ''
+
+        if self.hac:
+            deparse += self.hac.render(target='decompile')
+            deparse += '\n'
+
+        if not self.parser:
+            raise hqle.CompilerException(f'Attempting to deparse an unparsed query {self.id}')
+        
+        if not isinstance(self.parser.assembly, Query):
+            raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
+
+        deparse += self.parser.assembly.decompile(Context(Data()))
+        
+        return deparse
+
     def compile(self) -> 'HqlCompiler':
         from Hql.Parser import Parser
         from Hql.Query import Query

@@ -11,6 +11,20 @@ class Hac():
     '''
     def __init__(self, asm:dict, src:str, default_schedule:str='0 * * * *') -> None:
         import uuid
+        from datetime import datetime
+
+        if not asm:
+            asm = {
+                'title': 'my detection',
+                'status': 'testing',
+                'description': 'Parasaurolophus is a great dinosaur',
+                'tags': ['tag'],
+                'references': ['https://hql.dev'],
+                'level': 'medium',
+                'changelog': [
+                    f'{datetime.now().strftime("%Y-%m-%d")} Username: Init detection'
+                ]
+            }
 
         self.asm = asm
         self.src = src
@@ -19,11 +33,27 @@ class Hac():
         # Required tags from a HaC definition
         self.required = [
             'title',
+            'author',
             'id',
             'status',
             'schedule',
             'description',
+        ]
+
+        self.order = [
+            'title',
             'author',
+            'id',
+            'status',
+            'level',
+            'schedule',
+            'description',
+            'tags',
+            'triage',
+            'falsepositives',
+            'authornotes',
+            'references',
+            'changelog'
         ]
 
         self.id = str(uuid.uuid4())
@@ -55,7 +85,9 @@ class Hac():
     def reorder_keys(self):
         new = dict()
 
-        for i in self.required:
+        for i in self.order:
+            if i not in self.asm:
+                continue
             new[i] = self.asm.pop(i)
 
         for i in self.asm:

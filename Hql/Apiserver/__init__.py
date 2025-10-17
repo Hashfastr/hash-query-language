@@ -22,13 +22,6 @@ class HqlRequest(BaseModel):
     save: bool = False
     plan: bool = False
 
-class SigmaRequest(BaseModel):
-    sigma: Union[dict, None] = None
-    sigma_text: str = ''
-    run: bool = True
-    save: bool = False
-    plan: bool = False
-
 class Apiserver():
     def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8081):
         if not can_thread():
@@ -143,6 +136,24 @@ class Apiserver():
             det = Detection(hql.hql, 'api', self.hacengine.config, no_hac=True)
             rid = self.hacengine.run_detection(det)
             return {'id': rid}
+
+        def reparse_hql(hql:HqlRequest):
+            from Hql.Hac.Engine import Detection
+
+            det = Detection(hql.hql, 'api', self.hacengine.config)
+            deparsed = det.deparse()
+
+            return {
+                'hql': deparsed
+            }
+
+        def add_hac(hql:HqlRequest):
+            from Hql.Hac.Engine import Detection, Hac
+
+            det = Detection(hql.hql, 'api', self.hacengine.config)
+            if not det.hac:
+                det.hac = Hac({}, 'api')
+
 
     def start(self):
         self.thread = threading.Thread(target=self.run, daemon=True)

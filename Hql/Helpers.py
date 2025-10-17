@@ -19,6 +19,7 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     from Hql.Compiler import HqlCompiler
     from Hql.Hac import Parser as HaCParser
     from Hql.Query import Query
+    from Hql.Hac import Hac
 
     ##################################
     ## Generate HaC (if applicable) ##
@@ -65,8 +66,11 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
         # Use print to give a raw output
         return str(parser.assembly)
 
-    if kwargs.get('deparse', False):
+    if kwargs.get('deparse', False) or kwargs.get('init_hac', False):
         deparse = ''
+
+        if kwargs.get('init_hac'):
+            hac = Hac({}, src='init')
 
         if hac:
             deparse += hac.render(target='decompile')
