@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gruvbox-dark-bg2 dark:border-gruvbox-dark-bg2;
+  }
+
+  body {
+    @apply bg-gruvbox-light-bg text-gruvbox-light-fg dark:bg-gruvbox-dark-bg dark:text-gruvbox-dark-fg;
+    @apply font-mono;
+  }
+
+  /* Scrollbar styles */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gruvbox-light-bg1 dark:bg-gruvbox-dark-bg1;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gruvbox-light-bg3 dark:bg-gruvbox-dark-bg3 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gruvbox-light-gray dark:bg-gruvbox-dark-gray;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded font-medium transition-colors;
+    @apply bg-gruvbox-light-bg2 text-gruvbox-light-fg hover:bg-gruvbox-light-bg3;
+    @apply dark:bg-gruvbox-dark-bg2 dark:text-gruvbox-dark-fg dark:hover:bg-gruvbox-dark-bg3;
+  }
+
+  .btn-primary {
+    @apply bg-gruvbox-light-blue text-gruvbox-light-bg hover:opacity-90;
+    @apply dark:bg-gruvbox-dark-blue dark:text-gruvbox-dark-bg;
+  }
+
+  .btn-success {
+    @apply bg-gruvbox-light-green text-gruvbox-light-bg hover:opacity-90;
+    @apply dark:bg-gruvbox-dark-green dark:text-gruvbox-dark-bg;
+  }
+
+  .btn-danger {
+    @apply bg-gruvbox-light-red text-gruvbox-light-bg hover:opacity-90;
+    @apply dark:bg-gruvbox-dark-red dark:text-gruvbox-dark-bg;
+  }
+
+  .input {
+    @apply px-3 py-2 rounded border;
+    @apply bg-gruvbox-light-bg0 text-gruvbox-light-fg border-gruvbox-light-bg3;
+    @apply dark:bg-gruvbox-dark-bg0 dark:text-gruvbox-dark-fg dark:border-gruvbox-dark-bg3;
+    @apply focus:outline-none focus:ring-2 focus:ring-gruvbox-light-blue dark:focus:ring-gruvbox-dark-blue;
+  }
+
+  .card {
+    @apply rounded border p-4;
+    @apply bg-gruvbox-light-bg0 border-gruvbox-light-bg2;
+    @apply dark:bg-gruvbox-dark-bg0 dark:border-gruvbox-dark-bg2;
+  }
+
+  .sidebar {
+    @apply border-r;
+    @apply bg-gruvbox-light-bg1 border-gruvbox-light-bg2;
+    @apply dark:bg-gruvbox-dark-bg1 dark:border-gruvbox-dark-bg2;
+    @apply overflow-y-auto;
+  }
+
+  .table-cell {
+    @apply px-3 py-2 border-b;
+    @apply border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2;
+  }
+
+  .table-header {
+    @apply px-3 py-2 border-b font-semibold text-left;
+    @apply bg-gruvbox-light-bg1 border-gruvbox-light-bg3;
+    @apply dark:bg-gruvbox-dark-bg1 dark:border-gruvbox-dark-bg3;
+  }
+}

@@ -143,8 +143,12 @@ RUN set -eux; \
 
 ARG HOME="/opt/Hql"
 
-RUN apt update && apt install -y rustup gcc build-essential
+RUN apt update && apt install -y rustup gcc build-essential curl
 RUN rustup default stable
+
+# Install Node.js for building frontend
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt install -y nodejs
 
 RUN mkdir -p $HOME
 COPY ./Hql $HOME/Hql
@@ -154,11 +158,17 @@ COPY ./README.md $HOME
 WORKDIR $HOME
 RUN pip3 install --no-cache-dir --break-system-packages .
 
+# Build frontend
+COPY ./Hql-Interface $HOME/Hql-Interface
+WORKDIR $HOME/Hql-Interface
+RUN npm install && npm run build
+
 # Clean
-RUN apt remove -y build-essential && \
+WORKDIR $HOME
+RUN apt remove -y build-essential nodejs curl && \
     apt autoremove -y && \
     rustup toolchain list | awk '{print $1}' | xargs rustup toolchain uninstall && \
-    rm -rf $HOME
+    rm -rf $HOME/Hql $HOME/pyproject.toml $HOME/LICENSE $HOME/README.md $HOME/Hql-Interface/node_modules $HOME/Hql-Interface/src
 
 ARG USER="hql"
 ARG UID=1000

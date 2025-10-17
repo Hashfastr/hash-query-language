@@ -1,0 +1,65 @@
+// API Types
+export interface HqlRequest {
+  hql: string;
+  run: boolean;
+  save: boolean;
+  plan: boolean;
+}
+
+export interface HqlRunResponse {
+  id: string;
+}
+
+export interface HqlRun {
+  run_id: string;
+  run_date: string;
+  started: boolean;
+  failed: boolean;
+  completed: boolean;
+  num_results: number;
+  data?: Record<string, any>[];
+  schema?: Record<string, string>;
+}
+
+export interface Detection {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  status: string;
+  schedule: string;
+  hql?: string;
+  src?: string;
+}
+
+export interface SaveDetectionRequest {
+  hql: string;
+  title: string;
+  description: string;
+  author: string;
+  schedule: string;
+  status: string;
+}
+
+export interface SchemaField {
+  name: string;
+  type: string;
+  children?: SchemaField[];
+}
+
+export interface QueryResult {
+  columns: string[];
+  data: Record<string, any>[];
+  duration?: number;
+  rowCount: number;
+}
+
+// UI State Types
+export type Theme = 'light' | 'dark';
+
+export interface QueryEditorState {
+  query: string;
+  isExecuting: boolean;
+  results: QueryResult | null;
+  error: string | null;
+}
