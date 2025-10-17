@@ -1,6 +1,6 @@
 /**
  * @title  Persistence Via Cron Files
- * @author Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research), MSTIC
+ * @author SYLVAI JONES
  * @id     6c4e2f43-d94d-4ead-b64d-97e53fa2bd05
  * 
  * @status test

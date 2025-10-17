@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { QueryEditor } from './QueryEditor';
 import { ResultsTable } from './ResultsTable';
 import type { QueryResult, Theme } from '../types';
@@ -17,7 +17,11 @@ interface TabManagerProps {
 const TABS_STORAGE_KEY = 'hql-tabs';
 const ACTIVE_TAB_KEY = 'hql-active-tab';
 
-export function TabManager({ theme }: TabManagerProps) {
+export interface TabManagerHandle {
+  loadDetectionIntoActiveTab: (query: string) => void;
+}
+
+export const TabManager = forwardRef<TabManagerHandle, TabManagerProps>(({ theme }, ref) => {
   const [tabs, setTabs] = useState<Tab[]>(() => {
     try {
       const saved = localStorage.getItem(TABS_STORAGE_KEY);
@@ -98,6 +102,24 @@ export function TabManager({ theme }: TabManagerProps) {
     setTabs(tabs.map(t => t.id === tabId ? { ...t, name } : t));
   };
 
+  // Expose method to load detection into active tab
+  useImperativeHandle(ref, () => ({
+    loadDetectionIntoActiveTab: (query: string) => {
+      console.log('Loading detection into tab:', activeTabId);
+      console.log('Query length:', query.length);
+      console.log('Query preview:', query.substring(0, 100));
+
+      // Use setTabs with functional update to avoid stale closure
+      setTabs(currentTabs => {
+        return currentTabs.map(t =>
+          t.id === activeTabId
+            ? { ...t, query, results: null }
+            : t
+        );
+      });
+    },
+  }), [activeTabId]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Tab Bar */}
@@ -166,4 +188,4 @@ export function TabManager({ theme }: TabManagerProps) {
       )}
     </div>
   );
-}
+});

@@ -3,16 +3,17 @@ import { api } from '../services/api';
 import type { Detection } from '../types';
 
 interface DetectionsSidebarProps {
-  onLoadQuery?: (query: string) => void;
+  onLoadDetection?: (query: string) => void;
 }
 
-export function DetectionsSidebar({ onLoadQuery }: DetectionsSidebarProps) {
+export function DetectionsSidebar({ onLoadDetection }: DetectionsSidebarProps) {
   const [detections, setDetections] = useState<Detection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedDetection, setSelectedDetection] = useState<Detection | null>(null);
+  const [loadingDetection, setLoadingDetection] = useState(false);
 
   useEffect(() => {
     loadDetections();
@@ -44,8 +45,27 @@ export function DetectionsSidebar({ onLoadQuery }: DetectionsSidebarProps) {
 
   const handleDetectionClick = (detection: Detection) => {
     setSelectedDetection(detection);
-    if (detection.hql && onLoadQuery) {
-      onLoadQuery(detection.hql);
+  };
+
+  const handleDetectionDoubleClick = async (detectionId: string) => {
+    if (!onLoadDetection) return;
+
+    setLoadingDetection(true);
+    try {
+      const response = await fetch(`/api/detections/${detectionId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load detection');
+      }
+
+      const detectionData = await response.json();
+      if (detectionData.hql) {
+        onLoadDetection(detectionData.hql);
+      }
+    } catch (err) {
+      console.error('Failed to load detection:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load detection');
+    } finally {
+      setLoadingDetection(false);
     }
   };
 
@@ -117,6 +137,8 @@ export function DetectionsSidebar({ onLoadQuery }: DetectionsSidebarProps) {
                     : ''
                 }`}
                 onClick={() => handleDetectionClick(detection)}
+                onDoubleClick={() => handleDetectionDoubleClick(detection.id)}
+                title="Double-click to load query"
               >
                 <div className="font-medium text-sm mb-1">{detection.title || 'Untitled'}</div>
                 {detection.description && (
@@ -154,7 +176,11 @@ export function DetectionsSidebar({ onLoadQuery }: DetectionsSidebarProps) {
       </div>
 
       <div className="p-2 border-t border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2 text-xs text-gruvbox-light-gray dark:text-gruvbox-dark-gray">
-        {filterDetections().length} of {detections.length} detections
+        {loadingDetection ? (
+          <span className="text-gruvbox-light-blue dark:text-gruvbox-dark-blue">Loading detection...</span>
+        ) : (
+          <span>{filterDetections().length} of {detections.length} detections</span>
+        )}
       </div>
     </div>
   );

@@ -82,6 +82,11 @@ class Apiserver():
                     continue
                 detections.append(det.hac.asm)
             return detections
+        
+        @self.app.get('/api/detections/{detection_id}')
+        def get_detections(detection_id:str):
+            detection = self.hacengine.detections[detection_id]
+            return detection.to_dict()
 
         @self.app.post('/api/detections')
         async def save_detection(request: fastapi.Request):

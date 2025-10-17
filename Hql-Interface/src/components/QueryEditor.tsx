@@ -18,6 +18,9 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
   // Use external query if provided, otherwise use internal state
   const query = externalQuery !== undefined ? externalQuery : internalQuery;
 
+  console.log('QueryEditor - externalQuery length:', externalQuery?.length ?? 'undefined');
+  console.log('QueryEditor - current query length:', query.length);
+
   const handleQueryChange = (newQuery: string) => {
     if (onQueryChange) {
       onQueryChange(newQuery);
@@ -210,6 +213,7 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
 
       <div className="flex-1 m-4 border border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2 rounded overflow-hidden">
         <Editor
+          key={query.substring(0, 50)} // Force re-render on query change
           height="100%"
           defaultLanguage="plaintext"
           value={query}

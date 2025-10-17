@@ -132,7 +132,7 @@ class Detection():
         self.config = config
         self.hac, self.parser = self.gen_hac()
         self.compiler = None
-        self.schedule = None
+        self.schedule:Optional[Schedule] = None
         self.id = ''
         
         self.run_history:list[dict] = []
@@ -150,6 +150,18 @@ class Detection():
         elif no_hac:
             self.id = str(uuid.uuid4())
             self.compiler = self.compile()
+
+    def to_dict(self) -> dict:
+        res = {
+            'id': self.id,
+            'hql': self.txt,
+            'history': self.run_history
+        }
+
+        if self.schedule:
+            res['schedule'] = self.schedule.cronstr
+
+        return res
 
     def gen_hac(self) -> tuple[Optional['Hac'], Optional['SigmaParser']]:
         from Hql.Hac import Parser as HaCParser

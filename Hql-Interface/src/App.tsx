@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTheme } from './hooks/useTheme';
 import { ThemeToggle } from './components/ThemeToggle';
 import { TabManager } from './components/TabManager';
@@ -9,6 +9,7 @@ function App() {
   const { theme } = useTheme();
   const [showSchema, setShowSchema] = useState(true);
   const [showDetections, setShowDetections] = useState(true);
+  const tabManagerRef = useRef<{ loadDetectionIntoActiveTab: (query: string) => void }>(null);
 
   return (
     <div className="h-screen flex flex-col">
@@ -41,11 +42,17 @@ function App() {
 
         {/* Center - Tabs with Editor and Results */}
         <div className="flex-1 overflow-hidden">
-          <TabManager theme={theme} />
+          <TabManager ref={tabManagerRef} theme={theme} />
         </div>
 
         {/* Right Sidebar - Detections */}
-        {showDetections && <DetectionsSidebar />}
+        {showDetections && (
+          <DetectionsSidebar
+            onLoadDetection={(query) => {
+              tabManagerRef.current?.loadDetectionIntoActiveTab(query);
+            }}
+          />
+        )}
       </div>
     </div>
   );
