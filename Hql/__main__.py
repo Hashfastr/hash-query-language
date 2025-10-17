@@ -42,7 +42,7 @@ def main():
     file_ops.add_argument('-d', '--directory', help="File to compile")
     parser.add_argument('-o', '--output', help='Output dir otherwise stdout')
     parser.add_argument('-v', '--verbose', help="Set verbosity to debug", action='store_true')
-    parser.add_argument('-l' '--logging-level', help="Verbosity level 1-5, where 5 is debug, 1 is critical, default is 3, warning.", type=int)
+    parser.add_argument('-l', '--logging-level', help="Verbosity level 1-5, where 5 is debug, 1 is critical, default is 3, warning.", type=int)
     parser.add_argument('-p', '--profile', help="Profile the performance of Hql", action='store_true')
     parser.add_argument('-c', '--config', help="Location of the config file")
     parser.add_argument('-nx', '--no-exec', help="Only compile, don't execute", action='store_true')
@@ -59,8 +59,8 @@ def main():
         profiler = cProfile.Profile()
         profiler.enable()
     
-    if args.l__logging_level:
-        config_logging(args.l__logging_level)
+    if args.logging_level:
+        config_logging(args.logging_level)
     elif args.verbose:
         config_logging(5)
     else:
