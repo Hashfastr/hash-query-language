@@ -21,6 +21,32 @@ export function QueryEditor({ onResultsChange, theme }: QueryEditorProps) {
     status: 'enabled',
   });
 
+  // Flatten nested objects one level deep with dot notation
+  const flattenRow = (row: Record<string, any>): Record<string, any> => {
+    const flattened: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(row)) {
+      // Check if value is a plain object (not null, not array, not Date, etc.)
+      if (
+        value !== null &&
+        value !== undefined &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.prototype.toString.call(value) === '[object Object]'
+      ) {
+        // Flatten one level: event.category, event.severity, etc.
+        for (const [nestedKey, nestedValue] of Object.entries(value)) {
+          flattened[`${key}.${nestedKey}`] = nestedValue;
+        }
+      } else {
+        // Keep primitive values and arrays as-is
+        flattened[key] = value;
+      }
+    }
+
+    return flattened;
+  };
+
   const executeQuery = async () => {
     if (!query.trim()) {
       setError('Please enter a query');
@@ -73,12 +99,21 @@ export function QueryEditor({ onResultsChange, theme }: QueryEditorProps) {
       }
 
       if (resultData.length > 0) {
-        const columns = Object.keys(resultData[0]);
+        // Debug logging
+        console.log('Raw resultData:', resultData);
+
+        // Flatten nested objects one level deep
+        const flattenedData = resultData.map(row => flattenRow(row));
+
+        console.log('Flattened data:', flattenedData);
+
+        const columns = Object.keys(flattenedData[0]);
+
         onResultsChange({
           columns,
-          data: resultData,
+          data: flattenedData,
           duration: run.duration || (endTime - startTime) / 1000,
-          rowCount: resultData.length,
+          rowCount: flattenedData.length,
         });
       } else {
         onResultsChange({

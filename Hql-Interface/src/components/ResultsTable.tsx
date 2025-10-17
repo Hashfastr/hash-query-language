@@ -23,7 +23,9 @@ export function ResultsTable({ results }: ResultsTableProps) {
     if (!results || results.columns.length === 0) return [];
 
     return results.columns.map((col) => ({
-      accessorKey: col,
+      // Use accessor function instead of accessorKey to handle dot notation
+      id: col,
+      accessorFn: (row) => row[col],
       header: col,
       cell: (info) => {
         const value = info.getValue();
