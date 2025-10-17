@@ -330,18 +330,41 @@ class HqlCompiler(Compiler):
         desc.op = op
         return desc, None
 
-    def ProjectAway(self, op: 'Hql.Operators.Project', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+    def ProjectAway(self, op: 'Hql.Operators.ProjectAway', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Operators import ProjectAway
+        
         acc, rej = self.Project(op)
+        new = ProjectAway('project-away', acc.get_op().exprs)
+        acc.op = new
+
         return acc, rej
 
     def ProjectKeep(self, op: 'Hql.Operators.Project', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        return self.Project(op)
+        from Hql.Operators import ProjectKeep
+        
+        acc, rej = self.Project(op)
+        new = ProjectKeep('project-keep', acc.get_op().exprs)
+        acc.op = new
+
+        return acc, rej
 
     def ProjectReorder(self, op: 'Hql.Operators.Project', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        return self.Project(op)
+        from Hql.Operators import ProjectReorder
+        
+        acc, rej = self.Project(op)
+        new = ProjectReorder('project-reorder', acc.get_op().exprs)
+        acc.op = new
+
+        return acc, rej
 
     def ProjectRename(self, op: 'Hql.Operators.ProjectRename', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        return self.Project(op)
+        from Hql.Operators import ProjectRename
+        
+        acc, rej = self.Project(op)
+        new = ProjectRename('project-rename', acc.get_op().exprs)
+        acc.op = new
+
+        return acc, rej
 
     def Take(self, op: 'Hql.Operators.Take', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Take

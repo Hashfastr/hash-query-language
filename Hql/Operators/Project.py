@@ -20,9 +20,6 @@ class Project(Operator):
     def __init__(self, optok:str, exprs:list[Expression]):
         Operator.__init__(self)
         self.exprs = exprs
-        self.non_conseq = [
-            'Take'
-        ]
         self.optok = optok
 
     def decompile(self, ctx: 'Context') -> str:
@@ -55,7 +52,7 @@ class ProjectAway(Project):
         paths = []
         for i in self.exprs:
             paths.append(i.eval(ctx, as_list=True))
-            
+        
         return ctx.data.drop_many(paths)
 
 # @register_op('ProjectKeep')
