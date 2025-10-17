@@ -7,19 +7,17 @@ interface QueryEditorProps {
   query?: string;
   onQueryChange?: (query: string) => void;
   onResultsChange: (results: QueryResult | null) => void;
+  onDetectionSaved?: () => void;
   theme: 'light' | 'dark';
 }
 
-export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChange, theme }: QueryEditorProps) {
+export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChange, onDetectionSaved, theme }: QueryEditorProps) {
   const [internalQuery, setInternalQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Use external query if provided, otherwise use internal state
   const query = externalQuery !== undefined ? externalQuery : internalQuery;
-
-  console.log('QueryEditor - externalQuery length:', externalQuery?.length ?? 'undefined');
-  console.log('QueryEditor - current query length:', query.length);
 
   const handleQueryChange = (newQuery: string) => {
     if (onQueryChange) {
@@ -107,13 +105,8 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
       }
 
       if (resultData.length > 0) {
-        // Debug logging
-        console.log('Raw resultData:', resultData);
-
         // Flatten nested objects one level deep
         const flattenedData = resultData.map(row => flattenRow(row));
-
-        console.log('Flattened data:', flattenedData);
 
         const columns = Object.keys(flattenedData[0]);
 
@@ -167,6 +160,13 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
 
       setError(null);
       alert('Detection saved successfully');
+
+      // Trigger reload of detections list after 1 second
+      if (onDetectionSaved) {
+        setTimeout(() => {
+          onDetectionSaved();
+        }, 1000);
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(`Failed to save: ${err.message}`);

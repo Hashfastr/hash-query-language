@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { api } from '../services/api';
 import type { Detection } from '../types';
 
@@ -6,7 +6,11 @@ interface DetectionsSidebarProps {
   onLoadDetection?: (query: string) => void;
 }
 
-export function DetectionsSidebar({ onLoadDetection }: DetectionsSidebarProps) {
+export interface DetectionsSidebarHandle {
+  reloadDetections: () => Promise<void>;
+}
+
+export const DetectionsSidebar = forwardRef<DetectionsSidebarHandle, DetectionsSidebarProps>(({ onLoadDetection }, ref) => {
   const [detections, setDetections] = useState<Detection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +21,14 @@ export function DetectionsSidebar({ onLoadDetection }: DetectionsSidebarProps) {
 
   useEffect(() => {
     loadDetections();
+
+    // Set up periodic reload every 60 seconds
+    const intervalId = setInterval(() => {
+      loadDetections();
+    }, 60000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const loadDetections = async () => {
@@ -31,6 +43,11 @@ export function DetectionsSidebar({ onLoadDetection }: DetectionsSidebarProps) {
       setLoading(false);
     }
   };
+
+  // Expose reload method to parent
+  useImperativeHandle(ref, () => ({
+    reloadDetections: loadDetections,
+  }));
 
   const filterDetections = () => {
     return detections.filter((det) => {
@@ -184,4 +201,4 @@ export function DetectionsSidebar({ onLoadDetection }: DetectionsSidebarProps) {
       </div>
     </div>
   );
-}
+});

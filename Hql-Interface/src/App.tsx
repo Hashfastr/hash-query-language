@@ -3,13 +3,14 @@ import { useTheme } from './hooks/useTheme';
 import { ThemeToggle } from './components/ThemeToggle';
 import { TabManager } from './components/TabManager';
 import { SchemaExplorer } from './components/SchemaExplorer';
-import { DetectionsSidebar } from './components/DetectionsSidebar';
+import { DetectionsSidebar, type DetectionsSidebarHandle } from './components/DetectionsSidebar';
 
 function App() {
   const { theme } = useTheme();
   const [showSchema, setShowSchema] = useState(true);
   const [showDetections, setShowDetections] = useState(true);
   const tabManagerRef = useRef<{ loadDetectionIntoActiveTab: (query: string) => void }>(null);
+  const detectionsSidebarRef = useRef<DetectionsSidebarHandle>(null);
 
   return (
     <div className="h-screen flex flex-col">
@@ -42,12 +43,17 @@ function App() {
 
         {/* Center - Tabs with Editor and Results */}
         <div className="flex-1 overflow-hidden">
-          <TabManager ref={tabManagerRef} theme={theme} />
+          <TabManager
+            ref={tabManagerRef}
+            theme={theme}
+            onDetectionSaved={() => detectionsSidebarRef.current?.reloadDetections()}
+          />
         </div>
 
         {/* Right Sidebar - Detections */}
         {showDetections && (
           <DetectionsSidebar
+            ref={detectionsSidebarRef}
             onLoadDetection={(query) => {
               tabManagerRef.current?.loadDetectionIntoActiveTab(query);
             }}

@@ -12,6 +12,7 @@ interface Tab {
 
 interface TabManagerProps {
   theme: Theme;
+  onDetectionSaved?: () => void;
 }
 
 const TABS_STORAGE_KEY = 'hql-tabs';
@@ -21,7 +22,7 @@ export interface TabManagerHandle {
   loadDetectionIntoActiveTab: (query: string) => void;
 }
 
-export const TabManager = forwardRef<TabManagerHandle, TabManagerProps>(({ theme }, ref) => {
+export const TabManager = forwardRef<TabManagerHandle, TabManagerProps>(({ theme, onDetectionSaved }, ref) => {
   const [tabs, setTabs] = useState<Tab[]>(() => {
     try {
       const saved = localStorage.getItem(TABS_STORAGE_KEY);
@@ -105,10 +106,6 @@ export const TabManager = forwardRef<TabManagerHandle, TabManagerProps>(({ theme
   // Expose method to load detection into active tab
   useImperativeHandle(ref, () => ({
     loadDetectionIntoActiveTab: (query: string) => {
-      console.log('Loading detection into tab:', activeTabId);
-      console.log('Query length:', query.length);
-      console.log('Query preview:', query.substring(0, 100));
-
       // Use setTabs with functional update to avoid stale closure
       setTabs(currentTabs => {
         return currentTabs.map(t =>
@@ -176,6 +173,7 @@ export const TabManager = forwardRef<TabManagerHandle, TabManagerProps>(({ theme
               query={activeTab.query}
               onQueryChange={(query) => updateTabQuery(activeTab.id, query)}
               onResultsChange={(results) => updateTabResults(activeTab.id, results)}
+              onDetectionSaved={onDetectionSaved}
               theme={theme}
             />
           </div>
