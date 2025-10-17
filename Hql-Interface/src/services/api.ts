@@ -3,7 +3,6 @@ import type {
   HqlRunResponse,
   HqlRun,
   Detection,
-  SaveDetectionRequest,
   SchemaField,
 } from '../types';
 
@@ -69,14 +68,6 @@ export const api = {
   // Get detection history
   getDetectionHistory: async (detectionId: string): Promise<any[]> => {
     return fetchApi<any[]>(`/detections/${detectionId}/history`);
-  },
-
-  // Save detection
-  saveDetection: async (detection: SaveDetectionRequest): Promise<{ id: string }> => {
-    return fetchApi<{ id: string }>('/detections', {
-      method: 'POST',
-      body: JSON.stringify(detection),
-    });
   },
 
   // Get schema/fields

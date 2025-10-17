@@ -4,22 +4,27 @@ import { api, ApiError } from '../services/api';
 import type { QueryResult } from '../types';
 
 interface QueryEditorProps {
+  query?: string;
+  onQueryChange?: (query: string) => void;
   onResultsChange: (results: QueryResult | null) => void;
   theme: 'light' | 'dark';
 }
 
-export function QueryEditor({ onResultsChange, theme }: QueryEditorProps) {
-  const [query, setQuery] = useState('');
+export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChange, theme }: QueryEditorProps) {
+  const [internalQuery, setInternalQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveMode, setSaveMode] = useState(false);
-  const [saveForm, setSaveForm] = useState({
-    title: '',
-    description: '',
-    author: '',
-    schedule: '0 * * * *',
-    status: 'enabled',
-  });
+
+  // Use external query if provided, otherwise use internal state
+  const query = externalQuery !== undefined ? externalQuery : internalQuery;
+
+  const handleQueryChange = (newQuery: string) => {
+    if (onQueryChange) {
+      onQueryChange(newQuery);
+    } else {
+      setInternalQuery(newQuery);
+    }
+  };
 
   // Flatten nested objects one level deep with dot notation
   const flattenRow = (row: Record<string, any>): Record<string, any> => {
@@ -142,31 +147,26 @@ export function QueryEditor({ onResultsChange, theme }: QueryEditorProps) {
       return;
     }
 
-    if (!saveForm.title || !saveForm.author) {
-      setError('Title and author are required');
-      return;
-    }
-
     try {
-      await api.saveDetection({
-        hql: query,
-        ...saveForm,
+      // Send raw query body to backend
+      const response = await fetch('/api/detections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: query,
       });
-      setSaveMode(false);
-      setSaveForm({
-        title: '',
-        description: '',
-        author: '',
-        schedule: '0 * * * *',
-        status: 'enabled',
-      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || response.statusText);
+      }
+
       setError(null);
       alert('Detection saved successfully');
     } catch (err) {
-      if (err instanceof ApiError) {
+      if (err instanceof Error) {
         setError(`Failed to save: ${err.message}`);
-      } else if (err instanceof Error) {
-        setError(err.message);
       }
     }
   };
@@ -184,14 +184,14 @@ export function QueryEditor({ onResultsChange, theme }: QueryEditorProps) {
             {isExecuting ? 'Executing...' : 'Run Query'}
           </button>
           <button
-            onClick={() => setSaveMode(!saveMode)}
+            onClick={saveDetection}
             className="btn-primary"
           >
-            {saveMode ? 'Cancel Save' : 'Save as Detection'}
+            Save as Detection
           </button>
           <button
             onClick={() => {
-              setQuery('');
+              handleQueryChange('');
               onResultsChange(null);
               setError(null);
             }}
@@ -208,57 +208,12 @@ export function QueryEditor({ onResultsChange, theme }: QueryEditorProps) {
         </div>
       )}
 
-      {saveMode && (
-        <div className="mx-4 mt-4 p-4 card space-y-3">
-          <h3 className="font-bold">Save Detection</h3>
-          <input
-            type="text"
-            placeholder="Title"
-            value={saveForm.title}
-            onChange={(e) => setSaveForm({ ...saveForm, title: e.target.value })}
-            className="input w-full"
-          />
-          <textarea
-            placeholder="Description"
-            value={saveForm.description}
-            onChange={(e) => setSaveForm({ ...saveForm, description: e.target.value })}
-            className="input w-full h-20"
-          />
-          <input
-            type="text"
-            placeholder="Author"
-            value={saveForm.author}
-            onChange={(e) => setSaveForm({ ...saveForm, author: e.target.value })}
-            className="input w-full"
-          />
-          <input
-            type="text"
-            placeholder="Schedule (cron format)"
-            value={saveForm.schedule}
-            onChange={(e) => setSaveForm({ ...saveForm, schedule: e.target.value })}
-            className="input w-full"
-          />
-          <select
-            value={saveForm.status}
-            onChange={(e) => setSaveForm({ ...saveForm, status: e.target.value })}
-            className="input w-full"
-          >
-            <option value="enabled">Enabled</option>
-            <option value="disabled">Disabled</option>
-            <option value="testing">Testing</option>
-          </select>
-          <button onClick={saveDetection} className="btn-success">
-            Save Detection
-          </button>
-        </div>
-      )}
-
       <div className="flex-1 m-4 border border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2 rounded overflow-hidden">
         <Editor
           height="100%"
           defaultLanguage="plaintext"
           value={query}
-          onChange={(value) => setQuery(value || '')}
+          onChange={(value) => handleQueryChange(value || '')}
           theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
           options={{
             minimap: { enabled: false },

@@ -275,6 +275,24 @@ class HacEngine():
 
         return detections
 
+    def write_detection(self, text:str='', detection:Optional[Detection]=None):
+        if text:
+            detection = Detection(text, 'hac-engine', self.config)
+        
+        if detection == None:
+            logging.error('Failed to generate detection from text')
+            raise hqle.HqlException(f'Failed to parse hql detection')
+
+        if self.directory:
+            path = self.path / f'{detection.id}.hql'
+        else:
+            path = self.path
+
+        with open(path, mode='w+') as f:
+            f.write(detection.txt)
+
+        return detection
+
     def wait_till(self, stamp:int, pad:int=0):
         from time import sleep
         cur = datetime.datetime.now(tz=self.tz).timestamp()

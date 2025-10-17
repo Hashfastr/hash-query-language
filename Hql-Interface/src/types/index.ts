@@ -38,15 +38,6 @@ export interface Detection {
   src?: string;
 }
 
-export interface SaveDetectionRequest {
-  hql: string;
-  title: string;
-  description: string;
-  author: string;
-  schedule: string;
-  status: string;
-}
-
 export interface SchemaField {
   name: string;
   type: string;

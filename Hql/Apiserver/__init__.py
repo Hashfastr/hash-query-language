@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import uvicorn
+import fastapi
 from typing import TYPE_CHECKING, Optional, Union
 import threading
 from Hql.Helpers import can_thread
@@ -27,14 +28,6 @@ class SigmaRequest(BaseModel):
     run: bool = True
     save: bool = False
     plan: bool = False
-
-class SaveDetectionRequest(BaseModel):
-    hql: str
-    title: str
-    description: str
-    author: str
-    schedule: str
-    status: str
 
 class Apiserver():
     def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8081):
@@ -91,36 +84,21 @@ class Apiserver():
             return detections
 
         @self.app.post('/api/detections')
-        def save_detection(request: SaveDetectionRequest):
-            import uuid
-            from datetime import datetime
+        async def save_detection(request: fastapi.Request):
+            query_body = await request.body()
+            query_text = query_body.decode('utf-8')
 
-            # Create HaC YAML content
-            detection_id = str(uuid.uuid4())
-            hac_content = f"""title: {request.title}
-id: {detection_id}
-status: {request.status}
-schedule: {request.schedule}
-description: {request.description}
-author: {request.author}
-date: {datetime.now().strftime('%Y-%m-%d')}
-hql: |
-  {request.hql}
-"""
-
-            # Save to file in the detections directory
-            detection_dir = self.hacengine.path if self.hacengine.directory else self.hacengine.path.parent
-            detection_file = detection_dir / f"{detection_id}.hql"
+            if not query_text.strip():
+                raise HTTPException(status_code=400, detail='Query body cannot be empty')
 
             try:
-                with open(detection_file, 'w') as f:
-                    f.write(hac_content)
+                detection = self.hacengine.write_detection(query_text)
 
                 # Reload detections
                 self.hacengine.files = self.hacengine.scan_files()
                 self.hacengine.detections = self.hacengine.load_files()
 
-                return {'id': detection_id}
+                return {'id': detection.id}
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f'Failed to save detection: {str(e)}')
 

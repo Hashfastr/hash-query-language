@@ -1,15 +1,12 @@
 import { useState } from 'react';
 import { useTheme } from './hooks/useTheme';
 import { ThemeToggle } from './components/ThemeToggle';
-import { QueryEditor } from './components/QueryEditor';
-import { ResultsTable } from './components/ResultsTable';
+import { TabManager } from './components/TabManager';
 import { SchemaExplorer } from './components/SchemaExplorer';
 import { DetectionsSidebar } from './components/DetectionsSidebar';
-import type { QueryResult } from './types';
 
 function App() {
   const { theme } = useTheme();
-  const [results, setResults] = useState<QueryResult | null>(null);
   const [showSchema, setShowSchema] = useState(true);
   const [showDetections, setShowDetections] = useState(true);
 
@@ -42,17 +39,9 @@ function App() {
         {/* Left Sidebar - Schema */}
         {showSchema && <SchemaExplorer />}
 
-        {/* Center - Editor and Results */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Query Editor */}
-          <div className="h-1/2 border-b border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2">
-            <QueryEditor onResultsChange={setResults} theme={theme} />
-          </div>
-
-          {/* Results Table */}
-          <div className="h-1/2">
-            <ResultsTable results={results} />
-          </div>
+        {/* Center - Tabs with Editor and Results */}
+        <div className="flex-1 overflow-hidden">
+          <TabManager theme={theme} />
         </div>
 
         {/* Right Sidebar - Detections */}
