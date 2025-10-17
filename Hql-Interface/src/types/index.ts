@@ -17,8 +17,14 @@ export interface HqlRun {
   failed: boolean;
   completed: boolean;
   num_results: number;
-  data?: Record<string, any>[];
-  schema?: Record<string, string>;
+  duration: number;
+  results?: {
+    // Data can be either a direct array or keyed by table name
+    data?: Record<string, any>[] | Record<string, Record<string, any>[]>;
+    schema?: Record<string, string> | Record<string, Record<string, string>>;
+  };
+  str_out?: string;
+  hac?: any;
 }
 
 export interface Detection {

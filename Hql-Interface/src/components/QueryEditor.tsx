@@ -46,24 +46,45 @@ export function QueryEditor({ onResultsChange, theme }: QueryEditorProps) {
       const endTime = performance.now();
 
       if (run.failed) {
-        setError('Query execution failed');
+        const errorMsg = run.str_out || 'Query execution failed';
+        setError(errorMsg);
         setIsExecuting(false);
         return;
       }
 
-      if (run.data && Array.isArray(run.data)) {
-        const columns = run.data.length > 0 ? Object.keys(run.data[0]) : [];
+      // Extract data from the results object
+      let resultData: Record<string, any>[] = [];
+
+      if (run.results?.data) {
+        // Check if data is already an array
+        if (Array.isArray(run.results.data)) {
+          resultData = run.results.data;
+        } else {
+          // Data is keyed by table name, extract the first table's data
+          const tableNames = Object.keys(run.results.data);
+          if (tableNames.length > 0) {
+            const firstTable = tableNames[0];
+            const tableData = run.results.data[firstTable];
+            if (Array.isArray(tableData)) {
+              resultData = tableData;
+            }
+          }
+        }
+      }
+
+      if (resultData.length > 0) {
+        const columns = Object.keys(resultData[0]);
         onResultsChange({
           columns,
-          data: run.data,
-          duration: (endTime - startTime) / 1000,
-          rowCount: run.data.length,
+          data: resultData,
+          duration: run.duration || (endTime - startTime) / 1000,
+          rowCount: resultData.length,
         });
       } else {
         onResultsChange({
           columns: [],
           data: [],
-          duration: (endTime - startTime) / 1000,
+          duration: run.duration || (endTime - startTime) / 1000,
           rowCount: 0,
         });
       }
