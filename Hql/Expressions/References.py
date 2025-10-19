@@ -112,7 +112,7 @@ class HacNamedReference(NamedReference):
 class Path(Expression):
     def __init__(self, path:Union[None, list]=None):
         Expression.__init__(self)
-        self.path = path if path else []
+        self.path:list[NamedReference] = path if path else []
       
     def to_dict(self) -> Union[None, dict]:
         try:

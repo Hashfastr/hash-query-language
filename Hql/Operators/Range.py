@@ -10,7 +10,7 @@ from Hql.Operators import Operator
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression
+    from Hql.Expressions import Expression, NamedReference
     from Hql.Context import Context
 
 '''
@@ -22,9 +22,9 @@ https://learn.microsoft.com/en-us/kusto/query/range-operator
 '''
 # @register_op('Range')
 class Range(Operator):
-    def __init__(self, name:'Expression', start:'Expression', end:'Expression', step:'Expression'):
+    def __init__(self, name:'NamedReference', start:'Expression', end:'Expression', step:'Expression'):
         Operator.__init__(self)
-        self.name = name
+        self.name:'NamedReference' = name
         self.start = start
         self.end = end
         self.step = step
