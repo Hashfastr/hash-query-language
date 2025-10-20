@@ -3,11 +3,12 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql import Config
 from Hql.Context import register_func, Context
 from Hql.Expressions import StringLiteral
+from typing import Optional
 
 # This is a meta function resolved while parsing
 @register_func('index')
 class index(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 1)
         self.preprocess = True
 

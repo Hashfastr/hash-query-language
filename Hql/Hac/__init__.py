@@ -2,6 +2,7 @@ from Hql.Exceptions import HacExceptions as hace
 from Hql.Hac.Sources import Source, Product
 from Hql.Hac.Parser import Tag, Parser
 import json
+from typing import Union
 
 class Hac():
     '''
@@ -82,7 +83,7 @@ class Hac():
 
         raise hace.HacException(f'Unknown HaC render type {target}')
     
-    def get(self, name:str):
+    def get(self, name:str) -> Union[str, list[str]]:
         if name == 'src':
             return self.src
         return self.asm.get(name, '')

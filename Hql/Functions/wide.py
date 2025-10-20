@@ -3,7 +3,7 @@ from Hql.Context import register_func, Context
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Expressions import StringLiteral, Multivalue
 from Hql.Data import Series
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from Hql.Data import Data
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 @register_func('wide')
 class wide(Function):
-    def __init__(self, args: list):
+    def __init__(self, args: list, conf:Optional[dict]=None):
         from Hql.Expressions import StringLiteral, NamedReference, Path
         Function.__init__(self, args, 1, 1)
 

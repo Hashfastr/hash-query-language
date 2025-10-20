@@ -3,11 +3,12 @@ from . import Function
 from Hql import Config
 from Hql.Context import register_func, Context
 from Hql.Exceptions import HqlExceptions as hqle
+from typing import Optional
 
 # This is a meta function resolved while parsing
 @register_func('file')
 class file(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, conf:Optional[dict]=None):
         super().__init__(args, 1, -1)
 
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):

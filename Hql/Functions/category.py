@@ -1,10 +1,11 @@
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
+from typing import Optional
 
 @register_func('category')
 class category(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, -1)
         self.preprocess = True
         

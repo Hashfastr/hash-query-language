@@ -2,10 +2,11 @@ from . import Function
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Table
 from Hql.Types.Hql import HqlTypes as hqlt
+from typing import Optional
 
 @register_func('count')
 class count(Function):
-    def __init__(self, args:list, name:str='count_'):
+    def __init__(self, args:list, name:str='count_', conf:Optional[dict]=None):
         super().__init__(args, 0, 0)
         self.count_name = name
         self.count_type = hqlt.uint()

@@ -2,7 +2,7 @@ import importlib, pkgutil
 
 import json
 import polars as pl
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
 
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from Hql.Hac import Source
 
 class Function():
-    def __init__(self, args:list, min:int, max:int):
+    def __init__(self, args:list, min:int, max:int, conf:Optional[dict]=None):
         self.name = self.__class__.__name__
         self.args = args
         self.min = min
@@ -23,6 +23,7 @@ class Function():
         self.preprocess = False
         self.type = 'Function'
         self.static = False
+        self.conf = conf if conf else dict()
         
         if len(args) < min:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')

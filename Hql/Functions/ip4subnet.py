@@ -3,12 +3,13 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
 from Hql.Types.Hql import HqlTypes as hqlt
 from Hql.Expressions import BasicRange, Integer
+from typing import Optional
 
 import polars as pl
 
 @register_func('ip4subnet')
 class ip4subnet(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 1)
         self.preprocess = True
     

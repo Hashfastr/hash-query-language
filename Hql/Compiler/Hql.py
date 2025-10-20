@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from Hql.Query import Query
     from Hql.Config import Config
     from Hql.Context import Context
+    from Hql.Hac import Hac
     import Hql
 
 '''
@@ -19,10 +20,11 @@ Hql preprocessor
 Works out preprocessor functions
 '''
 class HqlCompiler(Compiler):
-    def __init__(self, config:'Config', query:Optional['Query']=None):
+    def __init__(self, config:'Config', query:Optional['Query']=None, hac:Optional['Hac']=None):
         Compiler.__init__(self)
         self.ctx.config = config
         self.root:Optional[InstructionSet] = None
+        self.hac:Optional['Hac'] = hac
 
         if query:
             self.Query(query)
@@ -37,7 +39,7 @@ class HqlCompiler(Compiler):
         ctx = ctx if ctx else self.ctx
         if not self.root:
             raise hqle.CompilerException('Attempting to run compiler with None-root')
-        return self.root.eval(ctx)
+        return self.root.eval(ctx, hac=self.hac)
 
     def Query(self, query: 'Hql.Query.Query', preprocess:bool=True):
         res = None

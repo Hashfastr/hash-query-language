@@ -5,6 +5,7 @@ from Hql.Data import Data, Series, Table, Schema
 from Hql.Types.Hql import HqlTypes as hqlt
 from Hql.Operators import Project
 from Hql.Exceptions import HqlExceptions as hqle
+from typing import Optional
 
 import polars as pl
 import polars.dataframe.group_by as group_by
@@ -27,7 +28,7 @@ OR
 @register_func('make_list')
 @register_func('make_mv')
 class make_mv(Function):
-    def __init__(self, args:list[Expression]):
+    def __init__(self, args:list[Expression], conf:Optional[dict]=None):
         Function.__init__(self, args, 1, -1)
         self.args = args
     

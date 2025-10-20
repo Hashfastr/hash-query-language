@@ -31,7 +31,8 @@ dependencies = [
     "aiohttp",
     "boto3",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "dfir-iris-client"
 ]
 
 [project.urls]

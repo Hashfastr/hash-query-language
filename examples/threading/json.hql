@@ -55,7 +55,6 @@ let D = database('json').macro('network')
 | extend name='D', source.ip = toip4(source.ip)
 | where source.ip == ip4subnet('192.168.0.0/16')
 ;
-union A, B, C, D
+union B
 | project ['@timestamp'], original_name=name, src_ip=toip4(source.ip), src_port=source.port, dest_ip=toip4(destination.ip), dest_port=destination.port
-| union * as final
-| summarize count() by original_name
+| project res = dfir_iris()

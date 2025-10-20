@@ -5,7 +5,7 @@ from Hql.Expressions import StringLiteral, Multivalue
 from Hql.Data import Series
 import polars as pl
 
-from typing import Union, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from Hql.Data import Data
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 @register_func('base64')
 @register_func('b64')
 class base64enc(Function):
-    def __init__(self, args: list):
+    def __init__(self, args: list, conf:Optional[dict]=None):
         from Hql.Expressions import StringLiteral, NamedReference, Path
         Function.__init__(self, args, 1, 2)
 

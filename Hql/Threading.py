@@ -152,10 +152,13 @@ class InstructionThread():
     def run(self) -> None:
         from Hql.Data import Data
         from Hql.Context import Context
+        import copy
 
         out = self.inst.eval(self.ctx)
         if isinstance(out, Data):
-            out = Context(out)
+            ctx = copy.deepcopy(self.ctx)
+            ctx.data = out
+            out = ctx
         self.output = out
 
     def is_alive(self) -> bool:

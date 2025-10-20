@@ -97,10 +97,10 @@ class InstructionSet():
 
         logging.debug(f'Starting InstructionSet {self.id}')
         start = time.perf_counter()
-   
+
         pool = InstructionPool(auto_run=False)
         for i in self.upstream:
-            pool.add_instruction(i, Context(Data()))
+            pool.add_instruction(i, Context(Data(), hac=kwargs.get('hac', None)))
 
         pool.start()
 
@@ -114,6 +114,7 @@ class InstructionSet():
             logging.error(f'Failed upstreams: {[x.id for x in self.upstream]}')
             raise hqle.CompilerException('One or more upstream instruction sets failed to execute')
 
+        print(ctx.hac)
         ctx = Context.merge(sets, merge_rows=False)
 
         for i in self.ops:

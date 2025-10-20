@@ -4,10 +4,11 @@ from Hql import Config
 from Hql.Context import register_func, Context
 from Hql.Expressions import PipeExpression, StringLiteral, Expression, DotCompositeFunction
 from Hql.Compiler import InstructionSet, HqlCompiler
+from typing import Optional
 
 @register_func('macro')
 class macro(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, -1)
         self.preprocess = True
 

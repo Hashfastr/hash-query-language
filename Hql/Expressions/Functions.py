@@ -44,15 +44,6 @@ class FuncExpr(Expression):
     
     # Evals to function objects
     def eval(self, ctx:'Context', **kwargs):
-        # Do we need this? Provides no functional use
-        '''
-        if kwargs.get('as_list', False):
-            return self.name.eval(ctx, as_list=True)
-        
-        if kwargs.get('as_str', False):
-            return self.name.eval(ctx, as_str=True)
-        '''
-        
         name = self.name.eval(ctx, as_str=True)
         if not isinstance(name, str):
             raise hqle.CompilerException(f'Function name expression returned non-string {name}')
@@ -60,7 +51,7 @@ class FuncExpr(Expression):
         func = ctx.get_func(name)
         logging.debug(f'Resolved func {func}')
 
-        return func(self.args)
+        return func(self.args, conf=ctx.config.get_function(name))
         
 class DotCompositeFunction(Expression):
     def __init__(self, funcs:list[FuncExpr]):

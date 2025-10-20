@@ -1,9 +1,10 @@
 from Hql.Exceptions import HqlExceptions as hqle
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
 from Hql.Config import Config
 
 if TYPE_CHECKING:
     from Hql.Data import Data
+    from Hql.Hac import Hac
 
 database_registry = {}
 
@@ -98,7 +99,7 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data:'Data', symbol_table:Union[dict, None]=None, macros:Union[dict, None]=None, config:Union[Config, None]=None) -> None:
+    def __init__(self, data:'Data', hac:Optional['Hac']=None, symbol_table:Optional[dict]=None, macros:Optional[dict]=None, config:Optional[Config]=None) -> None:
         from copy import copy
 
         self.dbs = copy(database_registry)
@@ -108,7 +109,7 @@ class Context():
         self.symbol_table = symbol_table if symbol_table else dict()
         self.macros = macros if macros else dict()
         self.config = config if config else Config()
-        # self.root = None
+        self.hac = hac
 
     def __bool__(self):
         return self.data.__bool__()
@@ -131,7 +132,7 @@ class Context():
             for j in i.macros:
                 macros[j] = i.macros[j]
 
-        return Context(data, symbol_table=syms, macros=macros)
+        return Context(data, symbol_table=syms, macros=macros, hac=ctxs[0].hac)
 
     def get_db(self, name:str):
         if name in self.dbs:

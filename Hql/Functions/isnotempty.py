@@ -12,7 +12,7 @@ import polars as pl
 
 @register_func('isnotempty')
 class isnotempty(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, conf:Optional[dict]=None):
         # allows 1 to infinity args
         Function.__init__(self, args, 1, -1)
 

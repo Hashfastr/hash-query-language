@@ -11,7 +11,8 @@ class Config():
         self.conf = {
             'general': {},
             'databases': {},
-            'products': {}
+            'products': {},
+            'functions': {}
         }
 
         if path:
@@ -57,6 +58,9 @@ class Config():
 
                 elif j == 'product':
                     self.load_product(src, i[j])
+
+                elif j == 'function':
+                    self.load_function(src, i[j])
 
                 else:
                     logging.error(f'Invalid config block {j}')
@@ -111,6 +115,22 @@ class Config():
             raise hqle.ConfigException(f'Duplicate product definition: {name} in {src}')
 
         self.conf['products'][name] = config
+
+    def load_function(self, src:str, config:dict):
+        for i in ['name', 'conf']:
+            if i not in config:
+                raise hqle.ConfigException(f'Function config {src} missing required key {i}')
+        
+        name = config['name']
+        if name in self.conf['functions']:
+            raise hqle.ConfigException(f'Duplicate definition of function {name} in {src}')
+
+        self.conf['functions'][name] = config
+
+    def get_function(self, name:str) -> dict:
+        if name in self.conf['functions']:
+            return self.conf['functions'][name].get('conf', dict())
+        return dict()
 
     def get_product(self, name:str) -> dict:
         if name in self.conf['products']:

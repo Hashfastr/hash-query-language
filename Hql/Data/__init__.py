@@ -1,7 +1,7 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Iterator
 from fnmatch import fnmatch
 
-from .Table import Table
+from .Tables import Table
 from .Schema import Schema
 from .Series import Series
 from Hql.Exceptions import HqlExceptions as hqle
@@ -48,7 +48,7 @@ class Data():
             
         return length
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Table]:
         tables = []
         for name in self.tables:
             tables.append(self.tables[name])

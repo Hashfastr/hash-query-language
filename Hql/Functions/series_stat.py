@@ -3,7 +3,7 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Table
-from typing import Union
+from typing import Union, Optional
 
 import polars as pl
 from Hql.PolarsTools import pltools
@@ -11,7 +11,7 @@ from Hql.PolarsTools import pltools
 # This is a meta function resolved while parsing
 @register_func('series_stats')
 class series_stats(Function):
-    def __init__(self, args:list):
+    def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 3)
         self.ignore_nonfinite = False
         self.src = args[0]

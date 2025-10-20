@@ -92,7 +92,7 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     if not isinstance(parser.assembly, Query):
         raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
     
-    compiler = HqlCompiler(conf, parser.assembly)
+    compiler = HqlCompiler(conf, parser.assembly, hac=hac)
     
     end = time.perf_counter()
     logging.debug("Done.")

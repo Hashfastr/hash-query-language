@@ -131,7 +131,7 @@ class Detection():
         self.txt = txt
         self.config = config
         self.hac, self.parser = self.gen_hac()
-        self.compiler = None
+        self.compiler:Optional['HqlCompiler'] = None
         self.schedule:Optional[Schedule] = None
         self.id = ''
         
@@ -217,7 +217,7 @@ class Detection():
         if not isinstance(self.parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
 
-        comp = HqlCompiler(self.config, self.parser.assembly)
+        comp = HqlCompiler(self.config, query=self.parser.assembly, hac=self.hac)
         return comp
 
     def should_fire(self, time_parts:tuple[int, int, int, int, int]):
