@@ -1,0 +1,51 @@
+FROM fedora:42
+
+ARG HOME="/opt/Hql"
+
+RUN dnf update && \
+    dnf install -y python3.14-freethreading which alternatives && \
+    dnf group install -y c-development development-tools
+RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.13 1 && \
+    alternatives --install /usr/bin/python3 python3 /usr/bin/python3.14t 2 && \
+    alternatives --set python3 /usr/bin/python3.14t && \
+    python3 --version && \
+    python3 -m ensurepip
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 
+ENV PATH=$HOME/.cargo/bin:$PATH
+RUN rustup default stable
+
+RUN curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash - && \
+    dnf install -y nodejs
+
+RUN mkdir -p $HOME
+COPY ./Hql $HOME/Hql
+COPY ./pyproject.toml $HOME
+COPY ./LICENSE $HOME
+COPY ./README.md $HOME
+WORKDIR $HOME
+RUN python3 -m pip install --no-cache-dir --break-system-packages .
+
+# Build frontend
+COPY ./Hql-Interface $HOME/Hql-Interface
+WORKDIR $HOME/Hql-Interface
+RUN npm install && npm run build
+
+# Clean
+RUN dnf group remove -y c-development development-tools && \
+    dnf autoremove -y && \
+    rustup toolchain list | awk '{print $1}' | xargs rustup toolchain uninstall && \
+    rm -rf $HOME/Hql $HOME/pyproject.toml $HOME/LICENSE $HOME/README.md $HOME/Hql-Interface/node_modules $HOME/Hql-Interface/src
+
+ARG USER="hql"
+ARG UID=1000
+ARG HOME="/data"
+
+RUN useradd -u "$UID" -d "$HOME" "$USER" && \
+    mkdir -p "$HOME" && \
+    chown -R "$USER:$USER" "$HOME"
+USER "$USER"
+WORKDIR "$HOME"
+
+ENV PYTHON_GIL=0
+ENTRYPOINT ["/usr/bin/python3.14t", "-m", "Hql"]
