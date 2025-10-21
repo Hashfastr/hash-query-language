@@ -29,6 +29,9 @@ class Function():
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
         if max != -1 and len(args) > max:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at most {self.max}')
+    
+    def __hash__(self):
+        return hash((self.name))
 
     def decompile(self, ctx:'Context'):
         args = ', '.join([x.decompile(ctx) for x in self.args])

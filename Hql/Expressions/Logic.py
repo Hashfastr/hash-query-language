@@ -7,6 +7,7 @@ import polars as pl
 
 if TYPE_CHECKING:
     from Hql.Context import Context
+    from Hql.Expressions import StringLiteral, NamedReference, Path
 
 class Comparator(Expression):
     def __init__(self, lh:Expression, op:str, rh:list[Expression]) -> None:
@@ -518,15 +519,15 @@ class BasicRange(Expression):
         return lh.is_between(start, end)
 
 class Regex(Expression):
-    def __init__(self, lh:Expression, rh:Expression, i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:
+    def __init__(self, lh:Union['NamedReference', 'Path', 'StringLiteral'], rh:'StringLiteral', i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:
         Expression.__init__(self)
         self.lh = lh
         self.rh = rh
 
-        self.i = i
-        self.m = m
-        self.s = s
-        self.g = g
+        self.i = i # case insentive
+        self.m = m # multiline
+        self.s = s # dotall
+        self.g = g # global
 
     def to_dict(self) -> Union[None, dict]:
         return {

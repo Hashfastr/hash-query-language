@@ -5,9 +5,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Hql.Expressions import OrderedExpression
 
-
-# @register_op('Sort')
-# @register_op('Order')
 class Sort(Operator):
     def __init__(self, exprs:list['OrderedExpression']):
         Operator.__init__(self)

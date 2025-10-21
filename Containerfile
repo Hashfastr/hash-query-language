@@ -164,7 +164,6 @@ WORKDIR $HOME/Hql-Interface
 RUN npm install && npm run build
 
 # Clean
-WORKDIR $HOME
 RUN apt remove -y build-essential nodejs curl && \
     apt autoremove -y && \
     rustup toolchain list | awk '{print $1}' | xargs rustup toolchain uninstall && \

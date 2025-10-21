@@ -780,6 +780,7 @@ class HqlCompiler(Compiler):
         from Hql.Expressions import Equality
         desc = BranchDescriptor()
         desc.set_attr('case_insensitive_compare', not expr.cs)
+        desc.set_attr('case_sensitive_compare', expr.cs)
 
         acc, rej = self.compile(expr.lh)
         desc.merge(acc)

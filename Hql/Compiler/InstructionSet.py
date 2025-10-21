@@ -114,7 +114,6 @@ class InstructionSet():
             logging.error(f'Failed upstreams: {[x.id for x in self.upstream]}')
             raise hqle.CompilerException('One or more upstream instruction sets failed to execute')
 
-        print(ctx.hac)
         ctx = Context.merge(sets, merge_rows=False)
 
         for i in self.ops:
