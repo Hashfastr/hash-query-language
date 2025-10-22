@@ -235,8 +235,8 @@ class HqlCompiler(Compiler):
             i = -1
             while i >= -len(optimized):
                 if not (optimized[i].get_attr('row_dependent') or optimized[i].get_attr('row_mutable')) and op.get_attr('row_reducing'):
-                    if isinstance(optimized[i].get_op(), Take):
-                        logging.debug(f'Maintaining Take as a priority operator')
+                    if isinstance(optimized[i].get_op(), Take) or isinstance(op.get_op(), Take):
+                        logging.debug("Holding take's location")
                         break
 
                     if type(optimized[i].get_op()) == type(op.get_op()):
@@ -371,6 +371,7 @@ class HqlCompiler(Compiler):
     def Take(self, op: 'Hql.Operators.Take', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Take
         desc = BranchDescriptor()
+        desc.set_attr('row_dependent') # take a subset of the above rows
         desc.set_attr('row_reducing')
 
         acc, rej = self.compile(op.expr)
@@ -799,6 +800,7 @@ class HqlCompiler(Compiler):
         from Hql.Expressions import Substring
         desc = BranchDescriptor()
         desc.set_attr('case_insensitive_compare', not expr.cs)
+        desc.set_attr('case_sensitive_compare', expr.cs)
         desc.set_attr('term_matching', expr.term)
         desc.set_attr('substring_matching')
 

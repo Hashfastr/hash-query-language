@@ -64,7 +64,7 @@ class SPLCompiler():
     
     def add_ops(self, ops:list['BranchDescriptor']) -> Optional[list['Operator']]:
         for idx, op in enumerate(ops):
-            acc, rej = self.add_op(op)
+            _, rej = self.add_op(op)
             if rej:
                 return [rej] + [x.get_op() for x in ops[idx+1:]]
         return None
@@ -76,16 +76,18 @@ class SPLCompiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], **kwargs) -> tuple[Optional[object], Optional[object]]:
-        from Hql.Operators import Operator, Where
-
+    def compile(self, src:Union['Expression', 'Operator', 'Statement', 'SplunkOp', None], **kwargs) -> tuple[Optional[object], Optional[object]]:
         if src == None:
-            raise hqle.CompilerException('Unimplemented root compile')
+            ops:list[str] = []
+            for i in self.ops:
+                acc, rej = self.compile(i, preprocess=False)
+                if rej:
+                    logging.warning(f'Non-preprocess op {i} returned non-None rejection {rej}')
+                assert isinstance(acc, str)
+                ops.append(acc)
+            return '\n'.join(ops), None
 
-        if not kwargs.get('preprocess', True) and isinstance(src, Operator) and not isinstance(src, Where):
-            self.top_level_where = False
-
-        return self.from_name(src.type)(src, preprocess=kwargs.get('preprocess', True))
+        return self.from_name(src.type)(src, preprocess=kwargs.get('preprocess', True), where=kwargs.get('where', False))
 
     def decompile(self) -> str:
         from Hql.Expressions import PipeExpression
@@ -117,21 +119,19 @@ class SPLCompiler():
         from Hql.Expressions import Expression
         if kwargs.get('preprocess', True):
             acc, rej = self.compile(op.expr)
-            assert isinstance(acc, Expression)
-            assert isinstance(rej, Expression)
+            assert isinstance(acc, (Expression, type(None)))
+            assert isinstance(rej, (Expression, type(None)))
             ret_acc = Where(acc) if acc else None
             ret_rej = Where(rej) if rej else None
             return ret_acc, ret_rej
 
-        acc, _ = self.compile(op.expr, preprocess=False)
+        acc, _ = self.vestigial_compiler.compile(op.expr)
+        where = acc.get_attr('functions') or acc.get_attr('regex_matching') or acc.get_attr('case_sensitive_compare')
+        
+        acc, _ = self.compile(op.expr, preprocess=False, where=where)
         assert isinstance(acc, str)
         pred = acc
 
-        acc, _ = self.vestigial_compiler.compile(op.expr)
-        # where = acc.get_attr('functions') or acc.get_attr('case_sensitive_compare')
-        # keep this default for now
-        where = True
-        
         if where:
             spl_op = 'where'
         else:
@@ -488,8 +488,6 @@ class SPLCompiler():
     def Equality(self, expr:'Hql.Expressions.Equality', **kwargs) -> tuple[object, object]:
         from Hql.Expressions import Equality, NamedReference, Path
         if kwargs.get('preprocess', True):
-            if expr.cs:
-                return None, expr
             lh, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
@@ -504,6 +502,8 @@ class SPLCompiler():
             
             return Equality(lh, expr.op, rh), None
 
+        where = kwargs.get('where', False)
+
         lh, _ = self.compile(expr.lh, preprocess=False)
 
         rh = []
@@ -511,19 +511,33 @@ class SPLCompiler():
             acc, _ = self.compile(i, preprocess=False)
             rh.append(acc)
 
-        if expr.cs:
-            out = f'{lh} in ('
-            out += ', '.join(rh)
-            out += ')'
+        if where:
+            if expr.cs:
+                if len(rh) > 1:
+                    out = f'{lh} in ('
+                    out += ', '.join(rh)
+                    out += ')'
+                else:
+                    out = f'{lh} == {rh[0]}'
+            else:
+                pairs = []
+                for i in rh:
+                    pairs.append(f'lower({lh}) == lower({i})')
+                out = ' or '.join(pairs)
+                out = f'({out})'
+
+            if expr.neq:
+                out = 'not ' + out
+
         else:
             pairs = []
             for i in rh:
-                pairs.append(f'lower({lh}) == lower({i})')
+                pairs.append(f'{lh}={i}')
             out = ' or '.join(pairs)
             out = f'({out})'
 
-        if expr.neq:
-            out = 'not ' + out
+            if expr.neq:
+                out = 'NOT ' + out
 
         return out, None
 
@@ -590,6 +604,8 @@ class SPLCompiler():
         return None, expr
 
     def Regex(self, expr:'Hql.Expressions.Regex', **kwargs) -> tuple[object, object]:
+        from Hql.Expressions import Expression, NamedReference, Path, StringLiteral
+
         if kwargs.get('preprocess', True):
             if expr.g:
                 return None, expr
@@ -606,13 +622,15 @@ class SPLCompiler():
             assert isinstance(acc, Expression)
             rh = acc
 
+            assert isinstance(lh, (NamedReference, Path, StringLiteral))
             expr.lh = lh
+            assert isinstance(rh, StringLiteral)
             expr.rh = rh
 
             return expr, None
 
         # | where match(dest_mac, "(?sim)00:50:56:ef:8C:19")
-        lh = self.compile(expr.lh, preprocess=False)
+        lh, _ = self.compile(expr.lh, preprocess=False)
 
         flags = '(?'
         if expr.i:
@@ -626,7 +644,7 @@ class SPLCompiler():
             flags = ''
 
         expr.rh.value = flags + expr.rh.value
-        rh = self.compile(expr.rh, preprocess=False)
+        rh, _ = self.compile(expr.rh, preprocess=False)
 
         out = f'match({lh}, {rh})'
         return out, None

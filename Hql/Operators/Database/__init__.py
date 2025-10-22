@@ -5,6 +5,7 @@ from .CSV import CSV
 from .JSON import JSON
 from .Opensearch import Opensearch
 from .Elasticsearch import Elasticsearch
+from .Splunk import Splunk
 
 # for loader, name, is_pkg in pkgutil.iter_modules(__path__):
 #     importlib.import_module(f"{__name__}.{name}")
