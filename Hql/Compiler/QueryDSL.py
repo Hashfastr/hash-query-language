@@ -228,7 +228,7 @@ class QueryDSLCompiler(Compiler):
     def StringLiteral(self, expr: 'Hql.Expressions.StringLiteral', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:
             return expr, None
-        return expr.value, None
+        return expr.quote(''), None
 
     def MultiString(self, expr: 'Hql.Expressions.MultiString', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:
@@ -450,7 +450,7 @@ class QueryDSLCompiler(Compiler):
             rh = acc
             assert isinstance(rh, Expression)
 
-            return Regex(lh, rh), None
+            return Regex(lh, rh, i=expr.i), None
 
         acc, rej = self.compile(expr.lh, preprocess=False)
         if rej:
@@ -482,6 +482,7 @@ class QueryDSLCompiler(Compiler):
 
     def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Substring, Expression, StringLiteral, Regex
+        from Hql.Expressions import NamedReference, Path
         import re
 
         if preprocess:
@@ -489,7 +490,7 @@ class QueryDSLCompiler(Compiler):
             if rej:
                 return None, expr
             lh = acc
-            assert isinstance(lh, Expression)
+            assert isinstance(lh, (NamedReference, Path))
 
             rhs = []
             for i in expr.rh:
@@ -518,7 +519,7 @@ class QueryDSLCompiler(Compiler):
                 rh = f'.*{rh}'
             else:
                 rh = f'.*{rh}.*'
-            rh = StringLiteral(rh, lquote='@')
+            rh = StringLiteral(rh, verbatim=True)
             
             acc, rej = self.Regex(Regex(expr.lh, rh), preprocess=False)
             exprs.append(acc)

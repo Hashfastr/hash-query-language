@@ -1,4 +1,7 @@
 database('splunk')
-| where index =~ "*"
+| where index =~ '''
+Super code
+test
+'''
 | take 10
-| where field2 matches regex @"test.*test"
+| where field2 matches regex @"test.*\ntest"

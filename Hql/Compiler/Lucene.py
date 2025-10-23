@@ -207,7 +207,7 @@ class LuceneCompiler(Compiler):
     def StringLiteral(self, expr: 'Hql.Expressions.StringLiteral', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:
             return expr, None
-        return f'"{expr.value}"', None
+        return expr.quote('"'), None
 
     def MultiString(self, expr: 'Hql.Expressions.MultiString', preprocess: bool = True) -> tuple[object, object]:
         if preprocess:
@@ -480,7 +480,7 @@ class LuceneCompiler(Compiler):
                 rh = f'.*{rh}'
             else:
                 rh = f'.*{rh}.*'
-            rh = StringLiteral(rh, lquote='@')
+            rh = StringLiteral(rh, verbatim=True)
             
             acc, rej = self.Regex(Regex(expr.lh, rh), preprocess=False)
             exprs.append(acc)

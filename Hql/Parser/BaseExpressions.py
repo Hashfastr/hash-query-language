@@ -111,32 +111,43 @@ class BaseExpressions(HqlVisitor):
     Ints
     '''
     def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
+        import re
+
         parts = []
-        
-        # how do you handle multiple tokens in a string literal? Unsure.
-        # Just quits after the one
         for i in ctx.Tokens:
             cur = i.text
-            lquote = ''
-            rquote = ''
+            verbatim = False
+            obfuscated = False
+
             if i.text[0] in ('h', 'H'):
-                lquote += 'h'
                 cur = cur[1:]
+                obfuscated = True
 
             if i.text[0] == '@':
-                lquote += '@'
                 cur = cur[1:]
+                verbatim = True
+                
+            if i.text[:3] == '"""' or i.text[:3] == "'''":
+                verbatim = True
 
-            if i.text[:3] == '```' or i.text[:3] == '~~~':
-                lquote += i.text[:3]
-                rquote = i.text[:3]
-                cur = cur[3:-3]
+            if not verbatim:
+                cur = eval(cur)
+                assert isinstance(cur, str)
+                cur = cur.encode('utf-8')
+
             else:
-                lquote += cur[0]
-                rquote = cur[0]
-                cur = cur[1:-1]
+                if i.text[:3] == '"""' or i.text[:3] == "'''":
+                    quote = i.text[:3]
+                    cur = cur[3:-3]
+                else:
+                    quote = cur[0]
+                    cur = cur[1:-1]
 
-            parts.append(Expr.StringLiteral(cur, lquote=lquote, rquote=rquote))
+                # unescape any quotes
+                old = ''.join([fr'\{x}' for x in quote])
+                cur = re.sub(old, quote, cur).encode('utf-8')
+
+            parts.append(Expr.StringLiteral(cur, verbatim=verbatim, obfuscated=obfuscated))
 
         if len(parts) == 1:
             return parts[0]

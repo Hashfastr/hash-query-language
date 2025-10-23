@@ -170,7 +170,7 @@ Non-term operators:
     - non-term suffix/endswith
 '''
 class Substring(Comparator):
-    def __init__(self, lh:Expression, op:str, rh:list[Expression]):
+    def __init__(self, lh:Union['NamedReference', 'Path'], op:str, rh:list[Expression]):
         Comparator.__init__(self, lh, op, rh)
 
         self.term = 'has' in op

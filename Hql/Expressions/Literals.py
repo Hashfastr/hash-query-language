@@ -35,34 +35,52 @@ class TypeExpression(Literal):
     def eval(self, ctx:'Context', **kwargs):
         return hqlt.from_name(self.hql_type)()
 
-# A string literal
-# literally a string
-# we strip off quotes when constructing as the parser doesn't remove them for us.
 class StringLiteral(Literal):
-    def __init__(self, value:str, lquote:str="'", rquote:str="'"):
+    def __init__(self, value:Union[str, bytes], verbatim:bool=False, obfuscated:bool=False):
         Literal.__init__(self, hqlt.string())
 
-        self.lquote = lquote
-        self.rquote = rquote
-        self.value = value
+        if isinstance(value, str):
+            value = value.encode('utf-8')
+
+        self.value:bytes = value
+        self.verbatim = verbatim
+        self.obfuscated = obfuscated
     
     def to_dict(self):
         return {
             'type': self.type,
-            'value': self.value
+            'value': self.quote('')
         }
 
+    def quote(self, quote:str) -> str:
+        import re
+
+        if quote:
+            new = ''.join([fr'\{x}' for x in quote])
+            cur = re.sub(quote, new, self.value.decode('utf-8'))
+        else:
+            cur = self.value.decode('utf-8')
+
+        if not self.verbatim:
+            cur = cur.encode('unicode_escape').decode('utf-8')
+
+        return quote + cur + quote
+
     def decompile(self, ctx: 'Context') -> str:
-        return self.lquote + self.value + self.rquote
+        if self.verbatim:
+            if '\n' in self.value.decode('utf-8'):
+                quoted = self.quote("'''")
+            else:
+                quoted = '@' + self.quote("'")
+        else:
+            quoted = self.quote("'")
+
+        if self.obfuscated:
+            quoted = 'h' + quoted
+        return quoted
         
     def eval(self, ctx:'Context', **kwargs):
-        value = self.value
-        if '@' not in self.lquote:
-            value = value.encode('utf-8').decode('unicode_escape')
-
-        # if 'h' in self.lquote.lower():
-        #     value = bytes.fromhex(value).decode('utf-8')
-
+        value = self.quote('')
         if kwargs.get('as_pl', False):
             return pl.lit(value)
         return value

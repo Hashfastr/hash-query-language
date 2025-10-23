@@ -604,7 +604,7 @@ class SPLCompiler():
         return None, expr
 
     def Regex(self, expr:'Hql.Expressions.Regex', **kwargs) -> tuple[object, object]:
-        from Hql.Expressions import Expression, NamedReference, Path, StringLiteral
+        from Hql.Expressions import Expression, NamedReference, Path, StringLiteral, MultiString
 
         if kwargs.get('preprocess', True):
             if expr.g:
@@ -643,8 +643,8 @@ class SPLCompiler():
         if flags == '(?)':
             flags = ''
 
-        expr.rh.value = flags + expr.rh.value
-        rh, _ = self.compile(expr.rh, preprocess=False)
+        rh = StringLiteral(flags + expr.rh.quote(''), verbatim=True)
+        rh, _ = self.compile(rh, preprocess=False)
 
         out = f'match({lh}, {rh})'
         return out, None
@@ -655,7 +655,7 @@ class SPLCompiler():
     def StringLiteral(self, expr:'Hql.Expressions.StringLiteral', **kwargs) -> tuple[object, object]:
         if kwargs.get('preprocess', True):
             return expr, None
-        return repr(expr.value), None
+        return expr.quote('"'), None
     
     def MultiString(self, expr:'Hql.Expressions.MultiString', **kwargs) -> tuple[object, object]:
         return None, expr

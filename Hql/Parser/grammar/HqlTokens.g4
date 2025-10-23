@@ -398,8 +398,10 @@ fragment NonIntegerNumber:
     | ('0'..'9')+ Exponent
 ;
 
-fragment MultiLineStringQuote: '```';
-fragment AlternateMultiLineStringQuote: '~~~';
+// fragment MultiLineStringQuote: '```';
+// fragment AlternateMultiLineStringQuote: '~~~';
+fragment MultiLineStringQuote: '"""';
+fragment AlternateMultiLineStringQuote: '\'\'\'';
 
 STRINGLITERAL:
       ('h' | 'H')? '"' (EscapeSequence | ~('\\' | '"' | '\r' | '\n'))* '"'
