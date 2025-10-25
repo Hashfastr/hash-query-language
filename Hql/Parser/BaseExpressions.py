@@ -23,7 +23,7 @@ class BaseExpressions(HqlVisitor):
     def visitEscapedName(self, ctx: HqlParser.EscapedNameContext):
         # Probably need to unescape these eventually
         literal = self.visit(ctx.StringLiteral)
-        return Expr.EscapedNamedReference(literal.value)
+        return Expr.EscapedNamedReference(literal.quote(''))
 
     def visitWildcardedName(self, ctx: HqlParser.WildcardedNameContext):
         if ctx.Star:

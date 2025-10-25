@@ -57,4 +57,4 @@ let D = database('json').macro('network')
 ;
 union B
 | project ['@timestamp'], original_name=name, src_ip=toip4(source.ip), src_port=source.port, dest_ip=toip4(destination.ip), dest_port=destination.port
-| project res = dfir_iris()
+| project res = scot4()

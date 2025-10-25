@@ -95,7 +95,8 @@ class NamedReference(Expression):
         
 class EscapedNamedReference(NamedReference):
     def decompile(self, ctx: 'Context') -> str:
-        return "['" + self.name + "']"
+        from Hql.Expressions import StringLiteral
+        return "[" + StringLiteral(self.name).quote("'") + "]"
     
 class Keyword(NamedReference):
     ...

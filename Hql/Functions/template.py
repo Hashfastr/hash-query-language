@@ -10,7 +10,7 @@ from typing import Optional
 class template(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
         # allows 1 to infinity args
-        Function.__init__(self, args, 1, -1)
+        Function.__init__(self, args, 1, -1, conf)
         
     def eval(self, ctx:'Context', **kwargs):
         return Data()
