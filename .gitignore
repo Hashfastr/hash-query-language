@@ -190,3 +190,6 @@ index_debug.json
 local-data
 
 .claude
+
+examples/interface/*.hql
+examples/interface/*.yml

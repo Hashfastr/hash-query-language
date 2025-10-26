@@ -33,7 +33,7 @@ dependencies = [
     "boto3",
     "fastapi",
     "uvicorn",
-    "dfir-iris-client"
+    "dfir_iris_client"
 ]
 
 [project.urls]
