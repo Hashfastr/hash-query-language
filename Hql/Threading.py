@@ -13,8 +13,10 @@ if TYPE_CHECKING:
 
 class QueryPool():
     def __init__(self, auto_run:bool=True) -> None:
+        from threading import Semaphore
         self.auto_run = auto_run
         self.pool:list[QueryThread] = []
+        self.semaphore = Semaphore()
 
     def add_query(self, text:str, config:'Config', name:str='', **kwargs) -> None:
         t = QueryThread(text, config, name=name, **kwargs)
@@ -90,8 +92,10 @@ class QueryThread():
 
 class InstructionPool():
     def __init__(self, auto_run:bool=True) -> None:
+        from threading import Semaphore
         self.auto_run = auto_run
         self.pool:list[InstructionThread] = []
+        self.semaphore = Semaphore()
 
     def add_instruction(self, inst:Union['InstructionSet', 'Database'], ctx:'Context') -> None:
         t = InstructionThread(inst, ctx)
@@ -173,13 +177,17 @@ class InstructionThread():
 
 class HacPool():
     def __init__(self, auto_run:bool=True) -> None:
+        from threading import Semaphore
         self.auto_run = auto_run
         self.pool:list[HacThread] = []
-        self.clean_time = datetime.timedelta(days=1)
-        # self.max_retained = 1000
+        self.queue:list[HacThread] = []
+        self.semaphore = Semaphore(16)
+
+        self.completed:list[HacThread] = []
+        self.max_retained = 1000
 
     def get_by_id(self, tid:str):
-        for i in self.pool:
+        for i in self.pool + self.completed + self.queue:
             if i.id == tid:
                 return i
         return None
@@ -198,34 +206,46 @@ class HacPool():
 
     def add_detection(self, detection:'Detection') -> str:
         t = HacThread(detection)
-        if self.auto_run:
+        if self.auto_run and self.semaphore.acquire(blocking=False):
+            logging.debug(f'{t.id} started execution')
             t.start()
-        self.pool.append(t)
+            self.pool.append(t)
+        else:
+            logging.debug(f'{t.id} queued for execution')
+            self.queue.append(t)
+
         return t.id
 
     def is_idle(self) -> bool:
         return not self.pool
 
-    def start(self):
-        for t in self.pool:
-            if not t.started:
+    def clear_queue(self):
+        count = 0
+        for t in self.queue:
+            if self.semaphore.acquire(blocking=False):
+                self.pool.append(t)
+                self.queue.remove(t)
                 t.start()
+                count += 1
+            else:
+                break
+        if count:
+            logging.debug(f'Moved {count} detections from queue to running')
 
-    def clean_old(self):
-        for t in self.pool:
-            if not t.is_alive() and (datetime.datetime.now() - t.run_date) > self.clean_time:
-                logging.info(f'HaC thread {t.id} expired, cleaning')
-                t.join()
-                self.pool.remove(t)
-
-    # Gets completed threads and frees them from the pool
-    def get_completed(self) -> list['HacThread']:
-        completed = []
+    def gather_threads(self):
         for t in self.pool:
             if not t.is_alive():
                 t.join()
-                completed.append(t)
                 self.pool.remove(t)
+                self.semaphore.release()
+
+                if len(self.completed) >= self.max_retained:
+                    self.completed = self.completed[1:]
+                self.completed.append(t)
+
+    def get_completed(self) -> list['HacThread']:
+        completed = self.completed
+        self.completed = []
         return completed
 
 class HacThread():

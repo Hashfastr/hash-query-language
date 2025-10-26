@@ -321,7 +321,10 @@ class HacEngine():
             raise hqle.HqlException(f'Failed to parse hql detection')
 
         if self.directory:
-            path = self.path / f'{detection.id}.hql'
+            if detection.sigma:
+                path = self.path / f'{detection.id}.yml'
+            else:
+                path = self.path / f'{detection.id}.hql'
         else:
             path = self.path
 
@@ -373,19 +376,28 @@ class HacEngine():
         if self.apiserver:
             self.apiserver.start()
 
+        last = -1
         while True:
             # adding 1 seconds for a time buffer
-            dt = datetime.datetime.now(tz=self.tz) + datetime.timedelta(seconds=1)
-            ts = dt.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
-            ts = int(ts.timestamp())
-            self.wait_till(ts)
+            # dt = datetime.datetime.now(tz=self.tz) + datetime.timedelta(seconds=1)
+            # ts = dt.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
+            # self.wait_till(ts)
 
+            self.pool.gather_threads()
+            self.completed += self.pool.get_completed()
+            self.pool.clear_queue()
+            self.clean_old()
+
+            cur = datetime.datetime.now(tz=self.tz)
+            if last == cur.minute:
+                time.sleep(1)
+                continue
+            last = cur.minute
+
+            ts = int(cur.timestamp())
             for i in self.detections:
                 det = self.detections[i]
                 if not det.should_fire(self.time_parts(ts)):
                     logging.debug(f'Skipping {det.id}, not their time')
                     continue
                 self.pool.add_detection(det)
-
-            self.completed += self.pool.get_completed()
-            self.clean_old()
