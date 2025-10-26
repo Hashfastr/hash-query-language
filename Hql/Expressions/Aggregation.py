@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional, Union
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Data import Table
+    from Hql.Expressions import NamedReference, Path
 
 class OrderedExpression(Expression):
     def __init__(self, expr:Union[Expression, None]=None, order:str='desc', nulls:str=''):
@@ -41,7 +42,7 @@ class OrderedExpression(Expression):
         }
 
 class ByExpression(Expression):
-    def __init__(self, exprs:list[Expression]):
+    def __init__(self, exprs:list[Union['NamedReference', 'Path']]):
         Expression.__init__(self)
         self.exprs = exprs
         

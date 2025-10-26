@@ -4,7 +4,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data, Table, Series
 import polars as pl
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
 import logging
 
 if TYPE_CHECKING:
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 # A named reference, can be scoped
 # Scopes are not implemented yet.
 class NamedReference(Expression):
-    def __init__(self, name:str, scope:Union[None, Expression]=None):
+    def __init__(self, name:str, scope:Optional[Expression]=None):
         Expression.__init__(self)
         self.name = name
         self.scope = scope
@@ -111,11 +111,11 @@ class HacNamedReference(NamedReference):
     ...
 
 class Path(Expression):
-    def __init__(self, path:Union[None, list]=None):
+    def __init__(self, path:Optional[list]=None):
         Expression.__init__(self)
         self.path:list[NamedReference] = path if path else []
       
-    def to_dict(self) -> Union[None, dict]:
+    def to_dict(self) -> Optional[dict]:
         try:
             return {
                 'type': self.type,

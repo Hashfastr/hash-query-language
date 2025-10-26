@@ -39,9 +39,20 @@ class InstructionSet():
     def to_dict(self):
         from Hql.Context import Context
         from Hql.Data import Data
+        from Hql.Operators import Join
 
         ops = []
         for i in self.ops:
+            if isinstance(i, Join):
+                op = {
+                    'id': i.id,
+                    'type': i.type,
+                    'decomp': i.decompile(Context(Data())),
+                    'rh': i.rh.to_dict()
+                }
+                ops.append(op)
+                continue
+
             op = i.to_dict()
             op = {
                 'id': op.get('id', '????'),
@@ -94,13 +105,14 @@ class InstructionSet():
     def eval(self, ctx:Context, **kwargs) -> Context:
         from Hql.Data import Data
         from Hql.Threading import InstructionPool
+        hac = kwargs['hac'] if 'hac' in kwargs else ctx.hac
 
         logging.debug(f'Starting InstructionSet {self.id}')
         start = time.perf_counter()
 
         pool = InstructionPool(auto_run=False)
         for i in self.upstream:
-            pool.add_instruction(i, Context(Data(), hac=kwargs.get('hac', None)))
+            pool.add_instruction(i, Context(Data(), hac=hac))
 
         pool.start()
 

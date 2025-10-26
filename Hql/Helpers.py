@@ -33,7 +33,7 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
         parser = SigmaParser(text, conf)
         hac = parser.gen_hac()
     except Exception as e:
-        logging.warning(e)
+        # logging.warning(e)
         # We're just skipping over to HaC Parsing then
         try:
             hac = HaCParser.parse_text(text, name)
