@@ -12,7 +12,10 @@ class Config():
             'general': {},
             'databases': {},
             'products': {},
-            'functions': {}
+            'functions': {},
+            'sigma': {
+                'posthql': {}
+            }
         }
 
         if path:
@@ -61,6 +64,9 @@ class Config():
 
                 elif j == 'function':
                     self.load_function(src, i[j])
+
+                elif j == 'sigma':
+                    self.load_sigma(src, i[j])
 
                 else:
                     logging.error(f'Invalid config block {j}')
@@ -127,6 +133,17 @@ class Config():
 
         self.conf['functions'][name] = config
 
+    def load_sigma(self, src:str, config:dict):
+        posthql = config.get('posthql', dict())
+        for i in posthql:
+            if 'hql' not in posthql[i]:
+                raise hqle.ConfigException(f'Missing sigma posthql field hql in {src}')
+            
+            if i in self.conf['sigma']['posthql']:
+                raise hqle.ConfigException(f'Duplicate definition of sigma posthql {i} in {src}')
+
+            self.conf['sigma']['posthql'][i] = posthql[i]
+
     def get_function(self, name:str) -> dict:
         if name in self.conf['functions']:
             return self.conf['functions'][name].get('conf', dict())
@@ -136,3 +153,8 @@ class Config():
         if name in self.conf['products']:
             return self.conf['products'][name]
         raise hqle.ConfigException(f'Attempting to get undefined product {name}')
+
+    def get_posthql(self, name:str) -> dict:
+        if name in self.conf['sigma']['posthql']:
+            return self.conf['sigma']['posthql'][name]
+        raise hqle.ConfigException(f'Attempting to get unconfigured posthql sigma definition {name}')

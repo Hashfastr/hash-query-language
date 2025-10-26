@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from Hql.Exceptions import HqlExceptions as hqle
 
 class PipeExpression(Expression):
-    def __init__(self, pipes:list['Operator'], prepipe:Union['Expression', None]=None):
+    def __init__(self, pipes:list['Operator'], prepipe:Optional['Expression']=None):
         Expression.__init__(self)
         self.prepipe                = prepipe
         self.pipes:list['Operator'] = pipes

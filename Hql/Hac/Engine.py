@@ -130,10 +130,12 @@ class Detection():
         self.src = src
         self.txt = txt
         self.config = config
-        self.hac, self.parser = self.gen_hac()
         self.compiler:Optional['HqlCompiler'] = None
         self.schedule:Optional[Schedule] = None
         self.id = ''
+        self.sigma = False
+        
+        self.hac, self.parser = self.gen_hac()
         
         self.run_history:list[dict] = []
         self.max_runs = 10
@@ -171,8 +173,9 @@ class Detection():
         hac = None
 
         try:
-            parser = SigmaParser(self.txt)
+            parser = SigmaParser(self.txt, self.config)
             hac = parser.gen_hac()
+            self.sigma = True
         except Exception:
             # We're just skipping over to HaC Parsing then
             try:
@@ -212,6 +215,7 @@ class Detection():
 
         if not self.parser:
             self.parser = Parser(self.txt, self.src)
+
         self.parser.assemble()
     
         if not isinstance(self.parser.assembly, Query):

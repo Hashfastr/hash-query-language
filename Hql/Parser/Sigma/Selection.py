@@ -41,10 +41,7 @@ class Selection():
         from Hql.Expressions.Literals import StringLiteral, Integer, Float
         
         if isinstance(value, str):
-            value = repr(value)
-            lquote = value[0]
-            value = value[1:-1]
-            expr = StringLiteral(value, lquote=lquote, rquote=lquote)
+            expr = StringLiteral(value)
 
         elif isinstance(value, int):
             expr = Integer(value)
