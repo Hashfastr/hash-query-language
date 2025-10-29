@@ -17,13 +17,10 @@ class Schema():
             schema:Union[dict, None]=None,
             sample_size:int=1
         ):
-        from Hql.Types.Compiler import CompilerType
-        
         self.schema:dict = dict()
 
         if schema:
-            normalized = self.normalize(schema)
-            self.schema = normalized
+            self.schema = self.normalize(schema)
 
         # This is in the case of sample json data
         # A list of dicts
@@ -117,8 +114,9 @@ class Schema():
     Created to solve the problem of nested Schema objects in a schema dict.
     Just unnests them such that we have a pure dict structure.
     '''
-    def normalize(self, node:Union[dict, 'Schema', None]=None) -> Union[dict, 'CompilerType']:
+    def normalize(self, node:Union[dict, 'Schema', None]=None) -> dict:
         from Hql.Types.Compiler import CompilerType
+        from Hql.Data import Schema
 
         if node == None:
             node = self.schema
@@ -131,7 +129,10 @@ class Schema():
 
         new = dict()
         for key in node:
-            new[key] = self.normalize(node[key])
+            if isinstance(node[key], (dict, Schema)):
+                new[key] = self.normalize(node[key])
+            else:
+                new[key] = node[key]
         return new
 
     # Isolate the schema at a given path
@@ -307,7 +308,7 @@ class Schema():
             if hasattr(schema, 'hql_schema') and target == 'hql':
                 return schema.hql_schema()
             
-            if hasattr(schema, 'pl_schema') and target == 'pl':
+            if hasattr(schema, 'pl_schema') and target == 'polars':
                 return schema.pl_schema()
             
             raise hqle.CompilerException(f'Unsupported type to convert {schema}')
@@ -542,14 +543,16 @@ class Schema():
         return pl.DataFrame(newdf)
 
     def join(self, right:"Schema", on:str, kind:str):
-        import copy
-        
         # all of these are semantically the same schema wise
         if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter', 'fullouter'):
-            new = copy.deepcopy(self.schema)
+            new = self.schema.copy()
             for i in right.schema:
                 if i in new and i != on:
-                    new[f'{i}_right'] = new[i]
+                    new[f'{i}_right'] = right.schema[i]
+                elif i in new and i == on:
+                    ... # no need to change
+                elif i not in new:
+                    new[i] = right.schema[i]
             
             return Schema(schema=new)
 

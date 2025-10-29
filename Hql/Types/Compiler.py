@@ -29,6 +29,12 @@ class CompilerType():
 
         return series.cast(self.pl_schema())
 
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'name': self.name
+        }
+
     def __len__(self):
         return 1
 

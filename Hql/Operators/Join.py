@@ -32,10 +32,12 @@ class Join(Operator):
         for i in self.params:
             if i.name == 'kind':
                 self.kind = i.value.eval(ctx, as_str=True)
+            else:
+                raise hqle.QueryException(f'Invalid join parameter {i.name}')
 
-    def get_right(self, ctx:'Context', where:Union[None, 'Expression']):
-        from Hql.Expressions import Identifier
+    def get_right(self, ctx:'Context', where:Optional['Expression']) -> 'Data':
         from Hql.Operators import Where
+        from Hql.Compiler import InstructionSet
 
         if not isinstance(self.rh, InstructionSet):
             raise hqle.CompilerException('Join attempting to get right without compilation, error?')
@@ -45,7 +47,7 @@ class Join(Operator):
             self.rh.add_op(Where(where))
             self.rh.recompile(ctx.config)
         
-        return self.rh.eval(ctx)
+        return self.rh.eval(ctx).data
 
     def gen_optimization(self, data:'Data') -> 'Expression':
         from Hql.Operators import Summarize, Union
@@ -57,10 +59,13 @@ class Join(Operator):
 
         ops = [
             Summarize([], ByExpression(self.on)),
-            Union([Wildcard('*')])
+            Union([Wildcard('*')]),
+            # second summarize to dedup other tables
+            Summarize([], ByExpression(self.on))
         ]
 
         ctx = InstructionSet(Static(data), ops).eval(Context(Data()))
+        # get the only table following the union
         table = [x for x in ctx.data][0].to_dicts()
 
         exprs = []
@@ -145,13 +150,10 @@ class Join(Operator):
 
     def eval(self, ctx:'Context', **kwargs):
         self.process_params(ctx)
-        
+
         left = ctx.data
-
         expr = self.gen_optimization(left)
-        print(expr.decompile(ctx))
-
-        right = self.get_right(ctx, self.where)
+        right = self.get_right(ctx, expr)
         
         clause = self.on[0].eval(ctx, as_str=True)
         if not isinstance(clause, str):

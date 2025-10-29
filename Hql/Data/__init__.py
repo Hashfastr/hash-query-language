@@ -186,9 +186,9 @@ class Data():
             for rt in right:
                 new.append(lt.join(rt, on, kind))
 
-            tables.append(Table.concat(new))
+            tables.append(Table.merge(new, merge_rows=False))
         
-        return Data(tables=tables)
+        return Data(tables=tables, merge_rows=False)
     
     def strip(self):
         new = []

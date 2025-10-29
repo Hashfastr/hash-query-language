@@ -3,7 +3,7 @@ from Hql.Context import Context, register_database
 from Hql.Operators.Database import Database
 from Hql.Data import Schema, Data, Table
 from Hql.Types.Elasticsearch import ESTypes
-from Hql.Compiler import LuceneCompiler
+from Hql.Compiler import LuceneCompiler, QueryDSLCompiler
 
 from typing import TYPE_CHECKING, Union
 import json
@@ -52,13 +52,29 @@ class Elasticsearch(Database):
 
         if 'hosts' in conf:
             self.hosts = conf.get('hosts')
+        elif 'host' in conf:
+            self.hosts = [conf.get('host')]
         else:
             raise hqle.ConfigException(f'Missing hosts config in Elasticsearch config for {self.name}')
 
         self.username = conf.get('username', 'elastic')
         self.password = conf.get('password', 'changeme')
 
-        self.compiler = LuceneCompiler()
+        if conf.get('compiler', 'lucene') == 'lucene':
+            self.compiler = LuceneCompiler()
+        elif conf['compiler'] == 'dsl':
+            self.compiler = QueryDSLCompiler()
+        else:
+            raise hqle.ConfigException(f'Invalid compiler type {conf["compiler"]} for Elasticsearch')
+
+        self.client = ES(
+            self.hosts,
+            basic_auth=(self.username, self.password),
+            verify_certs=self.verify_certs,
+            request_timeout=self.timeout,
+            retry_on_timeout=True,
+            max_retries=3
+        )
 
     def to_dict(self):
         self.query = self.compile()
@@ -71,9 +87,19 @@ class Elasticsearch(Database):
             'query': self.query
         }
 
-    def compile(self) -> str:
+    def compile(self) -> dict:
         query, rej = self.compiler.compile(None)
-        assert isinstance(query, str)
+        assert isinstance(query, (dict, str))
+
+        if isinstance(query, str):
+            query = {
+                "query": {
+                    "query_string": {
+                        "query": query
+                    }
+                }
+            }
+
         return query
             
     def get_variable(self, name:NamedReference):
@@ -123,14 +149,7 @@ class Elasticsearch(Database):
             raise hqle.ConfigException(f'Elasticsearch authentication with user {user} failed') from None
 
     def make_query(self) -> Data:
-        client = ES(
-            self.hosts,
-            basic_auth=(self.username, self.password),
-            verify_certs=self.verify_certs,
-            request_timeout=self.timeout,
-            retry_on_timeout=True,
-        )
-        
+        from elasticsearch.helpers import scan
         logging.debug("Starting initial query")
 
         logging.debug(f"{self.type} query, using the following Lucene:")
@@ -138,69 +157,45 @@ class Elasticsearch(Database):
         logging.debug(f'Index pattern: {self.pattern}')
         logging.debug(f'Limit: {self.limit}')
         
-        # This gets the schema
-        # res = requests.get(
-        #     f'{self.hosts[0]}/{self.pattern}',
-        #     auth=(self.username, self.password)
-        # )
-        # index = json.loads(res.text)
-        # print(json.dumps(index, indent=2))
-        
-        res = client.search(
+        res = scan(
+            self.client,
             index=self.pattern,
             size=self.scroll_max,
-            scroll=self.scroll_time,
-            q=self.query
+            query=self.query
         )
-        sid = res['_scroll_id']
         
         logging.debug("Start scrolling")
         
-        # Will scroll through until we reach our limit, or no more results.
-        # Enables the take operator
         remainder = self.limit
-        results = []
-        while len(results) < self.limit:            
-            if len(res['hits']['hits']) == 0:
-                logging.debug(f"No more results to evaluate")
-                logging.debug(f"Timed out? {res['timed_out']}")
+        got = 0
+        results = dict()
+        for i in res:
+            if remainder <= 0:
                 break
-            
-            # Ensure that we only print the number of remaining rows
-            results += res['hits']['hits'][:remainder]
-            
-            remainder = self.limit - len(results)
-            
-            if len(results) >= self.limit:
-                logging.debug('Quota reached')
-                break
-            
-            logging.debug(f"Scroll {len(results)} < {self.limit} max")
 
-            res = client.scroll(
-                scroll_id=sid,
-                scroll=self.scroll_time,
-            )
+            index = i['_index']
+            if not i.get('_source', {}):
+                continue
 
-        client.clear_scroll(scroll_id=sid)
+            if index not in results:
+                results[index] = []
+            results[index].append(i['_source'])
 
-        i = 0
+            remainder -= 1
+            got += 1
 
-        result_sets = dict()
-        for i in results:
-            if i['_index'] not in result_sets:
-                result_sets[i['_index']] = []
-            result_sets[i['_index']].append(i['_source'])
+        logging.debug(f'Got {got} results')
 
         tables = []
-        for i in result_sets:
-            table = Table(init_data=result_sets[i], name=i)
+        for i in results:
+            table = Table(init_data=results[i], name=i)
+            
+            mapping = self.client.indices.get_mapping(index=i)
+            schema = self.gen_elastic_schema(mapping[i]['mappings']['properties'])
+            schema = Schema(schema=schema).convert_schema(target='hql')
+            schema = Schema.merge([table.schema, schema])
 
-            # schema = self.gen_elastic_schema(index[i]['mappings']['properties'])
-            # schema = Schema(schema=schema).convert_schema(target='hql')
-            # schema = Schema.merge([table.schema.schema, schema])
-
-            # table.set_schema(schema)
+            table.set_schema(schema)
             tables.append(table)
 
         return Data(tables=tables)

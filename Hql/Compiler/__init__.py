@@ -4,3 +4,4 @@ from .Compiler import Compiler
 from .Hql import HqlCompiler
 from .Lucene import LuceneCompiler
 from .Splunk import SPLCompiler
+from .QueryDSL import QueryDSLCompiler
