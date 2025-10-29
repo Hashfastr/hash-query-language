@@ -3,6 +3,7 @@ from typing import Union, Optional, TYPE_CHECKING
 
 from . import Compiler
 import logging
+import json
 
 if TYPE_CHECKING:
     import Hql
@@ -118,7 +119,7 @@ class QueryDSLCompiler(Compiler):
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             exprs.append(acc)
 
-        if len(exprs) == 0:
+        if len(exprs) == 1:
             ret = exprs[0]
         else:
             if expr.bitype == 'and':
@@ -473,7 +474,6 @@ class QueryDSLCompiler(Compiler):
                     'value': rh,
                     'flags': 'ALL',
                     'case_insensitive': expr.i,
-                    'max_deterministic_states': 10000 # default value, keeping for visibility
                 }
             }
         }

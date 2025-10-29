@@ -1022,8 +1022,19 @@ class HqlCompiler(Compiler):
 
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import Path, EscapedNamedReference, Wildcard
+        from Hql.Expressions import PipeExpression
+        from Hql.Operators.Database import Database
+        
         desc = BranchDescriptor()
         desc.set_attr('nested_objects')
+
+        if expr in self.ctx.symbol_table:
+            res = self.ctx.symbol_table[expr]
+            if not isinstance(res, (PipeExpression, Database, InstructionSet)):
+                acc, _ = self.compile(res)
+                desc.expr = acc.get_expr()
+                desc.merge(desc)
+                return desc, None
         
         path = []
         for i in expr.path:

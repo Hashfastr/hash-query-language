@@ -111,9 +111,20 @@ class HacNamedReference(NamedReference):
     ...
 
 class Path(Expression):
-    def __init__(self, path:Optional[list]=None):
+    def __init__(self, path:list[NamedReference]):
+        if not isinstance(self, Path):
+            return
+
         Expression.__init__(self)
-        self.path:list[NamedReference] = path if path else []
+        self.path:list[NamedReference] = path
+
+        if not self.path:
+            raise hqle.CompilerException('Attempting to init path with 0 path parts')
+
+    def __new__(cls, path:list):
+        if len(path) == 1:
+            return path[0]
+        return super().__new__(cls)
       
     def to_dict(self) -> Optional[dict]:
         try:

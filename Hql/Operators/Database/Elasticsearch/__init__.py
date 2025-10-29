@@ -99,6 +99,10 @@ class Elasticsearch(Database):
                     }
                 }
             }
+        else:
+            query = {
+                "query": query
+            }
 
         return query
             
@@ -190,12 +194,12 @@ class Elasticsearch(Database):
         for i in results:
             table = Table(init_data=results[i], name=i)
             
-            mapping = self.client.indices.get_mapping(index=i)
-            schema = self.gen_elastic_schema(mapping[i]['mappings']['properties'])
-            schema = Schema(schema=schema).convert_schema(target='hql')
-            schema = Schema.merge([table.schema, schema])
+            # mapping = self.client.indices.get_mapping(index=i)
+            # schema = self.gen_elastic_schema(mapping[i]['mappings']['properties'])
+            # schema = Schema(schema=schema).convert_schema(target='hql')
+            # schema = Schema.merge([table.schema, schema])
 
-            table.set_schema(schema)
+            # table.set_schema(schema)
             tables.append(table)
 
         return Data(tables=tables)
