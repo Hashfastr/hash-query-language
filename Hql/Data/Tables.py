@@ -11,6 +11,9 @@ from Hql.Types.Hql import HqlTypes as hqlt
 
 import logging
 
+if TYPE_CHECKING:
+    from Hql.Expressions import Expression, Path, NamedReference
+
 '''
 Table for a structure of data, includes schema definition.
 Mimics a pl.DataFrame
@@ -476,36 +479,55 @@ class Table():
 
         return self
     
-    def join(self, right:"Table", on:str, kind:str):
+    def join(self, right:"Table", on:Union[list[Union['Path', 'NamedReference']], Union['Path', 'NamedReference']], kind:str):
+        from Hql.Context import Context
+        from Hql.Data import Data
+
+        # faux ctx
+        ctx = Context(Data())
+
+        if not isinstance(on, list):
+            on = [on]
+        if not isinstance(self.df, pl.DataFrame):
+            raise hqle.CompilerException(f'Attempting to join with left non-dataframe: {type(self.df)}')
+        if not isinstance(right.df, pl.DataFrame):
+            raise hqle.CompilerException(f'Attempting to join with right non-dataframe: {type(right.df)}')
+
         schema = self.schema.join(right.schema, on, kind)
 
+        pl_on = []
+        for i in on:
+            expr = i.eval(ctx, as_pl=True)
+            assert isinstance(expr, pl.Expr)
+            pl_on.append(expr)
+
         if kind == 'inner':
-            df = self.df.join(right.df, on=on, how='inner')
+            df = self.df.join(right.df, on=pl_on, how='inner')
         
         elif kind == 'leftsemi':
-            df = self.df.join(right.df, on=on, how='semi')
+            df = self.df.join(right.df, on=pl_on, how='semi')
 
         elif kind == 'rightsemi':
-            df = right.df.join(self.df, on=on, how='semi')
+            df = right.df.join(self.df, on=pl_on, how='semi')
 
         elif kind == 'leftouter':
-            df = self.df.join(right.df, on=on, how='left')
+            df = self.df.join(right.df, on=pl_on, how='left')
 
         elif kind == 'rightouter':
-            df = right.df.join(self.df, on=on, how='left')
+            df = right.df.join(self.df, on=pl_on, how='left')
 
         elif kind == 'fullouter':
-            df = self.df.join(right.df, on=on, how='full')
+            df = self.df.join(right.df, on=pl_on, how='full')
 
         elif kind == 'leftanti':
-            df = self.df.join(right.df, on=on, how='anti')
+            df = self.df.join(right.df, on=pl_on, how='anti')
 
         elif kind == 'rightanti':
-            df = right.df.join(right.df, on=on, how='anti')
+            df = right.df.join(right.df, on=pl_on, how='anti')
 
         elif kind == 'innerunique':
-            left = self.df.unique(subset=[on])
-            df = left.join(right.df, on=on, how='inner')
+            left = self.df.unique(subset=pl_on)
+            df = left.join(right.df, on=pl_on, how='inner')
 
         else:
             raise hqle.QueryException(f'Invalid join kind {kind} used')

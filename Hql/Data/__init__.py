@@ -10,6 +10,7 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
+    from Hql.Expressions import Path, NamedReference
 
 class Data():
     def __init__(self, tables:Union[list[Table], None]=None, merge_rows=True):
@@ -179,12 +180,17 @@ class Data():
 
         return self
 
-    def join(self, right:"Data", on:str, kind:str='innerunique'):
+    def join(self, right:"Data", on:Union[list[Union['Path', 'NamedReference']], Union['Path', 'NamedReference']], kind:str='innerunique'):
+        if not isinstance(on, list):
+            on = [on]
+
         tables = []
         for lt in self:
             new = []
             for rt in right:
                 new.append(lt.join(rt, on, kind))
+
+            print(new)
 
             tables.append(Table.merge(new, merge_rows=False))
         

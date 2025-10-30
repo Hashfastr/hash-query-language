@@ -12,7 +12,7 @@ class Functions(HqlVisitor):
         pass
     
     def visitFunctionCallOrPathPathExpression(self, ctx: HqlParser.FunctionCallOrPathPathExpressionContext):
-        path = Expr.Path()
+        path = []
         
         expr = self.visit(ctx.Expression)
         if expr == None:
@@ -23,13 +23,11 @@ class Functions(HqlVisitor):
                 ctx.start.column
             )
                 
-        # Get the root item
-        path.path.append(expr)
-        
+        path.append(expr)
         for i in ctx.Operations:
-            path.path.append(self.visit(i))
+            path.append(self.visit(i))
         
-        return path
+        return Expr.Path(path)
     
     def visitNamedFunctionCallExpression(self, ctx: HqlParser.NamedFunctionCallExpressionContext):
         expr = Expr.FuncExpr(self.visit(ctx.Name))

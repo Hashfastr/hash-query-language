@@ -125,6 +125,9 @@ class Path(Expression):
         if len(path) == 1:
             return path[0]
         return super().__new__(cls)
+
+    def __iter__(self):
+        return iter(self.path)
       
     def to_dict(self) -> Optional[dict]:
         try:

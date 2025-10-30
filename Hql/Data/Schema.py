@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
 
 import polars as pl
 
@@ -9,6 +9,7 @@ from Hql.Types.Compiler import CompilerType
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
     from Hql.Types.Compiler import CompilerType
+    from Hql.Expressions import Expression, Path, NamedReference
 
 class Schema():
     def __init__(
@@ -59,6 +60,62 @@ class Schema():
         if len(self.schema):
             return True
         return False
+
+    def __contains__(self, item) -> bool:
+        from Hql.Expressions import NamedReference, Path
+
+        if isinstance(item, NamedReference):
+            path = [item.name]
+        
+        elif isinstance(item, Path):
+            path = [x.name for x in item]
+
+        elif isinstance(item, str):
+            path = [item]
+        
+        elif isinstance(item, list):
+            path = []
+            for i in item:
+                if isinstance(i, str):
+                    path.append(i)
+                elif isinstance(i, NamedReference):
+                    path.append(i.name)
+                else:
+                    return False
+
+        else:
+            return False
+
+        cur = self.schema
+        for i in path:
+            if i not in cur:
+                return False
+            cur = cur[i]
+        return True
+
+    def __iter__(self):
+        return iter(self.blowup_schema())
+
+    def blowup_schema(self, schema:Optional[dict]=None) -> list[tuple[Union['NamedReference', 'Path'], CompilerType]]:
+        from Hql.Expressions import Path, NamedReference
+        if schema == None:
+            schema = self.schema
+
+        out = []
+        for key in schema:
+            name = NamedReference(key)
+            if isinstance(schema[key], dict):
+                recurse = self.blowup_schema(schema=schema[key])
+                for path, stype in recurse:
+                    if isinstance(path, NamedReference):
+                        path = Path([name, path])
+                    else:
+                        path = Path([name] + path.path)
+                    out.append((path, stype))
+            else:
+                out.append((name, schema[key]))
+
+        return out
 
     def to_dict(self, recurse:Union[None, dict]=None) -> dict:
         schema = recurse if recurse else self.schema
@@ -263,13 +320,22 @@ class Schema():
     '''
     Set a field to a specific type in the schema apply is then expected to be ran
     '''
-    def set(self, path:list[str], htype:Union['hqlt.HqlType', "Schema", dict], schema:Union[dict, "Schema", None]=None, idx:int=0):
+    def set(self, path:Union[list[str], 'Path', 'NamedReference'], htype:Union[CompilerType, "Schema", dict], schema:Union[dict, "Schema", None]=None, idx:int=0):
+        from Hql.Expressions import Path, NamedReference
         if isinstance(htype, Schema):
             htype = htype.schema
         
         schema = schema if schema != None else self.schema
         if isinstance(schema, Schema):
             schema = schema.schema
+
+        if isinstance(path, Path):
+            new = []
+            for i in path.path:
+                new.append(i.name)
+            path = new
+        elif isinstance(path, NamedReference):
+            path = [path.name]
 
         split = path[idx]
 
@@ -542,19 +608,27 @@ class Schema():
 
         return pl.DataFrame(newdf)
 
-    def join(self, right:"Schema", on:str, kind:str):
+    def join(self, right:"Schema", on:list[Union['Path', 'NamedReference']], kind:str) -> Schema:
+        from Hql.Expressions import Path, NamedReference
+
         # all of these are semantically the same schema wise
         if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter', 'fullouter'):
-            new = self.schema.copy()
-            for i in right.schema:
-                if i in new and i != on:
-                    new[f'{i}_right'] = right.schema[i]
-                elif i in new and i == on:
-                    ... # no need to change
-                elif i not in new:
-                    new[i] = right.schema[i]
+            new = self.copy()
+            for path, stype in right:
+                if path in new and path not in on:
+                    if isinstance(path, Path):
+                        path.path[-1].name = path.path[-1].name + '_right'
+                    else:
+                        path.name = path.name + '_right'
+                    new.set(path, stype)
+
+                elif path in new and path in on:
+                    ...
+
+                elif path not in new:
+                    new.set(path, stype)
             
-            return Schema(schema=new)
+            return new
 
         elif kind == 'leftanti':
             return self

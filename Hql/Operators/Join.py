@@ -155,10 +155,6 @@ class Join(Operator):
         expr = self.gen_optimization(left)
         right = self.get_right(ctx, expr)
         
-        clause = self.on[0].eval(ctx, as_str=True)
-        if not isinstance(clause, str):
-            raise hqle.CompilerException(f'Join clause expression returned {type(clause)} not str')
-        
-        data = left.join(right, clause, kind=self.kind)
+        data = left.join(right, self.on, kind=self.kind)
         
         return data
