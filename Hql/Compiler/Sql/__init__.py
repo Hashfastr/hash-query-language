@@ -17,8 +17,11 @@ Generic SQL compiler
 class SqlCompiler():
     def __init__(self):
         from Hql.Data import Data
+        from Hql.Compiler import HqlCompiler
+        from Hql.Config import Config
         self.type = self.__class__.__name__
         self.ctx = Context(Data())
+        self.vestigial_compiler = HqlCompiler(Config())
 
         self.where:Optional['Hql.Operators.Where'] = None
 

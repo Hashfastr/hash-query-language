@@ -6,6 +6,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Context import Context
+    from Hql.Functions import Function
 
 class FuncExpr(Expression):
     def __init__(self, name:Union[Expression, str], args:Union[None, list[Expression]]=None):
@@ -54,7 +55,7 @@ class FuncExpr(Expression):
         return func(self.args, conf=ctx.config.get_function(name))
         
 class DotCompositeFunction(Expression):
-    def __init__(self, funcs:list[FuncExpr]):
+    def __init__(self, funcs:list[Union[FuncExpr, 'Function']]):
         Expression.__init__(self)
         self.funcs = funcs
 
@@ -119,7 +120,7 @@ class DotCompositeFunction(Expression):
         if no_exec:
             return func_list
 
-        elif receiver == None:
+        elif isinstance(receiver, type(None)):
             logging.critical(self.to_dict())
             raise hqle.CompilerException('DotCompositeFunction resulted in None! (see above)')
 

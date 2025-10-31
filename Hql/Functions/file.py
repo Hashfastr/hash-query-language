@@ -9,7 +9,8 @@ from typing import Optional
 @register_func('file')
 class file(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
-        super().__init__(args, 1, -1)
+        Function.__init__(self, args, 1, -1)
+        self.preprocess = True
 
         if self.args[0].type not in ('StringLiteral', 'EscapedName'):
             raise hqle.ArgumentException(f'Bad database file argument datatype {args[0].type}')

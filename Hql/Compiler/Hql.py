@@ -99,7 +99,6 @@ class HqlCompiler(Compiler):
             acc = self.ctx.symbol_table[expr]
 
             if not isinstance(acc, (Database, InstructionSet)):
-                # a little horrifying but gets the default db using the database function
                 acc = self.ctx.get_func('database')([]).eval(self.ctx)
                 acc = acc.get_variable(expr)
 
@@ -744,19 +743,26 @@ class HqlCompiler(Compiler):
 
         return desc, None
 
-    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', preprocess:bool=True) -> tuple[object, None]:
+    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import DotCompositeFunction, Expression, FuncExpr
+        from Hql.Functions import Function
         from Hql.Operators import Operator, Database
         desc = BranchDescriptor()
         func_preprocess = True
 
-        funcs = []
+        funcs:list[Function] = []
         for i in expr.funcs:
+            if isinstance(i, Function):
+                funcs.append(i)
+                continue
+
             assert isinstance(i, FuncExpr)
             acc, _ = self.FuncExpr(i, dotcomp=True)
             assert isinstance(acc, BranchDescriptor)
             desc.merge(acc)
-            funcs.append(acc.get_expr())
+            acc = acc.get_expr()
+            assert isinstance(acc, Function)
+            funcs.append(acc)
 
         for i in funcs:
             if not i.preprocess:
