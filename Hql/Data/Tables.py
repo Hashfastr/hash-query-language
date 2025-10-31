@@ -260,8 +260,8 @@ class Table():
                 if dup_key in schema:
                     cur = cur.rename({key: dup_key})
             new.append(cur)
-        
-        df = pl.concat(new, how='diagonal')
+
+        df = pl.concat(new, how='diagonal_relaxed')
         return Table(df=df, schema=schema, name=name)
 
     '''
@@ -275,6 +275,7 @@ class Table():
         if not self.assert_field(field):
             return Table(name=self.name)
         
+        assert isinstance(self.df, pl.DataFrame)
         df = pltools.get_element(self.df, field)
         schema = self.schema.select(field)
 
