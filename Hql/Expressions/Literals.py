@@ -225,3 +225,6 @@ class Datetime(Literal):
         inner = StringLiteral(self.value.isoformat())
         return 'datetime(' + inner.decompile(ctx) + ')'
 
+class Null(Literal):
+    def __init__(self) -> None:
+        Literal.__init__(self, hqlt.null())

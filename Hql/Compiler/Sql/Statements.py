@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Optional, Union
 if TYPE_CHECKING:
     from Hql.Operators import Project, Where
     from Hql.Compiler import SqlCompiler
+    from Hql.Expressions import NamedReference
 
 class SqlStatement():
     def compile(self, compiler:'SqlCompiler') -> str:
@@ -14,7 +15,7 @@ Assumes all ops have been precompiled by the SQL compiler
 class SELECT(SqlStatement):
     def __init__(self, project:Optional['Project']=None, src=None, where:Optional['Where']=None):
         self.project:Optional['Project'] = project
-        self.src:Union[None, SqlStatement] = src
+        self.src:Union[None, SqlStatement, 'NamedReference'] = src
         self.where:Optional['Where'] = where
 
     def add_project(self, op:'Project') -> 'SELECT':
@@ -37,6 +38,7 @@ class SELECT(SqlStatement):
 
         if isinstance(self.src, SqlStatement):
             src = self.src.compile(compiler)
+            src = '(' + src + ')'
         else:
             src, _ = compiler.compile(self.src, preprocess=False)
 
@@ -49,8 +51,8 @@ class SELECT(SqlStatement):
         assert isinstance(src, str)
         assert isinstance(where, str)
 
-        out = f'SELECT {project} FROM {src} '
+        out = f'SELECT {project} FROM {src}'
         if where:
-            out += f'WHERE {where}'
+            out += f' WHERE {where}'
     
         return out

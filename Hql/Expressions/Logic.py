@@ -47,13 +47,9 @@ class Equality(Comparator):
 
         self.cs = '~' not in op
         self.neq = '!' in op
-
-        self.list = 'in' in op
+        self.list = len(rh) > 1
 
         self.rebuild_op()
-
-        if len(rh) > 1 and not self.list:
-            raise hqle.CompilerException('Non-list equality given more than one righthand')
         
     def add_rh(self, rh:Expression):
         self.rh.append(rh)

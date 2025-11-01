@@ -72,3 +72,10 @@ However to run the HaC engine, and enable parallel processing, Python 3.14t, or 
 It's hit a some of the mainstream distros, but people use RedHat, so I've provided a docker/podman container.
 Using a free threaded build also requires compilation of polars on your host system, so you need rust set up.
 Otherwise you can pip install it as a module and even use it as a library.
+
+For this workshop I've hooked Hql up to a SIEM interface that interacts with the HaC engine over a REST API.
+The possibility for hooking up a front end to a running HaC server allows for some cool possibilies.
+Using Hql direct as a SIEM, and providing things that other languages like Splunk don't provide, such as field completion and type hinting.
+These don't exist yet, but could in the future by caching schema from existing indexes and referring to them when using one.
+A HaC front end would also allow for direct running, editing, and saving of detections.
+Realistically, this could also be a VSCode plugin.

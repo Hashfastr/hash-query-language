@@ -7,7 +7,7 @@ import logging
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
     from Hql.Operators import Operator
-    from Hql.Expressions import Expression
+    # from Hql.Expressions import Expression
     from Hql.Query import Statement
     import Hql
 
@@ -54,7 +54,7 @@ class SqlCompiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
+    def compile(self, src:Union['Hql.Expressions.Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
         if src == None:
             raise hqle.CompilerException('Unimplemented root compile')
         return self.from_name(src.type)(src, preprocess=preprocess)
@@ -153,17 +153,68 @@ class SqlCompiler():
     def ByExpression(self, expr:'Hql.Expressions.ByExpression', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 
-    def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+    def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True, negate:bool=False) -> tuple[object, object]:
+        if expr.name == 'isnull':
+            if preprocess:
+                acc, rej = self.compile(expr.args[0])
+                if rej:
+                    return None, expr
+                expr.args[0] = acc
+                return expr, None
+            lh, _ = self.compile(expr.args[0], preprocess=False)
+            if negate:
+                return f'{lh} NOTNULL', None
+            else:
+                return f'{lh} ISNULL', None
 
-    def FuncExpr(self, expr:'Hql.Expressions.FuncExpr', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 
     def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 
     def Equality(self, expr:'Hql.Expressions.Equality', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        from Hql.Expressions import Equality, Expression
+
+        if preprocess:
+            if expr.cs:
+                logging.warning('Case sensitive comparison in Lucene has inconsistent results')
+                logging.warning('For compatibility, assuming agnostic')
+
+            acc, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            assert isinstance(acc, Expression)
+            lh = acc
+
+            rh = []
+            for i in expr.rh:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, expr
+                rh.append(acc)
+
+            return Equality(lh, expr.op, rh), None
+
+        lh, rej = self.compile(expr.lh, preprocess=False)
+        if rej:
+            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+
+        rh = []
+        for i in expr.rh:
+            acc, rej = self.compile(i, preprocess=False)
+            if rej:
+                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+            if isinstance(acc, list):
+                rh += acc
+            else:
+                rh.append(acc)
+        
+        eqs = [f'{lh}:{x}' for x in rh]
+        ret = ' OR '.join(eqs)
+        if len(eqs) > 1:
+            ret = f'({ret})'
+
+        return f'(NOT {ret})' if expr.neq else ret, None
 
     def Substring(self, expr:'Hql.Expressions.Substring', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
@@ -178,7 +229,27 @@ class SqlCompiler():
         return None, expr
 
     def Not(self, expr:'Hql.Expressions.Not', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        from Hql.Functions import Function
+        from Hql.Expressions import Expression
+        if preprocess:
+            acc, rej = self.compile(expr.expr)
+            if rej:
+                return None, expr
+            assert isinstance(acc, Expression)
+            expr.expr = acc
+            return expr, None
+
+        val, _ = self.compile(expr.expr, preprocess=False)
+        assert isinstance(val, str)
+        
+        # quick optimization
+        if isinstance(expr.expr, Function) and expr.expr.name == 'isnull':
+            val, _ = self.Function(expr.expr, preprocess=False, negate=True)
+
+        else:
+            val = f'NOT {val}'
+
+        return val, None
 
     def BasicRange(self, expr:'Hql.Expressions.BasicRange', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
@@ -196,16 +267,23 @@ class SqlCompiler():
         return None, expr
 
     def Integer(self, expr:'Hql.Expressions.Integer', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        if preprocess:
+            return expr, None
+        return str(expr.value), None
 
     def IP4(self, expr:'Hql.Expressions.IP4', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 
     def Float(self, expr:'Hql.Expressions.Float', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        if preprocess:
+            return expr, None
+        return str(expr.value), None
 
     def Bool(self, expr:'Hql.Expressions.Bool', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        if preprocess:
+            return expr, None
+        val = 'TRUE' if expr.value else 'FALSE'
+        return val, None
 
     def Multivalue(self, expr:'Hql.Expressions.Multivalue', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
@@ -229,7 +307,4 @@ class SqlCompiler():
         return None, expr
 
     def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
-    
-    def Null(self, expr:'Hql.Expressions.Null', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
