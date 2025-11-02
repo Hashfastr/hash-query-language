@@ -166,8 +166,10 @@ Non-term operators:
     - non-term suffix/endswith
 '''
 class Substring(Comparator):
-    def __init__(self, lh:Union['NamedReference', 'Path'], op:str, rh:list[Expression]):
-        Comparator.__init__(self, lh, op, rh)
+    def __init__(self, lh:Union['NamedReference', 'Path'], op:str, rh:list[StringLiteral]):
+        Comparator.__init__(self, lh, op, [])
+        self.lh:Union['NamedReference', 'Path'] = lh
+        self.rh:list[StringLiteral] = rh
 
         self.term = 'has' in op
 
@@ -177,11 +179,8 @@ class Substring(Comparator):
         self.neq = op[0] == '!'
         self.cs = op.endswith('_cs')
 
-        self.list = ('all' in op or 'any' in op)
+        self.list = len(rh) > 1
 
-        if len(rh) > 1 and not self.list:
-            raise hqle.CompilerException('Non-list substring given multiple rh expressions')
- 
     def to_dict(self):
         return {
             'type': self.type,

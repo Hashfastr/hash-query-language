@@ -4,6 +4,9 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 import logging
 
+from .Statements import SqlStatement, SELECT
+from .Expressions import SqlExpression, Like
+
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
     from Hql.Operators import Operator
@@ -24,6 +27,8 @@ class SqlCompiler():
         self.vestigial_compiler = HqlCompiler(Config())
 
         self.where:Optional['Hql.Operators.Where'] = None
+        
+        self.statement:SqlStatement = SELECT()
 
     def from_name(self, name:str) -> Callable:
         if hasattr(self, name):
@@ -75,10 +80,64 @@ class SqlCompiler():
     '''
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[object, object]:
-        return None, op
+        from Hql.Operators import Where
+        from Hql.Expressions import Expression, BinaryLogic
+
+        if preprocess:
+            acc, rej = self.compile(op.expr)
+            if rej:
+                return None, op
+            assert isinstance(acc, Expression)
+            op = Where(acc)
+
+            if not isinstance(self.statement, SELECT):
+                self.statement = SELECT(src=self.statement)
+
+            if not self.statement.where:
+                self.statement.where = op
+                return self.statement, None
+
+            if not isinstance(self.statement.where.expr, BinaryLogic) or self.statement.where.expr.bitype == 'or':
+                self.statement.where.expr = BinaryLogic(self.statement.where.expr, [], 'and')
+
+            self.statement.where.expr.rh.append(op.expr)
+
+            return self.statement, None
+
+        return self.compile(op.expr, preprocess=False)
 
     def Project(self, op:'Hql.Operators.Project', preprocess:bool=True) -> tuple[object, object]:
-        return None, op
+        from Hql.Operators import Project
+        from Hql.Expressions import Expression
+        
+        if preprocess:
+            exprs = []
+            for i in op.exprs:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, op
+                assert isinstance(acc, Expression)
+                exprs.append(acc)
+
+            op = Project('project', exprs)
+
+            if not isinstance(self.statement, SELECT):
+                self.statement = SELECT(src=self.statement)
+
+            if not self.statement.project:
+                self.statement.project = op
+                return self.statement, None
+            else:
+                self.statement = SELECT(project=op, src=self.statement)
+                return self.statement, None
+
+        exprs = []
+        for i in op.exprs:
+            acc, _ = self.compile(i, preprocess=False)
+            assert isinstance(acc, str)
+            exprs.append(acc)
+
+        return ', '.join(exprs), None
 
     def ProjectAway(self, op:'Hql.Operators.ProjectAway', preprocess:bool=True) -> tuple[object, object]:
         return None, op
@@ -93,7 +152,16 @@ class SqlCompiler():
         return None, op
 
     def Take(self, op:'Hql.Operators.Take', preprocess:bool=True) -> tuple[object, object]:
-        return None, op
+        if preprocess:
+            if op.tables:
+                return None, op
+            else:
+                if not isinstance(self.statement, SELECT):
+                    self.statement = SELECT(src=self.statement)
+                self.statement.limit = op
+                return self.statement, None
+
+        return self.compile(op.expr, preprocess=False)
 
     def Count(self, op:'Hql.Operators.Count', preprocess:bool=True) -> tuple[object, object]:
         return None, op
@@ -195,38 +263,138 @@ class SqlCompiler():
 
             return Equality(lh, expr.op, rh), None
 
-        lh, rej = self.compile(expr.lh, preprocess=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        lh, _ = self.compile(expr.lh, preprocess=False)
 
         rh = []
         for i in expr.rh:
-            acc, rej = self.compile(i, preprocess=False)
-            if rej:
-                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+            acc, _ = self.compile(i, preprocess=False)
             if isinstance(acc, list):
                 rh += acc
             else:
                 rh.append(acc)
         
-        eqs = [f'{lh}:{x}' for x in rh]
-        ret = ' OR '.join(eqs)
-        if len(eqs) > 1:
-            ret = f'({ret})'
+        if len(rh) == 1:
+            op = '!=' if expr.neq else '='
+            val = f'{lh} {op} {rh[0]}'
+            return val, None
 
-        return f'(NOT {ret})' if expr.neq else ret, None
+        op = 'NOT IN' if expr.neq else 'IN'
+        rh = ','.join(rh)
+        val = f'{lh} {op} ({rh})'
+
+        return val, None
 
     def Substring(self, expr:'Hql.Expressions.Substring', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        from Hql.Expressions import Substring, NamedReference
+        from Hql.Expressions import Integer, Float, StringLiteral
+        from Hql.Expressions import Regex
+
+        if preprocess:
+            if expr.term:
+                logging.warning('SQL has no support for term matching, no performance benefit provided')
+
+            acc, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            lh = acc
+            assert isinstance(lh, NamedReference)
+
+            rh = []
+            for i in expr.rh:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, expr
+                rh.append(acc)
+
+            expr = Substring(lh, expr.op, rh)
+            return expr, None
+
+        lh = self.compile(expr.lh, preprocess=False)
+
+        exprs = []
+        for i in expr.rh:
+            if expr.cs:
+                rh = StringLiteral('.*' + i.value.decode('utf-8') + '.*', verbatim=i.verbatim)
+                regex = Regex(expr.lh, rh)
+                val = self.compile(regex, preprocess=False)
+                exprs.append(val)
+
+            else:
+                rh = StringLiteral('%' + i.value.decode('utf-8') + '%', verbatim=i.verbatim)
+                val = self.compile(rh, preprocess=False)
+                exprs.append(f'{lh} LIKE {val}')
+        op = ' AND ' if expr.logic_and else ' OR '
+
+        val = op.join(exprs)
+        return val, None
 
     def Relational(self, expr:'Hql.Expressions.Relational', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 
     def BetweenEquality(self, expr:'Hql.Expressions.BetweenEquality', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        from Hql.Expressions import Literal, NamedReference, BetweenEquality
+
+        if preprocess:
+            acc, rej = self.compile(expr.lh)
+            if rej or not isinstance(acc, NamedReference):
+                return None, expr
+            lh = acc
+
+            acc, rej = self.compile(expr.start)
+            if rej or not isinstance(acc, Literal):
+                return None, expr
+            start = acc
+
+            acc, rej = self.compile(expr.end)
+            if rej or not isinstance(acc, Literal):
+                return None, expr
+            end = acc
+            
+            return BetweenEquality(lh, start, end, expr.op), None
+
+        lh, _ = self.compile(expr.lh, preprocess=False)
+        start, _ = self.compile(expr.start, preprocess=False)
+        end, _ = self.compile(expr.end, preprocess=False)
+
+        val = f'{lh} BETWEEN {start} AND {end}'
+        return val, None
 
     def BinaryLogic(self, expr:'Hql.Expressions.BinaryLogic', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        from Hql.Expressions import BinaryLogic
+
+        if preprocess:
+            accs = []
+            rejs = []
+            for i in [expr.lh] + expr.rh:
+                acc, rej = self.compile(i)
+                if rej and expr.bitype == 'and':
+                    rejs.append(rej)
+                elif rej and expr.bitype == 'or':
+                    return None, expr
+                elif acc:
+                    accs.append(acc)
+
+            if rejs:
+                rej = BinaryLogic(rejs[0], rejs[1:], bitype='and')
+            else:
+                rej = None
+
+            if accs:
+                acc = BinaryLogic(accs[0], accs, bitype=expr.bitype)
+            else:
+                acc = None
+            
+            return acc, rej
+
+        exprs = []
+        for i in [expr.lh] + expr.rh:
+            acc, _ = self.compile(i, preprocess=False)
+            assert isinstance(acc, str)
+            if isinstance(i, BinaryLogic):
+                acc = '(' + acc + ')'
+        op = ' AND ' if expr.bitype == 'and' else ' OR '
+
+        return op.join(exprs), None
 
     def Not(self, expr:'Hql.Expressions.Not', preprocess:bool=True) -> tuple[object, object]:
         from Hql.Functions import Function
@@ -255,13 +423,39 @@ class SqlCompiler():
         return None, expr
 
     def Regex(self, expr:'Hql.Expressions.Regex', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        from Hql.Expressions import NamedReference, StringLiteral, Regex
+
+        if preprocess:
+            acc, rej = self.compile(expr.lh)
+            if rej or not isinstance(acc, NamedReference):
+                return None, expr
+            lh = acc
+
+            acc, rej = self.compile(expr.rh)
+            if rej:
+                return None, expr
+            assert isinstance(acc, StringLiteral)
+            rh = acc
+            
+            return Regex(lh, rh, expr.i, expr.m, expr.s, expr.g), None
+
+        lh, _ = self.compile(expr.lh, preprocess=False)
+        assert isinstance(lh, str)
+
+        rh, _ = self.compile(expr.rh, preprocess=False)
+        assert isinstance(rh, str)
+
+        val = f'{lh} REGEXP {rh}'
+
+        return val, None
 
     def TypeExpression(self, expr:'Hql.Expressions.TypeExpression', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
 
     def StringLiteral(self, expr:'Hql.Expressions.StringLiteral', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        if preprocess:
+            return expr, None
+        return expr.quote("'"), None
     
     def MultiString(self, expr:'Hql.Expressions.MultiString', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
@@ -289,10 +483,12 @@ class SqlCompiler():
         return None, expr
     
     def NamedReference(self, expr:'Hql.Expressions.NamedReference', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        if preprocess:
+            return expr, None
+        return expr.name, None
 
     def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr, preprocess=preprocess)
+        return None, expr
 
     def Keyword(self, expr:'Hql.Expressions.Keyword', preprocess:bool=True) -> tuple[object, object]:
         return self.NamedReference(expr, preprocess=preprocess)
@@ -301,7 +497,7 @@ class SqlCompiler():
         return self.NamedReference(expr, preprocess=preprocess)
 
     def Wildcard(self, expr:'Hql.Expressions.Wildcard', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr, preprocess=preprocess)
+        return None, expr
 
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[object, object]:
         return None, expr

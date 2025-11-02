@@ -7,7 +7,7 @@ from .Logic import *
 from .References import *
 from .Literals import *
 from .Functions import *
-from .Aggregation import *
+from .Aggregation import OrderedExpression, ByExpression
 
 if TYPE_CHECKING:
     from Hql.Operators import Operator, Database

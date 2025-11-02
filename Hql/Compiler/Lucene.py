@@ -438,6 +438,7 @@ class LuceneCompiler(Compiler):
 
     def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Substring, Expression, StringLiteral, Regex
+        from Hql.Expressions import Path, NamedReference
         import re
 
         if preprocess:
@@ -445,7 +446,7 @@ class LuceneCompiler(Compiler):
             if rej:
                 return None, expr
             lh = acc
-            assert isinstance(lh, Expression)
+            assert isinstance(lh, (Path, NamedReference))
 
             rhs = []
             for i in expr.rh:

@@ -943,16 +943,15 @@ class HqlCompiler(Compiler):
         return desc, None
     
     def MultiString(self, expr:'Hql.Expressions.MultiString', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import MultiString
+        from Hql.Expressions import StringLiteral
         desc = BranchDescriptor()
 
-        exprs = []
+        val = ''
         for i in expr.strlits:
-            acc, _ = self.compile(i)
-            desc.merge(acc)
-            exprs.append(acc.get_expr())
+            val += i.quote('')
 
-        desc.expr = MultiString(exprs)
+        desc.set_attr('types', hqlt.string())
+        desc.expr = StringLiteral(val)
         return desc, None
 
     def Integer(self, expr:'Hql.Expressions.Integer', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
