@@ -316,19 +316,19 @@ class SqlCompiler():
             expr = Substring(lh, expr.op, rh)
             return expr, None
 
-        lh = self.compile(expr.lh, preprocess=False)
+        lh, _ = self.compile(expr.lh, preprocess=False)
 
         exprs = []
         for i in expr.rh:
             if expr.cs:
                 rh = StringLiteral('.*' + i.value.decode('utf-8') + '.*', verbatim=i.verbatim)
                 regex = Regex(expr.lh, rh)
-                val = self.compile(regex, preprocess=False)
+                val, _ = self.compile(regex, preprocess=False)
                 exprs.append(val)
 
             else:
                 rh = StringLiteral('%' + i.value.decode('utf-8') + '%', verbatim=i.verbatim)
-                val = self.compile(rh, preprocess=False)
+                val, _ = self.compile(rh, preprocess=False)
                 exprs.append(f'{lh} LIKE {val}')
         op = ' AND ' if expr.logic_and else ' OR '
 
