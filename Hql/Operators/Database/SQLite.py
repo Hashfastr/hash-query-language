@@ -1,27 +1,48 @@
 from typing import TYPE_CHECKING, Union
-from Hql.Operators import Database
+from Hql.Compiler.Sql.Statements import SELECT
+from Hql.Operators.Database import Database
 from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import Context, register_database
 import polars as pl
 import sqlite3
+from pathlib import Path
 
 if TYPE_CHECKING:
     from Hql.Data import Data
     from Hql.Operators import Operator
-    from Hql.Context import Context
     from Hql.Compiler import BranchDescriptor
     from Hql.Expressions import NamedReference
 
+@register_database('SQLite')
 class SQLite(Database):
     def __init__(self, config:dict, name:str='unnamed-database'):
         from Hql.Compiler import SqlCompiler
         Database.__init__(self, config, name=name)
+        conf = self.config.get('conf', {})
 
         self.compiler = SqlCompiler()
-        self.limit = self.config.get('max_rows', 100000)
+        self.limit = conf.get('max_rows', 100000)
 
-        if 'path' not in self.config:
+        if 'path' not in conf:
             raise hqle.ConfigException(f'Missing path in configuration for sqlite database {name}')
-        self.path = self.config['path']
+        self.path = Path(conf['path']).expanduser()
+
+        self.methods = [
+            'index',
+            'macro'
+        ]
+
+    def add_index(self, index:str):
+        from Hql.Expressions import NamedReference
+        self.get_variable(NamedReference(index))
+
+    def get_variable(self, name:'NamedReference') -> 'SQLite':
+        from Hql.Compiler.Sql import SELECT
+        if isinstance(self.compiler.statement, SELECT):
+            self.compiler.statement.src = name
+            return self
+        else:
+            raise hqle.QueryException(f'Attempting to set SQLite table {name.name} in an incompatible context')
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Compiler import BranchDescriptor
@@ -41,12 +62,16 @@ class SQLite(Database):
         import copy
 
         if self.limit > 0:
-            compiler = copy.deepcopy(self.compiler)
-            compiler.add_op(Take(Integer(self.limit), []))
+            if isinstance(self.compiler.statement, SELECT) and self.compiler.statement.limit:
+                compiler = self.compiler
+            else:
+                compiler = copy.deepcopy(self.compiler)
+                compiler.add_op(Take(Integer(self.limit), []))
         else:
             compiler = self.compiler
 
-        return compiler.compile(None)
+        acc, _ = compiler.compile(None)
+        return acc
         
     def to_dict(self):
         return {
