@@ -1,7 +1,4 @@
-database('splunk')
-| where index =~ '''
-Super code
-test
-'''
-| take 10
-| where field2 matches regex @"test.*\ntest"
+database('splunk').index('windows')
+| where EventCode == 1
+| where SHA1 == "EB42621654E02FAF2DE940442B6DEB1A77864E5B"
+| count

@@ -24,8 +24,8 @@ class SPLCompiler():
         self.ops:list[Union['Operator', SplunkOp]] = []
         self.symbols = dict()
         self.post_ops:list['Operator'] = []
-        self.top_level_where = True
         self.vestigial_compiler = HqlCompiler(Config())
+        self.top_level_expr:Optional[Expression] = None
 
         # self.reserved_names = {
         #     'index': 
@@ -56,8 +56,6 @@ class SPLCompiler():
         elif acc:
             assert isinstance(acc, (Operator, SplunkOp))
             self.ops.append(acc)
-        else:
-            raise hqle.CompilerException(f'Op compile returned {type(acc)} not Operator')
 
         assert isinstance(rej, (Operator, type(None)))
         return None, rej
@@ -72,11 +70,30 @@ class SPLCompiler():
     def optimize(self, ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
         return ops
 
+    def add_top_level(self, op:'Hql.Operators.Where') -> Optional['Hql.Operators.Where']:
+        from Hql.Expressions import BinaryLogic
+        acc, _ = self.vestigial_compiler.compile(op)
+        where = acc.get_attr('functions') or acc.get_attr('regex_matching') or acc.get_attr('case_sensitive_compare')
+
+        if where:
+            return op
+
+        if not self.top_level_expr:
+            self.top_level_expr = op.expr
+        elif isinstance(self.top_level_expr, BinaryLogic) and self.top_level_expr.bitype == 'and':
+            self.top_level_expr.rh.append(op.expr)
+        else:
+            self.top_level_expr = BinaryLogic(self.top_level_expr, [op.expr], 'and')
+        
+        return None
+
     '''
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
     def compile(self, src:Union['Expression', 'Operator', 'Statement', 'SplunkOp', None], **kwargs) -> tuple[Optional[object], Optional[object]]:
+        from Hql.Expressions import Equality, NamedReference, Wildcard, StringLiteral
+        from Hql.Operators import ProjectAway
         if src == None:
             ops:list[str] = []
             for i in self.ops:
@@ -86,10 +103,20 @@ class SPLCompiler():
                 assert isinstance(acc, str)
                 ops.append(acc)
 
-            if not ops:
-                ops = [
-                    'search index=*'
-                ]
+            junk = ProjectAway('project-away', [
+                NamedReference('_raw'),
+                Wildcard('_*')
+            ])
+            acc, _ = self.compile(junk, preprocess=False)
+            assert isinstance(acc, str)
+            ops.append(acc)
+
+            if not self.top_level_expr:
+                self.top_level_expr = Equality(NamedReference('index'), '==', [StringLiteral('*', verbatim=True)])
+            acc, _ = self.compile(self.top_level_expr, preprocess=False)
+            ops = [f'search {acc}'] + ops
+
+            # ops.append('| extract')
 
             return '\n'.join(ops), None
 
@@ -122,13 +149,18 @@ class SPLCompiler():
 
     def Where(self, op:'Hql.Operators.Where', **kwargs) -> tuple[object, object]:
         from Hql.Operators import Where
-        from Hql.Expressions import Expression
+        from Hql.Expressions import Expression, BinaryLogic
+        
         if kwargs.get('preprocess', True):
             acc, rej = self.compile(op.expr)
             assert isinstance(acc, (Expression, type(None)))
             assert isinstance(rej, (Expression, type(None)))
             ret_acc = Where(acc) if acc else None
             ret_rej = Where(rej) if rej else None
+        
+            if ret_acc and not self.ops:
+                ret_acc = self.add_top_level(ret_acc)
+
             return ret_acc, ret_rej
 
         acc, _ = self.vestigial_compiler.compile(op.expr)
@@ -143,10 +175,7 @@ class SPLCompiler():
         else:
             spl_op = 'search'
 
-        if self.top_level_where:
-            acc = f'{spl_op} ' + pred
-        else:
-            acc = f'| {spl_op} ' + pred
+        acc = f'| {spl_op} ' + pred
         return acc, None
 
     def Project(self, op:'Hql.Operators.Project', **kwargs) -> tuple[object, object]:
@@ -541,9 +570,9 @@ class SPLCompiler():
             for i in rh:
                 pairs.append(f'{lh}={i}')
             out = ' or '.join(pairs)
-            out = f'({out})'
 
             if expr.neq:
+                out = f'({out})'
                 out = 'NOT ' + out
 
         return out, None
@@ -585,7 +614,7 @@ class SPLCompiler():
                 return acc, rej
         
         exprs = []
-        for i in expr.lh + expr.rh:
+        for i in [expr.lh] + expr.rh:
             acc, _ = self.compile(i, preprocess=False)
             exprs.append(acc)
 
