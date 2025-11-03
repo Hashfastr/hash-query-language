@@ -23,7 +23,7 @@ dependencies = [
     "polars",
     "antlr4-python3-runtime==4.13.2",
     "elasticsearch",
-    "splunklib",
+    "splunk-sdk",
     "numpy",
     "requests",
     "ndjson",

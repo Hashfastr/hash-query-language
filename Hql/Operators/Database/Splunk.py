@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING, Union
 import json
 import logging
 
-import splunklib
+import splunklib.client as client
+import splunklib.results as results
 
 if TYPE_CHECKING:
     from Hql.Operators import Operator
     from Hql.Compiler import BranchDescriptor
     from Hql.Expressions import NamedReference
+
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Splunk')
@@ -26,13 +28,6 @@ class Splunk(Database):
         # Set to the config default to avoid DoS
         # Can be changed by the take operator for example.
         self.limit:int = conf.get('limit', 100000)
-        
-        # Default scroll max, cannot be higher than 10k
-        # Higher values are generally better, each request has some time to it
-        # 10000 is faster than 10x1000
-        self.scroll_max = conf.get('scroll_max', 10000)
-        self.scroll_time = conf.get('scroll_time', '1m')
-        self.timeout = conf.get('timeout', 10)
 
         self.methods = [
             'index',
@@ -47,14 +42,11 @@ class Splunk(Database):
             self.host = conf.get('host')
         else:
             raise hqle.ConfigException(f'Missing host config in Splunk config for {self.name}')
+        self.port = int(conf.get('port', 8089))
 
         self.username = conf.get('username', None)
         self.password = conf.get('password', None)
-
-        if self.username == None:
-            raise hqle.ConfigException(f'Unconfigured username in Splunk config {self.name}')
-        if self.password == None:
-            raise hqle.ConfigException(f'Unconfigured password in Splunk config {self.name}')
+        self.token = conf.get('token', None)
 
         self.compiler = SPLCompiler()
 
@@ -69,12 +61,43 @@ class Splunk(Database):
         }
 
     def compile(self) -> str:
-        query, rej = self.compiler.compile(None)
+        from Hql.Operators import Take
+        from Hql.Expressions import Integer
+        import copy
+
+        if self.limit > 0:
+            compiler = copy.deepcopy(self.compiler)
+            compiler.add_op(Take(Integer(self.limit), []))
+        else:
+            compiler = self.compiler
+
+        query, _ = compiler.compile(None)
         assert isinstance(query, str)
         return query
 
     def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         return self.compiler.add_op(op)
+
+    def connect(self):
+        auth_params = {
+            'host': self.host,
+            'port': self.port
+        }
+
+        if self.token:
+            auth_params['token'] = self.token
+        else:
+            if self.username == None:
+                raise hqle.ConfigException(f'Unconfigured username in Splunk config {self.name}')
+            if self.password == None:
+                raise hqle.ConfigException(f'Unconfigured password in Splunk config {self.name}')
+
+            auth_params['username'] = self.username
+            auth_params['password'] = self.password
+
+        service = client.connect(**auth_params)
+        print(type(service))
+        return service
 
     def eval(self, ctx:Context, **kwargs):
         try:
@@ -85,85 +108,15 @@ class Splunk(Database):
             user = self.config.get('ELASTIC_USER', 'elastic')
             raise hqle.ConfigException(f'Elasticsearch authentication with user {user} failed') from None
 
-    def make_query(self) -> Data:
-        # client = ES(
-        #     self.hosts,
-        #     basic_auth=(self.username, self.password),
-        #     verify_certs=self.verify_certs,
-        #     request_timeout=self.timeout,
-        #     retry_on_timeout=True,
-        # )
-        
-        logging.debug("Starting initial query")
+    def make_query(self, **kwargs) -> Data:
+        from Hql.Data import Table
 
-        logging.debug(f"{self.type} query, using the following Lucene:")
-        logging.debug(self.query)
-        logging.debug(f'Index pattern: {self.pattern}')
-        logging.debug(f'Limit: {self.limit}')
-        
-        # This gets the schema
-        # res = requests.get(
-        #     f'{self.hosts[0]}/{self.pattern}',
-        #     auth=(self.username, self.password)
-        # )
-        # index = json.loads(res.text)
-        # print(json.dumps(index, indent=2))
-        
-        res = client.search(
-            index=self.pattern,
-            size=self.scroll_max,
-            scroll=self.scroll_time,
-            q=self.query
-        )
-        sid = res['_scroll_id']
-        
-        logging.debug("Start scrolling")
-        
-        # Will scroll through until we reach our limit, or no more results.
-        # Enables the take operator
-        remainder = self.limit
-        results = []
-        while len(results) < self.limit:            
-            if len(res['hits']['hits']) == 0:
-                logging.debug(f"No more results to evaluate")
-                logging.debug(f"Timed out? {res['timed_out']}")
-                break
-            
-            # Ensure that we only print the number of remaining rows
-            results += res['hits']['hits'][:remainder]
-            
-            remainder = self.limit - len(results)
-            
-            if len(results) >= self.limit:
-                logging.debug('Quota reached')
-                break
-            
-            logging.debug(f"Scroll {len(results)} < {self.limit} max")
+        conn = self.connect()
+        job = conn.jobs.create(self.query, output_mode='json', **kwargs)
+        reader = results.JSONResultsReader(job)
 
-            res = client.scroll(
-                scroll_id=sid,
-                scroll=self.scroll_time,
-            )
+        data = [x for x in reader if isinstance(x, dict)]
+        print(json.dumps(data[0], indent=2))
+        table = Table(init_data=data, name=self.name)
 
-        client.clear_scroll(scroll_id=sid)
-
-        i = 0
-
-        result_sets = dict()
-        for i in results:
-            if i['_index'] not in result_sets:
-                result_sets[i['_index']] = []
-            result_sets[i['_index']].append(i['_source'])
-
-        tables = []
-        for i in result_sets:
-            table = Table(init_data=result_sets[i], name=i)
-
-            # schema = self.gen_elastic_schema(index[i]['mappings']['properties'])
-            # schema = Schema(schema=schema).convert_schema(target='hql')
-            # schema = Schema.merge([table.schema.schema, schema])
-
-            # table.set_schema(schema)
-            tables.append(table)
-
-        return Data(tables=tables)
+        return Data(tables=[table])

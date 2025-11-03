@@ -39,11 +39,17 @@ class SqlCompiler():
         ctx = ctx if ctx else self.ctx
         return self.ctx
 
-    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
+    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional[SqlStatement], Optional['Operator']]:
         from Hql.Compiler import BranchDescriptor
+        from Hql.Operators import Operator
+
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
-        return None, op
+
+        acc, rej = self.compile(op)
+        assert isinstance(rej, (Operator, type(None)))
+        assert isinstance(acc, (SqlStatement, type(None)))
+        return acc, rej
     
     def add_ops(self, ops:list['BranchDescriptor']) -> Optional[list['Operator']]:
         for idx, op in enumerate(ops):
@@ -61,7 +67,8 @@ class SqlCompiler():
     '''
     def compile(self, src:Union['Hql.Expressions.Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
         if src == None:
-            raise hqle.CompilerException('Unimplemented root compile')
+            compiled = self.statement.compile(self)
+            return compiled, None
         return self.from_name(src.type)(src, preprocess=preprocess)
 
     def decompile(self) -> str:

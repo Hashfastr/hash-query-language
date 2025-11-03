@@ -85,6 +85,12 @@ class SPLCompiler():
                     logging.warning(f'Non-preprocess op {i} returned non-None rejection {rej}')
                 assert isinstance(acc, str)
                 ops.append(acc)
+
+            if not ops:
+                ops = [
+                    'search index=*'
+                ]
+
             return '\n'.join(ops), None
 
         return self.from_name(src.type)(src, preprocess=kwargs.get('preprocess', True), where=kwargs.get('where', False))
@@ -135,11 +141,12 @@ class SPLCompiler():
         if where:
             spl_op = 'where'
         else:
-            if self.top_level_where:
-                return pred, None
             spl_op = 'search'
 
-        acc = f'| {spl_op} ' + pred
+        if self.top_level_where:
+            acc = f'{spl_op} ' + pred
+        else:
+            acc = f'| {spl_op} ' + pred
         return acc, None
 
     def Project(self, op:'Hql.Operators.Project', **kwargs) -> tuple[object, object]:
