@@ -23,6 +23,14 @@ class Database(Operator):
         self.name = name
         self.index = ''
 
+    def __eq__(self, value: object, /) -> bool:
+        if isinstance(value, Database):
+            if self.name == value.name and self.config == value.config:
+                return True
+            else:
+                return False
+        return super().__eq__(value)
+
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         return self.compiler.add_op(op)
 

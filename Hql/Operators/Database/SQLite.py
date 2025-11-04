@@ -20,7 +20,7 @@ class SQLite(Database):
         Database.__init__(self, config, name=name)
         conf = self.config.get('conf', {})
 
-        self.compiler = SqlCompiler()
+        self.compiler = SqlCompiler(parent=self)
         self.limit = conf.get('max_rows', 100000)
 
         if 'path' not in conf:

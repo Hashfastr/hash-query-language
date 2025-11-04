@@ -1,23 +1,41 @@
 from typing import TYPE_CHECKING, Optional, Union
+from Hql.Exceptions import HqlExceptions as hqle
+import random
 
 if TYPE_CHECKING:
-    from Hql.Operators import Project, Where, Take
+    from Hql.Operators import Project, Where, Take, Join
     from Hql.Compiler import SqlCompiler
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions import NamedReference, Path
 
 class SqlStatement():
+    def __init__(self) -> None:
+        self.indent_spaces = 2
+
     def compile(self, compiler:'SqlCompiler') -> str:
         ...
+
+    def compile_nested(self, compiler:'SqlCompiler', nested:'SqlStatement') -> str:
+        res = nested.compile(compiler)
+        indented = '\n'
+        for line in res.split('\n'):
+            if line:
+                indented += ' ' * self.indent_spaces + line
+                indented += '\n'
+        return '(' + indented + ')'
 
 '''
 Assumes all ops have been precompiled by the SQL compiler
 '''
 class SELECT(SqlStatement):
-    def __init__(self, project:Optional['Project']=None, src=None, where:Optional['Where']=None, take:Optional['Take']=None):
+    def __init__(self, project:Optional['Project']=None, src=None, where:Optional['Where']=None, take:Optional['Take']=None, join:Optional[list['Join']]=None, distinct:Optional[list[Union['Path', 'NamedReference']]]=None):
+        SqlStatement.__init__(self)
         self.project:Optional['Project'] = project
         self.src:Union[None, SqlStatement, 'NamedReference'] = src
         self.where:Optional['Where'] = where
         self.limit:Optional['Take'] = take
+        joins = join if join else []
+        self.join:JOIN = JOIN(joins)
+        self.distinct:list[Union['Path', 'NamedReference']] = distinct if distinct else []
 
     def add_project(self, op:'Project') -> 'SELECT':
         if self.project:
@@ -27,40 +45,171 @@ class SELECT(SqlStatement):
     
     def add_where(self, op:'Where') -> 'SELECT':
         if self.where:
-            return SELECT(where=op, src=self)
+            self.where.integrate(op)
         self.where = op
         return self
 
+    def add_join(self, op:'Join') -> 'SELECT':
+        self.join.add_join(op)
+        return self
+
+    def add_distinct(self, expr:Union['Path', 'NamedReference']):
+        self.distinct.append(expr)
+
+    def is_plain(self):
+        return not (
+            self.project or self.where or self.limit or self.join or self.distinct
+        )
+
     def compile(self, compiler:'SqlCompiler') -> str:
+        from copy import deepcopy
+        compiler = deepcopy(compiler)
+        compiler.statement = self
+
+        join = ''
+        if self.join:
+            join = self.join.compile(compiler)
+            for i in self.join.wheres:
+                self.add_where(i)
+
+        project = '*'
         if self.project:
             project, _ = compiler.compile(self.project, preprocess=False)
-        else:
-            project = '*'
 
-        if isinstance(self.src, SqlStatement):
+        if self.src == None:
+            raise hqle.CompilerException('Attempting to compile SQL SELECT statement using a None src!')
+
+        elif isinstance(self.src, SqlStatement):
             src = self.src.compile(compiler)
-            src = '(' + src + ')'
+            src = '(\n' + src + ')'
         else:
             src, _ = compiler.compile(self.src, preprocess=False)
 
+        where = ''
         if self.where:
             where, _ = compiler.compile(self.where, preprocess=False)
-        else:
-            where = ''
 
+        limit = ''
         if self.limit:
             limit, _ = compiler.compile(self.limit, preprocess=False)
-        else:
-            limit = ''
 
         assert isinstance(project, str)
         assert isinstance(src, str)
         assert isinstance(where, str)
+        assert isinstance(limit, str)
 
-        out = f'SELECT {project} FROM {src}'
+        out = f'SELECT {project}\n'
+        out += f'FROM {src}'
+        if join:
+            out += join
+        if out[-1] != '\n':
+            out += '\n'
         if where:
-            out += f' WHERE {where}'
+            out += f'WHERE {where}\n'
         if limit:
-            out += f' LIMIT {limit}'
+            out += f'LIMIT {limit}\n'
     
+        return out
+
+class JOIN(SqlStatement):
+    def __init__(self, joins:list['Join']) -> None:
+        from Hql.Expressions import NamedReference
+        SqlStatement.__init__(self)
+        self.lname = NamedReference('%08x' % random.getrandbits(32))
+        self.joins = joins
+        self.wheres:list['Where'] = []
+
+    def __bool__(self):
+        return bool(self.joins)
+
+    def add_join(self, join:'Join'):
+        self.joins.append(join)
+
+    def compile(self, compiler: 'SqlCompiler') -> str:
+        joins = []
+        for i in self.joins:
+            joins.append(self.compile_join(i, compiler))
+        acc, _ = compiler.compile(self.lname, preprocess=False)
+
+        out = f' {acc}\n'
+        out += '\n'.join(joins)
+        out += '\n'
+
+        return out
+
+    def compile_join(self, op:'Join', compiler:'SqlCompiler') -> str:
+        from Hql.Compiler import InstructionSet, SqlCompiler
+        from Hql.Operators import Where
+        from Hql.Expressions import BinaryLogic, Path, FuncExpr, NamedReference, Equality
+        from Hql.Operators.Database import Database
+
+        rname = NamedReference('%08x' % random.getrandbits(32))
+        join_op = 'INNER'
+        if op.kind in ('leftouter', 'left', 'leftanti'):
+            join_op = 'LEFT'
+        elif op.kind in ('rightouter', 'right', 'rightanti'):
+            join_op = 'RIGHT'
+        elif op.kind == 'fullouter':
+            join_op = 'FULL OUTER'
+
+        # if op.kind == 'innerunique':
+        #     for i in op.on:
+        #         path = [lname]
+        #         if isinstance(i, Path):
+        #             path += i.path
+        #         else:
+        #             path.append(i)
+        #         self.statement.add_distinct(Path(path))
+
+        anti = ''
+        if op.kind == 'leftanti':
+            anti = rname
+        if op.kind == 'rightanti':
+            anti = self.lname
+
+        if anti:
+            anti_filter = []
+            for i in op.on:
+                func = FuncExpr('isnull', [Path([anti, i])]).eval(compiler.ctx)
+                anti_filter.append(func)
+
+            self.wheres.append(Where(BinaryLogic(anti_filter[0], anti_filter[1:], 'and')))
+
+        out = f'{join_op} JOIN '
+
+        assert isinstance(op.rh, InstructionSet)
+        rh = op.rh.upstream[0]
+        assert isinstance(rh, Database)
+        assert isinstance(rh.compiler, SqlCompiler)
+        rh_stmt = rh.compiler.statement
+
+        if not isinstance(rh_stmt, SELECT):
+            raise hqle.CompilerException('SQL joining on non-SELECT statement')
+
+        if rh_stmt.is_plain():
+            if rh_stmt.src == None:
+                raise hqle.CompilerException('Attempting to compile SQL SELECT statement using a None src in join!')
+            elif isinstance(rh_stmt.src, SqlStatement):
+                rh_str = self.compile_nested(compiler, rh_stmt.src)
+            else:
+                rh_str, _ = compiler.compile(rh_stmt.src, preprocess=False)
+                assert isinstance(rh_str, str)
+        else:
+            rh_str = self.compile_nested(compiler, rh_stmt)
+
+        acc, _ = compiler.compile(rname, preprocess=False)
+        assert isinstance(acc, str)
+        out += rh_str + ' ' + acc + ' '
+
+        ons = []
+        for i in op.on:
+            ons.append(
+                Equality(Path([self.lname, i]), '==', [Path([rname, i])])
+            )
+        on_expr = BinaryLogic(ons[0], ons[1:], 'and')
+        acc, _ = compiler.compile(on_expr, preprocess=False)
+        assert isinstance(acc, str)
+        out += '\nON '
+        out += acc
+
         return out

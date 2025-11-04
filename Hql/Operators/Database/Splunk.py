@@ -107,7 +107,6 @@ class Splunk(Database):
             auth_params['password'] = self.password
 
         service = client.connect(**auth_params)
-        print(type(service))
         return service
 
     def eval(self, ctx:Context, **kwargs):
@@ -124,7 +123,6 @@ class Splunk(Database):
         reader = results.JSONResultsReader(res)
 
         data = [x for x in reader if isinstance(x, dict)]
-        print(json.dumps(data[0], indent=2))
         table = Table(init_data=data, name=self.name)
 
         return Data(tables=[table])

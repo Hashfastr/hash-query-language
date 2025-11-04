@@ -4,12 +4,15 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 import logging
 
+from Hql.Expressions.Logic import Equality
+
 from .Statements import SqlStatement, SELECT
 from .Expressions import SqlExpression, Like
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
     from Hql.Operators import Operator
+    from Hql.Operators.Database import Database
     # from Hql.Expressions import Expression
     from Hql.Query import Statement
     import Hql
@@ -18,7 +21,7 @@ if TYPE_CHECKING:
 Generic SQL compiler
 '''
 class SqlCompiler():
-    def __init__(self):
+    def __init__(self, parent:Optional['Database']=None):
         from Hql.Data import Data
         from Hql.Compiler import HqlCompiler
         from Hql.Config import Config
@@ -26,9 +29,8 @@ class SqlCompiler():
         self.ctx = Context(Data())
         self.vestigial_compiler = HqlCompiler(Config())
 
-        self.where:Optional['Hql.Operators.Where'] = None
-        
         self.statement:SqlStatement = SELECT()
+        self.parent = parent
 
     def from_name(self, name:str) -> Callable:
         if hasattr(self, name):
@@ -41,7 +43,7 @@ class SqlCompiler():
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional[SqlStatement], Optional['Operator']]:
         from Hql.Compiler import BranchDescriptor
-        from Hql.Operators import Operator
+        from Hql.Operators import Operator, Join
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
@@ -195,7 +197,39 @@ class SqlCompiler():
         return None, op
 
     def Join(self, op:'Hql.Operators.Join', preprocess:bool=True) -> tuple[object, object]:
-        return None, op
+        from Hql.Compiler import InstructionSet
+        from Hql.Operators import Where
+        from Hql.Expressions import BinaryLogic, Path, FuncExpr, NamedReference
+        import random
+
+        if preprocess:
+            if self.parent == None:
+                return None, op
+
+            if not isinstance(op.rh, InstructionSet) or len(op.rh.upstream) > 1 or op.rh.ops:
+                return None, op
+            
+            rh = op.rh.upstream[0]
+            if rh != self.parent:
+                return None, op
+
+            accepted_kinds = [
+                'inner',
+                'leftouter', 'left', 'leftanti',
+                'rightouter', 'right', 'rightanti',
+                'fullouter'
+            ]
+
+            if op.kind not in accepted_kinds:
+                return None, op
+
+            if not isinstance(self.statement, SELECT):
+                self.statement = SELECT(src=self.statement)
+            self.statement.add_join(op)
+
+            return self.statement, None
+
+        return None, None
 
     def MvExpand(self, op:'Hql.Operators.MvExpand', preprocess:bool=True) -> tuple[object, object]:
         return None, op
@@ -399,6 +433,7 @@ class SqlCompiler():
             assert isinstance(acc, str)
             if isinstance(i, BinaryLogic):
                 acc = '(' + acc + ')'
+            exprs.append(acc)
         op = ' AND ' if expr.bitype == 'and' else ' OR '
 
         return op.join(exprs), None
@@ -507,7 +542,25 @@ class SqlCompiler():
         return None, expr
 
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
+        from Hql.Expressions import NamedReference, Path
+
+        if preprocess:
+            path = []
+            for i in expr.path:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, expr
+                assert isinstance(acc, NamedReference)
+                path.append(acc)
+            return Path(path), None
+
+        path = []
+        for i in expr.path:
+            acc, _ = self.compile(i, preprocess=False)
+            assert isinstance(acc, str)
+            path.append(acc)
+
+        return '.'.join(path), None
 
     def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True) -> tuple[object, object]:
         return None, expr

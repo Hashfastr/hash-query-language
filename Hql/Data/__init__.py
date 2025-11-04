@@ -190,8 +190,6 @@ class Data():
             for rt in right:
                 new.append(lt.join(rt, on, kind))
 
-            print(new)
-
             tables.append(Table.merge(new, merge_rows=False))
         
         return Data(tables=tables, merge_rows=False)

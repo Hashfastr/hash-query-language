@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 # @register_op('Join')
 class Join(Operator):
     def __init__(self, rh:Union['Expression', 'InstructionSet'], params:Optional[list['OpParameter']]=None, on:Optional[list[Union['NamedReference', 'Path']]]=None, where:Optional['Expression']=None):
+        from Hql.Data import Data
+        ctx = Context(Data())
+
         Operator.__init__(self)
         self.rh = rh
         self.params:list = params if params else []
@@ -22,10 +25,9 @@ class Join(Operator):
 
         # default join type
         self.kind = 'inner'
+        self.process_params(ctx)
 
         if not self.on:
-            from Hql.Data import Data
-            ctx = Context(Data())
             raise hqle.QueryException(f'Missing on clause in join: {self.decompile(ctx)}')
 
     def process_params(self, ctx:'Context'):

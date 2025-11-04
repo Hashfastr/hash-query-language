@@ -4,7 +4,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data, Table, Series
 import polars as pl
 
-from typing import TYPE_CHECKING, Union, Optional
+from typing import TYPE_CHECKING, Sequence, Union, Optional
 import logging
 
 if TYPE_CHECKING:
@@ -111,12 +111,19 @@ class HacNamedReference(NamedReference):
     ...
 
 class Path(Expression):
-    def __init__(self, path:list[NamedReference]):
+    def __init__(self, path:Sequence[Union[NamedReference, Path]]):
         if not isinstance(self, Path):
             return
 
+        new = []
+        for i in path:
+            if isinstance(i, NamedReference):
+                new.append(i)
+            else:
+                new += i.path
+
         Expression.__init__(self)
-        self.path:list[NamedReference] = path
+        self.path:list[NamedReference] = new
 
         if not self.path:
             raise hqle.CompilerException('Attempting to init path with 0 path parts')
