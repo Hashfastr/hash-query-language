@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Exceptions import HqlExceptions as hqle
 import random
+import json
 
 if TYPE_CHECKING:
     from Hql.Operators import Project, Where, Take, Join
@@ -10,6 +11,9 @@ if TYPE_CHECKING:
 class SqlStatement():
     def __init__(self) -> None:
         self.indent_spaces = 2
+
+    def to_dict(self):
+        return {}
 
     def compile(self, compiler:'SqlCompiler') -> str:
         ...
@@ -27,19 +31,30 @@ class SqlStatement():
 Assumes all ops have been precompiled by the SQL compiler
 '''
 class SELECT(SqlStatement):
-    def __init__(self, project:Optional['Project']=None, src=None, where:Optional['Where']=None, take:Optional['Take']=None, join:Optional[list['Join']]=None, distinct:Optional[list[Union['Path', 'NamedReference']]]=None):
+    def __init__(self, src:Union[SqlStatement, 'NamedReference'], project:Optional['Project']=None, where:Optional['Where']=None, take:Optional['Take']=None, join:Optional[list['Join']]=None, distinct:Optional[list[Union['Path', 'NamedReference']]]=None):
         SqlStatement.__init__(self)
         self.project:Optional['Project'] = project
-        self.src:Union[None, SqlStatement, 'NamedReference'] = src
+        self.src:Union[SqlStatement, 'NamedReference'] = src
         self.where:Optional['Where'] = where
         self.limit:Optional['Take'] = take
         joins = join if join else []
         self.join:JOIN = JOIN(joins)
         self.distinct:list[Union['Path', 'NamedReference']] = distinct if distinct else []
 
+    def to_dict(self):
+        return {
+            'type': 'SELECT',
+            'project': self.project.to_dict() if self.project else None,
+            'src': self.src.to_dict() if self.src else None,
+            'where': self.where.to_dict() if self.where else None,
+            'limit': self.where.to_dict() if self.where else None,
+            'joins': self.join.to_dict(),
+            'distinct': [x.to_dict() for x in self.distinct]
+        }
+
     def add_project(self, op:'Project') -> 'SELECT':
         if self.project:
-            return SELECT(project=op, src=self)
+            return SELECT(self, project=op)
         self.project = op
         return self
     
@@ -50,7 +65,7 @@ class SELECT(SqlStatement):
         return self
 
     def add_join(self, op:'Join') -> 'SELECT':
-        self.join.add_join(op)
+        self.join.add(op)
         return self
 
     def add_distinct(self, expr:Union['Path', 'NamedReference']):
@@ -61,10 +76,33 @@ class SELECT(SqlStatement):
             self.project or self.where or self.limit or self.join or self.distinct
         )
 
+    def join_only(self):
+        return not (
+            self.project or self.where or self.limit or self.distinct
+        )
+
+    def collapse_join(self) -> tuple[Union['SqlStatement', 'NamedReference'], list['Join']]:
+        if not self.join_only():
+            return self.src, []
+
+        if isinstance(self.src, SELECT):
+            src, joins = self.src.collapse_join()
+        else:
+            src = self.src
+            joins = self.join.joins
+
+        return src, joins
+
     def compile(self, compiler:'SqlCompiler') -> str:
         from copy import deepcopy
         compiler = deepcopy(compiler)
         compiler.statement = self
+
+        # Another time
+        # src, joins = self.collapse_join()
+        # self.join.prepend(joins)
+
+        src = self.src
 
         join = ''
         if self.join:
@@ -76,14 +114,10 @@ class SELECT(SqlStatement):
         if self.project:
             project, _ = compiler.compile(self.project, preprocess=False)
 
-        if self.src == None:
-            raise hqle.CompilerException('Attempting to compile SQL SELECT statement using a None src!')
-
-        elif isinstance(self.src, SqlStatement):
-            src = self.src.compile(compiler)
-            src = '(\n' + src + ')'
+        if isinstance(src, SqlStatement):
+            src = self.compile_nested(compiler, src)
         else:
-            src, _ = compiler.compile(self.src, preprocess=False)
+            src, _ = compiler.compile(src, preprocess=False)
 
         where = ''
         if self.where:
@@ -108,7 +142,7 @@ class SELECT(SqlStatement):
             out += f'WHERE {where}\n'
         if limit:
             out += f'LIMIT {limit}\n'
-    
+
         return out
 
 class JOIN(SqlStatement):
@@ -116,20 +150,33 @@ class JOIN(SqlStatement):
         from Hql.Expressions import NamedReference
         SqlStatement.__init__(self)
         self.lname = NamedReference('%08x' % random.getrandbits(32))
-        self.joins = joins
+        self.joins:list['Join'] = joins
         self.wheres:list['Where'] = []
 
     def __bool__(self):
         return bool(self.joins)
 
-    def add_join(self, join:'Join'):
+    def to_dict(self):
+        return {
+            'type': 'JOIN',
+            'lname': self.lname.name,
+            'joins': [x.to_dict() for x in self.joins],
+            'wheres': [x.to_dict() for x in self.wheres]
+        }
+
+    def add(self, join:'Join'):
         self.joins.append(join)
 
+    def prepend(self, join:Union[list['Join'], 'Join']):
+        if not isinstance(join, list):
+            join = [join]
+        self.joins = join + self.joins
+
     def compile(self, compiler: 'SqlCompiler') -> str:
+        acc, _ = compiler.compile(self.lname, preprocess=False)
         joins = []
         for i in self.joins:
             joins.append(self.compile_join(i, compiler))
-        acc, _ = compiler.compile(self.lname, preprocess=False)
 
         out = f' {acc}\n'
         out += '\n'.join(joins)
@@ -187,9 +234,7 @@ class JOIN(SqlStatement):
             raise hqle.CompilerException('SQL joining on non-SELECT statement')
 
         if rh_stmt.is_plain():
-            if rh_stmt.src == None:
-                raise hqle.CompilerException('Attempting to compile SQL SELECT statement using a None src in join!')
-            elif isinstance(rh_stmt.src, SqlStatement):
+            if isinstance(rh_stmt.src, SqlStatement):
                 rh_str = self.compile_nested(compiler, rh_stmt.src)
             else:
                 rh_str, _ = compiler.compile(rh_stmt.src, preprocess=False)
@@ -211,5 +256,7 @@ class JOIN(SqlStatement):
         assert isinstance(acc, str)
         out += '\nON '
         out += acc
+
+        self.lname = rname
 
         return out

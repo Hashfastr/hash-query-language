@@ -30,6 +30,16 @@ class Join(Operator):
         if not self.on:
             raise hqle.QueryException(f'Missing on clause in join: {self.decompile(ctx)}')
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'kind': self.kind,
+            'rh': self.rh.to_dict(),
+            'on': [x.to_dict() for x in self.on],
+            'where': self.where.to_dict() if self.where else None
+        }
+
     def process_params(self, ctx:'Context'):
         for i in self.params:
             if i.name == 'kind':

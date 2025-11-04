@@ -25,11 +25,12 @@ class SqlCompiler():
         from Hql.Data import Data
         from Hql.Compiler import HqlCompiler
         from Hql.Config import Config
+        from Hql.Expressions import Wildcard
         self.type = self.__class__.__name__
         self.ctx = Context(Data())
         self.vestigial_compiler = HqlCompiler(Config())
 
-        self.statement:SqlStatement = SELECT()
+        self.statement:SqlStatement = SELECT(Wildcard('*'))
         self.parent = parent
 
     def from_name(self, name:str) -> Callable:
@@ -100,7 +101,7 @@ class SqlCompiler():
             op = Where(acc)
 
             if not isinstance(self.statement, SELECT):
-                self.statement = SELECT(src=self.statement)
+                self.statement = SELECT(self.statement)
 
             if not self.statement.where:
                 self.statement.where = op
@@ -131,13 +132,13 @@ class SqlCompiler():
             op = Project('project', exprs)
 
             if not isinstance(self.statement, SELECT):
-                self.statement = SELECT(src=self.statement)
+                self.statement = SELECT(self.statement)
 
             if not self.statement.project:
                 self.statement.project = op
                 return self.statement, None
             else:
-                self.statement = SELECT(project=op, src=self.statement)
+                self.statement = SELECT(src=self.statement, project=op)
                 return self.statement, None
 
         exprs = []
@@ -166,7 +167,7 @@ class SqlCompiler():
                 return None, op
             else:
                 if not isinstance(self.statement, SELECT):
-                    self.statement = SELECT(src=self.statement)
+                    self.statement = SELECT(self.statement)
                 self.statement.limit = op
                 return self.statement, None
 
@@ -224,7 +225,7 @@ class SqlCompiler():
                 return None, op
 
             if not isinstance(self.statement, SELECT):
-                self.statement = SELECT(src=self.statement)
+                self.statement = SELECT(self.statement)
             self.statement.add_join(op)
 
             return self.statement, None
@@ -285,10 +286,6 @@ class SqlCompiler():
         from Hql.Expressions import Equality, Expression
 
         if preprocess:
-            if expr.cs:
-                logging.warning('Case sensitive comparison in Lucene has inconsistent results')
-                logging.warning('For compatibility, assuming agnostic')
-
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
@@ -317,11 +314,15 @@ class SqlCompiler():
         if len(rh) == 1:
             op = '!=' if expr.neq else '='
             val = f'{lh} {op} {rh[0]}'
+            if not expr.cs:
+                val += ' COLLATE NOCASE'
             return val, None
 
         op = 'NOT IN' if expr.neq else 'IN'
         rh = ','.join(rh)
         val = f'{lh} {op} ({rh})'
+        if not expr.cs:
+            val += ' COLLATE NOCASE'
 
         return val, None
 
