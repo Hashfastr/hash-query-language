@@ -71,6 +71,10 @@ class SqlCompiler():
     def compile(self, src:Union['Hql.Expressions.Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
         if src == None:
             compiled = self.statement.compile(self)
+            compiled += ';'
+            print()
+            print(compiled)
+            print()
             return compiled, None
         return self.from_name(src.type)(src, preprocess=preprocess)
 
@@ -199,9 +203,6 @@ class SqlCompiler():
 
     def Join(self, op:'Hql.Operators.Join', preprocess:bool=True) -> tuple[object, object]:
         from Hql.Compiler import InstructionSet
-        from Hql.Operators import Where
-        from Hql.Expressions import BinaryLogic, Path, FuncExpr, NamedReference
-        import random
 
         if preprocess:
             if self.parent == None:

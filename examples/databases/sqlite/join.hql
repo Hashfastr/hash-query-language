@@ -5,13 +5,8 @@ let Application = database('nist-rds').index('PACKAGE_OBJECT')
 let Manu = database('nist-rds').index('MANUFACTURER_APPLICATION')
 | join database('nist-rds').index('MANUFACTURER') on manufacturer_id
 ;
-/*
 Meta
-| where md5 == 'AAB634FA7C0EEEE6EE64C138A5FDBC89'
+//| where md5 == 'aab634fa7c0eeee6ee64c138a5fdbc89'
+//| join Application on object_id
 | take 1
-| join Application on object_id
-| join Manu on application_id
-*/
-Meta
-| where md5 == 'AAB634FA7C0EEEE6EE64C138A5FDBC89'
-| join Application on object_id
+| project md5

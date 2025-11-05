@@ -55,6 +55,6 @@ let D = database('json').macro('network')
 | extend name='D', source.ip = toip4(source.ip)
 | where source.ip == ip4subnet('192.168.0.0/16')
 ;
-union B
+database('json').macro('network')
 | project ['@timestamp'], original_name=name, src_ip=toip4(source.ip), src_port=source.port, dest_ip=toip4(destination.ip), dest_port=destination.port
-| project res = scot4()
+//| project res = scot4()

@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Exceptions import HqlExceptions as hqle
-import random
 import json
 
 if TYPE_CHECKING:
@@ -17,6 +16,10 @@ class SqlStatement():
 
     def compile(self, compiler:'SqlCompiler') -> str:
         ...
+
+    def random_label(self) -> str:
+        import string, random
+        return ''.join(random.choices(string.ascii_lowercase, k=8))
 
     def compile_nested(self, compiler:'SqlCompiler', nested:'SqlStatement') -> str:
         res = nested.compile(compiler)
@@ -81,15 +84,19 @@ class SELECT(SqlStatement):
             self.project or self.where or self.limit or self.distinct
         )
 
-    def collapse_join(self) -> tuple[Union['SqlStatement', 'NamedReference'], list['Join']]:
+    def collapse_join(self) -> tuple[Union['SqlStatement', 'NamedReference', None], list['Join']]:
+        from Hql.Operators import Join
+        from Hql.Compiler import InstructionSet
+
         if not self.join_only():
-            return self.src, []
+            return self, []
 
         if isinstance(self.src, SELECT):
             src, joins = self.src.collapse_join()
+            joins = joins + self.join.joins
         else:
             src = self.src
-            joins = self.join.joins
+            joins = self.join.collapse_joins()
 
         return src, joins
 
@@ -98,9 +105,13 @@ class SELECT(SqlStatement):
         compiler = deepcopy(compiler)
         compiler.statement = self
 
-        # Another time
-        # src, joins = self.collapse_join()
-        # self.join.prepend(joins)
+        # if self.is_plain():
+        #     if isinstance(self.src, SqlStatement):
+        #         return self.src.compile(compiler)
+        #     else:
+        #         acc, _ = compiler.compile(self.src, preprocess=False)
+        #         assert isinstance(acc, str)
+        #         return acc
 
         src = self.src
 
@@ -149,7 +160,7 @@ class JOIN(SqlStatement):
     def __init__(self, joins:list['Join']) -> None:
         from Hql.Expressions import NamedReference
         SqlStatement.__init__(self)
-        self.lname = NamedReference('%08x' % random.getrandbits(32))
+        self.lname = NamedReference(self.random_label())
         self.joins:list['Join'] = joins
         self.wheres:list['Where'] = []
 
@@ -167,12 +178,38 @@ class JOIN(SqlStatement):
     def add(self, join:'Join'):
         self.joins.append(join)
 
+    def collapse_joins(self) -> list['Join']:
+        new = []
+        for i in self.joins:
+            new += self.collapse_join(i)
+        return new
+
+    def collapse_join(self, join:'Join') -> list['Join']:
+        from Hql.Compiler import InstructionSet, SqlCompiler
+        from Hql.Operators import Join
+        from Hql.Operators.Database import SQLite, Database
+
+        assert isinstance(join.rh, InstructionSet)
+        up = join.rh.upstream[0]
+        assert isinstance(up, SQLite) and isinstance(up.compiler, SqlCompiler)
+        rh = up.compiler.statement
+        if not isinstance(rh, SELECT):
+            return [join]
+
+        src, joins = rh.collapse_join()
+        # I will fix this typing later, is only within the domain of this class
+        new = Join(src, on=join.on)
+        new = [new] + joins
+        return new
+
     def prepend(self, join:Union[list['Join'], 'Join']):
         if not isinstance(join, list):
             join = [join]
         self.joins = join + self.joins
 
     def compile(self, compiler: 'SqlCompiler') -> str:
+        self.joins = self.collapse_joins()
+
         acc, _ = compiler.compile(self.lname, preprocess=False)
         joins = []
         for i in self.joins:
@@ -190,7 +227,7 @@ class JOIN(SqlStatement):
         from Hql.Expressions import BinaryLogic, Path, FuncExpr, NamedReference, Equality
         from Hql.Operators.Database import Database
 
-        rname = NamedReference('%08x' % random.getrandbits(32))
+        rname = NamedReference(self.random_label())
         join_op = 'INNER'
         if op.kind in ('leftouter', 'left', 'leftanti'):
             join_op = 'LEFT'
@@ -224,23 +261,30 @@ class JOIN(SqlStatement):
 
         out = f'{join_op} JOIN '
 
-        assert isinstance(op.rh, InstructionSet)
-        rh = op.rh.upstream[0]
-        assert isinstance(rh, Database)
-        assert isinstance(rh.compiler, SqlCompiler)
-        rh_stmt = rh.compiler.statement
+        if isinstance(op.rh, InstructionSet):
+            rh = op.rh.upstream[0]
+            assert isinstance(rh, Database)
+            assert isinstance(rh.compiler, SqlCompiler)
+            rh_stmt = rh.compiler.statement
+        else:
+            rh_stmt = op.rh
 
-        if not isinstance(rh_stmt, SELECT):
+        if not isinstance(rh_stmt, (NamedReference, SELECT)):
             raise hqle.CompilerException('SQL joining on non-SELECT statement')
 
-        if rh_stmt.is_plain():
-            if isinstance(rh_stmt.src, SqlStatement):
-                rh_str = self.compile_nested(compiler, rh_stmt.src)
+        if isinstance(rh_stmt, SELECT):
+            # collapse needless shells
+            if rh_stmt.is_plain():
+                if isinstance(rh_stmt.src, SqlStatement):
+                    rh_str = self.compile_nested(compiler, rh_stmt.src)
+                else:
+                    rh_str, _ = compiler.compile(rh_stmt.src, preprocess=False)
+                    assert isinstance(rh_str, str)
             else:
-                rh_str, _ = compiler.compile(rh_stmt.src, preprocess=False)
-                assert isinstance(rh_str, str)
+                rh_str = self.compile_nested(compiler, rh_stmt)
         else:
-            rh_str = self.compile_nested(compiler, rh_stmt)
+            rh_str, _ = compiler.compile(rh_stmt, preprocess=False)
+            assert isinstance(rh_str, str)
 
         acc, _ = compiler.compile(rname, preprocess=False)
         assert isinstance(acc, str)
@@ -248,14 +292,20 @@ class JOIN(SqlStatement):
 
         ons = []
         for i in op.on:
-            ons.append(
-                Equality(Path([self.lname, i]), '==', [Path([rname, i])])
-            )
-        on_expr = BinaryLogic(ons[0], ons[1:], 'and')
-        acc, _ = compiler.compile(on_expr, preprocess=False)
+            acc, _ = compiler.compile(i, preprocess=False)
+            assert isinstance(acc, str)
+            ons.append(acc)
+            # ons.append(
+            #     Equality(Path([self.lname, i]), '==', [Path([rname, i])])
+            # )
+        # on_expr = BinaryLogic(ons[0], ons[1:], 'and')
+        # acc, _ = compiler.compile(on_expr, preprocess=False)
+
+        acc = ','.join(ons)
         assert isinstance(acc, str)
-        out += '\nON '
-        out += acc
+        
+        out += '\n' + ' ' * self.indent_spaces + 'USING '
+        out += '(' + acc + ')'
 
         self.lname = rname
 

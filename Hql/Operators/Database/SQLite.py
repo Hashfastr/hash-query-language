@@ -56,7 +56,7 @@ class SQLite(Database):
             return None, op
         return op, None
 
-    def compile(self):
+    def compile(self) -> str:
         from Hql.Operators import Take
         from Hql.Expressions import Integer
         import copy
@@ -71,6 +71,7 @@ class SQLite(Database):
             compiler = self.compiler
 
         acc, _ = compiler.compile(None)
+        assert isinstance(acc, str)
         return acc
         
     def to_dict(self):

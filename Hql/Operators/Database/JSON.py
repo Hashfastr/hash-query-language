@@ -33,6 +33,14 @@ class JSON(Database):
         ]
 
         self.limits:dict[str, int] = dict()
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'files': [self.local_base + x for x in self.files],
+            'urls': [self.http_base + x for x in self.urls],
+        }
     
     def from_file(self, filename:str):
         if self.local_base:
