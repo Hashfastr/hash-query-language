@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from Hql.Expressions import Expression as Expression
     from Hql.Compiler import InstructionSet
     from Hql.Hac import Source
+    from Hql.Operators.Database import Database
 
 class Function():
     def __init__(self, args:list, min:int, max:int, conf:Optional[dict]=None):
@@ -50,7 +51,7 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
         
-    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet', 'Source', pl.Expr]:
+    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet', 'Source', 'Database', pl.Expr]:
         from Hql.Data import Data
         return Data()
 

@@ -64,18 +64,44 @@ class Splunk(Database):
 
     def compile(self) -> str:
         from Hql.Operators import Take, Where
-        from Hql.Expressions import Integer, BinaryLogic, StringLiteral, NamedReference
+        from Hql.Expressions import Integer, BinaryLogic, StringLiteral, NamedReference, PipeExpression
+        from Hql.Compiler import HqlCompiler
+        from Hql.Config import Config
         import copy
             
         compiler = copy.deepcopy(self.compiler)
 
+        # Add preamble and recompile
+        if self.preamble:
+            new_ops = self.preamble.pipes
+            
+            if compiler.top_level_expr:
+                op = Where(compiler.top_level_expr)
+                new_ops += [op]
+
+            new_ops += compiler.ops
+
+            vestigial = HqlCompiler(Config())
+            desc = vestigial.optimize(new_ops)
+
+            ops = []
+            for i in desc:
+                ops.append(i.get_op())
+
+            if compiler.top_level_expr:
+                compiler.top_level_expr = None
+                compiler.add_top_level(ops[0])
+                compiler.ops = ops[1:]
+            else:
+                compiler.ops = ops
+
         if self.indexes:
             indexes = []
             for i in self.indexes:
-                expr = Equality(NamedReference('index'), '==', [StringLiteral(i, verbatim=True)])
+                expr = Equality(NamedReference('index'), '=~', [StringLiteral(i, verbatim=True)])
                 indexes.append(expr)
             expr = BinaryLogic(indexes[0], indexes[1:], 'or')
-            self.compiler.add_top_level(Where(expr))
+            compiler.add_top_level(Where(expr))
 
         if self.limit > 0:
             compiler.add_op(Take(Integer(self.limit), []))

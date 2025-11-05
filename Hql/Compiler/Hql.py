@@ -1,4 +1,4 @@
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, Sequence, Union, TYPE_CHECKING
 import logging
 import json
 
@@ -127,6 +127,9 @@ class HqlCompiler(Compiler):
             
             acc = InstructionSet(upstream=upstream)
 
+        elif isinstance(expr, Database):
+            acc = expr
+
         else:
             return None, expr
 
@@ -139,6 +142,24 @@ class HqlCompiler(Compiler):
         if not isinstance(acc, InstructionSet):
             assert not isinstance(expr, Range)
             return None, expr
+
+        # Add hac timebound
+        if self.hac:
+            from Hql.Operators import Where
+            from Hql.Expressions import BetweenEquality, Datetime, NamedReference
+
+            start, end = self.hac.get_timerange()
+
+            acc.add_op(
+                Where(
+                    BetweenEquality(
+                        NamedReference('_hqltimestamp'),
+                        Datetime(start),
+                        Datetime(end),
+                        'between'
+                    )
+                )
+            )
 
         return acc, None
 
@@ -222,8 +243,18 @@ class HqlCompiler(Compiler):
 
         return comp
 
-    def optimize(self, ops: list[BranchDescriptor]) -> list[BranchDescriptor]:
-        from Hql.Operators import Take, Unnest
+    def optimize(self, ops: Sequence[Union['Hql.Operators.Operator', BranchDescriptor]]) -> list[BranchDescriptor]:
+        from Hql.Operators import Take, Unnest, Operator
+
+        new = []
+        for i in ops:
+            if isinstance(i, Operator):
+                acc, _ = self.compile(i)
+                assert isinstance(acc, BranchDescriptor)
+                new.append(acc)
+            else:
+                new.append(i)
+        ops = new
         
         logging.debug(f'Optimizing the following operators:')
         for op in ops:
@@ -986,6 +1017,15 @@ class HqlCompiler(Compiler):
         
         desc = BranchDescriptor()
         desc.set_attr('types', hqlt.bool())
+        desc.expr = expr
+
+        return desc, None
+
+    def Datetime(self, expr: 'Hql.Expressions.Datetime', preprocess: bool = True) -> tuple[object, object]:
+        from Hql.Types.Hql import HqlTypes as hqlt
+
+        desc = BranchDescriptor()
+        desc.set_attr('types', hqlt.datetime())
         desc.expr = expr
 
         return desc, None

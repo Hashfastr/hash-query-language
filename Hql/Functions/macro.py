@@ -48,7 +48,7 @@ class macro(Function):
             if not isinstance(parsed, PipeExpression):
                 parsed = PipeExpression([], prepipe=parsed)
 
-            acc, rej = compiler.compile(parsed)
+            acc, _ = compiler.compile(parsed)
             upstream.append(acc)
 
         return InstructionSet(upstream)

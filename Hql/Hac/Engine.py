@@ -35,6 +35,26 @@ class Schedule():
         }
         self.schedule:tuple[set, set, set, set, set] = self.parse_cron(cronstr)
 
+    def delta(self) -> datetime.timedelta:
+        # MUCH MUCH smarter way to do this, but on a crunch
+        now = datetime.datetime.now().replace(second=0, microsecond=0)
+        
+        # get upper bound
+        while not self.should_fire(self.gen_parts(now)):
+            now += datetime.timedelta(minutes=1)
+
+        minutes = 1
+
+        # crawl back until we fire again
+        while not self.should_fire(self.gen_parts(now - datetime.timedelta(minutes=minutes))):
+            minutes += 1
+
+        return datetime.timedelta(minutes=minutes)
+
+    @staticmethod
+    def gen_parts(dt:datetime.datetime) -> tuple[int, int, int, int, int]:
+        return (dt.minute, dt.hour, dt.month, dt.day, dt.weekday())
+
     def should_fire(self, time_parts:tuple[int, int, int, int, int]):
         for i in range(5):
             if time_parts[i] not in self.schedule[i]:
@@ -274,10 +294,6 @@ class HacEngine():
         self.completed:list[HacThread] = []
         self.clean_time = datetime.timedelta(days=1)
 
-    def time_parts(self, ts:int) -> tuple[int, int, int, int, int]:
-        dt = datetime.datetime.fromtimestamp(ts, tz=self.tz)
-        return (dt.minute, dt.hour, dt.month, dt.day, dt.weekday())
-
     def load_conf(self):
         from Hql.Config import Config
         return Config(self.conf_path)
@@ -394,10 +410,9 @@ class HacEngine():
                 continue
             last = cur.minute
 
-            ts = int(cur.timestamp())
             for i in self.detections:
                 det = self.detections[i]
-                if not det.should_fire(self.time_parts(ts)):
+                if not det.should_fire(Schedule.gen_parts(cur)):
                     logging.debug(f'Skipping {det.id}, not their time')
                     continue
                 self.pool.add_detection(det)

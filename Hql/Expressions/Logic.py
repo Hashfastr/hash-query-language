@@ -1,7 +1,7 @@
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Sequence, Union
 import logging
 import polars as pl
 
@@ -395,11 +395,13 @@ class BetweenEquality(Expression):
 # If there is 3 items in the right list it is equal to
 # a and b and c and d
 class BinaryLogic(Expression):
-    def __init__(self, lh:Expression, rh:list[Expression], bitype:str):
+    def __init__(self, lh:Expression, rh:Sequence[Expression], bitype:str):
         from Hql.Expressions import Equality
         Expression.__init__(self)
         self.bitype = bitype.lower()
-        exprs:list[Expression] = [lh] + rh
+        exprs:Sequence[Expression] = []
+        exprs.append(lh)
+        exprs += rh
 
         if bitype == 'or':
             exprs = self.condense(exprs, Equality, ('==', 'in'))
@@ -418,7 +420,7 @@ class BinaryLogic(Expression):
         from Hql.Expressions import NamedReference, Path
 
         # Make things a bit nicer
-        eq:dict[Union[NamedReference, Path], object] = dict()
+        eq:dict[Union[NamedReference, Path], Equality] = dict()
         other = []
         for i in exprs:
             if isinstance(i, target) and i.op in ops:

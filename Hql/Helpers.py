@@ -30,10 +30,12 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     parser = None
 
     try:
+        logging.info('Attempting Sigma')
         parser = SigmaParser(text, conf)
         hac = parser.gen_hac()
     except Exception as e:
         logging.warning(e)
+        logging.info('Failed Sigma, using Hql')
         # We're just skipping over to HaC Parsing then
         try:
             hac = HaCParser.parse_text(text, name)

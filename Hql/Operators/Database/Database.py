@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 from Hql.Operators import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from Hql.Data import Data
     from Hql.Context import Context
     from Hql.Compiler import BranchDescriptor
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions import NamedReference, PipeExpression
 
 class Database(Operator):
     def __init__(self, config:dict, name:str='unnamed-database'):
@@ -22,6 +22,7 @@ class Database(Operator):
         self.compiler = Compiler()
         self.name = name
         self.index = ''
+        self.preamble:Optional['PipeExpression'] = None
 
     def __eq__(self, value: object, /) -> bool:
         if isinstance(value, Database):
@@ -54,3 +55,6 @@ class Database(Operator):
     def get_macro(self, name:str) -> Union[None, dict]:
         macros = self.config.get('macro', dict())
         return macros.get(name, None)
+
+    def get_preamble(self) -> dict:
+        return self.config.get('preamble', dict())

@@ -1,4 +1,4 @@
-from typing import Optional, Union, TYPE_CHECKING, Callable
+from typing import Optional, Union, TYPE_CHECKING, Callable, override
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
@@ -9,18 +9,19 @@ from Hql.Expressions.Logic import Equality
 from .Statements import SqlStatement, SELECT
 from .Expressions import SqlExpression, Like
 
+from ..Compiler import Compiler
+
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
     from Hql.Operators import Operator
     from Hql.Operators.Database import Database
-    # from Hql.Expressions import Expression
     from Hql.Query import Statement
     import Hql
 
 '''
 Generic SQL compiler
 '''
-class SqlCompiler():
+class SqlCompiler(Compiler):
     def __init__(self, parent:Optional['Database']=None):
         from Hql.Data import Data
         from Hql.Compiler import HqlCompiler
@@ -40,10 +41,7 @@ class SqlCompiler():
             return getattr(self, name)
         raise hqle.CompilerException(f'Attempting to get non-existant compiler function for {name}')
 
-    def run(self, ctx:Union[Context, None]=None) -> Context:
-        ctx = ctx if ctx else self.ctx
-        return self.ctx
-
+    @override
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional[SqlStatement], Optional['Operator']]:
         from Hql.Compiler import BranchDescriptor
         from Hql.Operators import Operator, Join

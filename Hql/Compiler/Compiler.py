@@ -1,7 +1,9 @@
-from typing import Optional, Union, TYPE_CHECKING, Callable
+from typing import Optional, Union, TYPE_CHECKING, Callable, Sequence
+
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 import logging
+from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
@@ -33,11 +35,19 @@ class Compiler():
             op = op.get_op()
         return None, op
     
-    def add_ops(self, ops:list['BranchDescriptor']) -> Optional[list['Operator']]:
+    def add_ops(self, ops:Sequence[Union['Operator', 'BranchDescriptor']]) -> Optional[list['Operator']]:
+        from Hql.Operators import Operator
+
         for idx, op in enumerate(ops):
-            acc, rej = self.add_op(op)
+            _, rej = self.add_op(op)
             if rej:
-                return [rej] + [x.get_op() for x in ops[idx+1:]]
+                post = []
+                for i in ops[idx+1:]:
+                    if isinstance(i, Operator):
+                        post.append(i)
+                    else:
+                        post.append(i.get_op())
+                return [rej] + post
         return None
 
     def optimize(self, ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
@@ -57,6 +67,30 @@ class Compiler():
         logging.critical("Decompilation doesn't actually work right now, sorry")
         # return PipeExpression(pipes=self.ops).decompile(self.ctx)
         return ''
+
+    def add_time_bound(self, start:Union[datetime, timedelta], end:Union[datetime, timedelta, None]=None):
+        from Hql.Operators import Where
+        from Hql.Expressions import BetweenEquality, NamedReference, Datetime
+
+        if end == None:
+            end = datetime.now()
+
+        if isinstance(end, timedelta):
+            end = datetime.now() - end
+
+        if isinstance(start, timedelta):
+            start = datetime.now() - start
+
+        op = Where(
+            BetweenEquality(
+                NamedReference('_hqltimestamp'),
+                Datetime(start),
+                Datetime(end),
+                'between'
+            )
+        )
+
+        self.add_op(op)
 
     '''
     By default, all of these return themselves as they are being
@@ -201,6 +235,9 @@ class Compiler():
         return None, expr
 
     def Multivalue(self, expr:'Hql.Expressions.Multivalue', preprocess:bool=True) -> tuple[object, object]:
+        return None, expr
+
+    def Datetime(self, expr:'Hql.Expressions.Datetime', preprocess:bool=True) -> tuple[object, object]:
         return None, expr
     
     def NamedReference(self, expr:'Hql.Expressions.NamedReference', preprocess:bool=True) -> tuple[object, object]:

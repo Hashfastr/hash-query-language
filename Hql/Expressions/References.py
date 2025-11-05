@@ -87,7 +87,7 @@ class NamedReference(Expression):
         
         # If we're operating on something that support variables
         elif hasattr(receiver, 'get_variable'):
-            return receiver.get_variable(self.name)
+            return receiver.get_variable(self)
         
         # Not implemented, or bug
         else:

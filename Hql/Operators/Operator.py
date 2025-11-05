@@ -4,6 +4,7 @@ from Hql.Context import Context
 
 if TYPE_CHECKING:
     from Hql.Data import Data
+    from Hql.Expressions import NamedReference
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
@@ -75,8 +76,8 @@ class Operator():
     def has_method(self, name:str):
         return name in self.methods
 
-    def get_variable(self, name:str):
-        return self.variables[name]
+    def get_variable(self, name:NamedReference):
+        return self.variables[name.name]
 
     def can_integrate(self, type:str):
         return type in self.compatible

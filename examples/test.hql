@@ -1,3 +1,8 @@
-product('windows').category('process_creation')
-| take 10
-
+/**
+ * @title Update VM connections
+ * @schedule * * * * *
+ */
+database('splunk').index('sysmon')
+| where HostName == 'compromised'
+| project source_ip, dest_ip
+| project res = dfir_iris(kind=networkconn)

@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Union, Optional
 import polars as pl
+import datetime
 
 from .__proto__ import Expression
 from Hql.Types.Hql import HqlTypes as hqlt
@@ -7,7 +8,6 @@ from Hql.Types.Hql import HqlTypes as hqlt
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Data import Series
-    import datetime
 
 class Literal(Expression):
     def __init__(self, hql_type:hqlt.HqlType) -> None:
@@ -212,14 +212,17 @@ class Multivalue(Literal):
         return 'make_mv(' + ', '.join(dec) + ')'
 
 class Datetime(Literal):
-    def __init__(self, value:Union[StringLiteral, 'datetime.datetime']) -> None:
+    def __init__(self, value:Union[StringLiteral, datetime.datetime]) -> None:
         from dateutil import parser
         Literal.__init__(self, hqlt.datetime())
 
         if isinstance(value, StringLiteral):
-            self.value:'datetime.datetime' = parser.parse(value.value)
+            self.value:datetime.datetime = parser.parse(value.value)
         else:
             self.value = value
+
+    def render(self, time_format:str="%Y-%m-%dT%H:%M:%S.%f%z") -> str:
+        return self.value.strftime(time_format)
 
     def decompile(self, ctx: 'Context') -> str:
         inner = StringLiteral(self.value.isoformat())

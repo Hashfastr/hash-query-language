@@ -1,8 +1,10 @@
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Hac.Sources import Source, Product
 from Hql.Hac.Parser import Tag, Parser
+from Hql.Hac.Engine import HacEngine, Detection, Schedule
 import json
 from typing import Union
+from datetime import datetime, timedelta
 
 class Hac():
     '''
@@ -14,7 +16,7 @@ class Hac():
         from datetime import datetime
         import uuid
         self.id = str(uuid.uuid4())
-        self.schedule = default_schedule
+        self.schedule:str = default_schedule
 
         if not asm:
             asm = {
@@ -82,6 +84,10 @@ class Hac():
             return hd.decompile()
 
         raise hace.HacException(f'Unknown HaC render type {target}')
+
+    def get_timerange(self) -> tuple[datetime, datetime]:
+        delta = Schedule(self.schedule).delta()
+        return datetime.now() - delta, datetime.now()
     
     def get(self, name:str) -> Union[str, list[str]]:
         if name == 'src':

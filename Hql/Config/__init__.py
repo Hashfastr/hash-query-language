@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Union
+from typing import Optional, Union
 from pathlib import Path
 import oyaml as yaml
 from Hql.Exceptions import HqlExceptions as hqle

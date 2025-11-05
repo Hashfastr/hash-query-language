@@ -1,31 +1,34 @@
-from typing import Optional, Union, TYPE_CHECKING, Callable
+from typing import Optional, Sequence, Union, TYPE_CHECKING, Callable
+
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 import logging
-import csv
+import csv, json
 import io
 
-from .SplunkOps import SplunkOp, Spath
+from ..Compiler import Compiler
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
     from Hql.Operators import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
+    from Hql.Config import Config
     import Hql
 
-class SPLCompiler():
-    def __init__(self):
+class SPLCompiler(Compiler):
+    def __init__(self, time_format:str="%Y-%m-%dT%H:%M:%S.%f%z"):
         from Hql.Data import Data
         from Hql.Compiler import HqlCompiler
         from Hql.Config import Config
         self.type = self.__class__.__name__
         self.ctx = Context(Data())
-        self.ops:list[Union['Operator', SplunkOp]] = []
+        self.ops:list['Operator'] = []
         self.symbols = dict()
         self.post_ops:list['Operator'] = []
         self.vestigial_compiler = HqlCompiler(Config())
         self.top_level_expr:Optional[Expression] = None
+        self.time_format = time_format
 
         # self.reserved_names = {
         #     'index': 
@@ -54,18 +57,11 @@ class SPLCompiler():
         if isinstance(acc, list):
             self.ops += acc
         elif acc:
-            assert isinstance(acc, (Operator, SplunkOp))
+            assert isinstance(acc, Operator)
             self.ops.append(acc)
 
         assert isinstance(rej, (Operator, type(None)))
         return None, rej
-    
-    def add_ops(self, ops:list['BranchDescriptor']) -> Optional[list['Operator']]:
-        for idx, op in enumerate(ops):
-            _, rej = self.add_op(op)
-            if rej:
-                return [rej] + [x.get_op() for x in ops[idx+1:]]
-        return None
 
     def optimize(self, ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
         return ops
@@ -91,7 +87,7 @@ class SPLCompiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self, src:Union['Expression', 'Operator', 'Statement', 'SplunkOp', None], **kwargs) -> tuple[Optional[object], Optional[object]]:
+    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], preprocess:bool=True, **kwargs) -> tuple[Optional[object], Optional[object]]:
         from Hql.Expressions import Equality, NamedReference, Wildcard, StringLiteral
         from Hql.Operators import ProjectAway
         if src == None:
@@ -120,7 +116,7 @@ class SPLCompiler():
 
             return '\n'.join(ops), None
 
-        return self.from_name(src.type)(src, preprocess=kwargs.get('preprocess', True), where=kwargs.get('where', False))
+        return self.from_name(src.type)(src, preprocess=preprocess, where=kwargs.get('where', False))
 
     def decompile(self) -> str:
         from Hql.Expressions import PipeExpression
@@ -137,8 +133,8 @@ class SPLCompiler():
     Splunk ops
     '''
 
-    # def Spath(self, op:Spath, **kwargs) -> tuple[object, None]:
-    #     if kwargs.get('preprocess', True):
+    # def Spath(self, op:Spath, preprocess:bool=True, **kwargs) -> tuple[object, None]:
+    #     if preprocess:
     #         return op, None
     #
     #     return 
@@ -147,11 +143,11 @@ class SPLCompiler():
     Operators
     '''
 
-    def Where(self, op:'Hql.Operators.Where', **kwargs) -> tuple[object, object]:
+    def Where(self, op:'Hql.Operators.Where', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Operators import Where
         from Hql.Expressions import Expression, BinaryLogic
         
-        if kwargs.get('preprocess', True):
+        if preprocess:
             acc, rej = self.compile(op.expr)
             assert isinstance(acc, (Expression, type(None)))
             assert isinstance(rej, (Expression, type(None)))
@@ -178,10 +174,10 @@ class SPLCompiler():
         acc = f'| {spl_op} ' + pred
         return acc, None
 
-    def Project(self, op:'Hql.Operators.Project', **kwargs) -> tuple[object, object]:
+    def Project(self, op:'Hql.Operators.Project', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import NamedExpression, NamedReference
         from Hql.Operators import Extend, Project
-        if kwargs.get('preprocess', True):
+        if preprocess:
             extend = []
             project = []
             for i in op.exprs:
@@ -224,8 +220,8 @@ class SPLCompiler():
         acc = f'| fields ' + ', '.join(exprs)
         return acc, None
 
-    def ProjectAway(self, op:'Hql.Operators.ProjectAway', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def ProjectAway(self, op:'Hql.Operators.ProjectAway', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return op, None
 
         exprs = []
@@ -236,8 +232,8 @@ class SPLCompiler():
         acc = f'| fields - ' + ', '.join(exprs)
         return acc, None
 
-    def ProjectKeep(self, op:'Hql.Operators.ProjectKeep', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def ProjectKeep(self, op:'Hql.Operators.ProjectKeep', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return op, None
 
         exprs = []
@@ -248,8 +244,8 @@ class SPLCompiler():
         acc = f'| fields ' + ', '.join(exprs)
         return acc, None
 
-    def ProjectReorder(self, op:'Hql.Operators.ProjectReorder', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def ProjectReorder(self, op:'Hql.Operators.ProjectReorder', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return op, None
 
         exprs = []
@@ -261,9 +257,9 @@ class SPLCompiler():
         acc = f'| fields ' + ', '.join(exprs)
         return acc, None
 
-    def ProjectRename(self, op:'Hql.Operators.ProjectRename', **kwargs) -> tuple[object, object]:
+    def ProjectRename(self, op:'Hql.Operators.ProjectRename', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import NamedExpression
-        if kwargs.get('preprocess', True):
+        if preprocess:
             for i in op.exprs:
                 if not isinstance(i, NamedExpression):
                     return None, op
@@ -283,8 +279,8 @@ class SPLCompiler():
         acc = f'| rename ' + ', '.join(exprs)
         return acc, None
 
-    def Take(self, op:'Hql.Operators.Take', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def Take(self, op:'Hql.Operators.Take', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             if op.tables:
                 return None, op
             return op, None
@@ -295,8 +291,8 @@ class SPLCompiler():
 
         return acc, None
 
-    def Count(self, op:'Hql.Operators.Count', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def Count(self, op:'Hql.Operators.Count', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             if op.name:
                 return None, op
             return op, None
@@ -304,9 +300,9 @@ class SPLCompiler():
         ret = '| stats count by index'
         return ret, None
 
-    def Extend(self, op:'Hql.Operators.Extend', **kwargs) -> tuple[object, object]:
+    def Extend(self, op:'Hql.Operators.Extend', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Operators import Extend
-        if kwargs.get('preprocess', True):
+        if preprocess:
             exprs = []
             rejexprs = []
             for i in op.exprs:
@@ -330,9 +326,9 @@ class SPLCompiler():
         out = '| eval ' + exprs
         return out, None
 
-    def Range(self, op:'Hql.Operators.Range', **kwargs) -> tuple[object, object]:
+    def Range(self, op:'Hql.Operators.Range', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import Integer, Float, Datetime
-        if kwargs.get('preprocess', True):
+        if preprocess:
             return op, None
 
         acc, rej = self.compile(op.name, preprocess=False)
@@ -387,21 +383,21 @@ class SPLCompiler():
         
         return out, op
 
-    def Top(self, op:'Hql.Operators.Top', **kwargs) -> tuple[object, object]:
+    def Top(self, op:'Hql.Operators.Top', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, op
 
-    def Unnest(self, op:'Hql.Operators.Unnest', **kwargs) -> tuple[object, object]:
+    def Unnest(self, op:'Hql.Operators.Unnest', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, op
 
-    def Union(self, op:'Hql.Operators.Union', **kwargs) -> tuple[object, object]:
+    def Union(self, op:'Hql.Operators.Union', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, op
 
-    def Summarize(self, op:'Hql.Operators.Summarize', **kwargs) -> tuple[object, object]:
+    def Summarize(self, op:'Hql.Operators.Summarize', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, op
 
-    def Datatable(self, op:'Hql.Operators.Datatable', **kwargs) -> tuple[object, object]:
+    def Datatable(self, op:'Hql.Operators.Datatable', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import NamedReference, Literal
-        if kwargs.get('preprocess', True):
+        if preprocess:
             return op, None
 
         keys:list[str] = []
@@ -431,12 +427,12 @@ class SPLCompiler():
 
         return new, op
 
-    def Join(self, op:'Hql.Operators.Join', **kwargs) -> tuple[object, object]:
+    def Join(self, op:'Hql.Operators.Join', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, op
 
-    def MvExpand(self, op:'Hql.Operators.MvExpand', **kwargs) -> tuple[object, object]:
+    def MvExpand(self, op:'Hql.Operators.MvExpand', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Operators import MvExpand
-        if kwargs.get('preprocess', True):
+        if preprocess:
             supported = []
             failed = []
             for i in op.exprs:
@@ -470,8 +466,8 @@ class SPLCompiler():
         
         return out, None
 
-    def Sort(self, op:'Hql.Operators.Sort', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def Sort(self, op:'Hql.Operators.Sort', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             for i in op.exprs:
                 if i.nulls != 'last':
                     return None, op
@@ -488,7 +484,7 @@ class SPLCompiler():
         out = '| sort ' + exprs
         return out, None
 
-    def Rename(self, op:'Hql.Operators.Rename', **kwargs) -> tuple[object, object]:
+    def Rename(self, op:'Hql.Operators.Rename', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, op
 
     '''
@@ -498,32 +494,32 @@ class SPLCompiler():
     def Tabular(self, expr:'Hql.Expressions.Expression') -> tuple[Optional['InstructionSet'], Optional['Hql.Expressions.Expression']]:
         return None, expr
 
-    def PipeExpression(self, expr:'Hql.Expressions.PipeExpression', **kwargs) -> tuple[object, object]:
+    def PipeExpression(self, expr:'Hql.Expressions.PipeExpression', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def OpParameter(self, expr:'Hql.Expressions.OpParameter', **kwargs) -> tuple[object, object]:
+    def OpParameter(self, expr:'Hql.Expressions.OpParameter', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def ToClause(self, expr:'Hql.Expressions.ToClause', **kwargs) -> tuple[object, object]:
+    def ToClause(self, expr:'Hql.Expressions.ToClause', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression', **kwargs) -> tuple[object, object]:
+    def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return expr, None
 
-    def ByExpression(self, expr:'Hql.Expressions.ByExpression', **kwargs) -> tuple[object, object]:
+    def ByExpression(self, expr:'Hql.Expressions.ByExpression', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return expr, None
 
-    def Function(self, expr:'Hql.Functions.Function', **kwargs) -> tuple[object, object]:
+    def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         if expr.name in self.supported_functions:
             return expr, None
         return None, expr
 
-    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', **kwargs) -> tuple[object, object]:
+    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def Equality(self, expr:'Hql.Expressions.Equality', **kwargs) -> tuple[object, object]:
+    def Equality(self, expr:'Hql.Expressions.Equality', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import Equality, NamedReference, Path
-        if kwargs.get('preprocess', True):
+        if preprocess:
             lh, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
@@ -577,18 +573,52 @@ class SPLCompiler():
 
         return out, None
 
-    def Substring(self, expr:'Hql.Expressions.Substring', **kwargs) -> tuple[object, object]:
+    def Substring(self, expr:'Hql.Expressions.Substring', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def Relational(self, expr:'Hql.Expressions.Relational', **kwargs) -> tuple[object, object]:
-        return None, expr
+    def Relational(self, expr:'Hql.Expressions.Relational', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        from Hql.Expressions import Relational, NamedReference, Path, Expression
+        if preprocess:
+            lh, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            assert isinstance(lh, (NamedReference, Path))
+            
+            rh, rej = self.compile(expr.rh[0])
+            if rej:
+                return None, expr
+            assert isinstance(rh, Expression)
+            
+            return Relational(lh, expr.op, [rh]), None
 
-    def BetweenEquality(self, expr:'Hql.Expressions.BetweenEquality', **kwargs) -> tuple[object, object]:
-        return None, expr
+        lh, _ = self.compile(expr.lh, preprocess=False)
+        assert isinstance(lh, str)
+        
+        rh, _ = self.compile(expr.rh[0], preprocess=False)
+        assert isinstance(rh, str)
 
-    def BinaryLogic(self, expr:'Hql.Expressions.BinaryLogic', **kwargs) -> tuple[object, object]:
+        op = expr.op
+
+        return f'{lh} {op} {rh}', None
+
+    def BetweenEquality(self, expr:'Hql.Expressions.BetweenEquality', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        from Hql.Expressions import BinaryLogic, Relational
+
+        if preprocess:
+            return expr, None
+
+        new = BinaryLogic(
+            Relational(expr.lh, '>=', [expr.start]),
+            [Relational(expr.lh, '<=', [expr.end])],
+            'and'
+        )
+        acc, _ = self.compile(new, preprocess=False)
+
+        return acc, None
+
+    def BinaryLogic(self, expr:'Hql.Expressions.BinaryLogic', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import BinaryLogic
-        if kwargs.get('preprocess', True):
+        if preprocess:
             exprs = [expr.lh] + expr.rh
             accs = []
             rejs = []
@@ -625,8 +655,8 @@ class SPLCompiler():
 
         return out, None
 
-    def Not(self, expr:'Hql.Expressions.Not', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def Not(self, expr:'Hql.Expressions.Not', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             _, rej = self.compile(expr.expr)
             if rej:
                 return None, expr
@@ -636,13 +666,13 @@ class SPLCompiler():
         out = f'not {inner}'
         return out, None
 
-    def BasicRange(self, expr:'Hql.Expressions.BasicRange', **kwargs) -> tuple[object, object]:
+    def BasicRange(self, expr:'Hql.Expressions.BasicRange', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
-
-    def Regex(self, expr:'Hql.Expressions.Regex', **kwargs) -> tuple[object, object]:
+        
+    def Regex(self, expr:'Hql.Expressions.Regex', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import Expression, NamedReference, Path, StringLiteral, MultiString
 
-        if kwargs.get('preprocess', True):
+        if preprocess:
             if expr.g:
                 return None, expr
 
@@ -685,65 +715,78 @@ class SPLCompiler():
         out = f'match({lh}, {rh})'
         return out, None
 
-    def TypeExpression(self, expr:'Hql.Expressions.TypeExpression', **kwargs) -> tuple[object, object]:
+    def TypeExpression(self, expr:'Hql.Expressions.TypeExpression', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def StringLiteral(self, expr:'Hql.Expressions.StringLiteral', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def StringLiteral(self, expr:'Hql.Expressions.StringLiteral', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return expr, None
         return expr.quote('"'), None
     
-    def MultiString(self, expr:'Hql.Expressions.MultiString', **kwargs) -> tuple[object, object]:
+    def MultiString(self, expr:'Hql.Expressions.MultiString', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def Integer(self, expr:'Hql.Expressions.Integer', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def Integer(self, expr:'Hql.Expressions.Integer', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return expr, None
         return expr.value, None
 
-    def IP4(self, expr:'Hql.Expressions.IP4', **kwargs) -> tuple[object, object]:
+    def IP4(self, expr:'Hql.Expressions.IP4', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
 
-    def Float(self, expr:'Hql.Expressions.Float', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def Float(self, expr:'Hql.Expressions.Float', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return expr, None
         return str(expr.value), None
 
-    def Bool(self, expr:'Hql.Expressions.Bool', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def Bool(self, expr:'Hql.Expressions.Bool', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return expr, None
         ret = 'true' if expr.value else 'false'
         return ret, None
 
-    def Multivalue(self, expr:'Hql.Expressions.Multivalue', **kwargs) -> tuple[object, object]:
+    def Multivalue(self, expr:'Hql.Expressions.Multivalue', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
+
+    def Datetime(self, expr:'Hql.Expressions.Datetime', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        from Hql.Expressions import StringLiteral
+        if preprocess:
+            return expr, None
+        
+        acc = StringLiteral(expr.render(self.time_format), verbatim=True)
+        datelit, _ = self.compile(acc, preprocess=False)
+        acc = StringLiteral(self.time_format, verbatim=True)
+        time_format, _ = self.compile(acc, preprocess=False)
+
+        func = f'strptime({datelit}, {time_format})'
+        return func, None 
     
-    def NamedReference(self, expr:'Hql.Expressions.NamedReference', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def NamedReference(self, expr:'Hql.Expressions.NamedReference', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return expr, None
         return expr.name, None
 
-    def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', **kwargs) -> tuple[object, object]:
-        if kwargs.get('preprocess', True):
+    def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        if preprocess:
             return expr, None
         return f'{repr(expr.name)}', None
 
-    def Keyword(self, expr:'Hql.Expressions.Keyword', **kwargs) -> tuple[object, object]:
-        return self.NamedReference(expr, preprocess=kwargs.get('preprocess', True))
+    def Keyword(self, expr:'Hql.Expressions.Keyword', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        return self.NamedReference(expr, preprocess=preprocess)
 
-    def Identifier(self, expr:'Hql.Expressions.Identifier', **kwargs) -> tuple[object, object]:
-        return self.NamedReference(expr, preprocess=kwargs.get('preprocess', True))
+    def Identifier(self, expr:'Hql.Expressions.Identifier', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        return self.NamedReference(expr, preprocess=preprocess)
 
-    def Wildcard(self, expr:'Hql.Expressions.Wildcard', **kwargs) -> tuple[object, object]:
-        return self.NamedReference(expr, preprocess=kwargs.get('preprocess', True))
+    def Wildcard(self, expr:'Hql.Expressions.Wildcard', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        return self.NamedReference(expr, preprocess=preprocess)
 
-    def Path(self, expr:'Hql.Expressions.Path', **kwargs) -> tuple[object, object]:
+    def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import EscapedNamedReference, NamedReference
         from Hql.Expressions import StringLiteral, NamedExpression
         from Hql.Operators import ProjectRename
         import random
 
-        if kwargs.get('preprocess', True):
+        if preprocess:
 
             '''
             spath = False
@@ -779,5 +822,42 @@ class SPLCompiler():
         out = repr('.'.join(parts))
         return out, None
 
-    def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', **kwargs) -> tuple[object, object]:
-        return expr, None
+    def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True, **kwargs) -> tuple[object, object]:
+        from Hql.Expressions import NamedExpression, Expression
+
+        if preprocess:
+            good_paths = []
+            bad_paths = []
+            for i in expr.paths:
+                acc, rej = self.compile(i)
+                if rej:
+                    bad_paths.append(rej)
+                else:
+                    good_paths.append(acc)
+
+            value, rej = self.compile(expr.value)
+            assert isinstance(value, Expression)
+            if rej or not good_paths:
+                return None, expr
+    
+            good = NamedExpression(good_paths, value)
+            bad = None
+            if bad_paths:
+                bad = NamedExpression(bad_paths, value)
+
+            return good, bad
+
+        paths = []
+        for i in expr.paths:
+            acc, _ = self.compile(i, preprocess=False)
+            assert isinstance(acc, str)
+            paths.append(acc)
+
+        value, _ = self.compile(expr.value, preprocess=False)
+        assert isinstance(value, str)
+
+        exprs = []
+        for i in paths:
+            exprs.append(f'{i}={value}')
+
+        return ', '.join(exprs), None

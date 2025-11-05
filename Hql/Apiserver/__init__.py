@@ -14,7 +14,7 @@ from pathlib import Path
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Hac.Engine import HacEngine
+    from Hql.Hac import HacEngine
 
 class HqlRequest(BaseModel):
     hql: str
@@ -77,7 +77,7 @@ class Apiserver():
             return detections
         
         @self.app.get('/api/detections/{detection_id}')
-        def get_detections(detection_id:str):
+        def get_detection(detection_id:str):
             detection = self.hacengine.detections[detection_id]
             return detection.to_dict()
 
@@ -129,7 +129,7 @@ class Apiserver():
 
         @self.app.post('/api/hql/runs')
         def submit_hql_query(hql:HqlRequest):
-            from Hql.Hac.Engine import Detection
+            from Hql.Hac import Detection
             if not hql.run:
                 return {'id': ''}
 
@@ -138,7 +138,7 @@ class Apiserver():
             return {'id': rid}
 
         def reparse_hql(hql:HqlRequest):
-            from Hql.Hac.Engine import Detection
+            from Hql.Hac import Detection
 
             det = Detection(hql.hql, 'api', self.hacengine.config)
             deparsed = det.deparse()
@@ -148,7 +148,7 @@ class Apiserver():
             }
 
         def add_hac(hql:HqlRequest):
-            from Hql.Hac.Engine import Detection, Hac
+            from Hql.Hac import Detection, Hac
 
             det = Detection(hql.hql, 'api', self.hacengine.config)
             if not det.hac:
