@@ -5,6 +5,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context, register_database
 import polars as pl
 import sqlite3
+import logging
 from pathlib import Path
 
 if TYPE_CHECKING:
@@ -32,6 +33,8 @@ class SQLite(Database):
             'macro'
         ]
 
+        self.projected = False
+
     def add_index(self, index:str):
         from Hql.Expressions import NamedReference
         self.get_variable(NamedReference(index))
@@ -46,9 +49,13 @@ class SQLite(Database):
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Compiler import BranchDescriptor
+        from Hql.Operators import Project
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
+
+        if isinstance(op, Project):
+            self.projected = True
         
         # Sql compiler auto-updates itself
         _, rej = self.compiler.add_op(op)
@@ -83,11 +90,26 @@ class SQLite(Database):
 
     def eval(self, ctx:'Context', **kwargs) -> 'Data':
         from Hql.Data import Data, Table
+        from Hql.Operators import Take, Project
+        from Hql.Expressions import Integer, NamedReference
+        import copy
         self.ctx = ctx
         
-        query = self.compile()
+        # Make compiler check for joins
+        self.compiler.compile(None)
         with sqlite3.connect(self.path) as conn:
+            if not self.projected and not self.compiler.joins:
+                logging.warning(f'SELECT * with JOINs can cause issues, predicting output schema by taking one')
+                sample = copy.deepcopy(self)
+                sample.add_op(Take(Integer(1), []))
+                query = sample.compile()
+                cursor = conn.execute(query)
+                cols = [NamedReference(x[0]) for x in cursor.description]
+                self.add_op(Project('project', cols))
+
+            query = self.compile()
             df = pl.read_database(query, conn)
+            
         data = Data([Table(df=df, name=self.name)])
 
         return data

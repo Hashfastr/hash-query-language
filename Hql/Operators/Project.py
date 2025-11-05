@@ -4,6 +4,7 @@ from Hql.Context import register_op, Context
 from Hql.Operators import Operator
 import polars as pl
 import logging
+from typing import Sequence
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.
@@ -17,7 +18,7 @@ import logging
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 # @register_op('Project')
 class Project(Operator):
-    def __init__(self, optok:str, exprs:list[Expression]):
+    def __init__(self, optok:str, exprs:Sequence[Expression]):
         Operator.__init__(self)
         self.exprs = exprs
         self.optok = optok

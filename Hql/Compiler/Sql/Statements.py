@@ -120,6 +120,7 @@ class SELECT(SqlStatement):
             join = self.join.compile(compiler)
             for i in self.join.wheres:
                 self.add_where(i)
+            compiler.joins = True
 
         project = '*'
         if self.project:

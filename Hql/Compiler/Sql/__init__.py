@@ -33,6 +33,8 @@ class SqlCompiler():
         self.statement:SqlStatement = SELECT(Wildcard('*'))
         self.parent = parent
 
+        self.joins = False
+
     def from_name(self, name:str) -> Callable:
         if hasattr(self, name):
             return getattr(self, name)
@@ -72,9 +74,6 @@ class SqlCompiler():
         if src == None:
             compiled = self.statement.compile(self)
             compiled += ';'
-            print()
-            print(compiled)
-            print()
             return compiled, None
         return self.from_name(src.type)(src, preprocess=preprocess)
 

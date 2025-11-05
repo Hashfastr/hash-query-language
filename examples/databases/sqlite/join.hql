@@ -8,5 +8,6 @@ let Manu = database('nist-rds').index('MANUFACTURER_APPLICATION')
 Meta
 //| where md5 == 'aab634fa7c0eeee6ee64c138a5fdbc89'
 //| join Application on object_id
-| take 1
-| project md5
+| where file_name == "cmd.exe"
+| take 10
+//| project md5
