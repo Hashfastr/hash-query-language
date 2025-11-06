@@ -1,8 +1,5 @@
-/**
- * @title Update VM connections
- * @schedule * * * * *
- */
-database('splunk').index('sysmon')
-| where HostName == 'compromised'
-| project source_ip, dest_ip
-| project res = dfir_iris(kind=networkconn)
+database('tf11-elastic').index('so-beats-*')
+| extend EventCode = event.code
+//| project EventCode
+| where EventCode == 1
+| take 1

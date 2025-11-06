@@ -10,6 +10,7 @@ class Source():
     def __init__(self, ctx:Context) -> None:
         self.ctx = ctx
         self.products:list[Product] = []
+        self.conf:dict = self.ctx.config.conf['products']
 
     def assemble(self):
         from Hql.Compiler import InstructionSet
@@ -25,10 +26,12 @@ class Source():
 
     def product(self, pattern:str):
         from fnmatch import fnmatch
-        for i in self.ctx.config.conf['products']:
+        for i in self.conf:
             if not fnmatch(i, pattern):
                 continue
-            self.products.append(Product(i, self.ctx))
+            
+            for j in self.conf[i]['upstream']:
+                self.products.append(Product(i, j, self.ctx))
         return self
 
     def service(self, pattern:str):
@@ -109,10 +112,10 @@ class HaCStatement():
             raise hqle.ConfigException('Attempting to add empty pipes to empty query with HaC')
 
 class Product():
-    def __init__(self, name:str, ctx:Context) -> None:
+    def __init__(self, name:str, conf:dict, ctx:Context) -> None:
         self.name = name
         self.ctx = ctx
-        self.conf = ctx.config.get_product(name)
+        self.conf = conf
         self.services = self.conf.get('services', dict())
         self.set_services = False
         self.categories = self.conf.get('categories', dict())
@@ -174,19 +177,21 @@ class Product():
         self.splits.add_level()
 
         # Assume using all services
-        if not self.selection['services']:
+        if not self.selection['services'] and not self.selection['categories']:
             if self.set_services:
                 return InstructionSet([])
             self.service('*')
 
         for i in self.selection['services']:
             self.integrate(i)
-        self.splits.add_level()
+
+        if self.selection['services']:
+            self.splits.add_level()
         
-        if not self.selection['categories']:
-            if self.set_categories:
-                return InstructionSet([])
-            self.category('*')
+        # if self.selection['categories']:
+        #     if self.set_categories:
+        #         return InstructionSet([])
+        #     self.category('*')
 
         for i in self.selection['categories']:
             self.integrate(i)

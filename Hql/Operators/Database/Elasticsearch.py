@@ -62,8 +62,10 @@ class Elasticsearch(Database):
 
         if conf.get('compiler', 'lucene') == 'lucene':
             self.compiler = LuceneCompiler()
+            self.compiler_type = 'Lucene'
         elif conf['compiler'] == 'dsl':
             self.compiler = QueryDSLCompiler()
+            self.compiler_type = 'DSL'
         else:
             raise hqle.ConfigException(f'Invalid compiler type {conf["compiler"]} for Elasticsearch')
 
@@ -188,7 +190,7 @@ class Elasticsearch(Database):
         from elasticsearch.helpers import scan
         logging.debug("Starting initial query")
 
-        logging.debug(f"{self.type} query, using the following Lucene:")
+        logging.debug(f"{self.type} query, using the following {self.compiler_type}:")
         logging.debug(self.query)
         logging.debug(f'Index pattern: {self.pattern}')
         logging.debug(f'Limit: {self.limit}')

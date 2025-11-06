@@ -318,7 +318,7 @@ class HqlCompiler(Compiler):
         # Should use this to do allow for more more error checking here
         if type(upstream.op) == Project:
             for i in integrating.references:
-                if i not in upstream.mapping and i not in self.ctx.symbol_table:
+                if i not in upstream.mapping and i not in upstream.symmetric and i not in self.ctx.symbol_table:
                     return 2, integrating
 
         elif type(upstream.op) in (Extend, ProjectRename):
@@ -355,6 +355,7 @@ class HqlCompiler(Compiler):
             acc, _ = self.compile(i)
             if isinstance(acc.get_expr(), NamedReference):
                 desc.provides.append(acc.get_expr())
+                desc.symmetric.append(acc.get_expr())
             desc.merge(acc)
             exprs.append(acc.get_expr())
 

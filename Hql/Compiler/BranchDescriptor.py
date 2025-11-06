@@ -35,6 +35,7 @@ class BranchDescriptor():
         self.removes:list = []
         self.full_schema = False
         self.mapping:dict[Union['NamedReference', 'Path'], Union['NamedReference', 'Path']] = dict()
+        self.symmetric:list = []
 
     def set_attr(self, name:str, value:object=True):
         self.attrs[name] = value

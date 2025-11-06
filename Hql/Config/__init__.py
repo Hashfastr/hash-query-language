@@ -112,9 +112,15 @@ class Config():
         if not config.get('configured', True):
             return
 
-        for i in ['name', 'hql']:
-            if i not in config:
-                raise hqle.ConfigException(f'Product config {src} missing required key {i}')
+        if 'name' not in config:
+            raise hqle.ConfigException(f'Product config {src} missing required key name')
+
+        if 'hql' not in config and 'upstream' not in config:
+            raise hqle.ConfigException(f'Product config {src} missing required key hql or upstream')
+
+        if 'hql' in config:
+            config['upstream'] = [config.pop('hql')]
+
         name = config['name']
 
         if name in self.conf['products']:
