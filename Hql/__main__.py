@@ -1,5 +1,4 @@
-import sys    
-
+import sys
 from Hql.Config import Config
 from Hql.Data import Data
 from Hql.Threading import QueryPool
@@ -77,6 +76,7 @@ def main():
             engine = HacEngine(Path(args.directory), True, Path(conf_path))
         else:
             engine = HacEngine(Path(args.file), False, Path(conf_path))
+
         engine.run()
         return
     

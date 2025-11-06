@@ -174,7 +174,7 @@ class Substring(Comparator):
         self.term = 'has' in op
 
         # only affects *_all, *_any right now
-        self.logic_and = True if 'all' in op else False
+        self.logic_and = False if 'any' in op else True
         
         self.neq = op[0] == '!'
         self.cs = op.endswith('_cs')
