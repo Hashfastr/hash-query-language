@@ -130,6 +130,10 @@ class QueryDSLCompiler(Compiler):
                 ret = {
                     'should': exprs
                 }
+                
+            ret = {
+                'bool': ret
+            }
 
         return ret, None
 
@@ -144,7 +148,18 @@ class QueryDSLCompiler(Compiler):
             return Not(acc), None
 
         inner, rej = self.compile(expr.expr, preprocess=False)
-        return {'must_not': inner}, None
+
+        if isinstance(inner, dict):
+            if 'must' in inner and len(inner) == 1:
+                out = {'must_not': inner.pop('must')}
+            else:
+                out = {'must_not': inner}
+        else:
+            out = {'must_not': inner}
+
+        out = {'bool': out}
+
+        return out, None
 
     def Equality(self, expr: 'Hql.Expressions.Equality', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Equality, Expression, Not
@@ -405,7 +420,7 @@ class QueryDSLCompiler(Compiler):
             }
         }
         if expr.negate:
-            ret = {'must_not': ret}
+            ret = {'bool': {'must_not': ret}}
 
         return ret, None
 
@@ -553,5 +568,10 @@ class QueryDSLCompiler(Compiler):
                 ret = {
                     'must_not': ret
                 }
+
+        if len(exprs) > 1:
+            ret = {
+                'bool': ret
+            }
 
         return ret, None

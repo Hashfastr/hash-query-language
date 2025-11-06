@@ -191,7 +191,7 @@ class Elasticsearch(Database):
         logging.debug("Starting initial query")
 
         logging.debug(f"{self.type} query, using the following {self.compiler_type}:")
-        logging.debug(self.query)
+        logging.debug(json.dumps(self.query))
         logging.debug(f'Index pattern: {self.pattern}')
         logging.debug(f'Limit: {self.limit}')
         
