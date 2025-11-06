@@ -32,12 +32,12 @@ class Tag():
 
 class Parser():
     @staticmethod
-    def parse_file(filename:str) -> 'Hac':
+    def parse_file(filename:str) -> Optional['Hac']:
         with open(filename, mode='r') as f:
             return Parser.parse_text(f.read(), src=filename)
 
     @staticmethod   
-    def parse_text(text:str, src:str='') -> 'Hac':
+    def parse_text(text:str, src:str='') -> Optional['Hac']:
         from Hql.Hac import Hac
         tags:list[Tag] = []
         comment = Parser.get_comment(text).split('\n')
@@ -87,7 +87,10 @@ class Parser():
         for tag in tags:
             asm[tag.name] = tag.get_val()
 
-        return Hac(asm, src)
+        if not asm:
+            return None
+        else:
+            return Hac(asm, src)
 
     @staticmethod
     def get_comment(text:str) -> str:
