@@ -112,8 +112,8 @@ class HacNamedReference(NamedReference):
 
 class Path(Expression):
     def __init__(self, path:Sequence[Union[NamedReference, Path]]):
-        if not isinstance(self, Path):
-            return
+        # if not isinstance(self, Path):
+        #     return
 
         new = []
         for i in path:
@@ -132,6 +132,9 @@ class Path(Expression):
         if len(path) == 1:
             return path[0]
         return super().__new__(cls)
+
+    def __reduce__(self):
+        return (self.__class__, (self.path,))
 
     def __iter__(self):
         return iter(self.path)

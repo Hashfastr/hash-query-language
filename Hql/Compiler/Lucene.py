@@ -233,6 +233,15 @@ class LuceneCompiler(Compiler):
         val = 'True' if expr.value else 'False'
         return val, None
 
+    def Datetime(self, expr: 'Hql.Expressions.Datetime', preprocess: bool = True) -> tuple[object, object]:
+        import datetime
+
+        if preprocess:
+            return expr, None
+
+        dt = expr.value.astimezone(datetime.timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ"), None
+
     def Multivalue(self, expr: 'Hql.Expressions.Multivalue', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Multivalue
 

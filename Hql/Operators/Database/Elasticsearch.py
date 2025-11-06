@@ -77,18 +77,45 @@ class Elasticsearch(Database):
         )
 
     def to_dict(self):
-        self.query = self.compile()
+        self.query, ops = self.compile()
         
         return {
             'id': self.id,
             'type': self.type,
             'index': self.pattern,
             'limit': self.limit,
-            'query': self.query
+            'query': self.query,
+            'ops': [x.to_dict() for x in ops]
         }
 
-    def compile(self) -> dict:
-        query, rej = self.compiler.compile(None)
+    def compile(self) -> tuple[dict, list['Operator']]:
+        from Hql.Compiler import HqlCompiler
+        from Hql.Config import Config
+        from Hql.Operators import Where
+        import copy
+
+        compiler = copy.deepcopy(self.compiler)
+
+        # Add preamble and recompile
+        ops = []
+        if self.preamble:
+            new_ops = self.preamble.pipes
+            if compiler.expr:
+                new_ops.append(Where(compiler.expr))
+
+            vestigial = HqlCompiler(Config())
+            desc = vestigial.optimize(new_ops)
+
+            ops = []
+            for i in desc:
+                ops.append(i.get_op())
+
+            compiler.expr = None
+            ops = compiler.add_ops(ops)
+            if ops == None:
+                ops = []
+
+        query, _ = compiler.compile(None)
         assert isinstance(query, (dict, str))
 
         if isinstance(query, str):
@@ -104,7 +131,7 @@ class Elasticsearch(Database):
                 "query": query
             }
 
-        return query
+        return query, ops
             
     def get_variable(self, name:NamedReference):
         self.pattern = name.name
@@ -146,8 +173,13 @@ class Elasticsearch(Database):
 
     def eval(self, ctx:Context, **kwargs):
         try:
-            self.query = self.compile()
-            return self.make_query()
+            self.query, ops = self.compile()
+            data = self.make_query()
+            # Run extra ops from prepend
+            for op in ops:
+                ctx.data = data
+                data = op.eval(ctx)
+            return data
         except ESAuthExcept:
             user = self.config.get('ELASTIC_USER', 'elastic')
             raise hqle.ConfigException(f'Elasticsearch authentication with user {user} failed') from None
