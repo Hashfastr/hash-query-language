@@ -3,7 +3,7 @@ from Hql.Hac.Sources import Source, Product
 from Hql.Hac.Parser import Tag, Parser
 from Hql.Hac.Engine import HacEngine, Detection, Schedule
 import json
-from typing import Union
+from typing import Optional, Union
 from datetime import datetime, timedelta
 
 class Hac():
@@ -12,11 +12,12 @@ class Hac():
     src is a string identifier of the origin of the HaC, e.g. a filename
     default_schedule is if there is an undefined schedule, safe defaults to hourly
     '''
-    def __init__(self, asm:dict, src:str, default_schedule:str='0 * * * *', username:str='Username') -> None:
+    def __init__(self, asm:dict, src:str, default_schedule:str='0 * * * *', username:str='Username', start:Optional[datetime]=None) -> None:
         from datetime import datetime
         import uuid
         self.id = str(uuid.uuid4())
         self.schedule:str = default_schedule
+        self.start = start if start else datetime.now()
 
         if not asm:
             asm = {
@@ -87,7 +88,7 @@ class Hac():
 
     def get_timerange(self) -> tuple[datetime, datetime]:
         delta = Schedule(self.schedule).delta()
-        return datetime.now() - delta, datetime.now()
+        return self.start - delta, self.start
     
     def get(self, name:str) -> Union[str, list[str]]:
         if name == 'src':

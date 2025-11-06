@@ -226,10 +226,11 @@ class Detection():
         
         return deparse
 
-    def compile(self) -> 'HqlCompiler':
+    def compile(self, query_time:Optional[datetime.datetime]=None) -> 'HqlCompiler':
         from Hql.Parser import Parser
         from Hql.Query import Query
         from Hql.Compiler import HqlCompiler
+        import copy
 
         logging.debug(f'Compiling {self.src}')
 
@@ -241,7 +242,13 @@ class Detection():
         if not isinstance(self.parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
 
-        comp = HqlCompiler(self.config, query=self.parser.assembly, hac=self.hac)
+        if self.hac and query_time:
+            hac = copy.deepcopy(self.hac)
+            hac.start = query_time
+        else:
+            hac = self.hac
+
+        comp = HqlCompiler(self.config, query=self.parser.assembly, hac=hac)
         return comp
 
     def should_fire(self, time_parts:tuple[int, int, int, int, int]):
@@ -255,12 +262,17 @@ class Detection():
             self.run_history = self.run_history[diff:]
         self.run_history.append(run)
 
-    def run(self) -> 'Data':
-        if not self.compiler:
+    def run(self, query_time:Optional[datetime.datetime]=None) -> 'Data':
+        if query_time:
+            compiler = self.compile(query_time)
+        else:
+            compiler = self.compiler
+
+        if not compiler:
             raise Exception('Attempting to run detection without instructions!')
         
         start = time.perf_counter()
-        ctx = self.compiler.run()
+        ctx = compiler.run()
         end = time.perf_counter()
 
         run = {
