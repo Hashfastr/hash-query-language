@@ -131,8 +131,8 @@ class scot4(Function):
         tags = hac.get('tags')
         assert isinstance(tags, list)
 
-        if not data:
-            logging.debug('scot4 given empty alertgroup, skipping')
+        if not data or len(data) == 0:
+            logging.debug('Scot4 given empty alertgroup, skipping')
             return []
 
         out = []

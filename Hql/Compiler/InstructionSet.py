@@ -70,13 +70,51 @@ class InstructionSet():
         }
 
     def add_op(self, op:Union['BranchDescriptor', 'Operator']) -> tuple[Union['Operator', None], Union['Operator', None]]:
-        from Hql.Compiler import BranchDescriptor
+        from Hql.Compiler import BranchDescriptor, HqlCompiler
+        from Hql.Config import Config
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
         self.ops.append(op)
-        
+
+        # comp = HqlCompiler(Config())
+        # ops = []
+        # for i in self.ops:
+        #     acc, _ = comp.compile(i)
+        #     ops.append(acc)
+        # ops = comp.optimize(ops)
+        #
+        # self.ops = [x.get_op() for x in ops]
+
         return None, None
+
+    def flatten(self) -> InstructionSet:
+        new = []
+        for i in self.upstream:
+            if isinstance(i, InstructionSet):
+                print(i)
+                new.append(i.flatten())
+            else:
+                new.append(i)
+
+        if len(new) == 1 and isinstance(new[0], InstructionSet):
+            new[0].ops += self.ops
+            return new[0]
+
+        elif len(new) == 1:
+            ops = []
+            for idx, i in enumerate(self.ops):
+                acc, rej = new[0].add_op(i)
+                if rej:
+                    ops = self.ops[idx:]
+                    break
+            self.ops = ops
+            self.upstream = new
+
+        else:
+            self.upstream = new
+
+        return self
 
     def recompile(self, config:'Config') -> 'InstructionSet':
         from Hql.Compiler import HqlCompiler

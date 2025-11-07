@@ -159,7 +159,7 @@ class Elasticsearch(Database):
 
             return op, None
 
-        acc, rej = self.compiler.compile(op)
+        acc, rej = self.compiler.add_op(op)
         assert isinstance(acc, (Operator, type(None)))
         assert isinstance(rej, (Operator, type(None)))
         return acc, rej

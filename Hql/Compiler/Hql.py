@@ -241,6 +241,10 @@ class HqlCompiler(Compiler):
         if isinstance(comp, list):
             comp = InstructionSet(comp)
 
+        if len(comp.upstream) == 1 and isinstance(comp.upstream[0], InstructionSet):
+            comp.upstream[0].ops += comp.ops
+            comp = comp.upstream[0]
+
         return comp
 
     def optimize(self, ops: Sequence[Union['Hql.Operators.Operator', BranchDescriptor]]) -> list[BranchDescriptor]:

@@ -921,10 +921,14 @@ class SPLCompiler(Compiler):
                 else:
                     good_paths.append(acc)
 
-            value, rej = self.compile(expr.value)
-            assert isinstance(value, (Expression, Function))
-            if rej or not good_paths:
-                return None, expr
+            if isinstance(expr.value, Function):
+                if expr.value.name not in self.supported_functions:
+                    return None, expr
+            else:
+                value, rej = self.compile(expr.value)
+                assert isinstance(value, Expression)
+                if rej or not good_paths:
+                    return None, expr
     
             good = NamedExpression(good_paths, value)
             bad = None

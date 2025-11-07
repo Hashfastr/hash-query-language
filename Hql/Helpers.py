@@ -97,6 +97,10 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     
     compiler = HqlCompiler(conf, parser.assembly, hac=hac)
     
+    # second pass
+    # assert compiler.root
+    # compiler.root = compiler.root.recompile(conf)
+    
     end = time.perf_counter()
     logging.debug("Done.")
     
