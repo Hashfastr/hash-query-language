@@ -55,9 +55,14 @@ class SigmaParser():
         prepipe = self.gen_src(src)
         pipe = self.parse_dac(dac)
         expr = PipeExpression([pipe], prepipe=prepipe)
-        
-        if 'posthql' in self.loaded['detection']:
+
+        posthql_src = ''
+        if 'posthql' not in self.loaded['detection'] and 'default' in self.config.conf['sigma']['posthql']:
+            posthql_src = self.config.get_posthql('default')['hql']
+        elif 'posthql' in self.loaded['detection']:
             posthql_src = self.config.get_posthql(self.loaded['detection']['posthql'])['hql']
+
+        if posthql_src:
             parser = HqlParser(posthql_src, 'SigmaConfig')
             parser.assemble(target='emptyPipedExpression')
             asm = parser.assembly

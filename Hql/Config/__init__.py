@@ -141,7 +141,12 @@ class Config():
 
     def load_sigma(self, src:str, config:dict):
         posthql = config.get('posthql', dict())
+        default = ''
         for i in posthql:
+            if i == 'default':
+                default = posthql[i]
+                continue
+
             if 'hql' not in posthql[i]:
                 raise hqle.ConfigException(f'Missing sigma posthql field hql in {src}')
             
@@ -149,6 +154,11 @@ class Config():
                 raise hqle.ConfigException(f'Duplicate definition of sigma posthql {i} in {src}')
 
             self.conf['sigma']['posthql'][i] = posthql[i]
+
+        if default:
+            if default not in self.conf['sigma']['posthql']:
+                raise hqle.ConfigException(f'Default sigma posthql identifier {default} points to nowhere')
+            self.conf['sigma']['posthql']['default'] = self.conf['sigma']['posthql'][default]
 
     def get_function(self, name:str) -> dict:
         if name in self.conf['functions']:
