@@ -204,8 +204,8 @@ class HacPool():
             })
         return runs
 
-    def add_detection(self, detection:'Detection') -> str:
-        t = HacThread(detection)
+    def add_detection(self, detection:'Detection', query_now:Optional[datetime.datetime]=None) -> str:
+        t = HacThread(detection, query_now=query_now)
         if self.auto_run and self.semaphore.acquire(blocking=False):
             logging.debug(f'{t.id} started execution')
             t.start()
@@ -249,10 +249,11 @@ class HacPool():
         return completed
 
 class HacThread():
-    def __init__(self, detection:'Detection') -> None:
+    def __init__(self, detection:'Detection', query_now:Optional[datetime.datetime]=None) -> None:
         from Hql.Helpers import can_thread
         self.threaded = can_thread()
 
+        self.query_now = query_now if query_now else datetime.datetime.now()
         self.detection = detection
 
         self.started = False

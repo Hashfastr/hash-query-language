@@ -4,6 +4,9 @@ export interface HqlRequest {
   run: boolean;
   save: boolean;
   plan: boolean;
+  start?: string; // ISO 8601 datetime string
+  end?: string; // ISO 8601 datetime string
+  retro?: boolean;
 }
 
 export interface HqlRunResponse {
@@ -57,6 +60,10 @@ export interface HacInitResponse {
 
 export interface SigmaConvertResponse {
   hql: string;
+}
+
+export interface RetroHuntResponse {
+  ids: string[];
 }
 
 // UI State Types

@@ -2,12 +2,10 @@ import { useState, useRef } from 'react';
 import { useTheme } from './hooks/useTheme';
 import { ThemeToggle } from './components/ThemeToggle';
 import { TabManager } from './components/TabManager';
-import { SchemaExplorer } from './components/SchemaExplorer';
 import { DetectionsSidebar, type DetectionsSidebarHandle } from './components/DetectionsSidebar';
 
 function App() {
   const { theme } = useTheme();
-  const [showSchema, setShowSchema] = useState(true);
   const [showDetections, setShowDetections] = useState(true);
   const tabManagerRef = useRef<{ loadDetectionIntoActiveTab: (query: string) => void }>(null);
   const detectionsSidebarRef = useRef<DetectionsSidebarHandle>(null);
@@ -19,12 +17,6 @@ function App() {
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold">HQL Interface</h1>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowSchema(!showSchema)}
-              className={`text-sm btn px-3 py-1 ${showSchema ? 'btn-primary' : ''}`}
-            >
-              Schema
-            </button>
             <button
               onClick={() => setShowDetections(!showDetections)}
               className={`text-sm btn px-3 py-1 ${showDetections ? 'btn-primary' : ''}`}
@@ -38,9 +30,6 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Schema */}
-        {showSchema && <SchemaExplorer />}
-
         {/* Center - Tabs with Editor and Results */}
         <div className="flex-1 overflow-hidden">
           <TabManager

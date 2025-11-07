@@ -12,6 +12,7 @@ import json
 from pydantic import BaseModel
 from pathlib import Path
 import logging
+from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
     from Hql.Hac import HacEngine
@@ -21,7 +22,9 @@ class HqlRequest(BaseModel):
     run: bool = True
     save: bool = False
     plan: bool = False
-
+    start:datetime = datetime.now() - timedelta(hours=1)
+    end:datetime = datetime.now()
+    retro: bool = False
 
 class Apiserver():
     def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8081):
@@ -100,6 +103,27 @@ class Apiserver():
                 return {'id': detection.id}
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f'Failed to save detection: {str(e)}')
+
+        @self.app.post('/api/detections/retro')
+        def retro_hunt(hql:HqlRequest):
+            from Hql.Hac import Detection
+
+            det = Detection(hql.hql, 'api', self.hacengine.config, no_hac=True)
+            if not det.hac or not det.schedule:
+                return {'id': ''}
+
+            start:datetime = hql.start
+            end:datetime = hql.end
+            delta = det.schedule.delta()
+
+            ids = []
+            while start < end:
+                rid = self.hacengine.run_detection(det, query_now=start + delta)
+                ids.append(rid)
+                start += delta
+                det = Detection(hql.hql, 'api', self.hacengine.config, no_hac=True)
+
+            return {'ids': ids}
 
         @self.app.get('/api/schema')
         def get_schema():

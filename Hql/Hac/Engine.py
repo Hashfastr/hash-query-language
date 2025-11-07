@@ -154,6 +154,7 @@ class Detection():
         self.schedule:Optional[Schedule] = None
         self.id = ''
         self.sigma = False
+        self.no_hac = no_hac
         
         self.hac, self.parser = self.gen_hac()
         
@@ -164,10 +165,7 @@ class Detection():
         if self.hac:
             self.id = self.hac.id
             self.compiler = self.compile()
-
-            # Just don't schedule if not a hac run
-            if not no_hac:
-                self.schedule = Schedule(self.hac.schedule)
+            self.schedule = Schedule(self.hac.schedule)
 
         elif no_hac:
             self.id = str(uuid.uuid4())
@@ -226,7 +224,7 @@ class Detection():
         
         return deparse
 
-    def compile(self, query_time:Optional[datetime.datetime]=None) -> 'HqlCompiler':
+    def compile(self, query_now:Optional[datetime.datetime]=None) -> 'HqlCompiler':
         from Hql.Parser import Parser
         from Hql.Query import Query
         from Hql.Compiler import HqlCompiler
@@ -242,9 +240,9 @@ class Detection():
         if not isinstance(self.parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
 
-        if self.hac and query_time:
+        if self.hac and query_now:
             hac = copy.deepcopy(self.hac)
-            hac.start = query_time
+            hac.set_query_now(query_now)
         else:
             hac = self.hac
 
@@ -252,7 +250,7 @@ class Detection():
         return comp
 
     def should_fire(self, time_parts:tuple[int, int, int, int, int]):
-        if not self.schedule:
+        if self.no_hac or not self.schedule:
             return False
         return self.schedule.should_fire(time_parts)
 
@@ -395,8 +393,8 @@ class HacEngine():
         runs += self.pool.get_runs()
         return runs
 
-    def run_detection(self, detection:Detection):
-        return self.pool.add_detection(detection)
+    def run_detection(self, detection:Detection, query_now:Optional[datetime.datetime]=None):
+        return self.pool.add_detection(detection, query_now=query_now)
 
     def run(self):
         logging.info(f'Starting HaC engine with {len(self.detections)} detections')

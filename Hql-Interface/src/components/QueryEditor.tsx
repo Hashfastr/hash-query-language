@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { api, ApiError } from '../services/api';
 import type { QueryResult } from '../types';
+import { RetroHuntModal } from './RetroHuntModal';
 
 interface QueryEditorProps {
   query?: string;
@@ -16,6 +17,7 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
   const [isExecuting, setIsExecuting] = useState(false);
   const [isInitializingHac, setIsInitializingHac] = useState(false);
   const [isConvertingSigma, setIsConvertingSigma] = useState(false);
+  const [showRetroModal, setShowRetroModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Use external query if provided, otherwise use internal state
@@ -265,6 +267,12 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
             {isConvertingSigma ? 'Converting...' : 'Convert Sigma'}
           </button>
           <button
+            onClick={() => setShowRetroModal(true)}
+            className="bg-gruvbox-light-purple hover:opacity-90 text-gruvbox-light-bg dark:bg-gruvbox-dark-purple dark:text-gruvbox-dark-bg font-medium py-2 px-4 rounded transition-opacity"
+          >
+            Retro Hunt
+          </button>
+          <button
             onClick={() => {
               handleQueryChange('');
               onResultsChange(null);
@@ -300,6 +308,12 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
           }}
         />
       </div>
+
+      <RetroHuntModal
+        query={query}
+        isOpen={showRetroModal}
+        onClose={() => setShowRetroModal(false)}
+      />
     </div>
   );
 }

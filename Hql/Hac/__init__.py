@@ -12,12 +12,12 @@ class Hac():
     src is a string identifier of the origin of the HaC, e.g. a filename
     default_schedule is if there is an undefined schedule, safe defaults to hourly
     '''
-    def __init__(self, asm:dict, src:str, default_schedule:str='0 * * * *', username:str='Username', start:Optional[datetime]=None) -> None:
+    def __init__(self, asm:dict, src:str, default_schedule:str='0 * * * *', username:str='Username', start:Optional[datetime]=None, end:Optional[datetime]=None) -> None:
         from datetime import datetime
         import uuid
         self.id = str(uuid.uuid4())
         self.schedule:str = default_schedule
-        self.start = start if start else datetime.now()
+        self.set_query_now(datetime.now())
 
         if not asm:
             asm = {
@@ -86,9 +86,15 @@ class Hac():
 
         raise hace.HacException(f'Unknown HaC render type {target}')
 
+    def set_query_now(self, query_now:datetime):
+        self.end = query_now
+        self.start = query_now - self.get_delta()
+
+    def get_delta(self):
+        return Schedule(self.schedule).delta()
+
     def get_timerange(self) -> tuple[datetime, datetime]:
-        delta = Schedule(self.schedule).delta()
-        return self.start - delta, self.start
+        return self.start, self.end
     
     def get(self, name:str) -> Union[str, list[str]]:
         if name == 'src':

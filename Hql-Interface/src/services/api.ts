@@ -6,6 +6,7 @@ import type {
   SchemaField,
   HacInitResponse,
   SigmaConvertResponse,
+  RetroHuntResponse,
 } from '../types';
 
 const API_BASE = '/api';
@@ -116,6 +117,23 @@ export const api = {
       plan: false,
     };
     return fetchApi<SigmaConvertResponse>('/sigma/convert', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // Retro hunt with date range
+  retroHunt: async (hql: string, start: Date, end: Date): Promise<RetroHuntResponse> => {
+    const request: HqlRequest = {
+      hql,
+      run: false,
+      save: false,
+      plan: false,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      retro: true,
+    };
+    return fetchApi<RetroHuntResponse>('/detections/retro', {
       method: 'POST',
       body: JSON.stringify(request),
     });
