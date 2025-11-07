@@ -51,6 +51,14 @@ export interface QueryResult {
   rowCount: number;
 }
 
+export interface HacInitResponse {
+  hql: string;
+}
+
+export interface SigmaConvertResponse {
+  hql: string;
+}
+
 // UI State Types
 export type Theme = 'light' | 'dark';
 

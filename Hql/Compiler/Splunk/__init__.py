@@ -574,7 +574,70 @@ class SPLCompiler(Compiler):
         return out, None
 
     def Substring(self, expr:'Hql.Expressions.Substring', preprocess:bool=True, **kwargs) -> tuple[object, object]:
-        return None, expr
+        from Hql.Expressions import Substring, NamedReference, Path, Expression, StringLiteral
+
+        if preprocess:
+            lh, rej = self.compile(expr.lh)
+            if rej:
+                return None, expr
+            assert isinstance(lh, (NamedReference, Path))
+           
+            rh = []
+            for i in expr.rh:
+                acc, rej = self.compile(i)
+                if rej:
+                    return None, expr
+                assert isinstance(acc, Expression)
+                rh.append(acc)
+            
+            return Substring(lh, expr.op, rh), None
+
+        lh, _ = self.compile(expr.lh, preprocess=False)
+        assert isinstance(lh, str)
+
+        where = kwargs.get('where', False)
+
+        if where:
+            pairs = []
+            for i in expr.rh:
+                if expr.startswith:
+                    value = '^' + i.quote('')
+                elif expr.endswith:
+                    value = i.quote('') + '$'
+                else:
+                    value = i.quote('')
+
+                new = StringLiteral(value, verbatim=True)
+                acc, _ = self.compile(new, preprocess=False)
+                assert isinstance(acc, str)
+                pairs.append(f'match({lh}, {acc})')
+
+            if expr.logic_and:
+                out = ' AND '.join(pairs)
+            else:
+                out = ' OR '.join(pairs)
+
+        else:
+            pairs = []
+            for i in expr.rh:
+                if expr.startswith:
+                    value = i.quote('') + '*'
+                elif expr.endswith:
+                    value = '*' + i.quote('')
+                else:
+                    value = '*' + i.quote('') + '*'
+
+                new = StringLiteral(value, verbatim=True)
+                acc, _ = self.compile(new, preprocess=False)
+                assert isinstance(acc, str)
+                pairs.append(lh + '=' + acc)
+
+            if expr.logic_and:
+                out = ' AND '.join(pairs)
+            else:
+                out = ' OR '.join(pairs)
+
+        return out, None
 
     def Relational(self, expr:'Hql.Expressions.Relational', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import Relational, NamedReference, Path, Expression
@@ -645,7 +708,7 @@ class SPLCompiler(Compiler):
         
         exprs = []
         for i in [expr.lh] + expr.rh:
-            acc, _ = self.compile(i, preprocess=False)
+            acc, _ = self.compile(i, preprocess=False, where=kwargs.get('where', False))
             exprs.append(acc)
 
         if expr.bitype == 'or':
@@ -662,7 +725,7 @@ class SPLCompiler(Compiler):
                 return None, expr
             return expr, None
 
-        inner = self.compile(expr.expr, preprocess=False)
+        inner = self.compile(expr.expr, preprocess=False, where=kwargs.get('where', False))
         out = f'not {inner}'
         return out, None
 

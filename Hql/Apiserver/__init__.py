@@ -22,6 +22,7 @@ class HqlRequest(BaseModel):
     save: bool = False
     plan: bool = False
 
+
 class Apiserver():
     def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8081):
         if not can_thread():
@@ -137,6 +138,7 @@ class Apiserver():
             rid = self.hacengine.run_detection(det)
             return {'id': rid}
 
+        @self.app.post('/api/hql/deparse')
         def reparse_hql(hql:HqlRequest):
             from Hql.Hac import Detection
 
@@ -147,12 +149,21 @@ class Apiserver():
                 'hql': deparsed
             }
 
+        @self.app.post('/api/sigma/convert')
+        def convert_sigma(hql:HqlRequest):
+            return reparse_hql(hql)
+
+        @self.app.post('/api/hql/init_hac')
         def add_hac(hql:HqlRequest):
             from Hql.Hac import Detection, Hac
 
             det = Detection(hql.hql, 'api', self.hacengine.config)
             if not det.hac:
                 det.hac = Hac({}, 'api')
+                comment = det.hac.render()
+                return {'hql': comment + hql.hql}
+            else:
+                return {'hql': hql.hql}
 
 
     def start(self):

@@ -4,6 +4,8 @@ import type {
   HqlRun,
   Detection,
   SchemaField,
+  HacInitResponse,
+  SigmaConvertResponse,
 } from '../types';
 
 const API_BASE = '/api';
@@ -89,6 +91,34 @@ export const api = {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
     throw new Error('Query execution timeout');
+  },
+
+  // Initialize HAC for HQL query
+  initHac: async (hql: string): Promise<HacInitResponse> => {
+    const request: HqlRequest = {
+      hql,
+      run: false,
+      save: false,
+      plan: false,
+    };
+    return fetchApi<HacInitResponse>('/hql/init_hac', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // Convert Sigma rule to HQL
+  convertSigma: async (hql: string): Promise<SigmaConvertResponse> => {
+    const request: HqlRequest = {
+      hql,
+      run: false,
+      save: false,
+      plan: false,
+    };
+    return fetchApi<SigmaConvertResponse>('/sigma/convert', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   },
 };
 

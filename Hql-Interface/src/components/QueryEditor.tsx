@@ -14,6 +14,8 @@ interface QueryEditorProps {
 export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChange, onDetectionSaved, theme }: QueryEditorProps) {
   const [internalQuery, setInternalQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isInitializingHac, setIsInitializingHac] = useState(false);
+  const [isConvertingSigma, setIsConvertingSigma] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Use external query if provided, otherwise use internal state
@@ -174,6 +176,62 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
     }
   };
 
+  const initHac = async () => {
+    if (!query.trim()) {
+      setError('Please enter a query');
+      return;
+    }
+
+    setIsInitializingHac(true);
+    setError(null);
+
+    try {
+      const response = await api.initHac(query);
+
+      // Replace the query with the HAC-initialized version
+      handleQueryChange(response.hql);
+
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(`API Error: ${err.message}`);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to initialize HAC');
+      }
+    } finally {
+      setIsInitializingHac(false);
+    }
+  };
+
+  const convertSigma = async () => {
+    if (!query.trim()) {
+      setError('Please enter a query');
+      return;
+    }
+
+    setIsConvertingSigma(true);
+    setError(null);
+
+    try {
+      const response = await api.convertSigma(query);
+
+      // Replace the query with the converted version
+      handleQueryChange(response.hql);
+
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(`API Error: ${err.message}`);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to convert Sigma');
+      }
+    } finally {
+      setIsConvertingSigma(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2">
@@ -191,6 +249,20 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
             className="btn-primary"
           >
             Save as Detection
+          </button>
+          <button
+            onClick={initHac}
+            disabled={isInitializingHac}
+            className="btn-primary"
+          >
+            {isInitializingHac ? 'Initializing HAC...' : 'Init HAC'}
+          </button>
+          <button
+            onClick={convertSigma}
+            disabled={isConvertingSigma}
+            className="bg-gruvbox-light-orange hover:opacity-90 text-gruvbox-light-bg dark:bg-gruvbox-dark-orange dark:text-gruvbox-dark-bg font-medium py-2 px-4 rounded transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isConvertingSigma ? 'Converting...' : 'Convert Sigma'}
           </button>
           <button
             onClick={() => {
@@ -213,7 +285,6 @@ export function QueryEditor({ query: externalQuery, onQueryChange, onResultsChan
 
       <div className="flex-1 m-4 border border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2 rounded overflow-hidden">
         <Editor
-          key={query.substring(0, 50)} // Force re-render on query change
           height="100%"
           defaultLanguage="plaintext"
           value={query}

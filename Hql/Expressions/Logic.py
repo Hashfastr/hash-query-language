@@ -178,6 +178,13 @@ class Substring(Comparator):
         
         self.neq = op[0] == '!'
         self.cs = op.endswith('_cs')
+        
+        self.startswith = False
+        self.endswith = False
+        if 'prefix' in self.op or 'startswith' in self.op:
+            self.startswith = True
+        if 'suffix' in self.op or 'endswith' in self.op:
+            self.endswith = True
 
         self.list = len(rh) > 1
 
@@ -217,14 +224,14 @@ class Substring(Comparator):
 
         return lh.str.contains(regex)
 
-    def all_any(self, ctx:'Context', lh:pl.Expr, rh:list[Expression]):
+    def all_any(self, ctx:'Context', lh:pl.Expr, rh:Sequence[Expression]):
         exprs = []
         for i in rh:
             exprs.append(self.has(ctx, lh, i))
 
         expr = exprs[0]
         for i in exprs[1:]:
-            expr = expr & i if 'all' in self.op else expr | i
+            expr = expr & i if self.logic_and else expr | i
 
         return expr
 
@@ -267,8 +274,7 @@ class Substring(Comparator):
             # no list right hand supported atm
             expr = self.prefix(ctx, lh, self.rh[0], False)
 
-        if 'all' in self.op or 'any' in self.op:
-            expr = self.all_any(ctx, lh, self.rh)
+        expr = self.all_any(ctx, lh, self.rh)
 
         if not isinstance(expr, type(None)):
             return ~expr if self.neq else expr
