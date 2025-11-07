@@ -27,7 +27,7 @@ class HqlRequest(BaseModel):
     retro: bool = False
 
 class Apiserver():
-    def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8081):
+    def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8080):
         if not can_thread():
             raise hqle.CompilerException('Cannot start the api server as free threading is not supported, use the container?')
 

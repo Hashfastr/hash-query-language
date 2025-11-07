@@ -210,7 +210,7 @@ class Table():
                     new[key] = [new[key], col]
                 else:
                     new[key].append(col)                
-                
+        
         df = pl.DataFrame(new)
         schema = Schema(schema=schema)
                 

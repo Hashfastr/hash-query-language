@@ -4,6 +4,7 @@ import logging
 import time
 import json
 from Hql.Exceptions import HqlExceptions as hqle
+import polars.exceptions as ple
 
 if TYPE_CHECKING:
     from Hql.Operators import Database, Operator
@@ -82,10 +83,16 @@ class InstructionSet():
         return HqlCompiler(config).InstructionSet(self)
 
     def exec(self, inst:Union['Database', 'Operator'], ctx:Context) -> Context:
+        from Hql.Data import Data
         logging.debug(f'Executing {inst.type} - {inst.id}')
         start = time.perf_counter()
 
-        ctx.data = inst.eval(ctx)
+        try:
+            ctx.data = inst.eval(ctx)
+        except ple.ColumnNotFoundError:
+            # disappointment, that filter wasn't for it
+            for i in ctx.data:
+                i.truncate(0)
 
         end = time.perf_counter()
         logging.debug(f'{inst.id} - {end - start}')

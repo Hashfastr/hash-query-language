@@ -327,7 +327,11 @@ class HqlTypes():
     @register_type('hql_multivalue')
     class multivalue(HqlType):
         def __init__(self, inner:type):
-            self.inner = inner().hql_schema()
+            try:
+                self.inner = inner().hql_schema()
+            except:
+                self.inner = inner.hql_schema()
+
             HqlTypes.HqlType.__init__(self, self.pl_schema(), inner=inner)
             
             self.priority = 5
