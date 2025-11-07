@@ -1041,7 +1041,7 @@ class HqlCompiler(Compiler):
 
         desc = BranchDescriptor()
 
-        if expr in self.ctx.symbol_table:
+        if expr in self.ctx.symbol_table and expr != self.ctx.symbol_table[expr]:
             res = self.ctx.symbol_table[expr]
 
             if not isinstance(res, (PipeExpression, Database, InstructionSet)):
