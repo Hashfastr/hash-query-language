@@ -44,7 +44,11 @@ class BranchDescriptor():
         self.mapping[dest] = src
 
     def get_attr(self, name:str):
-        return self.attrs.get(name, None)
+        if name in self.attrs:
+            return self.attrs[name]
+        if name in self.list_attrs:
+            return []
+        return None
 
     def merge_attrs(self, attrs:dict):
         for i in attrs:

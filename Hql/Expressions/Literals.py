@@ -221,8 +221,9 @@ class Datetime(Literal):
         else:
             self.value = value
 
-    def render(self, time_format:str="%Y-%m-%dT%H:%M:%S.%f%z") -> str:
-        return self.value.strftime(time_format)
+    def render(self, time_format:str="%Y-%m-%dT%H:%M:%S.%f%z", timezone:datetime.timezone=datetime.timezone.utc) -> str:
+        dt = self.value.astimezone(timezone)
+        return dt.strftime(time_format)
 
     def decompile(self, ctx: 'Context') -> str:
         inner = StringLiteral(self.value.isoformat())

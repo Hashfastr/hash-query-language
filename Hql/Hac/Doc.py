@@ -133,3 +133,81 @@ class HacDoc():
         out += ' */'
 
         return out
+
+    def html(self):
+        html = f"<h1>{self.hac.get('title')}</h1><br>"
+        html += f"<i>{self.hac.get('id')}</i><br>"
+        
+        author = self.hac.get('author')
+        if author:
+            html += f"{author}<br>"
+        html += '<br>'
+
+        # Build table values
+        # Two table fields are required so we always add a table header
+        if self.md_table_fields:
+            html += '<table>'
+            for i in self.md_table_fields:
+                j = self.hac.get(i)
+
+                if not j:
+                    continue
+
+                name = i[0].upper() + i[1:]
+                html += f"<tr><th>{name}</th> <th>{j}</th></tr>"
+            html += '</table>'
+            html += '<br>'
+
+        html += '<h3>Description</h3><br><p>'
+        html += str(self.hac.get('description'))
+        html += '</p><br>'
+
+        tags = self.hac.get('tags')
+        if tags:
+            html += '<h3>Tags</h3><br>'
+            html += '<ul>'
+            for i in tags:
+                html += f'<li>{i}</li>'
+            html += '</ul>'
+            html += '<br>'
+
+        triage = self.hac.get('triage')
+        if triage:
+            html += '<h3>Triage</h3><br><p>'
+            html += f'{triage}<br>'
+            html += '</p><br>'
+
+        falsepositives = self.hac.get('falsepositives')
+        if falsepositives:
+            html += '<h3>False Positives</h3><br>'
+            html += '<ul>'
+            for i in falsepositives:
+                html += f'<li>{i}</li>'
+            html += '</ul>'
+            html += '<br>'
+
+        authornotes = self.hac.get('authornotes')
+        if authornotes:
+            html += '<h3>Author Notes</h3><br><p>'
+            html += f'{authornotes}<br>'
+            html += '</p><br>'
+
+        references = self.hac.get('references')
+        if references:
+            html += '<h3>References</h3><br>'
+            html += '<ul>'
+            for i in references:
+                html += f'<li>{i}</li>'
+            html += '</ul>'
+            html += '<br>'
+
+        changelog = self.hac.get('changelog')
+        if changelog:
+            html += '<h3>Change Log</h3><br>'
+            html += '<ul>'
+            for i in changelog:
+                html += f'<li>{i}</li>'
+            html += '</ul>'
+            html += '<br>'
+
+        return html

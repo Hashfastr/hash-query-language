@@ -332,9 +332,12 @@ class NamedExpression(Expression):
                         schema = cur.schema
                         cur = cur.df
 
-                    else:
+                    elif cur.series:
                         schema = cur.series.type
                         cur = cur.series.series
+
+                    else:
+                        continue
 
                 # Insert properly
                 data.tables[table.name].insert(path, cur, schema)

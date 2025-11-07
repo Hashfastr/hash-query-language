@@ -7,6 +7,7 @@ from Hql.Expressions import Wildcard, NamedReference, NamedExpression, StringLit
 from Hql.Hac import Hac
 import requests
 import json
+import urllib.parse
 
 import logging
 from typing import Optional
@@ -56,10 +57,16 @@ class scot4(Function):
         if not self.server:
             raise hqle.ArgumentException(f'Attempting to use invalid scot4 server definition {self.params["server"]}')
 
+        self.timeout = 5
+        self.owner = 'HaC-Engine'
+
     def eval(self, ctx:'Context', **kwargs):
+        import time
         if not ctx.hac:
             return Data()
 
+        self.update_hac(ctx.hac)
+        time.sleep(1)
         res = self.post_alertgroup(ctx.data, ctx.hac)
         return Data([Table(init_data=res)])
 
@@ -69,10 +76,47 @@ class scot4(Function):
             'Authorization': f'apikey {self.server["apikey"]}'
         }
 
-        res = requests.post(url=url, headers=headers, json=json)
+        res = requests.post(url=url, headers=headers, json=json, timeout=self.timeout)
 
         if res.status_code != 200:
             logging.error(f'Post to scot returned a {res.status_code}')
+            logging.error(res.text)
+
+        return res
+
+    def get(self, api:str, json:Optional[dict]=None, params:Optional[dict]=None):
+        url = self.server['host'] + api
+        headers = {
+            'Authorization': f'apikey {self.server["apikey"]}'
+        }
+
+        if json:
+            res = requests.get(url=url, headers=headers, json=json, timeout=self.timeout)
+        elif params:
+            param_strs = []
+            for i in params:
+                param_strs.append(f'{i}={urllib.parse.quote_plus(params[i])}')
+            url += '?' + '&'.join(param_strs)
+            res = requests.get(url=url, headers=headers)
+        else:
+            res = requests.get(url=url, headers=headers)
+
+        if res.status_code != 200:
+            logging.error(f'Get from scot returned a {res.status_code}')
+            logging.error(res.text)
+
+        return res
+
+    def put(self, api:str, json:dict):
+        url = self.server['host'] + api
+        headers = {
+            'Authorization': f'apikey {self.server["apikey"]}'
+        }
+
+        res = requests.put(url=url, headers=headers, json=json, timeout=self.timeout)
+
+        if res.status_code != 200:
+            logging.error(f'Put to scot returned a {res.status_code}')
             logging.error(res.text)
 
         return res
@@ -86,6 +130,10 @@ class scot4(Function):
         assert isinstance(srcs, list)
         tags = hac.get('tags')
         assert isinstance(tags, list)
+
+        if not data:
+            logging.debug('scot4 given empty alertgroup, skipping')
+            return []
 
         out = []
         for i in data:
@@ -101,7 +149,6 @@ class scot4(Function):
             res = self.post('/api/v1/alertgroup/', body)
             if res.status_code != 200 or True:
                 res = json.loads(res.text)
-                print(json.dumps(res))
                 continue
 
             res = json.loads(res.text)
@@ -113,6 +160,136 @@ class scot4(Function):
             out.append(new)
 
         return out
+
+    def update_hac(self, hac:Hac):
+        guide = self.get_guide(hac)
+        if guide['resultCount']:
+            guide = guide['result'][0]
+        else:
+            guide = self.make_guide(hac)
+
+        self.update_guide(guide, hac)
+
+        sig = self.get_signature(str(hac.get('title')))
+        
+        if not sig['result']:
+            sig = self.create_signature(hac)
+        else:
+            sig = sig['result'][0]
+
+        sig_id = sig['id']
+        sig = self.update_signature(sig_id, hac)
+        self.link_guide(guide, sig)
+
+    def create_signature(self, hac:Hac):
+        signature = {
+            'name': hac.get('title'),
+            'owner': self.owner,
+            'status': 'enabled'
+        }
+        raw_return = self.post('/api/v1/signature/', signature).text
+        return json.loads(raw_return)
+    
+    def update_signature(self, sig_id:int, hac:Hac):
+        signature = {
+            'name': hac.get('title'),
+            'owner': self.owner,
+            'status': 'enabled',
+            'description': hac.get('description'),
+            'data': {
+                'signature_body': hac.get('src'),
+                'signature_group': [
+                    'HaC-Engine'
+                ]
+            }
+        }
+
+        raw_return = self.put(f'/api/v1/signature/{sig_id}', signature).text
+        return json.loads(raw_return)
+
+    def get_signature(self, subject:str):
+        raw_return = self.get('/api/v1/signature/', params={'name':subject}).text
+        return json.loads(raw_return)
+
+    def get_guide(self, hac:Hac):
+        title = hac.get('title')
+        raw_return = self.get('/api/v1/guide/', params={'subject':title}).text
+        return json.loads(raw_return)
+
+    def make_guide(self, hac:Hac):
+        guide = {
+            'guide': {
+                'owner': self.owner,
+                'tlp': 'unset',
+                'subject': hac.get('title'),
+                'status': 'current'
+            }
+        }
+
+        raw_return = self.post('/api/v1/guide/', guide).text
+        return json.loads(raw_return)
+
+    def update_guide(self, guide:dict, hac:Hac):
+        entries = self.get_guide_entries(guide)
+        if not entries:
+            self.make_guide_entry(guide, hac)
+        else:
+            self.update_guide_entry(entries[0].get('id'), hac)
+
+    def get_guide_entries(self, guide:dict) -> list:
+        gid = guide.get('id')
+        raw_return = self.get(f'/api/v1/guide/{gid}/entry').text
+        return json.loads(raw_return)['result']
+    
+    def make_guide_entry(self, guide:dict, hac:Hac):
+        entry = {
+            'entry': {
+                'owner': self.owner,
+                'target_type': 'guide',
+                'target_id': guide['id'],
+                'entry_data': {
+                    'html': hac.render(target='html')
+                }
+            }
+        }
+
+        raw_return = self.post('/api/v1/entry/', entry).text
+        return json.loads(raw_return)
+
+    def update_guide_entry(self, entry:int, hac:Hac):
+        entry_data = {
+            'entry_data': {
+                'html': hac.render(target='html')
+            }
+        }
+
+        raw_return = self.put(f'/api/v1/entry/{entry}', entry_data).text
+        return json.loads(raw_return)
+    
+    def get_guide_signatures(self, guide:dict) -> list:
+        gid = guide['id']
+        raw_return = self.get(f"/api/v1/guide/{gid}/signatures").text
+        return json.loads(raw_return)
+
+    def link_guide(self, guide:dict, signature:dict):
+        # check if we're already linked
+        guide_sigs = self.get_guide_signatures(guide)
+        for i in guide_sigs:
+            if guide['id'] == signature['id']:
+                return ''
+        
+        title = guide.get('title')
+        logging.debug(f'Linking new signature to guide {title}')
+
+        link = {
+            'v0_type': 'signature',
+            'v0_id': signature['id'],
+            'v1_type': 'guide',
+            'v1_id': guide['id']
+        }
+
+        raw_return = self.post('/api/v1/link/', link).text
+        return json.loads(raw_return)
 
     def gen_alerts(self, table:Table):
         limit = self.conf['row_limit']

@@ -13,3 +13,4 @@ let right = datatable (ham: string, apple: string)
 ];
 left
 | join (right | where apple == 'x') on ham
+| extend res = scot4()

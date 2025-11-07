@@ -84,6 +84,9 @@ class Hac():
         if target == 'decompile':
             return hd.decompile()
 
+        if target == 'html':
+            return hd.html()
+
         raise hace.HacException(f'Unknown HaC render type {target}')
 
     def set_query_now(self, query_now:datetime):

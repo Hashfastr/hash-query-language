@@ -1,5 +1,3 @@
-from numpy import isin
-from polars import String
 from Hql.Operators import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_op, Context
@@ -78,6 +76,8 @@ class Join(Operator):
 
         ctx = InstructionSet(Static(data), ops).eval(Context(Data()))
         # get the only table following the union
+        if not ctx.data:
+            return None
         table = [x for x in ctx.data][0].to_dicts()
 
         exprs = []
@@ -134,12 +134,19 @@ class Join(Operator):
 
     def decompile(self, ctx: 'Context') -> str:
         from Hql.Compiler import InstructionSet
+        from Hql.Expressions import PipeExpression
         out = 'join '
 
         if isinstance(self.rh, InstructionSet):
             out += 'INSTRUCTION_RH'
         else:
-            out += self.rh.decompile(ctx)
+            rh = self.rh.decompile(ctx)
+            if isinstance(self.rh, PipeExpression):
+                assert isinstance(rh, str)
+                rh = rh.replace('\n', ' ')
+                out += '(' + rh + ')'
+            else:
+                out += rh
 
         if self.params:
             out += ' '

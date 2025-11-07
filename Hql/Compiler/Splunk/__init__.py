@@ -147,7 +147,14 @@ class SPLCompiler(Compiler):
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Operators import Where
         from Hql.Expressions import Expression, BinaryLogic
-        
+        from Hql.Types.Hql import HqlTypes as hqlt
+
+        acc, _ = self.vestigial_compiler.compile(op.expr)
+        where = acc.get_attr('functions') or acc.get_attr('regex_matching') or acc.get_attr('case_sensitive_compare')
+
+        if hqlt.datetime in [type(x) for x in acc.get_attr('types')]:
+            where = True
+
         if preprocess:
             acc, rej = self.compile(op.expr)
             assert isinstance(acc, (Expression, type(None)))
@@ -155,14 +162,11 @@ class SPLCompiler(Compiler):
             ret_acc = Where(acc) if acc else None
             ret_rej = Where(rej) if rej else None
         
-            if ret_acc and not self.ops:
+            if ret_acc and not self.ops and not where:
                 ret_acc = self.add_top_level(ret_acc)
 
             return ret_acc, ret_rej
 
-        acc, _ = self.vestigial_compiler.compile(op.expr)
-        where = acc.get_attr('functions') or acc.get_attr('regex_matching') or acc.get_attr('case_sensitive_compare')
-        
         acc, _ = self.compile(op.expr, preprocess=False, where=where)
         assert isinstance(acc, str)
         pred = acc
