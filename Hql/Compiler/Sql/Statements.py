@@ -189,6 +189,10 @@ class JOIN(SqlStatement):
         from Hql.Compiler import InstructionSet, SqlCompiler
         from Hql.Operators import Join
         from Hql.Operators.Database import SQLite, Database
+        from Hql.Expressions import NamedReference
+
+        if isinstance(join.rh, NamedReference):
+            return [join]
 
         assert isinstance(join.rh, InstructionSet)
         up = join.rh.upstream[0]

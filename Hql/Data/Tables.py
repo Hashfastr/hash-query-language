@@ -49,7 +49,7 @@ class Table():
             self.series = series
 
         elif init_data and not schema:
-            self.schema = Schema(init_data)
+            self.schema = Schema(init_data, sample_size=100)
             init_data = self.schema.adjust_mv(init_data)
             pl_schema = self.schema.gen_pl_schema()
             self.df = pl.from_dicts(init_data, schema=pl_schema)

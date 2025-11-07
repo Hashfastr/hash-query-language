@@ -9,6 +9,7 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Context import Context
+    from Hql.Functions import Function
 
 # A named reference, can be scoped
 # Scopes are not implemented yet.
@@ -235,7 +236,7 @@ Sets a name a value
 ip_addr = ip4(destination.ip)
 '''
 class NamedExpression(Expression):
-    def __init__(self, paths:list[Expression], value:Expression):
+    def __init__(self, paths:list[Expression], value:Union[Expression, Function]):
         Expression.__init__(self)
         self.paths = paths
         self.value = value

@@ -10,7 +10,7 @@ class PythonTypes():
             CompilerType.__init__(self, base, inner=inner)
 
             self.priority = 0
-            self.super = ()
+            self.super = []
         
         def pl_schema(self):
             return self.hql_schema().pl_schema()
@@ -102,7 +102,7 @@ class PythonTypes():
             PythonTypes.PythonType.__init__(self, hqlt.string)
  
             self.priority = 4
-            self.super = (PythonTypes.list)
+            self.super = [PythonTypes.list]
 
     @register_type('python_bytes')
     class bytes(PythonType, hqlt.binary):
@@ -132,7 +132,7 @@ class PythonTypes():
             self.HqlType = hqlt.multivalue
             
             self.priority = 5
-            self.super = ()
+            self.super = []
 
     @register_type('python_dict')
     class dict(PythonType):

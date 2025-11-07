@@ -35,7 +35,8 @@ class SPLCompiler(Compiler):
         # }
 
         self.supported_functions = {
-            'count': 'count'
+            'count': 'count',
+            'tolower': 'lower'
         }
 
     def from_name(self, name:str) -> Callable:
@@ -510,9 +511,26 @@ class SPLCompiler(Compiler):
         return expr, None
 
     def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True, **kwargs) -> tuple[object, object]:
-        if expr.name in self.supported_functions:
+        if preprocess:
+            if expr.name not in self.supported_functions:
+                return None, expr
+
+            for i in expr.args:
+                acc, rej = self.compile(i, preprocess=False)
+                if rej:
+                    return None, expr
+
             return expr, None
-        return None, expr
+
+        args = []
+        for i in expr.args:
+            acc, _ = self.compile(i, preprocess=False)
+            assert isinstance(acc, str)
+            args.append(acc)
+        args = ', '.join(args)
+        name = self.supported_functions[expr.name]
+
+        return f'{name}({args})', None
 
     def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         return None, expr
@@ -887,6 +905,7 @@ class SPLCompiler(Compiler):
 
     def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True, **kwargs) -> tuple[object, object]:
         from Hql.Expressions import NamedExpression, Expression
+        from Hql.Functions import Function
 
         if preprocess:
             good_paths = []
@@ -899,7 +918,7 @@ class SPLCompiler(Compiler):
                     good_paths.append(acc)
 
             value, rej = self.compile(expr.value)
-            assert isinstance(value, Expression)
+            assert isinstance(value, (Expression, Function))
             if rej or not good_paths:
                 return None, expr
     

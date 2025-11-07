@@ -142,13 +142,13 @@ class SqlCompiler(Compiler):
                 self.statement = SELECT(src=self.statement, project=op)
                 return self.statement, None
 
-        exprs = []
+        exprs = set()
         for i in op.exprs:
             acc, _ = self.compile(i, preprocess=False)
             assert isinstance(acc, str)
-            exprs.append(acc)
+            exprs.add(acc)
 
-        return ', '.join(exprs), None
+        return ', '.join(list(exprs)), None
 
     def ProjectAway(self, op:'Hql.Operators.ProjectAway', preprocess:bool=True) -> tuple[object, object]:
         return None, op
