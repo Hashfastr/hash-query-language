@@ -246,11 +246,9 @@ class Detection():
 
         self.reparse()
         if self.parser == None:
-            logging.critical(self.txt)
             raise hqle.QueryException(f'Failed to parse query for {self.id}')
 
         self.parser.assemble()
-        logging.critical('assembled')
     
         if not isinstance(self.parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
