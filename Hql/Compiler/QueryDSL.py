@@ -36,7 +36,10 @@ class QueryDSLCompiler(Compiler):
 
         # still missing a root
         if src == None:
-            return '', None
+            out = {
+                'bool': {}
+            }
+            return out, None
 
         out = super().compile(src, preprocess=preprocess)
         return out

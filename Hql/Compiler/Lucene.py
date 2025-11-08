@@ -29,13 +29,16 @@ class LuceneCompiler(Compiler):
         self.expr:Union['Expression', None] = None
 
     def compile(self, src: Union['Expression', 'Operator', 'Statement', None], preprocess: bool = True) -> tuple[Union[object, None], Union[object, None]]:
+        from Hql.Expressions import Bool
+
         if src == None:
             src = self.expr
             preprocess = False
 
         # still missing a root
         if src == None:
-            return '', None
+            acc, _ = self.compile(Bool('true'), preprocess=False)
+            return acc, None
 
         out = super().compile(src, preprocess=preprocess)
         return out
