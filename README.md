@@ -1,10 +1,8 @@
 # Hash Query Language (Hql)
 <p align="center">
   <img src="https://hql.dev/hql-dark-no-text.png" width="300" />
-  <br>
   <h3>Current Phase: Cambrian - Ultra Alpha</h3>
-  <br>
-  <h3>Current Phase: Primordial Ooze</h3>
+  <s>Current Phase: Primordial Ooze</s>
 </p>
 
 Hash Query Language (Hql) is a query language designed to implement a consistent feature set across all database backends.
