@@ -15,7 +15,7 @@ function App() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 border-b border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2 bg-gruvbox-light-bg1 dark:bg-gruvbox-dark-bg1">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold">HQL Interface</h1>
+          <h1 className="text-xl font-bold">Hql Interface</h1>
           <div className="flex gap-2">
             <button
               onClick={() => setShowDetections(!showDetections)}
