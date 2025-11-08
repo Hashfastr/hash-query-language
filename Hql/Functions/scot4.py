@@ -62,10 +62,7 @@ class scot4(Function):
 
     def eval(self, ctx:'Context', **kwargs):
         import time
-        if not ctx.hac:
-            return Data()
-
-        if not ctx.data:
+        if not ctx.hac or not ctx.data:
             return Data()
 
         self.update_hac(ctx.hac)

@@ -272,7 +272,7 @@ class LuceneCompiler(Compiler):
             if expr.name == None:
                 return None, expr
             return expr, None
-        return f'"{expr.name}"', None
+        return f'{expr.name}', None
 
     def Path(self, expr: 'Hql.Expressions.Path', preprocess: bool = True) -> tuple[object, object]:
         from Hql.Expressions import Path

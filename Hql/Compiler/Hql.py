@@ -145,21 +145,9 @@ class HqlCompiler(Compiler):
 
         # Add hac timebound
         if self.hac:
-            from Hql.Operators import Where
-            from Hql.Expressions import BetweenEquality, Datetime, NamedReference
-
             start, end = self.hac.get_timerange()
-
-            acc.add_op(
-                Where(
-                    BetweenEquality(
-                        NamedReference('_hqltimestamp'),
-                        Datetime(start),
-                        Datetime(end),
-                        'between'
-                    )
-                )
-            )
+            print('enter')
+            acc, _ = acc.add_timebound(start, end)
 
         return acc, None
 

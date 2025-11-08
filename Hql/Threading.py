@@ -317,7 +317,7 @@ class HacThread():
         from Hql.Data import Data
         try:
             start = time.perf_counter()
-            self.output = self.detection.run()
+            self.output = self.detection.run(self.query_now)
             end = time.perf_counter()
             
             self.duration = end - start

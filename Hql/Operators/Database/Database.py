@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Operators import Operator
 from Hql.Exceptions import HqlExceptions as hqle
+import datetime
+import logging
 
 if TYPE_CHECKING:
     from Hql.Data import Data
@@ -34,6 +36,28 @@ class Database(Operator):
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         return self.compiler.add_op(op)
+
+    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple['Database', Union[None, 'Operator']]:
+        from Hql.Operators import Where
+        from Hql.Expressions import BetweenEquality, Datetime, NamedReference
+
+        if not self.config.get('timeseries', True):
+            # Fake consume it if we don't use it
+            logging.debug(f'Skipping timeseries for {self.type}')
+            return self, None
+
+        _, rej = self.add_op(
+            Where(
+                BetweenEquality(
+                    NamedReference('_hqltimestamp'),
+                    Datetime(start),
+                    Datetime(end),
+                    'between'
+                )
+            )
+        )
+
+        return self, rej
 
     def add_index(self, index:str):
         self.index = index

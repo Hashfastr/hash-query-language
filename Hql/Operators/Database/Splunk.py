@@ -110,9 +110,6 @@ class Splunk(Database):
         assert isinstance(query, str)
         return query
 
-    def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
-        return self.compiler.add_op(op)
-
     def connect(self):
         import splunklib.client as client
 

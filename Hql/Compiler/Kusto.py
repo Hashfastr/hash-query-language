@@ -68,30 +68,6 @@ class Compiler():
         # return PipeExpression(pipes=self.ops).decompile(self.ctx)
         return ''
 
-    def add_time_bound(self, start:Union[datetime, timedelta], end:Union[datetime, timedelta, None]=None):
-        from Hql.Operators import Where
-        from Hql.Expressions import BetweenEquality, NamedReference, Datetime
-
-        if end == None:
-            end = datetime.now()
-
-        if isinstance(end, timedelta):
-            end = datetime.now() - end
-
-        if isinstance(start, timedelta):
-            start = datetime.now() - start
-
-        op = Where(
-            BetweenEquality(
-                NamedReference('_hqltimestamp'),
-                Datetime(start),
-                Datetime(end),
-                'between'
-            )
-        )
-
-        self.add_op(op)
-
     '''
     By default, all of these return themselves as they are being
     'rejected' back to the compiler

@@ -57,8 +57,9 @@ class Data():
         return iter(tables)
 
     def __bool__(self):
-        if len(self.tables):
-            return True
+        for i in self.tables:
+            if len(i):
+                return True
         return False
 
     def __contains__(self, key:str):

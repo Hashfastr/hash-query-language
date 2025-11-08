@@ -3,6 +3,7 @@ from Hql.Context import Context
 import logging
 import time
 import json
+import datetime
 from Hql.Exceptions import HqlExceptions as hqle
 import polars.exceptions as ple
 
@@ -87,6 +88,24 @@ class InstructionSet():
         # self.ops = [x.get_op() for x in ops]
 
         return None, None
+
+    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple['InstructionSet', None]:
+        bounded = []
+        for i in self.upstream:
+            acc, rej = i.add_timebound(start, end)
+            bounded.append(
+                InstructionSet(
+                    acc,
+                    operators=[rej] if rej else []
+                )
+            )
+
+        new = InstructionSet(
+            bounded,
+            operators=self.ops
+        )
+
+        return new, None
 
     # def flatten(self) -> InstructionSet:
     #     new = []
