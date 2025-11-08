@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from Hql.Expressions import Expression, NamedReference, Path
     from Hql.Operators import Operator, Database
     from Hql.Query import Query, Statement
+    from Hql.Functions import Function
 
 '''
 Wraps an Expression or Operator with some tagged metadata
@@ -18,7 +19,7 @@ class BranchDescriptor():
         # contains a timeseries element
         self.attrs:dict = dict()
 
-        self.expr:Union[None, 'Expression'] = None
+        self.expr:Union[None, 'Expression', 'Function'] = None
         self.op:Union[None, 'Operator'] = None
         self.statement:Union[None, 'Statement'] = None
         self.query:Union[None, 'Query'] = None

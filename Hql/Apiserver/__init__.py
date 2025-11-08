@@ -185,7 +185,7 @@ class Apiserver():
             if not det.hac:
                 det.hac = Hac({}, 'api')
                 comment = det.hac.render(target='decompile')
-                return {'hql': comment + hql.hql}
+                return {'hql': comment + '\n' + hql.hql}
             else:
                 return {'hql': hql.hql}
 

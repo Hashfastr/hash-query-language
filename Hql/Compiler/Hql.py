@@ -743,8 +743,15 @@ class HqlCompiler(Compiler):
         return desc, None
 
     def Function(self, expr: 'Hql.Functions.Function', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import FuncExpr
-        return self.compile(FuncExpr(expr.name, expr.args))
+        desc = BranchDescriptor()
+        desc.expr = expr
+        desc.set_attr('functions', expr.name)
+
+        for i in expr.args:
+            acc, _ = self.compile(i)
+            desc.merge(acc)
+
+        return desc, None
 
     def FuncExpr(self, expr:'Hql.Expressions.FuncExpr', preprocess:bool=True, dotcomp:bool=False) -> tuple[object, None]:
         from Hql.Expressions import FuncExpr, NamedReference, Expression
