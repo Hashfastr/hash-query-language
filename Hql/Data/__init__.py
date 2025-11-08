@@ -58,7 +58,7 @@ class Data():
 
     def __bool__(self):
         for i in self.tables:
-            if len(i):
+            if len(self.tables[i]):
                 return True
         return False
 
