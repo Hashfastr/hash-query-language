@@ -329,6 +329,8 @@ class HacThread():
             import traceback
             self.failed = True
             self.output = traceback.format_exc()
+            logging.critical(e)
+            logging.critical(self.output)
 
     def is_alive(self) -> bool:
         if not self.thread or not self.threaded:

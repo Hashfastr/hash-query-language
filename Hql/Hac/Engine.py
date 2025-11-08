@@ -439,6 +439,6 @@ class HacEngine():
             for i in self.detections:
                 det = self.detections[i]
                 if not det.should_fire(Schedule.gen_parts(cur)):
-                    logging.debug(f'Skipping {det.id}, not their time')
+                    # logging.debug(f'Skipping {det.id}, not their time')
                     continue
                 self.pool.add_detection(det)
