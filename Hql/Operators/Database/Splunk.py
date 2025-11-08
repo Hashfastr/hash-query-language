@@ -140,7 +140,7 @@ class Splunk(Database):
         return self.make_query()
 
     def make_query(self, **kwargs) -> Data:
-        import splunklib.results as results
+        from splunklib import results
         from Hql.Data import Table
 
         conn = self.connect()
@@ -150,5 +150,7 @@ class Splunk(Database):
 
         data = [x for x in reader if isinstance(x, dict)]
         table = Table(init_data=data, name=self.name)
+
+        job.delete()
 
         return Data(tables=[table])

@@ -1,5 +1,2 @@
-database('tf11-elastic').index('so-beats-*')
-| extend EventCode = event.code
-//| project EventCode
-| where EventCode == 1
+database('death-splunk').index('windows')
 | take 1
