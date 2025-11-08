@@ -409,6 +409,7 @@ class HacEngine():
             # ts = dt.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
             # self.wait_till(ts)
 
+            self.pool.write_detections(self.path)
             self.pool.gather_threads()
             self.completed += self.pool.get_completed()
             self.pool.clear_queue()

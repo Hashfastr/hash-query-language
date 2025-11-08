@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Union, Optional
 import logging
 import random
 import datetime, time
+from pathlib import Path
 
 if TYPE_CHECKING:
     from Hql.Config import Config
@@ -215,6 +216,13 @@ class HacPool():
             self.queue.append(t)
 
         return t.id
+
+    def write_detections(self, path:Path):
+        for i in self.pool:
+            tid = i.id
+            txt = i.detection.txt
+            with open(path/f'{tid}.log', mode='w+') as f:
+                f.write(txt)
 
     def is_idle(self) -> bool:
         return not self.pool
