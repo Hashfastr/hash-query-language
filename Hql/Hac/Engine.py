@@ -430,6 +430,9 @@ class HacEngine():
             self.pool.clear_queue()
             self.clean_old()
 
+            if self.pool.is_overloaded():
+                logging.warning(f'HaC queue is overloaded! {len(self.pool.queue)} queued {self.pool.max_threads} max threads')
+
             cur = datetime.datetime.now(tz=self.tz)
             if last == cur.minute:
                 time.sleep(1)

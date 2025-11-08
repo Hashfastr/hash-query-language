@@ -182,6 +182,7 @@ class HacPool():
         self.auto_run = auto_run
         self.pool:list[HacThread] = []
         self.queue:list[HacThread] = []
+        self.max_threads = max_threads
         self.semaphore = Semaphore(max_threads)
 
         self.completed:list[HacThread] = []
@@ -226,6 +227,9 @@ class HacPool():
 
     def is_idle(self) -> bool:
         return not self.pool
+
+    def is_overloaded(self) -> bool:
+        return len(self.queue) > self.max_threads
 
     def clear_queue(self):
         count = 0
