@@ -312,9 +312,8 @@ class HacEngine():
         else:
             self.apiserver = None
 
-        max_threads = self.config.get_engine().get('max_threads', 16)
-        print(max_threads)
-        self.pool = HacPool(max_threads=max_threads)
+        self.max_threads = self.config.get_engine().get('max_threads', 16)
+        self.pool = HacPool(max_threads=self.max_threads)
 
         self.completed:list[HacThread] = []
         self.clean_time = datetime.timedelta(days=1)

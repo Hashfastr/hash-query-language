@@ -65,6 +65,9 @@ class scot4(Function):
         if not ctx.hac:
             return Data()
 
+        if not ctx.data:
+            return Data()
+
         self.update_hac(ctx.hac)
         time.sleep(1)
         res = self.post_alertgroup(ctx.data, ctx.hac)
