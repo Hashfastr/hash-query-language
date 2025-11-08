@@ -145,6 +145,7 @@ ARG HOME="/opt/Hql"
 
 RUN apt update && apt install -y rustup gcc build-essential curl
 RUN rustup default stable
+RUN pip3 install --no-cache-dir --break-system-packages polars
 
 # Install Node.js for building frontend
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
