@@ -177,12 +177,12 @@ class InstructionThread():
         return self.output
 
 class HacPool():
-    def __init__(self, auto_run:bool=True) -> None:
+    def __init__(self, auto_run:bool=True, max_threads:int=16) -> None:
         from threading import Semaphore
         self.auto_run = auto_run
         self.pool:list[HacThread] = []
         self.queue:list[HacThread] = []
-        self.semaphore = Semaphore(16)
+        self.semaphore = Semaphore(max_threads)
 
         self.completed:list[HacThread] = []
         self.max_retained = 1000

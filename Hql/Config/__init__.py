@@ -174,3 +174,6 @@ class Config():
         if name in self.conf['sigma']['posthql']:
             return self.conf['sigma']['posthql'][name]
         raise hqle.ConfigException(f'Attempting to get unconfigured posthql sigma definition {name}')
+
+    def get_engine(self) -> dict:
+        return self.conf['general'].get('hacengine', dict())
