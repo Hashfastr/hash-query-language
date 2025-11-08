@@ -193,3 +193,5 @@ local-data
 
 examples/interface/*.hql
 examples/interface/*.yml
+
+conf.tar.gz
