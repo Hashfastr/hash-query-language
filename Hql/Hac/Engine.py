@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Compiler import InstructionSet
@@ -146,17 +146,22 @@ class Schedule():
 class Detection():
     def __init__(self, txt:str, src:str, config:'Config', no_hac:bool=False) -> None:
         import uuid
+        from Hql.Parser import Parser as HqlParser
+        from Hql.Parser import SigmaParser
 
         self.src = src
         self.txt = txt
         self.config = config
-        self.compiler:Optional['HqlCompiler'] = None
+        # self.compiler:Optional['HqlCompiler'] = None
         self.schedule:Optional[Schedule] = None
         self.id = ''
         self.sigma = False
         self.no_hac = no_hac
+
+        self.hac:Optional[Hac] = None
+        self.parser:Union[None, HqlParser, SigmaParser] = None
         
-        self.hac, self.parser = self.gen_hac()
+        self.reparse()
         
         self.run_history:list[dict] = []
         self.max_runs = 10
@@ -164,12 +169,10 @@ class Detection():
         # skip instruction compiling if we don't have hac
         if self.hac:
             self.id = self.hac.id
-            self.compiler = self.compile()
             self.schedule = Schedule(self.hac.schedule)
 
         elif no_hac:
             self.id = str(uuid.uuid4())
-            self.compiler = self.compile()
 
     def to_dict(self) -> dict:
         res = {
@@ -224,18 +227,29 @@ class Detection():
         
         return deparse
 
-    def compile(self, query_now:Optional[datetime.datetime]=None) -> 'HqlCompiler':
+    def reparse(self):
         from Hql.Parser import Parser
+        self.hac, parser = self.gen_hac()
+
+        if parser:
+            self.parser = parser
+        else:
+            self.parser = Parser(self.txt, self.src)
+
+    def compile(self, query_now:Optional[datetime.datetime]=None) -> 'HqlCompiler':
         from Hql.Query import Query
         from Hql.Compiler import HqlCompiler
         import copy
 
         logging.debug(f'Compiling {self.src}')
 
-        if not self.parser:
-            self.parser = Parser(self.txt, self.src)
+        self.reparse()
+        if self.parser == None:
+            logging.critical(self.txt)
+            raise hqle.QueryException(f'Failed to parse query for {self.id}')
 
         self.parser.assemble()
+        logging.critical('assembled')
     
         if not isinstance(self.parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
@@ -261,10 +275,7 @@ class Detection():
         self.run_history.append(run)
 
     def run(self, query_time:Optional[datetime.datetime]=None) -> 'Data':
-        if query_time:
-            compiler = self.compile(query_time)
-        else:
-            compiler = self.compiler
+        compiler = self.compile(query_time)
 
         if not compiler:
             raise Exception('Attempting to run detection without instructions!')
