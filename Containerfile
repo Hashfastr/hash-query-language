@@ -169,12 +169,15 @@ RUN apt remove -y build-essential nodejs curl && \
     rustup toolchain list | awk '{print $1}' | xargs rustup toolchain uninstall && \
     rm -rf $HOME/Hql $HOME/pyproject.toml $HOME/LICENSE $HOME/README.md $HOME/Hql-Interface/node_modules $HOME/Hql-Interface/src
 
-ARG USER="hql"
-ARG UID=1000
+#ARG USER="hql"
+#ARG UID=1000
+
+ARG USER="root"
+
 ARG HOME="/data"
 
-RUN useradd -u "$UID" -d "$HOME" "$USER" && \
-    mkdir -p "$HOME" && \
+# RUN useradd -u "$UID" -d "$HOME" "$USER" && \
+RUN    mkdir -p "$HOME" && \
     chown -R "$USER:$USER" "$HOME"
 USER "$USER"
 WORKDIR "$HOME"

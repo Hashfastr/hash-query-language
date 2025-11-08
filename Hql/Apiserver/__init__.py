@@ -27,7 +27,7 @@ class HqlRequest(BaseModel):
     retro: bool = False
 
 class Apiserver():
-    def __init__(self, hacengine:'HacEngine', host='127.0.0.1', port=8080):
+    def __init__(self, hacengine:'HacEngine', host='0.0.0.0', port=8080):
         if not can_thread():
             raise hqle.CompilerException('Cannot start the api server as free threading is not supported, use the container?')
 
@@ -184,7 +184,7 @@ class Apiserver():
             det = Detection(hql.hql, 'api', self.hacengine.config)
             if not det.hac:
                 det.hac = Hac({}, 'api')
-                comment = det.hac.render()
+                comment = det.hac.render(target='decompile')
                 return {'hql': comment + hql.hql}
             else:
                 return {'hql': hql.hql}
