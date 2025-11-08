@@ -147,7 +147,10 @@ class scot4(Function):
             }
 
             res = self.post('/api/v1/alertgroup/', body)
-            if res.status_code != 200 or True:
+
+            # catch all non-200s
+            code = res.status_code - 200
+            if code < 0 or code > 99:
                 res = json.loads(res.text)
                 continue
 
