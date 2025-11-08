@@ -219,7 +219,8 @@ class Detection():
 
         if not self.parser:
             raise hqle.CompilerException(f'Attempting to deparse an unparsed query {self.id}')
-        
+
+        self.parser.assemble()
         if not isinstance(self.parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
 
