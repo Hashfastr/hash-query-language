@@ -1,6 +1,6 @@
 [project]
 name = "pyhql"
-version = "0.0.8"
+version = "0.0.9"
 authors = [
     { name="Sylvain Jones", email="sylvainjones+hql@hashfastr.com" },
 ]
