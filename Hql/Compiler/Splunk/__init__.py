@@ -924,6 +924,7 @@ class SPLCompiler(Compiler):
             if isinstance(expr.value, Function):
                 if expr.value.name not in self.supported_functions:
                     return None, expr
+                value = expr.value
             else:
                 value, rej = self.compile(expr.value)
                 assert isinstance(value, Expression)
