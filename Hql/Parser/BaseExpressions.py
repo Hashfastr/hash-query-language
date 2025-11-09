@@ -176,6 +176,17 @@ class BaseExpressions(HqlVisitor):
         expr = self.visit(ctx.Ordering)
         expr.expr = self.visit(ctx.Expression)
         return expr
+
+    def visitDateTimeLiteralExpression(self, ctx: HqlParser.DateTimeLiteralExpressionContext):
+        import re
+
+        if ctx.Token == None:
+            raise hqle.ParseException('DatetimeLiteral has no string token', ctx)
+
+        datestr = "'" + re.findall(r'datetime\(([^\)]+)\)', ctx.Token.text)[0] + "'"
+
+        lit = Expr.StringLiteral(datestr)
+        return Expr.Datetime(lit)
     
     '''
     Sort specific
