@@ -135,7 +135,7 @@ class Path(Expression):
         return super().__new__(cls)
 
     def __reduce__(self):
-        return (self.__class__, (self.path,))
+        return (self.__class__, (self.path))
 
     def __iter__(self):
         return iter(self.path)

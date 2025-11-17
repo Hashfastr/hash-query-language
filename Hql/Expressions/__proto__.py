@@ -30,8 +30,11 @@ class Expression():
             'type': self.type
         }
     
-    def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, 'Expression', list[str], str, 'CompilerSet', 'CompilerType', 'Data', 'Table', int, float]:
-        raise hqle.CompilerException(f'Undefined eval for {self.type}')
+    def polars(self) -> pl.Expr:
+        return NotImplemented
+    
+    # def eval(self, ctx:'Context', **kwargs) -> Union[pl.Expr, 'Expression', list[str], str, 'CompilerSet', 'CompilerType', 'Data', 'Table', int, float]:
+    #     raise hqle.CompilerException(f'Undefined eval for {self.type}')
 
     def __str__(self) -> str:
         return json.dumps(self.to_dict())
@@ -47,8 +50,5 @@ class Expression():
     def __eq__(self, value: object, /) -> bool:
         return NotImplemented
 
-    def features(self):
-        return []
-
-    def decompile(self, ctx:'Context') -> str:
-        return ''
+    def deparse(self) -> str:
+        return NotImplemented

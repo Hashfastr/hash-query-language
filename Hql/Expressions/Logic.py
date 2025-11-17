@@ -8,19 +8,103 @@ import polars as pl
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Expressions import StringLiteral, NamedReference, Path
+    from Hql.Expressions import BinaryLogic
 
-class Comparator(Expression):
-    def __init__(self, lh:Expression, op:str, rh:list[Expression]) -> None:
+# descriptive class
+class Logic(Expression):
+    def __init__(self):
         Expression.__init__(self)
 
-        self.lh = lh
-        self.op = op
-        self.rh = rh
+class Comparator(Logic):
+    def __init__(self, lh:Expression, rh:Union[list[Expression], Expression], cs:bool=True, neq:bool=False, term:bool=False, logic_and:bool=False) -> None:
+        Logic.__init__(self)
 
-        self.cs       = True
-        self.neq      = False
-        self.term     = False
-        self.logic    = True
+        self.lh:Expression = lh
+        self.rh:list[Expression] = rh if isinstance(rh, list) else [rh]
+        
+        for i in rh:
+            if not isinstance(i, Expression):
+                hqle.CompilerException(f'Comparator {self.type} given non-Expression rh {type(i)}')
+
+        # case sensitive compare
+        self.cs:bool        = cs
+        # is negated
+        self.neq:bool       = neq
+        # term matching
+        self.term:bool      = term
+        # How right hand logic should be handled
+        # expr AND expr AND expr
+        # vs
+        # expr OR expr OR expr
+        self.logic_and:bool = logic_and
+        # if a comparator can be a righthand list
+        self.can_list:bool  = True
+
+    def set_rh(self, rh:Union[list[Expression], Expression]):
+        self.rh = rh if isinstance(rh, list) else [rh]
+    
+    def add_rh(self, rh:Union[list[Expression], Expression]):
+        if not isinstance(rh, list):
+            rh = [rh]
+
+        if not self.can_list:
+            err_s = ''
+            if len(rh) > 1:
+                err_s = 's'
+                logging.critical(f'{[type(x) for x in rh]}')
+            else:
+                logging.critical(f'{type(rh[0])}')
+
+            raise hqle.CompilerException(f'Attempting to add expression{err_s} to non-list comparator {self.type}')
+
+        for i in rh:
+            if not isinstance(i, Expression):
+                raise hqle.CompilerException(f'Invalid rh expression added to {self.type}: {type(i)}')
+
+        self.rh += rh
+
+    '''
+    Simplifys some things, breaks out rhs to a set of singular comparators and a BinaryOperator
+    Most languages don't support list right hands, so a lot of repeated code to do this:
+    '''
+    def expand_rh(self) -> BinaryLogic:
+        exprs = []
+        for i in self.rh:
+            new = self.dupe()
+            new.set_rh(i)
+            exprs.append(new)
+        return BinaryLogic(exprs, logic_and=self.logic_and)
+    
+    def can_merge(self, expr:'Comparator') -> bool:
+        if type(self) != type(expr) or self.lh != expr.lh or not self.can_list:
+            return False
+
+        attrs = [
+            'cs',
+            'neq',
+            'term',
+            'logic_and'
+        ]
+
+        # this feels smart, but maybe stupid, idk
+        for i in attrs:
+            if self.__getattribute__(i) != expr.__getattribute__(i):
+                return False
+        return True
+
+    def __add__(self, expr:'Comparator'):
+        if not self.can_merge(expr):
+            raise hqle.CompilerException(f'Cannot merge comparators {type(self)} and {type(expr)}, did you use .can_merge() before adding?')
+        self.add_rh(expr.rh)
+        return self
+
+    '''
+    Create a copy duplicate of this object.
+    Expressions can be reused many places, not costy to copy
+    '''    
+    def dupe(self):
+        import copy
+        return copy.deepcopy(self)
 
     def to_dict(self):
         return {
@@ -32,6 +116,9 @@ class Comparator(Expression):
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
+    
+    def build_op(self):
+        raise hqle.CompilerException(f'build_op not implemented for {self.type}')
 
 '''
 Handles the following direct comparators:
@@ -42,20 +129,32 @@ Handles the following direct comparators:
 Not substring comparators
 '''
 class Equality(Comparator):
-    def __init__(self, lh:Expression, op:str, rh:list[Expression]):
-        Comparator.__init__(self, lh, op, rh)
+    def __init__(self, lh:Expression, rh:list[Expression], cs:bool=True, neq:bool=False):
+        Comparator.__init__(self, lh, rh, cs=cs, neq=neq)
+        self.cs = cs
+        self.neq = neq
+        self.logic_and = False
 
-        self.cs = '~' not in op
-        self.neq = '!' in op
-        self.list = len(rh) > 1
+    # convert if we're given a single BasicRange on the right
+    def __new__(cls, lh:Expression, rh:list[Expression], cs:bool=True, neq:bool=False):
+        if len(rh) > 1:
+            return super().__new__(cls)
 
-        self.rebuild_op()
+        if isinstance(rh[0], BasicRange):
+            return BetweenEquality(lh, rh[0].start, rh[0].end)
+        
+        return super().__new__(cls)
+
+    def __reduce__(self):
+        return (self.__class__, (self.lh, self.rh, self.cs, self.neq))
         
     def add_rh(self, rh:Expression):
         self.rh.append(rh)
-        self.rebuild_op()
 
-    def rebuild_op(self):
+    '''
+    Justifies the operator to correctly represent the flags given
+    '''
+    def build_op(self) -> str:
         op = ''
         if len(self.rh) > 1:
             if self.neq:
@@ -63,7 +162,6 @@ class Equality(Comparator):
             op += 'in'
             if not self.cs:
                 op += '~'
-            self.list = True
         else:
             if self.neq:
                 if self.cs:
@@ -75,66 +173,43 @@ class Equality(Comparator):
                     op += '=~'
                 else:
                     op += '=='
-            self.list = False
-        self.op = op
+        return op
 
-    def as_pl(self, ctx:'Context'):
-        from Hql.Expressions import Literal, StringLiteral
-        lh = self.lh.eval(ctx, as_pl=True)
+    def polars(self) -> pl.Expr:
+        if len(self.rh) > 1:
+            expr = self.expand_rh()
+            return expr.polars()
 
-        if not isinstance(lh, pl.Expr):
-            raise hqle.CompilerException(f'lh evaluated to non-pl.Expr type {type(lh)}')
-        
-        rh = []
-        for i in self.rh:
-            if i.requires_lh:
-                expr = i.eval(ctx, lh=lh, as_pl=True)
-                return expr
-            rh.append(i.eval(ctx, as_pl=True))
+        if isinstance(self.rh[0], BasicRange):
+            expr = BetweenEquality(self.lh, self.rh[0].start, self.rh[0].end, self.neq)
+            return expr.polars()
 
-        expr = None
-        for i in rh:
-            if self.cs:
-                new = (lh == i)
-            else:
-                i = pl.select(i.str.escape_regex()).item()
-                regex = f'(?i)^{i}$'
-                new = lh.str.contains(regex)
+        lh = self.lh.polars()
+        rh = self.rh[0].polars()
 
-            if self.neq:
-                new = ~new
+        if self.cs:
+            new = (lh == rh)
+        else:
+            rh = pl.select(rh.str.escape_regex()).item()
+            regex = f'(?i)^{rh}$'
+            new = lh.str.contains(regex)
 
-            if isinstance(expr, type(None)):
-                expr = new
-            else:
-                expr = (expr | new)
+        if self.neq:
+            new = ~new
+        return new
 
-        if isinstance(expr, type(None)):
-            raise hqle.CompilerException('Equality returned None expression')
+    def deparse(self):
+        lh = self.lh.deparse()
 
-        return expr
-
-    def decompile(self, ctx):
-        lh = self.lh.decompile(ctx)
-
-        # Non-list decomp
-        if len(self.rh) == 1 and not self.list:
-            return f'{lh} {self.op} {self.rh[0].decompile(ctx)}'
+        if len(self.rh) == 1:
+            return f'{lh} {self.build_op()} {self.rh[0].deparse()}'
 
         rh = []
         for i in self.rh:
-            rh.append(i.decompile(ctx))
-
+            rh.append(i.deparse())
         rh = ', '.join(rh)
 
-        return f'{lh} {self.op} ({rh})'
-    
-    # Generates a polars filter
-    def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('as_pl', True):
-            return self.as_pl(ctx)
-        
-        raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        return f'{lh} {self.build_op()} ({rh})'
 
 '''
 Handles the following term operators:
@@ -166,27 +241,17 @@ Non-term operators:
     - non-term suffix/endswith
 '''
 class Substring(Comparator):
-    def __init__(self, lh:Union['NamedReference', 'Path'], op:str, rh:list[StringLiteral]):
-        Comparator.__init__(self, lh, op, [])
+    def __init__(self, lh:Union['NamedReference', 'Path'], rh:list[StringLiteral], term:bool=False, logic_and:bool=False, neq:bool=False, cs:bool=False, startswith:bool=False, endswith:bool=False):
+        Comparator.__init__(self, lh, rh)
         self.lh:Union['NamedReference', 'Path'] = lh
         self.rh:list[StringLiteral] = rh
 
-        self.term = 'has' in op
-
-        # only affects *_all, *_any right now
-        self.logic_and = False if 'any' in op else True
-        
-        self.neq = op[0] == '!'
-        self.cs = op.endswith('_cs')
-        
-        self.startswith = False
-        self.endswith = False
-        if 'prefix' in self.op or 'startswith' in self.op:
-            self.startswith = True
-        if 'suffix' in self.op or 'endswith' in self.op:
-            self.endswith = True
-
-        self.list = len(rh) > 1
+        self.term = term
+        self.logic_and = logic_and
+        self.neq = neq
+        self.cs = cs
+        self.startswith = startswith
+        self.endswith = endswith
 
     def to_dict(self):
         return {
@@ -196,90 +261,82 @@ class Substring(Comparator):
             'rh': [x.to_dict() for x in self.rh]
         }
 
-    def has(self, ctx:'Context', lh:pl.Expr, rh:Expression):
-        rh_str = rh.eval(ctx, as_str=True)
-        if not isinstance(rh_str, str):
-            raise hqle.CompilerException(f'Substring righthand returned non-str {type(rh_str)}')
+    def build_op(self) -> str:
+        if self.startswith:
+            core = 'startswith'
+        elif self.endswith:
+            core = 'endswith'
+        elif self.term:
+            core = 'has'
+        else:
+            core = 'contains'
 
-        rh_str = pl.escape_regex(rh_str)
+        if self.neq:
+            core = '!' + core
+        
+        if len(self.rh) > 1:
+            core += '_all' if self.logic_and else '_any'
+        
+        if self.cs:
+            core += '_cs'
+
+        return core
+
+    '''
+    contains and has operators
+    '''
+    def has(self, lh:pl.Expr, rh:Expression):
+        rh_str = pl.escape_regex(rh.stringify())
 
         regex = '' if self.cs else '(?i)'
         regex += rh_str
 
         return lh.str.contains(regex)
 
-    # as_pl representation
-    def prefix(self, ctx:'Context', lh:pl.Expr, rh:Expression, prefix:bool):
-        rh_str = rh.eval(ctx, as_str=True)
-        if not isinstance(rh_str, str):
-            raise hqle.CompilerException(f'Substring righthand returned non-str {type(rh_str)}')
-
-        # regex escape
-        rh_str = pl.escape_regex(rh_str)
+    '''
+    prefix and suffix operators
+    '''
+    def prefix(self, lh:pl.Expr, rh:Expression):
+        rh_str = pl.escape_regex(rh.stringify())
         
         regex = '' if self.cs else '(?i)'
-        regex += '^' if prefix else ''
-        regex += f'{rh_str}'
-        regex += '' if prefix else '$'
+        regex += '^' if self.startswith else ''
+        regex += rh_str
+        regex += '$' if self.endswith else ''
 
         return lh.str.contains(regex)
 
-    def all_any(self, ctx:'Context', lh:pl.Expr, rh:Sequence[Expression]):
-        exprs = []
-        for i in rh:
-            exprs.append(self.has(ctx, lh, i))
-
-        expr = exprs[0]
-        for i in exprs[1:]:
-            expr = expr & i if self.logic_and else expr | i
-
-        return expr
-
-    def decompile(self, ctx: 'Context') -> str:
-        lh = self.lh.decompile(ctx)
-
-        # Non-list decomp
-        if len(self.rh) == 1 and not self.list:
-            return f'{lh} {self.op} {self.rh[0].decompile(ctx)}'
+    def deparse(self) -> str:
+        lh = self.lh.decompile()
+        op = self.build_op()
 
         rh = []
         for i in self.rh:
-            rh.append(i.decompile(ctx))
-
+            rh.append(i.deparse())
         rh = ', '.join(rh)
 
-        return f'{lh} {self.op} ({rh})'
+        out = f'{lh} {op} '
+        if len(self.rh) > 1:
+            out += f'({rh})'
+        else:
+            out += rh
 
-    def eval(self, ctx:'Context', **kwargs):
-        if kwargs.get('decomp', False):
-            return self.decompile(ctx)
+        return out
 
-        as_pl = kwargs.get('as_pl', True)
-        if not as_pl:
-            raise hqle.CompilerException(f'{as_pl} in Substring comparator only supported as True')
-        
+    def polars(self) -> pl.Expr:
         if self.term:
             logging.warning('Term matching not supported in Hql-land, do not expect increased performance')
+
+        if len(self.rh) > 1:
+            return self.expand_rh().polars()
         
-        lh = self.lh.eval(ctx, as_pl=True)
-        expr = None
-        if not isinstance(lh, pl.Expr):
-            raise hqle.CompilerException(f'lh.eval() returned non-pl.Expr type {type(lh)}')
+        lh = self.lh.polars()
+        if self.startswith or self.endswith:
+            expr = self.prefix(lh, self.rh[0])
+        else:
+            expr = self.has(lh, self.rh[0])
 
-        if 'prefix' in self.op or 'startswith' in self.op:
-            # no list right hand supported atm
-            expr = self.prefix(ctx, lh, self.rh[0], True)
-
-        if 'suffix' in self.op or 'endswith' in self.op:
-            # no list right hand supported atm
-            expr = self.prefix(ctx, lh, self.rh[0], False)
-
-        expr = self.all_any(ctx, lh, self.rh)
-
-        if not isinstance(expr, type(None)):
-            return ~expr if self.neq else expr
-
-        raise hqle.CompilerException(f'Substring comparator got to the end of execution, unhandled operator {self.op} ?')
+        return ~expr if self.neq else expr
 
 # Handles relational expressions
 # - <
@@ -289,46 +346,52 @@ class Substring(Comparator):
 # As per the grammar
 # Takes after the equality expression
 class Relational(Comparator):
-    def __init__(self, lh: Expression, op: str, rh: list[Expression]) -> None:
-        Comparator.__init__(self, lh, op, rh)
+    def __init__(self, lh: Expression, rh:Union[Expression, list[Expression]], gt:bool, eq:bool) -> None:
+        Comparator.__init__(self, lh, rh, logic_and=True)
+        self.gt = gt
+        self.eq = eq
+        self.can_list = False
 
-        if len(self.rh) > 1:
-            raise hqle.CompilerException(f'Relational expression given a incompatible number of right hand expressions {len(rh)} > 1')
+    # Explode if we have too many rhs
+    def __new__(cls, lh: Expression, rh:Union[Expression, list[Expression]], gt:bool, eq:bool):
+        if not isinstance(rh, list):
+            rh = [rh]
 
-    def decompile(self, ctx: 'Context') -> str:
-        lh = self.lh.decompile(ctx)
-        rh = self.rh[0].decompile(ctx)
-        return f'{lh} {self.op} {rh}'
+        if len(rh) > 1:
+            exprs = []
+            for i in rh:
+                exprs.append(Relational(lh, i, gt, eq)) 
+            return BinaryLogic(exprs, True)
 
-    def eval(self, ctx:'Context', **kwargs):
-        as_pl = kwargs.get('as_pl', True)
+        return super().__new__(cls)
 
-        lh = self.lh.eval(ctx, as_pl=as_pl)
-        # list right hand not supported atm
-        rh = self.rh[0].eval(ctx, as_pl=as_pl)
+    def __reduce__(self):
+        return (self.__class__, (self.lh, self.rh, self.gt, self.eq))
 
-        if as_pl:
-            if not isinstance(lh, pl.Expr):
-                raise hqle.CompilerException(f'Relational left hand {type(self.lh)} returned non-polars expression {type(lh)}')
-            
-            if not isinstance(rh, pl.Expr):
-                raise hqle.CompilerException(f'Relational right hand {type(self.rh[0])} returned non-polars expression {type(rh)}')
+    def deparse(self, ctx: 'Context') -> str:
+        lh = self.lh.deparse()
+        rh = self.rh[0].deparse()
+        return f'{lh} {self.build_op()} {rh}'
+    
+    def build_op(self) -> str:
+        op =  '>' if self.gt else '<'
+        op += '=' if self.eq else ''
+        return op
 
-            if self.op == '<':
-                return (lh < rh)
-            
-            if self.op == '>':
-                return (lh > rh)
-            
-            if self.op == '<=':
-                return (lh <= rh)
-            
-            if self.op == '>=':
+    def polars(self) -> pl.Expr:
+        lh = self.lh.polars()
+        rh = self.rh[0].polars()
+
+        if self.gt:
+            if self.eq:
                 return (lh >= rh)
-
-            raise hqle.CompilerException(f'Unhandled op type {self.op}')
-
-        raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+            else:
+                return (lh > rh)
+        else:
+            if self.eq:
+                return (lh <= rh)
+            else:
+                return (lh < rh)
 
 # Data range functionality
 # Left hand side is the expression to evaluate in being between two values.
@@ -338,20 +401,19 @@ class Relational(Comparator):
 # 
 # Here lh is the '@timestamp' escaped string literal, and the right hand has
 # the start and end values for the time range.
-class BetweenEquality(Expression):
-    def __init__(self, lh:Expression, start:Expression, end:Expression, op:str):
-        Expression.__init__(self)
+class BetweenEquality(Comparator):
+    def __init__(self, lh:Expression, start:Expression, end:Expression, neq:bool=False):
+        Logic.__init__(self)
 
         self.lh = lh
         self.start = start
         self.end = end
-        self.op = op
-        self.negate = '!' in op
+        self.neq = neq
     
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             'type': self.type,
-            'negate': self.negate,
+            'negate': self.neq,
             'lh': self.lh.to_dict(),
             'rh': {
                 'start': self.start.to_dict(),
@@ -359,89 +421,94 @@ class BetweenEquality(Expression):
             }
         }
 
-    def decompile(self, ctx: 'Context') -> str:
-        lh = self.lh.decompile(ctx)
-        start = self.start.decompile(ctx)
-        end = self.end.decompile(ctx)
-        op = '!between' if self.negate else 'between'
-
+    def deparse(self) -> str:
+        lh = self.lh.deparse()
+        start = self.start.deparse()
+        end = self.end.deparse()
+        op = '!between' if self.neq else 'between'
         return f'{lh} {op} ({start} .. {end})'
-    
-    def eval(self, ctx:'Context', **kwargs):
-        as_pl = kwargs.get('as_pl', True)
-        
-        lh = self.lh.eval(ctx, as_pl=True)
-        start = self.start.eval(ctx, as_pl=True)
-        end = self.end.eval(ctx, as_pl=True)
 
-        if not isinstance(lh, pl.Expr):
-            raise hqle.CompilerException(f'Between left hand {self.lh.type} returned non-polars expression')
-
-        if not isinstance(start, pl.Expr):
-            raise hqle.CompilerException(f'Start field returned non-pl.Expr type {type(start)}')
-
-        if not isinstance(end, pl.Expr):
-            raise hqle.CompilerException(f'Start field returned non-pl.Expr type {type(end)}')
+    def polars(self) -> pl.Expr:
+        lh = self.lh.polars()
+        start = self.start.polars()
+        end = self.end.polars()
         
         filt = lh.is_between(start, end)
-        
-        if self.negate:
+        if self.neq:
             filt = ~filt
+        return filt
+
+'''
+Handles binary logic, simple ands and ors
+'''
+class BinaryLogic(Logic):
+    def __init__(self, exprs:list[Logic], logic_and:bool=True):
+        Logic.__init__(self)
+        self.logic_and = logic_and
         
-        if as_pl:
-            return filt
-        
-        else:
-            raise hqle.CompilerException(f'Unhandled kwarg as type, as_pl set to false {kwargs}')
+        if len(exprs) == 0:
+            raise hqle.CompilerException(f'BinaryLogic given a empty list of expressions')
 
-# Handles binary logic
-# - and
-# - or
-# Right hand is a list as that's how it's handled
-# If there is 3 items in the right list it is equal to
-# a and b and c and d
-class BinaryLogic(Expression):
-    def __init__(self, lh:Expression, rh:Sequence[Expression], bitype:str):
-        from Hql.Expressions import Equality
-        Expression.__init__(self)
-        self.bitype = bitype.lower()
-        exprs:Sequence[Expression] = []
-        exprs.append(lh)
-        exprs += rh
+        for i in exprs:
+            if not isinstance(i, Logic):
+                raise hqle.CompilerException(f'BinaryLogic passed invalid non-logic expression: {type(i)}')
 
-        if bitype == 'or':
-            exprs = self.condense(exprs, Equality, ('==', 'in'))
-
+        # break out needlessly nested binary operators
         condensed = []
         for i in exprs:
-            if isinstance(i, BinaryLogic) and i.bitype == self.bitype:
-                condensed += [i.lh] + i.rh
+            if isinstance(i, BinaryLogic) and self.logic_and == i.logic_and:
+                condensed += i.exprs
             else:
                 condensed.append(i)
         
-        self.lh = condensed[0]
-        self.rh = condensed[1:]
+        self.exprs:list[Logic] = condensed
 
-    def condense(self, exprs:list, target:type, ops:tuple) -> list:
-        from Hql.Expressions import NamedReference, Path
+    # immediately break down if there's only 1 expr
+    def __new__(cls, exprs:list, logic_and:bool=True):
+        if len(exprs) == 1:
+            return exprs[0]
+        return super().__new__(cls)
+
+    def __reduce__(self):
+        return (self.__class__, (self.exprs, self.logic_and))
+    
+    def __iter__(self) -> iter[Logic]:
+        return iter(self.exprs)
+
+    '''
+    Condense down equality operators so they're more syntactically condensed.
+    '''
+    def condense(self) -> list:
+        # from Hql.Expressions import NamedReference, Path
 
         # Make things a bit nicer
-        eq:dict[Union[NamedReference, Path], Equality] = dict()
-        other = []
-        for i in exprs:
-            if isinstance(i, target) and i.op in ops:
-                if not isinstance(i.lh, (NamedReference, Path)):
-                    other.append(i)
+        # eq:dict[Union[NamedReference, Path], Equality] = dict()
+        # other = []
+        # for i in exprs:
+        #     if isinstance(i, target) and i.op in ops:
+        #         if not isinstance(i.lh, (NamedReference, Path)):
+        #             other.append(i)
 
-                elif i.lh in eq:
-                    [eq[i.lh].add_rh(x) for x in i.rh]
+        #         elif i.lh in eq:
+        #             [eq[i.lh].add_rh(x) for x in i.rh]
 
-                else:
-                    eq[i.lh] = i
-            else:
-                other.append(i)
+        #         else:
+        #             eq[i.lh] = i
+        #     else:
+        #         other.append(i)
 
-        total = other + [eq[x] for x in eq]
+        # total = other + [eq[x] for x in eq]
+
+        new:list[Logic] = []
+        for i in self.exprs:
+            if not isinstance(i, Comparator):
+                new.append(i)
+
+            for j in new:
+                if j.can_merge(i):
+                    j.merge(i)
+
+            new.append(i)
 
         return total
         
@@ -489,13 +556,11 @@ class BinaryLogic(Expression):
                 
         return (filt)
 
-class BasicRange(Expression):
+class BasicRange(Logic):
     def __init__(self, start:Expression, end:Expression):
-        Expression.__init__(self)
+        Logic.__init__(self)
         self.start = start
         self.end = end
-        self.logic = True
-        self.requires_lh = True
 
     def decompile(self, ctx: 'Context') -> str:
         start = self.start.decompile(ctx)
@@ -521,9 +586,9 @@ class BasicRange(Expression):
         lh = pl.col('source').struct['ip']
         return lh.is_between(start, end)
 
-class Regex(Expression):
+class Regex(Logic):
     def __init__(self, lh:Union['NamedReference', 'Path', 'StringLiteral'], rh:'StringLiteral', i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:
-        Expression.__init__(self)
+        Logic.__init__(self)
         self.lh = lh
         self.rh = rh
 
@@ -574,9 +639,9 @@ class Regex(Expression):
 
         return lh.str.contains(rh)
 
-class Not(Expression):
+class Not(Logic):
     def __init__(self, expr:Expression) -> None:
-        Expression.__init__(self)
+        Logic.__init__(self)
         self.expr = expr
 
     def decompile(self, ctx: 'Context') -> str:
