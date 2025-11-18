@@ -183,9 +183,9 @@ class BaseExpressions(HqlVisitor):
         if ctx.Token == None:
             raise hqle.ParseException('DatetimeLiteral has no string token', ctx)
 
-        datestr = "'" + re.findall(r'datetime\(([^\)]+)\)', ctx.Token.text)[0] + "'"
-
+        datestr = re.findall(r'datetime\([\'"]?([^\)]+)[\'"]?\)', ctx.Token.text)[0]
         lit = Expr.StringLiteral(datestr)
+
         return Expr.Datetime(lit)
     
     '''

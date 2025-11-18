@@ -62,6 +62,7 @@ class Schedule():
         return True
 
     def parse_cron(self, cronstr:str) -> tuple[set, set, set, set, set]:
+        cronstr.strip('\n\r\t ')
         parts = cronstr.split(' ')
 
         for p in parts:
@@ -78,6 +79,7 @@ class Schedule():
 
     def parse_part(self, part:str, kind:str) -> set[int]:
         out_set:set[int] = set()
+        part.strip('\n\r\t ')
         opts = part.split(',')
 
         for i in opts:
