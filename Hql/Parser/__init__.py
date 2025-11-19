@@ -15,6 +15,8 @@ from Hql.Parser.Logic import Logic as ParseLogic
 
 from Hql.Parser.Sigma import SigmaParser
 
+from Hql.Parser.Object import ParseObject
+
 import logging
 from typing import Union, TYPE_CHECKING
 

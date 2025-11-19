@@ -118,7 +118,7 @@ class Data():
 
         return Data(tables=tables)
     
-    def unnest(self, field:list[str]):
+    def unnest(self, field:Union['NamedReference', 'Path']):
         tables = []
         for table in self:
             new = table.unnest(field)

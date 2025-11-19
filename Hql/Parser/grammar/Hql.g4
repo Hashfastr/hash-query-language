@@ -1090,7 +1090,7 @@ starExpression:
 
 primaryExpression:
       unsignedLiteralExpression
-    | nameReferenceWithDataScope
+    | simpleNameReference
     | dataTableExpression
     | externalDataExpression
     | contextualDataTableExpression
@@ -1098,11 +1098,11 @@ primaryExpression:
     | parenthesizedExpression
     ;
 
-nameReferenceWithDataScope:
-	Name=simpleNameReference (Scope=dataScopeClause)?;
-
-dataScopeClause:
-    DATASCOPE '=' KindToken=(HOTCACHE | ALL);
+// nameReferenceWithDataScope:
+// 	Name=simpleNameReference (Scope=dataScopeClause)?;
+//
+// dataScopeClause:
+//     DATASCOPE '=' KindToken=(HOTCACHE | ALL);
 
 parenthesizedExpression:
     '(' Expression=expression ')';

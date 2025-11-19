@@ -1,0 +1,40 @@
+from typing import TYPE_CHECKING, Optional
+import polars as pl
+from Hql.Context import Context
+import json
+
+class ParseObject():
+    def __init__(self) -> None:
+        self.type = self.__class__.__name__
+
+    def __bool__(self) -> bool:
+        return True
+
+    def __eq__(self, value: object, /) -> bool:
+        return NotImplemented
+
+    def __str__(self) -> str:
+        return json.dumps(self.to_dict())
+    
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def polars(self) -> 'pl.Expr':
+        return NotImplemented
+
+    def polars_value(self) -> 'pl.Expr':
+        return NotImplemented
+
+    def str(self) -> str:
+        return NotImplemented
+
+    def deparse(self) -> str:
+        return NotImplemented
+
+    def eval(self, ctx:Context) -> Context:
+        return NotImplemented
+
+    def to_dict(self) -> dict:
+        return {
+            'type': self.type
+        }
