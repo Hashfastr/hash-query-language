@@ -22,6 +22,12 @@ class Reference(Expression):
     def polars_value(self) -> 'pl.Expr':
         return NotImplemented
 
+    def polars_reference(self) -> 'pl.Expr':
+        return NotImplemented
+    
+    def get_symbol(self, ctx:'Context'):
+        return NotImplemented
+
 # A named reference, can be scoped
 # Scopes are not implemented yet.
 class NamedReference(Reference):
@@ -161,11 +167,35 @@ Sets a name a value
 ip_addr = ip4(destination.ip)
 '''
 class NamedExpression(Expression):
-    def __init__(self, paths:list[Expression], value:Union[Expression, Function]):
+    def __init__(self, paths:list[Reference], value:Union[Expression, Function]):
         Expression.__init__(self)
         self.paths = paths
         self.value = value
-        
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, NamedExpression):
+            return super().__eq__(value)
+
+        if len(self.paths) != len(value.paths):
+            return False
+
+        # Create a shallow copy
+        # Unordered comparison
+        value_paths = [x for x in value.paths]
+        for i in self.paths:
+            if i in value_paths:
+                value_paths.remove(i)
+            else:
+                return False
+
+        if value_paths:
+            return False
+
+        if self.value != value.value:
+            return False
+
+        return True
+
     def to_dict(self):        
         return {
             'type': self.type,
@@ -173,46 +203,46 @@ class NamedExpression(Expression):
             'value': self.value.to_dict()
         }
 
-    def __eq__(self, value: object, /) -> bool:
-        if isinstance(value, NamedExpression):
-            if len(self.paths) != len(value.paths):
-                return False
-
-            # Create a shallow copy
-            # Unordered comparison
-            value_paths = [x for x in value.paths]
-            for i in self.paths:
-                for j in value_paths:
-                    if i == j:
-                        value_paths.remove(j)
-                        break
-
-            if value_paths:
-                return False
-
-            if self.value != value.value:
-                return False
-
-            return True
-        return super().__eq__(value)
-
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         paths = []
         for i in self.paths:
-            paths.append(i.decompile(ctx))
+            paths.append(i.deparse())
 
         lh = ', '.join(paths)
-        value = self.value.decompile(ctx)
+        value = self.value.deparse()
 
         return f'{lh}={value}'
-        
-    def eval(self, ctx:'Context', **kwargs):
+
+    def can_polars(self) -> bool:
+        from Hql.Functions import Function
+        if isinstance(self.value, Function):
+            return False
+        return True
+
+    def polars(self) -> 'pl.Expr':
+        if isinstance(self.value, Function):
+            logging.error(self.deparse())
+            raise hqle.CompilerException(f'Attempting to polars non-polars expression')
+
+        value = self.polars_value()
+        exprs = []
+
+        for i in self.paths:
+            i.polars()
+
+        return 
+
+    def polars_value(self) -> 'pl.Expr':
+        if isinstance(self.value, Function):
+            logging.error(self.deparse())
+            raise hqle.CompilerException(f'Attempting to polars non-polars expression')
+        return self.value.polars()
+
+    def eval(self, ctx:'Context', insert:bool=True) -> 'Context':
         from Hql.Expressions import Literal
-        insert = kwargs.get('insert', False)
-        as_value = kwargs.get('as_value', False)
 
         if isinstance(self.value, Literal):
-            series = self.value.make_series()
+            series = self.value.series()
             value = Data()
             for i in ctx.data:
                 value.add_table(Table(name=i.name, series=series))

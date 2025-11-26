@@ -19,6 +19,9 @@ class ParseObject():
     def __repr__(self) -> str:
         return self.__str__()
 
+    def can_polars(self) -> bool:
+        return True
+
     def polars(self) -> 'pl.Expr':
         return NotImplemented
 

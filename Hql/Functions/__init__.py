@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from Hql.Expressions import Expression as Expression
     from Hql.Compiler import InstructionSet
     from Hql.Hac import Source
-    from Hql.Operators.Database import Database
+    from Hql.Database import Database
 
 class Function():
     def __init__(self, args:list, min:int, max:int, conf:Optional[dict]=None):
@@ -34,8 +34,8 @@ class Function():
     def __hash__(self):
         return hash((self.name))
 
-    def decompile(self, ctx:'Context'):
-        args = ', '.join([x.decompile(ctx) for x in self.args])
+    def deparse(self):
+        args = ', '.join([x.deparse() for x in self.args])
         return f'{self.name}({args})'
         
     def to_dict(self):

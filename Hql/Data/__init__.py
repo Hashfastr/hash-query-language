@@ -111,14 +111,14 @@ class Data():
         return schemata
 
     # Given a path, select just the data at that path
-    def select(self, path:list[str]):
+    def select(self, ref:Union['NamedReference', 'Path']):
         tables = []
         for table in self:
             tables.append(table.select(path))
 
         return Data(tables=tables)
     
-    def unnest(self, field:Union['NamedReference', 'Path']):
+    def unnest(self, ref:Union['NamedReference', 'Path']):
         tables = []
         for table in self:
             new = table.unnest(field)

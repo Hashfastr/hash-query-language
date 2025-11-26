@@ -16,7 +16,7 @@ class Literal(Expression):
         self.literal = True
         self.hql_type = hql_type
 
-    def make_series(self) -> 'Series':
+    def series(self) -> 'Series':
         from Hql.Data import Series
         series = Series(pl.Series([self.value]), self.hql_type)
         return series.cast()
