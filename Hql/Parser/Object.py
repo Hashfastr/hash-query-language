@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Optional
 import polars as pl
 from Hql.Context import Context
 import json
+from Hql.Types.Hql import HqlTypes as hqlt
 
 class ParseObject():
     def __init__(self) -> None:
@@ -29,6 +30,9 @@ class ParseObject():
         return NotImplemented
 
     def str(self) -> str:
+        return NotImplemented
+
+    def dtype(self) -> hqlt.HqlType:
         return NotImplemented
 
     def deparse(self) -> str:

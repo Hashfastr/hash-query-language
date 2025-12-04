@@ -1,7 +1,6 @@
-from numpy import isin
 import polars as pl
 import logging
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
@@ -12,10 +11,12 @@ if TYPE_CHECKING:
 
 class HqlTypes():
     class HqlType(CompilerType):
-        def __init__(self, proto:pl.DataType, inner:Union[None, type]=None):
+        def __init__(self, proto:Union[pl.DataType, type], inner:Optional[type]=None):
             CompilerType.__init__(self, type(self), inner=inner)
             
-            self.proto:pl.DataType = proto
+            # Union here to allow for a 'type' proto
+            # probably stupid, see HqlTypes.type
+            self.proto:Union[pl.DataType, type] = proto
                 
             self.complex:bool = False
             self.priority:int = 0
@@ -83,6 +84,11 @@ class HqlTypes():
             return HqlTypes.multivalue(l)
         else:
             return l
+
+    @register_type('hql_type')
+    class type(HqlType):
+        def __init__(self):
+            HqlTypes.HqlType.__init__(self, type)
 
     @register_type('hql_decimal')
     class decimal(HqlType):
@@ -163,7 +169,6 @@ class HqlTypes():
     class ip4(HqlType):
         def __init__(self):
             HqlTypes.HqlType.__init__(self, pl.UInt32())
-
             self.complex = True
 
         def pl_schema(self) -> pl.DataType:
