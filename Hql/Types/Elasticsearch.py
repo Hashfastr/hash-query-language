@@ -1,7 +1,7 @@
 from Hql.Types.Hql import HqlTypes as hqlt
 from Hql.Types.Compiler import CompilerType
 import logging
-from typing import Union
+from typing import Optional
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
@@ -9,8 +9,8 @@ from Hql.Context import register_type, get_type
 
 class ESTypes():
     class ESType(CompilerType):
-        def __init__(self, base:type, inner:Union[None, type]=None):
-            CompilerType.__init__(self, base, inner=inner)
+        def __init__(self, inner:Optional['ESTypes.ESType']=None):
+            CompilerType.__init__(self, inner=inner)
     
     @staticmethod
     def from_name(name:str):
@@ -20,77 +20,92 @@ class ESTypes():
     @register_type('elasticsearch_match_only_text')
     class text(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.string)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.string()
 
     @register_type('elasticsearch_boolean')
     class boolean(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.bool)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.bool()
 
     @register_type('elasticsearch_scaled_float')
     class scaled_float(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.decimal)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.decimal()
 
     @register_type('elasticsearch_half_float')
     class half_float(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.float)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.float()
     
     @register_type('elasticsearch_float')
     class float(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.float)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.float()
         
     @register_type('elasticsearch_double')
     class double(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.double)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.double()
     
     @register_type('elasticsearch_byte') 
     class byte(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.byte)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.byte()
     
     @register_type('elasticsearch_short') 
     class short(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.short)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.short()
     
     @register_type('elasticsearch_integer') 
     class integer(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.int)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.int()
     
     @register_type('elasticsearch_long') 
     class long(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.long)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.long()
     
     @register_type('elasticsearch_unsigned_long') 
     class unsigned_long(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.ulong)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.ulong()
     
     @register_type('elasticsearch_ip') 
     class ip(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.string)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.string()
         
     @register_type('elasticsearch_date')
     class date(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.datetime)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.datetime()
     
     @register_type('elasticsearch_date_nanos') 
     class date_nanos(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.datetime)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.datetime()
         
     @register_type('elasticsearch_date_range')
     class date_range(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.range, inner=hqlt.datetime)
+            ESTypes.ESType.__init__(self, inner=ESTypes.date())
+            self.HqlType = hqlt.range(hqlt.datetime())
     
     @register_type('elasticsearch_integer_range') 
     class integer_range(ESType):

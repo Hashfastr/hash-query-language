@@ -41,22 +41,26 @@ class Literal(Expression):
             'value': self.value
         }
 
-class TypeExpression(Literal):
-    def __init__(self, hql_type:str):
-        Literal.__init__(self, hqlt.type())
-        self.hql_type = hql_type
-
-    def polars(self) -> 'pl.Expr':
-        return self.dtype().pl_schema()
-
-    def polars_value(self) -> 'pl.Expr':
-        return NotImplemented
-
-    def deparse(self) -> str:
-        return self.hql_type
-
-    def dtype(self) -> hqlt.HqlType:
-        return hqlt.from_name(self.hql_type)()
+# class TypeExpression(Literal):
+#     def __init__(self, hql_type:Union[str, hqlt.HqlType]):
+#         Literal.__init__(self, hqlt.type())
+#
+#         if isinstance(hql_type, str):
+#             hql_type = hqlt.from_name(hql_type)
+#
+#         self.hql_type = hql_type
+#
+#     def polars(self) -> 'pl.Expr':
+#         return self.hql_type.pl_schema()
+#
+#     def polars_value(self) -> 'pl.Expr':
+#         return NotImplemented
+#
+#     def deparse(self) -> str:
+#         return self.hql_type
+#
+#     def dtype(self) -> hqlt.HqlType:
+#         return hqlt.from_name(self.hql_type)()
 
 class StringLiteral(Literal):
     def __init__(self, value:Union[str, bytes], verbatim:bool=False, obfuscated:bool=False):
@@ -141,13 +145,12 @@ class IP4(Literal):
         Literal.__init__(self, hqlt.ip4())
         
         if isinstance(value, StringLiteral):
-            self.value = hqlt.ip4().cast(pl.Series([value.polars()]))
+            self.value = hqlt.ip4().cast_single(value)
         else:
             self.value = value
 
-    def str(self) -> str:
-        s = pl.Series([self.value])
-        return hqlt.ip4().human(s)
+    def str(self):
+        return hqlt.ip4().human_single(self.value)
 
     def deparse(self) -> str:
         return f"ip4('{self.str()}')"
@@ -164,24 +167,22 @@ class Float(Literal):
         self.value = float(value)
 
 class Bool(Literal):
-    def __init__(self, value:Union[str, bool]):
+    def __init__(self, value:bool):
         Literal.__init__(self, hqlt.bool())
-
-        if isinstance(value, str):
-            self.value = value.lower() == 'true'
-        else:
-            self.value = value
+        self.value = value
 
 class Multivalue(Literal):
     def __init__(self, value:list[Literal]) -> None:
-        self.super_type = hqlt.resolve_conflict([x.hql_type for x in value])
-        Literal.__init__(self, hqlt.multivalue(type(self.super_type)))
+        super_type = hqlt.resolve_conflict([x.hql_type for x in value])
+        Literal.__init__(self, hqlt.multivalue(super_type))
 
         series = pl.Series([x.value for x in value])
         self.value = self.hql_type.cast(series)
 
     def deparse(self) -> str:
-        dec = [x.decompile(ctx) for x in self.value]
+        return NotImplemented
+        self.hql_type.inner()
+        dec = [ for x in self.value]
         return 'make_mv(' + ', '.join(dec) + ')'
 
 class Datetime(Literal):
@@ -200,10 +201,7 @@ class Datetime(Literal):
 
     def deparse(self) -> str:
         inner = StringLiteral(self.value.isoformat())
-        return 'datetime(' + inner.decompile(ctx) + ')'
-
-    def eval(self, ctx:'Context', **kwargs):
-        return pl.lit(self.value)
+        return 'datetime(' + inner.str() + ')'
 
 class Null(Literal):
     def __init__(self) -> None:

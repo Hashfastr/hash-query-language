@@ -8,15 +8,13 @@ from Hql.Types.Compiler import CompilerType
 
 if TYPE_CHECKING:
     from Hql.Data import Series
+    from Hql.Expressions.Literals import Integer, StringLiteral
 
 class HqlTypes():
     class HqlType(CompilerType):
-        def __init__(self, proto:Union[pl.DataType, type], inner:Optional[type]=None):
-            CompilerType.__init__(self, type(self), inner=inner)
-            
-            # Union here to allow for a 'type' proto
-            # probably stupid, see HqlTypes.type
-            self.proto:Union[pl.DataType, type] = proto
+        def __init__(self, inner:Optional['HqlTypes.HqlType']=None):
+            CompilerType.__init__(self, inner=inner)
+            self.proto:Optional[pl.DataType] = None
                 
             self.complex:bool = False
             self.priority:int = 0
@@ -41,7 +39,7 @@ class HqlTypes():
             return self
     
     @staticmethod
-    def from_name(name:str):
+    def from_name(name:str) -> HqlTypes.HqlType:
         return get_type(f'hql_{name}')
     
     @staticmethod
@@ -88,39 +86,47 @@ class HqlTypes():
     @register_type('hql_type')
     class type(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, type)
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.DataType()
 
     @register_type('hql_decimal')
     class decimal(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Decimal())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Decimal()
     
     @register_type('hql_float') 
     class float(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Float32())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Float32()
+
             self.priority = 3
             self.super = [HqlTypes.string, HqlTypes.multivalue]
 
     @register_type('hql_double')
     class double(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Float64())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Float64()
     
     @register_type('hql_byte') 
     class byte(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Int8())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Int8()
 
     @register_type('hql_short')
     class short(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Int16())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Int16()
 
     @register_type('hql_int')
-    class int(HqlType, pl.Int32):
+    class int(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Int32())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Int32()
             
             self.priority = 2
             self.super = [HqlTypes.float, HqlTypes.string, HqlTypes.multivalue]
@@ -128,56 +134,76 @@ class HqlTypes():
     @register_type('hql_long') 
     class long(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Int64())
+            HqlTypes.HqlType.__init__(self)
 
     @register_type('hql_xlong')
     class xlong(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Int128())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Int128()
 
     @register_type('hql_guid')
     class guid(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Int128())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Int128()
     
     @register_type('hql_ubyte') 
     class ubyte(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.UInt8())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.UInt8()
         
     @register_type('hql_ushort')
     class ushort(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.UInt16())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.UInt16()
     
     @register_type('hql_uint') 
-    class uint(HqlType, pl.UInt32):
+    class uint(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.UInt32())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.UInt32()
     
     @register_type('hql_ulong') 
     class ulong(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.UInt64())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.UInt64()
 
     @register_type('hql_ip')
     class ip(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.String())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.String()
 
     @register_type('hql_ip4')
     class ip4(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.UInt32())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.UInt32()
+
             self.complex = True
 
-        def pl_schema(self) -> pl.DataType:
-            schema = super().pl_schema()
+        def cast_single(self, ip:Union['StringLiteral', str]) -> int:
+            from Hql.Expressions.Literals import StringLiteral
 
-            if isinstance(schema, dict):
-                raise hqle.CompilerException('Returned a dict schema where ')
+            if isinstance(ip, StringLiteral):
+                ip = ip.str()
 
-            return super().pl_schema()
+            split = ip.split('.')
+            num = 0
+            for idx, j in enumerate(split):
+                try:
+                    # magnitude scales with the index
+                    num += int(split[idx]) << (8 * (3 - idx))
+                
+                # Likely IPv6 if we hit this
+                # Or trash garbo data
+                except ValueError:
+                    continue
+            return num
 
         def cast(self, series:pl.Series):
             # lazy if not string
@@ -186,54 +212,45 @@ class HqlTypes():
 
             ips = []
             for i in series:
-                if not i:
-                    ips.append(None)
-                    continue
-
-                split = i.split('.')
-                num = 0
-                for idx, j in enumerate(split):
-                    try:
-                        # magnitude scales with the index
-                        num += int(split[idx]) << (8 * (3 - idx))
-                    
-                    # Likely IPv6 if we hit this
-                    # Or trash garbo data
-                    except ValueError:
-                        continue
-
-                ips.append(num)
+                ips.append(self.cast_single(i)) if i != None else ips.append(None)
                 
             return pl.Series(ips, dtype=self.proto)
         
-        def human(self, series:pl.Series):
-            if series.dtype != self.proto:
-                raise hqle.CompilerException('Attempting to human a non-converted ip4 field')
+        def human_single(self, ip:Union['Integer', int]) -> str:
+            from Hql.Expressions.Literals import Integer
+
+            if isinstance(ip, Integer):
+                ip = ip.value
 
             d = 0xFF
             c = d << 8
             b = c << 8
             a = b << 8
+
+            return f'{(ip & a) >> 24}.{(ip & b) >> 16}.{(ip & c) >> 8}.{ip & d}'
+        
+        def human(self, series:pl.Series):
+            if series.dtype != self.proto:
+                raise hqle.CompilerException('Attempting to human a non-converted ip4 field')
             
             ips = []
             for i in series:
-                if i == None:
-                    ips.append(None)
-                    continue
-                
-                ips.append(f'{(i & a) >> 24}.{(i & b) >> 16}.{(i & c) >> 8}.{i & d}')
+                ips.append(self.human_single(i)) if i != None else ips.append(None)
 
             return pl.Series(ips, dtype=pl.String)                
 
     @register_type('hql_ip6')
     class ip6(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Int128())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Int128()
     
     @register_type('hql_datetime')     
     class datetime(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Datetime())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Datetime()
+
             self.complex = True
 
         def human(self, series:pl.Series):
@@ -248,38 +265,42 @@ class HqlTypes():
     @register_type('hql_duration')
     class duration(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Duration())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Duration()
         
     @register_type('hql_time')  
     class time(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Time())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Time()
 
     # Need to figure this out properly
     @register_type('hql_range')
     class range(HqlType, pl.Struct):
-        def __init__(self, inner:type):
-            self.inner = inner
-            HqlTypes.HqlType.__init__(self, self.pl_schema())
+        def __init__(self, inner:'HqlTypes.HqlType'):
+            HqlTypes.HqlType.__init__(self, inner=inner)
+            self.proto = self.pl_schema()
 
         def pl_schema(self) -> pl.DataType:
-            return pl.Struct(fields=[pl.Field('start', self.inner), pl.Field('end', self.inner)])
+            assert self.inner != None
+            pl_schema = self.inner.pl_schema()
+            return pl.Struct(fields=[pl.Field('start', pl_schema), pl.Field('end', pl_schema)])
 
     @register_type('hql_matrix')
     class matrix(HqlType):
-        def __init__(self, dtype:"HqlTypes.HqlType"):
-            HqlTypes.HqlType.__init__(self, self.pl_schema())
-            self.dtype = dtype
-            
+        def __init__(self, inner:'HqlTypes.HqlType'):
+            HqlTypes.HqlType.__init__(self, inner=inner)
             raise hqle.CompilerException('Unimplemented hql type matrix')
 
         def pl_schema(self) -> pl.DataType:
-            return pl.Array(self.dtype.pl_schema())
+            assert self.inner != None
+            return pl.Array(self.inner.pl_schema())
     
     @register_type('hql_string') 
     class string(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.String())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.String()
             
             self.priority = 4
             self.super = [HqlTypes.multivalue]
@@ -293,12 +314,14 @@ class HqlTypes():
     @register_type('hql_binary') 
     class binary(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Binary())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Binary()
     
     @register_type('hql_bool') 
     class bool(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Boolean())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Boolean()
             
             self.priority = 1
             self.super = [HqlTypes.int, HqlTypes.string, HqlTypes.multivalue]
@@ -308,9 +331,9 @@ class HqlTypes():
     '''
     @register_type('hql_object')
     class object(HqlType):
-        def __init__(self, schema:Union[dict, None]=None):
+        def __init__(self, schema:Optional[dict]=None):
             self.schema = schema if schema else dict()
-            HqlTypes.HqlType.__init__(self, self.pl_schema())
+            HqlTypes.HqlType.__init__(self)
 
         def pl_schema(self) -> pl.DataType:
             return pl.Struct(self.schema)
@@ -318,7 +341,8 @@ class HqlTypes():
     @register_type('hql_null')
     class null(HqlType):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Null())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Null()
             
             self.priority = 0
             self.super = [HqlTypes.bool, HqlTypes.int, HqlTypes.float, HqlTypes.string, HqlTypes.multivalue]
@@ -326,18 +350,18 @@ class HqlTypes():
     @register_type('hql_unknown')
     class unknown(HqlType, pl.Unknown):
         def __init__(self):
-            HqlTypes.HqlType.__init__(self, pl.Unknown())
+            HqlTypes.HqlType.__init__(self)
+            self.proto = pl.Unknown()
             raise hqle.CompilerException('Unknown type Unimplemented')
         
     @register_type('hql_multivalue')
     class multivalue(HqlType):
-        def __init__(self, inner:type):
-            try:
-                self.inner = inner().hql_schema()
-            except:
-                self.inner = inner.hql_schema()
+        def __init__(self, inner:'HqlTypes.HqlType'):
+            self.inner = inner
+            assert inner.proto
+            self.proto = pl.List(inner.proto)
 
-            HqlTypes.HqlType.__init__(self, self.pl_schema(), inner=inner)
+            HqlTypes.HqlType.__init__(self, inner=inner)
             
             self.priority = 5
             self.super = []
