@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from Hql.Expressions import NamedReference, Path
 
 class OrderedExpression(Expression):
-    def __init__(self, expr:Union[Expression, None]=None, order:str='desc', nulls:str=''):
+    def __init__(self, expr:Expression, order:str='desc', nulls:str=''):
         Expression.__init__(self)
         self.expr = expr
         self.order = order
@@ -22,11 +22,8 @@ class OrderedExpression(Expression):
             if order == 'desc':
                 self.nulls = 'last'
 
-    def decompile(self, ctx: 'Context') -> str:
-        if not self.expr:
-            raise hqle.CompilerException('Decompile of ordered expression with NoneType self.expr')
-
-        expr = self.expr.decompile(ctx)
+    def deparse(self) -> str:
+        expr = self.expr.deparse()
         return f'{expr} {self.order} nulls {self.nulls}'
         
     def to_dict(self):
