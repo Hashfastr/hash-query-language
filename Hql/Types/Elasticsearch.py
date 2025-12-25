@@ -3,14 +3,13 @@ from Hql.Types.Compiler import CompilerType
 import logging
 from typing import Optional
 
-from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
-# from ..Types.Compiler import CompilerType
 
 class ESTypes():
     class ESType(CompilerType):
         def __init__(self, inner:Optional['ESTypes.ESType']=None):
             CompilerType.__init__(self, inner=inner)
+            self.inner:Optional[ESTypes.ESType] = inner
     
     @staticmethod
     def from_name(name:str):
@@ -100,97 +99,79 @@ class ESTypes():
         def __init__(self):
             ESTypes.ESType.__init__(self)
             self.HqlType = hqlt.datetime()
-        
-    @register_type('elasticsearch_date_range')
-    class date_range(ESType):
-        def __init__(self):
-            ESTypes.ESType.__init__(self, inner=ESTypes.date())
-            self.HqlType = hqlt.range(hqlt.datetime())
-    
-    @register_type('elasticsearch_integer_range') 
-    class integer_range(ESType):
-        def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.range, inner=hqlt.int)
 
-    @register_type('elasticsearch_float_range')
-    class float_range(ESType):
-        def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.range, inner=hqlt.float)
-        
-    @register_type('elasticsearch_long_range')   
-    class long_range(ESType):
-        def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.range, inner=hqlt.long)
-        
-    @register_type('elasticsearch_double_range') 
-    class double_range(ESType):
-        def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.range, inner=hqlt.double)
-
-    @register_type('elasticsearch_ip_range') 
-    class ip_range(ESType):
-        def __init__(self):
-            # Might need to specify the type of ip
-            ESTypes.ESType.__init__(self, hqlt.range, inner=hqlt.ip)
+    @register_type('elasticsearch_range')
+    class range(ESType):
+        def __init__(self, inner:'ESTypes.ESType'):
+            ESTypes.ESType.__init__(self, inner=inner)
+            assert self.inner
+            self.HqlType = hqlt.range(self.inner.hql_schema())
     
     @register_type('elasticsearch_keyword') 
+    @register_type('elasticsearch_constant_keyword') 
     class keyword(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.string)
-    
-    @register_type('elasticsearch_constant_keyword') 
-    class constant_keyword(ESType):
-        def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.string)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.string()
     
     @register_type('elasticsearch_wildcard') 
     class wildcard(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.string)
-    
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.string()
+
     @register_type('elasticsearch_binary') 
     class binary(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.string)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.string()
     
     @register_type('elasticsearch_object') 
     class object(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.object)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.object()
     
     @register_type('elasticsearch_flattened') 
     class flattened(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.object)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.object()
         
     @register_type('elasticsearch_nested')
     class nested(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.object)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.object()
     
     @register_type('elasticsearch_alias') 
     class alias(ESType):
         def __init__(self):
             logging.warning("Elasticsearch type 'alias' not implemented at the moment")
             logging.warning("This is a metatype, I don't have examples")
-            ESTypes.ESType.__init__(self, hqlt.string)
+            ESTypes.ESType.__init__(self)
+            self.HqlType = hqlt.string()
         
     @register_type('elasticsearch_point')
     class point(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.multivalue, inner=hqlt.double)
+            ESTypes.ESType.__init__(self, ESTypes.double())
+            self.HqlType = hqlt.multivalue(hqlt.double())
         
     @register_type('elasticsearch_geo_point')
     class geo_point(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.multivalue, inner=hqlt.double)
+            ESTypes.ESType.__init__(self, ESTypes.double())
+            self.HqlType = hqlt.multivalue(hqlt.double())
     
     @register_type('elasticsearch_shape') 
     class shape(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.multivalue, inner=hqlt.double)
+            ESTypes.ESType.__init__(self, ESTypes.double())
+            self.HqlType = hqlt.multivalue(hqlt.double())
                     
     @register_type('elasticsearch_geo_shape')   
     class geo_shape(ESType):
         def __init__(self):
-            ESTypes.ESType.__init__(self, hqlt.multivalue, inner=hqlt.double)
+            ESTypes.ESType.__init__(self, ESTypes.double())
+            self.HqlType = hqlt.multivalue(hqlt.double())
