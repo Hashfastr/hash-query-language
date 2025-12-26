@@ -307,7 +307,7 @@ class HqlTypes():
         
     @register_type('hql_enum') 
     class enum(HqlType):
-        def __init__(self):
+        def __init__(self, values:list[str]):
             raise hqle.CompilerException('Unimplemented type enum')
             HqlTypes.HqlType.__init__(self, pl.Null())
         
