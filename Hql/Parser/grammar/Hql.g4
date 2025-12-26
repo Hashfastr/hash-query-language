@@ -308,7 +308,7 @@ facetByOperatorWithExpressionClause:
 
 findOperator:
     FIND 
-        (DataScopeClause=dataScopeClause)? 
+        // (DataScopeClause=dataScopeClause)? 
         (ParameterWhereClause=findOperatorParametersWhereClause)? 
         Expression=unnamedExpression 
         (ProjectClause=findOperatorProjectClause | ProjectSmartClause=findOperatorProjectSmartClause)?
@@ -729,7 +729,7 @@ scanOperatorAssignment:
 searchOperator:
     SEARCH 
       (Parameters+=relaxedQueryOperatorParameter)*
-      (DataScope=dataScopeClause)? 
+      // (DataScope=dataScopeClause)? 
       (InClause=searchOperatorInClause)? 
       (Expression=unnamedExpression | Star=starExpression | StarAndExpression=searchOperatorStarAndExpression);
     
@@ -748,11 +748,7 @@ sortOperator:
     Keyword=(SORT | ORDER) (Parameters+=relaxedQueryOperatorParameter)* BY Expressions+=orderedExpression (',' Expressions+=orderedExpression)*;
 
 orderedExpression:
-    Expression=namedExpression Ordering=sortOrdering;
-
-sortOrdering:
-    OrderKind=(ASC | DESC)? (NULLS NullsKind=(FIRST | LAST))?;
-
+    Expression=namedExpression OrderKind=(ASC | DESC)? (NULLS NullsKind=(FIRST | LAST))?;
 
 summarizeOperator:
     SUMMARIZE (Parameters+=strictQueryOperatorParameter)* (Expressions+=namedExpression (',' Expressions+=namedExpression)*)? (ByClause=summarizeOperatorByClause)?;

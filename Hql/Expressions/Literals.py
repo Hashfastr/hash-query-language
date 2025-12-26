@@ -20,7 +20,7 @@ class Literal(Expression):
         series = Series(pl.Series([self.value]), self.hql_type)
         return series.cast()
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> Union[pl.Expr, pl.DataTypeExpr]:
         return pl.lit(self.value)
 
     def polars_value(self) -> 'pl.Expr':
@@ -41,26 +41,22 @@ class Literal(Expression):
             'value': self.value
         }
 
-# class TypeExpression(Literal):
-#     def __init__(self, hql_type:Union[str, hqlt.HqlType]):
-#         Literal.__init__(self, hqlt.type())
-#
-#         if isinstance(hql_type, str):
-#             hql_type = hqlt.from_name(hql_type)
-#
-#         self.hql_type = hql_type
-#
-#     def polars(self) -> 'pl.Expr':
-#         return self.hql_type.pl_schema()
-#
-#     def polars_value(self) -> 'pl.Expr':
-#         return NotImplemented
-#
-#     def deparse(self) -> str:
-#         return self.hql_type
-#
-#     def dtype(self) -> hqlt.HqlType:
-#         return hqlt.from_name(self.hql_type)()
+class TypeExpression(Literal):
+    def __init__(self, hql_type:Union[str, hqlt.HqlType]):
+        Literal.__init__(self, hqlt.type())
+        self.hql_type:hqlt.HqlType = hqlt.from_name(hql_type) if isinstance(hql_type, str) else hql_type
+
+    def polars(self) -> pl.DataTypeExpr:
+        return pl.Decimal().to_dtype_expr()
+
+    def polars_value(self) -> pl.Expr:
+        return NotImplemented
+
+    def deparse(self) -> str:
+        return self.hql_type.name
+
+    def dtype(self) -> hqlt.HqlType:
+        return self.hql_type
 
 class StringLiteral(Literal):
     def __init__(self, value:Union[str, bytes], verbatim:bool=False, obfuscated:bool=False):

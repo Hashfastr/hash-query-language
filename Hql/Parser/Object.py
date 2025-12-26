@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Union
 import polars as pl
 from Hql.Context import Context
 import json
@@ -23,10 +23,10 @@ class ParseObject():
     def can_polars(self) -> bool:
         return True
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> Union[pl.Expr, pl.DataTypeExpr]:
         return NotImplemented
 
-    def polars_value(self) -> 'pl.Expr':
+    def polars_value(self) -> pl.Expr:
         return NotImplemented
 
     def str(self) -> str:

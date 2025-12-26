@@ -849,11 +849,6 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#sortOrdering.
-    def visitSortOrdering(self, ctx:HqlParser.SortOrderingContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by HqlParser#summarizeOperator.
     def visitSummarizeOperator(self, ctx:HqlParser.SummarizeOperatorContext):
         return self.visitChildren(ctx)
@@ -1171,16 +1166,6 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#primaryExpression.
     def visitPrimaryExpression(self, ctx:HqlParser.PrimaryExpressionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#nameReferenceWithDataScope.
-    def visitNameReferenceWithDataScope(self, ctx:HqlParser.NameReferenceWithDataScopeContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#dataScopeClause.
-    def visitDataScopeClause(self, ctx:HqlParser.DataScopeClauseContext):
         return self.visitChildren(ctx)
 
 

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 class Reference(Expression):
     def __init__(self):
         Expression.__init__(self)
+        self.name = ''
 
     def polars(self) -> 'pl.Expr':
         return NotImplemented
@@ -26,7 +27,7 @@ class Reference(Expression):
         return NotImplemented
     
     def get_symbol(self, ctx:'Context'):
-        return NotImplemented
+        return ctx.symbol_table.get(self.name, None)
 
 # A named reference, can be scoped
 # Scopes are not implemented yet.
@@ -49,9 +50,6 @@ class NamedReference(Reference):
             'name': self.name,
         }
 
-    def get_symbol(self, ctx:'Context'):
-        return ctx.symbol_table.get(self.name, None)
-
     def deparse(self) -> str:
         return self.name
 
@@ -73,6 +71,9 @@ class NamedReference(Reference):
         else:
             ctx.data = ctx.data.select(self)
         return ctx
+
+class Wildcard(NamedReference):
+    ...
         
 class EscapedNamedReference(NamedReference):
     def deparse(self) -> str:

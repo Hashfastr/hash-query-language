@@ -15,11 +15,7 @@ class BaseExpressions(HqlVisitor):
     
     Not values, but references to values such as columns and tables.
     '''
-    def visitNameReferenceWithDataScope(self, ctx: HqlParser.NameReferenceWithDataScopeContext):
-        name = self.visit(ctx.Name)
-        #name.scope = self.visit(ctx.Scope)
-        return name
-    
+
     def visitEscapedName(self, ctx: HqlParser.EscapedNameContext):
         # Probably need to unescape these eventually
         literal = self.visit(ctx.StringLiteral)
@@ -33,73 +29,33 @@ class BaseExpressions(HqlVisitor):
         else:
             raise hqle.ParseException("Wildcarded name given nothing", ctx)
         return Expr.Wildcard(txt)
-
-        # prefix = self.visit(ctx.Prefix) if ctx.Prefix else ''
-        # segments = []
-        # for i in ctx.Segments:
-        #     segments.append(self.visit(i))
-        #
-        # name = prefix + '*' + ''.join(segments)
-        #
-        # return Expr.Wildcard(name)
     
-    # def visitWildcardedNamePrefix(self, ctx: HqlParser.WildcardedNamePrefixContext):
-    #     if ctx.Identifier:
-    #         return ctx.getText()
-    #
-    #     if ctx.Keyword:
-    #         return self.visit(ctx.Keyword)
-    #
-    #     if ctx.ExtendedKeyword:
-    #         return self.visit(ctx.ExtendedKeyword)
-        
     def visitKeywordName(self, ctx: HqlParser.KeywordNameContext):
         if ctx.Token == None:
             raise hqle.ParseException('Keyword has no string token', ctx)
-
-        return Expr.Keyword(ctx.Token.text)
+        return Expr.NamedReference(ctx.Token.text)
     
     def visitIdentifierName(self, ctx: HqlParser.IdentifierNameContext):
         if ctx.Token == None:
             raise hqle.ParseException('Identifier has no string token', ctx)
-
-        return Expr.Identifier(ctx.Token.text)
+        return Expr.NamedReference(ctx.Token.text)
     
-    '''
-    Variable assignment, i.e. an expression given a name
-    
-    foo=toint(bar)
-    '''
     def visitNamedExpression(self, ctx: HqlParser.NamedExpressionContext):
         if not ctx.Name:
             return self.visit(ctx.Expression)
                 
         names = self.visit(ctx.Name)
         value = self.visit(ctx.Expression)
-                
         return Expr.NamedExpression(names, value)
     
     def visitNamedExpressionNameClause(self, ctx: HqlParser.NamedExpressionNameClauseContext):
-        if ctx.Name:
-            return [self.visit(ctx.Name)]
-        else:
-            return self.visit(ctx.NameList)
+        return [self.visit(ctx.Name)] if ctx.Name else self.visit(ctx.NameList)
         
     def visitNamedExpressionNameList(self, ctx: HqlParser.NamedExpressionNameListContext):
-        names = []
-        for name in ctx.Names:
-            names.append(self.visit(name))
-            
-        return names
+        return [self.visit(x) for x in ctx.Names]
     
     def visitPathReference(self, ctx: HqlParser.PathReferenceContext):
-        parts = []
-        
-        for i in ctx.Parts:
-            parts.append(self.visit(i))
-
-        if len(parts) == 1:
-            return parts[0]
+        parts = [self.visit(x) for x in ctx.Parts]
         return Expr.Path(parts)
 
     '''
@@ -110,6 +66,7 @@ class BaseExpressions(HqlVisitor):
     Bools
     Ints
     '''
+    
     def visitStringLiteralExpression(self, ctx: HqlParser.StringLiteralExpressionContext):
         import re
 
@@ -157,25 +114,17 @@ class BaseExpressions(HqlVisitor):
     def visitLongLiteralExpression(self, ctx: HqlParser.LongLiteralExpressionContext):
         if ctx.Token == None:
             raise hqle.ParseException('LongLiteral has no string token', ctx)
-
         return Expr.Integer(ctx.Token.text)
     
     def visitBooleanLiteralExpression(self, ctx: HqlParser.BooleanLiteralExpressionContext):
         if ctx.Token == None:
             raise hqle.ParseException('BooleanLiteral has no string token', ctx)
-
         return Expr.Bool(ctx.Token.text)
 
     def visitRealLiteralExpression(self, ctx: HqlParser.RealLiteralExpressionContext):
         if ctx.Token == None:
             raise hqle.ParseException('RealLiteral has no string token', ctx)
-
         return Expr.Float(ctx.Token.text)
-
-    def visitOrderedExpression(self, ctx: HqlParser.OrderedExpressionContext):
-        expr = self.visit(ctx.Ordering)
-        expr.expr = self.visit(ctx.Expression)
-        return expr
 
     def visitDateTimeLiteralExpression(self, ctx: HqlParser.DateTimeLiteralExpressionContext):
         import re
@@ -192,18 +141,12 @@ class BaseExpressions(HqlVisitor):
     Sort specific
     '''
     
-    def visitSortOrdering(self, ctx: HqlParser.SortOrderingContext):
-        order = 'desc'
-        nulls = 'last'
-        
-        if ctx.OrderKind:
-            order = ctx.OrderKind.text
-        
-        if ctx.NullsKind:
-            nulls = ctx.NullsKind.text
-        
-        expr = Expr.OrderedExpression(order=order, nulls=nulls)
-        return expr
+    def visitOrderedExpression(self, ctx: HqlParser.OrderedExpressionContext):
+        order = ctx.OrderKind.text if ctx.OrderKind else 'desc'
+        nulls = ctx.NullsKind.text if ctx.NullsKind else ''
+        expr = self.visit(ctx.Expression)
+
+        return Expr.OrderedExpression(expr, order=order, nulls=nulls)
 
     def visitScalarType(self, ctx: HqlParser.ScalarTypeContext):
         if ctx.Token == None:
