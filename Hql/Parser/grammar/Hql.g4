@@ -1065,21 +1065,12 @@ dotCompositeFunctionCallOperation:
     '.' Call=functionCallExpression;
 
 functionCallExpression:
-      namedFunctionCallExpression
-    | countExpression
-    ;
-
-namedFunctionCallExpression:
     Name=simpleNameReference '(' (Arguments+=argumentExpression (',' Arguments+=argumentExpression)*)? ')';
 
 argumentExpression:
       namedExpression
     | starExpression
     ;
-
-countExpression:
-    COUNT '(' (Expression=namedExpression)? ')';
-
 
 starExpression:
     '*';
