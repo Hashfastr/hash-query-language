@@ -22,7 +22,7 @@ class Comparator(Logic):
         self.lh:Expression = lh
         self.rh:list[Expression] = rh if isinstance(rh, list) else [rh]
         
-        for i in rh:
+        for i in self.rh:
             if not isinstance(i, Expression):
                 hqle.CompilerException(f'Comparator {self.type} given non-Expression rh {type(i)}')
 
@@ -112,12 +112,12 @@ class Comparator(Logic):
             'cs': self.cs,
             'neq': self.neq,
             'term': self.term,
-            'op': self.op,
+            'op': self.build_op(),
             'lh': self.lh.to_dict(),
             'rh': [x.to_dict() for x in self.rh]
         }
     
-    def build_op(self):
+    def build_op(self) -> str:
         raise hqle.CompilerException(f'build_op not implemented for {self.type}')
 
 '''
