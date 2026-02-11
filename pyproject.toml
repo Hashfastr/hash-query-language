@@ -33,7 +33,9 @@ dependencies = [
     "boto3",
     "fastapi",
     "uvicorn",
-    "dfir_iris_client"
+    "dfir_iris_client",
+    "azure-kusto-data",
+    "azure-kusto-ingest"
 ]
 
 [project.urls]

@@ -391,6 +391,30 @@ class HqlCompiler(Compiler):
 
         return acc, _
 
+    def Push(self, op: 'Hql.Operators.Push', preprocess: bool = True) -> tuple[BranchDescriptor, None]:
+        from Hql.Operators import Push, Database
+
+        desc = BranchDescriptor()
+
+        dbs = []
+        for i in op.exprs:
+            acc, rej = self.Tabular(i)
+            
+            if not isinstance(acc, InstructionSet) or \
+                    acc.ops or \
+                    len(acc.upstream) > 1 or \
+                    not isinstance(acc.upstream[0], Database) or \
+                    rej != None:
+                raise hqle.CompilerException(f'Push operator given expression that does not resolve to a singular database: {i.decompile(self.ctx)}')
+
+            dbs.append(acc.upstream[0])
+
+        op.dbs = dbs
+        desc.op = op
+        desc.set_attr('push')
+
+        return desc, None
+
     def Take(self, op: 'Hql.Operators.Take', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Operators import Take
         desc = BranchDescriptor()

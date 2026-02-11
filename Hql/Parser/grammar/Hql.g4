@@ -614,6 +614,8 @@ projectReorderOperator:
 projectReorderExpression:
     Expression=pathReference (Order=(ASC | DESC | GRANNYASC | GRANNYDESC))?;
 
+pushOperator:
+    PUSH (Parameters+=relaxedQueryOperatorParameter)* Destinations+=unnamedExpression (',' Destinations+=unnamedExpression);
 
 reduceByOperator:
     REDUCE (Parameters+=strictQueryOperatorParameter)* BY ByExpression=namedExpression (WithClause=reduceByWithClause)?;

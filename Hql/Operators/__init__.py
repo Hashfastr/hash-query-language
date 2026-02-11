@@ -25,6 +25,7 @@ from Hql.Operators.Database import Database
 
 from Hql.Operators.Where import Where
 from Hql.Operators.Project import Project, ProjectAway, ProjectKeep, ProjectReorder, ProjectRename
+from Hql.Operators.Push import Push
 from Hql.Operators.Take import Take
 from Hql.Operators.Count import Count
 from Hql.Operators.Extend import Extend

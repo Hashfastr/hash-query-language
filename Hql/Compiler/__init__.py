@@ -6,3 +6,4 @@ from .Lucene import LuceneCompiler
 from .Splunk import SPLCompiler
 from .QueryDSL import QueryDSLCompiler
 from .Sql import SqlCompiler
+from .Kusto import KustoCompiler

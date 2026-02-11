@@ -358,6 +358,8 @@ class Schema():
     Default is HqlTypes
     '''
     def convert_schema(self, schema:Union[dict, type, None]=None, target:str='hql') -> dict:
+        from Hql.Types.Hql import HqlTypes as hqlt
+
         supported = ('hql', 'polars')
         
         if target not in supported:

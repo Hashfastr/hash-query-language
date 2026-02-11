@@ -119,6 +119,9 @@ class Compiler():
     def ProjectRename(self, op:'Hql.Operators.ProjectRename', preprocess:bool=True) -> tuple[object, object]:
         return None, op
 
+    def Push(self, op: 'Hql.Operators.Push', preprocess:bool=True) -> tuple[object, object]:
+        return None, op
+
     def Take(self, op:'Hql.Operators.Take', preprocess:bool=True) -> tuple[object, object]:
         return None, op
 
