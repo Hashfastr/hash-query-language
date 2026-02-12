@@ -329,7 +329,8 @@ class HqlTypes():
         def __init__(self, inner:type):
             try:
                 self.inner = inner().hql_schema()
-            except:
+            except Exception as e:
+                logging.debug(e)
                 self.inner = inner.hql_schema()
 
             HqlTypes.HqlType.__init__(self, self.pl_schema(), inner=inner)

@@ -482,8 +482,11 @@ class Schema():
                     if key in row:
                         sub_data.append(row[key])
 
-                # Create the new schema from the unnested dict
-                new[key] = Schema(data=sub_data).schema
+                if sub_data[0] == {}:
+                    new[key] = pyt.dict([])
+                else:
+                    # Create the new schema from the unnested dict
+                    new[key] = Schema(data=sub_data).schema
 
             else:
                 # Find the best type

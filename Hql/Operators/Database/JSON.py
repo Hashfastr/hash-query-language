@@ -8,6 +8,7 @@ import requests
 import logging
 import polars as pl
 
+from pathlib import Path
 from typing import Union, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -21,10 +22,10 @@ class JSON(Database):
         Database.__init__(self, config, name=name)
         
         self.name = name
-        self.files:list[str] = []
+        self.files:list[Path] = []
         self.urls:list[str] = []
         conf = config.get('conf', dict())
-        self.local_base = conf.get('local-base', None)
+        self.local_base = Path(conf.get('local-base', None))
         self.http_base = conf.get('http-base', None)
 
         if not (self.local_base or self.http_base):
@@ -42,7 +43,7 @@ class JSON(Database):
         return {
             'id': self.id,
             'type': self.type,
-            'files': [self.local_base + x for x in self.files],
+            'files': [self.local_base / x for x in self.files],
             'urls': [self.http_base + x for x in self.urls],
             'limits': self.limits
         }
@@ -67,34 +68,7 @@ class JSON(Database):
             self.set_limit(i, limits['limit'])
 
         return op, None
-
-    def recurse(self, path:str) -> list[str]:
-        if self.local_base:
-            path = f'{self.local_base}{os.sep}{path}'
-
-        if not os.path.exists(path):
-            return []
-
-        if not os.path.isdir(path):
-            return [path]
-
-        json_files = []
-
-        for filename in os.listdir(path):
-            full_path = os.path.join(path, filename)
-            if os.path.isfile(full_path) and filename.lower().endswith('.json'):
-                json_files.append(full_path)
-
-        return json_files
     
-    def from_file(self, filename:str):
-        # if self.local_base:
-        #     path = f'{self.local_base}{os.sep}{filename}'
-        # else:
-        path = filename
-
-        return open(path, mode='r')
-        
     def from_url(self, url:str):
         from io import StringIO
 
@@ -160,7 +134,10 @@ class JSON(Database):
             self.limits[name] = limit if limit < cur else cur
     
     def eval(self, ctx:Context, **kwargs) -> Data:
-        from pathlib import Path
+        def file_2_table(file:Path, name:str) -> Table:
+            name = file.name
+            data = self.load_data(open(file, mode='r'), name)
+            return Table(init_data=data, name=name)
 
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
@@ -172,15 +149,17 @@ class JSON(Database):
             logging.critical('Similarly, file.json represents a file on a server prepended by BASE_PATH')
             logging.critical('If basepath is not specified it is taken as literal for http, or current dir for file.')
             raise hqle.QueryException('No file provided to JSON database')
+
+        files:list[Path] = []
+        for i in self.files:
+            files += list((self.local_base / i).parent.glob(i.name))
         
         tables = []
-        for file in self.files:
-            for i in self.recurse(file):
-                name = Path(i).parent.name
-                f = self.from_file(i)
-                data = self.load_data(f, name)
-                table = Table(init_data=data, name=name)
-                tables.append(table)
+        for file in files:
+            if file.is_file():
+                tables.append(file_2_table(file, file.name))
+            else:
+                tables += [file_2_table(x, file.name) for x in file.iterdir() if x.is_file()]
 
         for url in self.urls:
             s = self.from_url(url)

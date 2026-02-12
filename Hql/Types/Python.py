@@ -78,7 +78,7 @@ class PythonTypes():
     @register_type('python_int')
     class int(PythonType):
         def __init__(self):
-            PythonTypes.PythonType.__init__(self, hqlt.int)
+            PythonTypes.PythonType.__init__(self, hqlt.long)
                         
             self.priority = 2
             self.super = (PythonTypes.float, PythonTypes.str, PythonTypes.list) 
@@ -137,10 +137,5 @@ class PythonTypes():
     @register_type('python_dict')
     class dict(PythonType):
         def __init__(self, keys:list[str]):
-            raise hqle.CompilerException('Unimplemented python type object')
-
             PythonTypes.PythonType.__init__(self, hqlt.object)
             self.keys = keys
-            
-        #def hql_schema(self):
-        #    return self.hql_schema()(self.keys)
