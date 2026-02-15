@@ -1,10 +1,9 @@
-import json
-from typing import TYPE_CHECKING, Union
-from Hql.Context import Context
+from typing import TYPE_CHECKING, Optional
+from Hql.Parser import ParseObject
 
 if TYPE_CHECKING:
-    from Hql.Data import Data
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions import Expression, NamedReference
+    from Hql.Operators import Operator
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).
@@ -23,55 +22,35 @@ if TYPE_CHECKING:
 # Additionally, the top operator doesn't have to be an index, could be the saved
 # value of another statement.
 # @register_op('Operator')
-class Operator():
+class Operator(ParseObject):
     def __init__(self):
         import random
-        
-        self.type:str = self.__class__.__name__
-        self.expr = None
-        self.exprs = []
-        self.compatible = []
-        self.non_conseq = []
-        self.methods = []
+
+        self.expr:Optional['Expression'] = None
+        self.exprs:list['Expression'] = []
+        self.compatible:list['Operator'] = []
+        self.non_conseq:list['Operator'] = []
+        self.methods:list[str] = []
         self.variables:dict = {}
         self.tabular = False
         self.id = '%08x' % random.getrandbits(32)
-    
-    def to_dict(self):
+
+    def to_dict(self) -> dict:
+        out:dict = {
+            'id': self.id,
+            'type': self.type,
+        }
+
         if self.expr:
-            return {
-                'id': self.id,
-                'type': self.type,
-                'expression': self.expr.to_dict()
-            }
+            out['expression'] = self.expr.to_dict()
+
         if self.exprs:
-            return {
-                'id': self.id,
-                'type': self.type,
-                'expressions': [x.to_dict() for x in self.exprs]
-            }
-        else:
-            return {
-                'id': self.id,
-                'type': self.type,
-                'expression': None
-            }
+            out['expressions'] = [x.to_dict() for x in self.exprs]
 
-    def decompile(self, ctx: 'Context') -> Union[str, list[str]]:
-        return ''
+        return out
     
-    def __str__(self):
-        return json.dumps(self.to_dict(), indent=2)
-    
-    def __repr__(self):
-        return self.__str__()
-
-    # default execution passthrough unless implemented
-    def eval(self, ctx:'Context', **kwargs) -> 'Data':
-        return ctx.data
-    
-    def non_consequential(self, type:str):
-        return type in self.non_conseq
+    def non_consequential(self, t:str):
+        return t in self.non_conseq
     
     def has_method(self, name:str):
         return name in self.methods
@@ -79,8 +58,8 @@ class Operator():
     def get_variable(self, name:NamedReference):
         return self.variables[name.name]
 
-    def can_integrate(self, type:str):
-        return type in self.compatible
+    def can_integrate(self, t:str):
+        return t in self.compatible
 
     '''
     Where you take in operators you can merge together

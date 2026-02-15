@@ -10,17 +10,22 @@ if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
     from Hql.Types.Compiler import CompilerType
     from Hql.Expressions import Expression, Path, NamedReference
+    from Hql.Types.Hql import HqlTypes as hqlt
 
 class Schema():
     def __init__(
             self,
             data: Union[pl.DataFrame, dict, list[dict], None]=None,
-            schema:Union[dict, None]=None,
+            schema:Union[dict, 'hqlt.object', None]=None,
             sample_size:int=1
         ):
+        from Hql.Types.Hql import HqlTypes as hqlt
+        
         self.schema:dict = dict()
 
         if schema:
+            if isinstance(schema, hqlt.object):
+                schema = schema.schema
             self.schema = self.normalize(schema)
 
         # This is in the case of sample json data

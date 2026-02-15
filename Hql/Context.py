@@ -10,7 +10,7 @@ database_registry = {}
 
 def register_database(name:str):
     def decorator(cls):
-        from Hql.Operators.Database import Database
+        from Hql.Database import Database
 
         if not issubclass(cls, Database):
             raise hqle.CompilerException(f'Attempting to register non-database class {name} as a database')
@@ -44,29 +44,6 @@ def get_func(name):
         return func_registry[name]
     else:
         raise hqle.CompilerException(f"Unknown function {name} referenced")
-    
-op_registry = {}
-
-def register_op(name):
-    def decorator(cls):
-        from Hql.Operators import Operator
-        from Hql.Operators.Database import Database
-
-        if not issubclass(cls, Operator):
-            raise hqle.CompilerException(f'Attempting to register non-operator class {name} as an operator')
-
-        if issubclass(cls, Database):
-            raise hqle.CompilerException(f'Attempting to register database class {name} as an operator, use @register_database')
-
-        op_registry[name] = cls
-        return cls
-    return decorator
-
-def get_op(name):
-    if name in op_registry:
-        return op_registry[name]
-    else:
-        raise hqle.CompilerException(f"Unknown operator {name} referenced")
 
 '''
 The naming scheme here is 
@@ -100,19 +77,31 @@ def get_type(name):
 # Essentially a scoped context
 class Context():
     def __init__(self, data:'Data', hac:Optional['Hac']=None, symbol_table:Optional[dict]=None, macros:Optional[dict]=None, config:Optional[Config]=None) -> None:
-        from copy import copy
+        import copy
 
-        self.dbs = copy(database_registry)
-        self.ops = copy(op_registry)
-        self.funcs = copy(func_registry)
+        # contexts are copied a lot so want to make sure things don't linger
+        self.dbs = copy.deepcopy(database_registry)
+        self.funcs = copy.deepcopy(func_registry)
+        self.symbol_table = copy.deepcopy(symbol_table) if symbol_table else dict()
+        self.macros = copy.deepcopy(macros) if macros else dict()
+        self.config = copy.deepcopy(config) if config else Config()
+        self.hac = copy.deepcopy(hac)
         self.data = data
-        self.symbol_table = symbol_table if symbol_table else dict()
-        self.macros = macros if macros else dict()
-        self.config = config if config else Config()
-        self.hac = hac
 
     def __bool__(self):
         return self.data.__bool__()
+
+    '''
+    Copy with pointer to data
+    '''
+    def copy(self):
+        return Context(
+            self.data,
+            hac=self.hac,
+            symbol_table=self.symbol_table,
+            macros=self.macros,
+            config=self.config
+        )
 
     @staticmethod
     def merge(ctxs:list['Context'], merge_rows=True):
@@ -148,9 +137,3 @@ class Context():
             return self.funcs[name]
         else:
             raise hqle.CompilerException(f"Unknown function {name} referenced")
-
-    def get_op(self, name:str):
-        if name in self.ops:
-            return self.ops[name]
-        else:
-            raise hqle.CompilerException(f"Unknown operator {name} referenced")

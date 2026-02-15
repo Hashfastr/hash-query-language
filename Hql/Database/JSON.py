@@ -1,14 +1,13 @@
 from . import Database
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Data import Data, Table, Schema
+from Hql.Data import Data, Table
 from Hql.Context import Context, register_database 
 
 import os
 import requests
 import logging
-import polars as pl
 
-from typing import Union, Optional
+from typing import Optional
 
 # Index in a database to grab data from, extremely simple.
 @register_database('JSON')

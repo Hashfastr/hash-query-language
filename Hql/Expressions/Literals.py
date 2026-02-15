@@ -24,7 +24,7 @@ class Literal(Expression):
         return pl.lit(self.value)
 
     def polars_value(self) -> 'pl.Expr':
-        return self.polars()
+        return pl.lit(self.value)
 
     def str(self) -> str:
         return str(self.value)

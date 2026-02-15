@@ -1,44 +1,49 @@
-from typing import Optional
 from .Operator import Operator
+
+from Hql.Expressions import NamedReference, Literal
 from Hql.Data import Data, Table, Schema
-from Hql.PolarsTools import pltools
-from Hql.Expressions import Expression, NamedReference
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_op, Context
+from Hql.Context import Context
 import polars as pl
-import numpy as np
 from Hql.Operators import Operator
+from Hql.Types.Hql import HqlTypes
+
+from typing import Optional
 
 '''
 Creates a simple datatable, essentially an inline dataframe/table
 '''
-# @register_op('Datatable')
 class Datatable(Operator):
-    def __init__(self, schema:list[list[Expression]], values:list[Expression], name:Optional[Expression]=None):
+    def __init__(self, schema:list[tuple[NamedReference, HqlTypes.HqlType]], values:list[Literal], name:Optional[NamedReference]=None):
         Operator.__init__(self)
-        self.values = values
-        self.schema = schema
-        self.name = name
-        self.tabular = True
+        self.values:list[Literal] = values
+        self.schema:list[tuple[NamedReference, HqlTypes.HqlType]] = schema
+        self.name:Optional[NamedReference] = name
+        self.tabular:bool = True
         
     def to_dict(self):
         return {
             'type': self.type,
-            # 'schema': 
+            'schema': self.gen_schema().to_dict()
         }
 
-    def decompile(self, ctx: 'Context') -> str:
+    def gen_schema(self) -> HqlTypes.object:
+        d = dict()
+        for i in self.schema:
+            d[i[0].str()] = i[1]
+        return HqlTypes.object(d)
+
+    def deparse(self) -> str:
         width = len(self.schema)
         nvalues = len(self.values)
 
         schema = []
         for i in self.schema:
-            schema.append(f'{i[0].decompile(ctx)}: {i[1].decompile(ctx)}')
+            schema.append(f'{i[0].deparse()}: {i[1].name}')
         schema = ', '.join(schema)
         
         values = []
         for i in range(0, nvalues, width):
-            row = [x.decompile(ctx) for x in self.values[i:i+width]]
+            row = [x.deparse() for x in self.values[i:i+width]]
             values.append(', '.join(row))
 
         table = '    '
@@ -51,21 +56,19 @@ class Datatable(Operator):
         total += ']'
         
         if self.name:
-            total += f' as {self.name.decompile(ctx)}'
+            total += f' as {self.name.deparse()}'
 
         return total
 
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:'Context'):
+        ctx = ctx.copy()
+
         width = len(self.schema)
         nvalues = len(self.values)
-        
-        schema = dict()
-        for i in self.schema:
-            name = i[0].eval(ctx, as_str=True)
-            t = i[1].eval(ctx)
-            schema[name] = t
 
-        keys = list(schema.keys())
+        schema = self.gen_schema()
+        keys = [x[0].str() for x in self.schema]
+
         data = dict()
         for i in range(width):
             rows = []
@@ -75,11 +78,13 @@ class Datatable(Operator):
 
         name = 'datatable'
         if self.name:
-            name = self.name.eval(ctx, as_str=True)
-            assert isinstance(name, str)
+            name = self.name.str()
             
-        schema = Schema(schema=schema)
-        df = pl.DataFrame(data)
-        table = Table(df=df, schema=schema, name=name)
-        
-        return Data(tables=[table])
+        table = Table(
+            df=pl.DataFrame(data),
+            schema=Schema(schema=schema),
+            name=name
+        )
+        ctx.data = Data(tables=[table])
+
+        return ctx

@@ -10,7 +10,8 @@ from .Functions import *
 from .Aggregation import OrderedExpression, ByExpression
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator, Database
+    from Hql.Operators import Operator
+    from Hql.Database import Database
     from Hql.Compiler import InstructionSet
 
 from Hql.Exceptions import HqlExceptions as hqle
