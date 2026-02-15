@@ -201,19 +201,23 @@ class PolarsTypes():
         
     @register_type('polars_Object')   
     class Object(PolarsType):
-        def __init__(self):
+        def __init__(self, schema:dict):
             PolarsTypes.PolarsType.__init__(self)
-            self.HqlType = hqlt.object()
-            self.pltype = pl.Object()
+            self.HqlType = hqlt.object(schema)
+            self.pltype = self.HqlType.pl_schema()
+
+        def pl_schema(self) -> pl.DataType:
+            assert self.HqlType
+            self.pltype = self.HqlType.pl_schema()
+            return self.pltype
 
     @register_type('polars_Struct')   
     class Struct(PolarsType):
         def __init__(self, schema:dict):
             PolarsTypes.PolarsType.__init__(self)
-            self.HqlType = hqlt.object()
-
             self.schema = schema
-            self.pltype = pl.Struct(schema)
+            self.HqlType = hqlt.object(schema)
+            self.pltype = self.HqlType.pl_schema()
         
     @register_type('polars_Unknown')
     class Unknown(PolarsType):

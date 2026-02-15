@@ -142,11 +142,7 @@ class PythonTypes():
 
     @register_type('python_dict')
     class dict(PythonType):
-        def __init__(self, keys:list[str]):
-            raise hqle.CompilerException('Unimplemented python type object')
-
-            PythonTypes.PythonType.__init__(self, hqlt.object)
-            self.keys = keys
-            
-        #def hql_schema(self):
-        #    return self.hql_schema()(self.keys)
+        def __init__(self, schema:dict):
+            PythonTypes.PythonType.__init__(self)
+            self.schema = schema
+            self.HqlType = hqlt.object(schema)

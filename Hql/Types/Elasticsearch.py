@@ -128,21 +128,33 @@ class ESTypes():
     
     @register_type('elasticsearch_object') 
     class object(ESType):
-        def __init__(self):
+        def __init__(self, schema:dict):
             ESTypes.ESType.__init__(self)
-            self.HqlType = hqlt.object()
-    
+            self.schema = schema
+            self.HqlType = hqlt.object(schema)
+
+    '''
+    Kinda odd datatype should figure out how to handle this.
+    Basically an object but it's treated as a singular field.
+    So a flattened field with 3 fields, one string, two integer,
+    will directly match a comparison to those values without specifying the field name
+    '''
     @register_type('elasticsearch_flattened') 
     class flattened(ESType):
-        def __init__(self):
+        def __init__(self, schema:dict):
             ESTypes.ESType.__init__(self)
-            self.HqlType = hqlt.object()
+            self.schema = schema
+            self.HqlType = hqlt.object(schema)
         
+    '''
+    From what I can tell this is just an internal rework of objects
+    '''
     @register_type('elasticsearch_nested')
     class nested(ESType):
-        def __init__(self):
+        def __init__(self, schema:dict):
             ESTypes.ESType.__init__(self)
-            self.HqlType = hqlt.object()
+            self.schema = schema
+            self.HqlType = hqlt.object(schema)
     
     @register_type('elasticsearch_alias') 
     class alias(ESType):

@@ -331,12 +331,24 @@ class HqlTypes():
     '''
     @register_type('hql_object')
     class object(HqlType):
-        def __init__(self, schema:Optional[dict]=None):
-            self.schema = schema if schema else dict()
+        def __init__(self, schema:dict):
             HqlTypes.HqlType.__init__(self)
+            self.schema = self.convert_dict(schema)
+            self.proto = self.pl_schema()
+
+        def convert_dict(self, d:dict, t:str='hql') -> dict:
+            new = {}
+            for i in d:
+                if isinstance(d[i], dict):
+                    new[i] = self.convert_dict(d[i], t=t)
+                elif t == 'hql':
+                    new[i] = d[i].hql_schema()
+                else:
+                    new[i] = d[i].pl_schema()
+            return new
 
         def pl_schema(self) -> pl.DataType:
-            return pl.Struct(self.schema)
+            return pl.Struct(self.convert_dict(self.schema, t='pl'))
             
     @register_type('hql_null')
     class null(HqlType):
