@@ -25,6 +25,9 @@ class Reference(Expression):
 
     def polars_reference(self) -> 'pl.Expr':
         return NotImplemented
+
+    def list(self) -> list[str]:
+        return NotImplemented
     
     def get_symbol(self, ctx:'Context'):
         return ctx.symbol_table.get(self.name, None)

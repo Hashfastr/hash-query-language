@@ -12,7 +12,7 @@ from Hql.Types.Hql import HqlTypes as hqlt
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, Path, NamedReference
+    from Hql.Expressions import Expression, Path, NamedReference, Reference
 
 '''
 Table for a structure of data, includes schema definition.
@@ -93,7 +93,7 @@ class Table():
             return self.schema.get_type(path)
         return None
 
-    def drop(self, path:list[str], df:Union[pl.DataFrame, None]=None, idx:int=0) -> Union[pl.DataFrame, "Table"]:
+    def drop(self, path:'Reference', df:Union[pl.DataFrame, None]=None, idx:int=0) -> Union[pl.DataFrame, "Table"]:
         if isinstance(df, type(None)) and idx != 0:
             raise hqle.CompilerException('Logic error? Would reinit df with a non-zero index.')
 

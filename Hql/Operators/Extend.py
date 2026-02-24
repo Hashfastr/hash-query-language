@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Union
-from Hql.Expressions import Expression, NamedExpression, NamedReference, Path
+from Hql.Expressions import Expression, NamedExpression, NamedReference, Path, Reference
 from Hql.Operators import Operator
-from Hql.Context import register_op, Context
+from Hql.Context import Context
 import logging
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -15,42 +15,29 @@ if TYPE_CHECKING:
 # | extend Duration = EndTime - StartTime
 #
 # https://learn.microsoft.com/en-us/kusto/query/extend-operator
-# @register_op('Extend')
 class Extend(Operator):
     def __init__(self, exprs:list[Expression]):
         Operator.__init__(self)
         self.exprs = exprs
 
-    def decompile(self, ctx: 'Context') -> str:
-        return 'extend ' + ', '.join(x.decompile(ctx) for x in self.exprs)
+    def deparse(self) -> str:
+        return 'extend ' + ', '.join(x.deparse() for x in self.exprs)
 
-    def remove_old(self, ctx:Context, expr:Union[NamedReference, Path], data:'Data') -> 'Data':
-        path = expr.eval(ctx, as_list=True)
-        assert isinstance(path, list)
-        new = []
-        for i in path:
-            if not isinstance(i, str):
-                raise hqle.CompilerException('NamedReference/Path list eval returned non-str element')
-            new.append(i)
-        return data.drop(new)
-            
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Data import Data
+    def eval(self, ctx:'Context'):
+        ctx = ctx.copy()
+        orig:'Data' = ctx.data
+        data:list['Data'] = []
 
-        orig:Data = ctx.data
-        data:list[Data] = []
         for i in self.exprs:
-            try:
-                datum = i.eval(ctx)
-                assert isinstance(datum, Data)
+            if isinstance(i, NamedExpression):
+                datum = i.eval(ctx).data
                 data.append(datum)
 
-                if isinstance(i, NamedExpression):
-                    for j in i.paths:
-                        assert isinstance(j, (Path, NamedReference))
-                        orig = self.remove_old(ctx, j, orig)
-            except hqle.QueryException as e:
-                logging.warning(e)
+                for j in i.paths:
+                    orig = orig.drop(j)
         
+        # orig is now a subset of the original with all assignments replaced
         data.append(orig)
-        return Data.merge(data)
+        ctx.data = Data.merge(data)
+
+        return ctx

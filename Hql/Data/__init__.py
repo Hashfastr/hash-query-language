@@ -10,7 +10,7 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
-    from Hql.Expressions import Path, NamedReference
+    from Hql.Expressions import Path, NamedReference, Reference
 
 class Data():
     def __init__(self, tables:Union[list[Table], None]=None, merge_rows=True):
@@ -201,13 +201,13 @@ class Data():
             new.append(table.strip())
         return Data(tables=new)
 
-    def drop_many(self, paths:list[list[str]]):
+    def drop_many(self, paths:list['Reference']):
         cur = self
         for path in paths:
             cur = cur.drop(path)
         return cur
 
-    def drop(self, path:list[str]):
+    def drop(self, path:'Reference'):
         new = []
         for table in self:
             new.append(table.drop(path))
