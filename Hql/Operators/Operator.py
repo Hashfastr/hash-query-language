@@ -48,6 +48,9 @@ class Operator(ParseObject):
             out['expressions'] = [x.to_dict() for x in self.exprs]
 
         return out
+
+    def deparse(self) -> str:
+        return NotImplemented
     
     def non_consequential(self, t:str):
         return t in self.non_conseq

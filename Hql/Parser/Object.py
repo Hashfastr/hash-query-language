@@ -3,6 +3,7 @@ import polars as pl
 from Hql.Context import Context
 import json
 from Hql.Types.Hql import HqlTypes as hqlt
+from warnings import deprecated
 
 class ParseObject():
     def __init__(self) -> None:
@@ -39,6 +40,10 @@ class ParseObject():
         return NotImplemented
 
     def eval(self, ctx:Context) -> Context:
+        return NotImplemented
+
+    @deprecated('Dumb stupid idea, use deparse')
+    def decompile(self, ctx:Context) -> str:
         return NotImplemented
 
     def to_dict(self) -> dict:

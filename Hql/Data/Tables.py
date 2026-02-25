@@ -471,7 +471,7 @@ class Table():
     def assert_field(self, field:list[str]):
         return self.schema.assert_field(field)
     
-    def cast_in_place(self, path:list[str], cast_type:hqlt.HqlType):
+    def cast_in_place(self, path:Reference, cast_type:hqlt.HqlType):
         if not self.assert_field(path):
             return None
         

@@ -37,19 +37,11 @@ class PipeExpression(Expression):
 
         return d
 
-    def decompile(self, ctx: 'Context') -> str:
-        prepipe = self.prepipe.decompile(ctx) if self.prepipe else ''
+    def deparse(self) -> str:
+        prepipe = self.prepipe.deparse() if self.prepipe else ''
+        pipes = [x.deparse() for x in self.pipes]
 
-        pipes = []
-        for i in self.pipes:
-            pipe = i.decompile(ctx)
-            
-            if isinstance(pipe, str):
-                pipes.append(pipe)
-            else:
-                pipes += pipe
-
-        out = f'{prepipe}'
+        out = prepipe
         for i in pipes:
             if out:
                 out += '\n'
@@ -58,66 +50,49 @@ class PipeExpression(Expression):
         return out
 
 class OpParameter(Expression):
-    def __init__(self, name:str, value:Expression):
+    def __init__(self, name:Reference, value:Expression):
         Expression.__init__(self)
         self.name = name
         self.value = value
 
-    def decompile(self, ctx: 'Context') -> str:
-        value = self.value.decompile(ctx)
-        return f'{self.name}={value}'
+    def deparse(self) -> str:
+        name = self.name.deparse()
+        value = self.value.deparse()
+        return f'{name}={value}'
         
     def to_dict(self):        
         return {
-            'name': self.name,
+            'name': self.name.to_dict(),
             'value': self.value.to_dict()
         }
 
 class ToClause(Expression):
-    def __init__(self, expr:Expression, to:Union[None, Expression, hqlt.HqlType]=None):
+    def __init__(self, expr:Reference, to:Union[TypeExpression, hqlt.HqlType]):
         Expression.__init__(self)
         self.expr = expr
+        if isinstance(to, TypeExpression):
+            to = to.dtype()
         self.to = to
         
     def to_dict(self):
-        d = {
+        return {
             'type': self.type,
             'expr': self.expr.to_dict(),
+            'to': self.to.to_dict()
         }
 
-        if isinstance(self.to, hqlt.HqlType):
-            d['to'] = self.to.name
-
-        elif self.to:
-            d['to'] = self.to.to_dict()
-
-        return d
-
-    def decompile(self, ctx: 'Context') -> str:
-        expr = self.expr.decompile(ctx)
-
-        if isinstance(self.to, hqlt.HqlType):
-            to = self.to.name
-            expr += f' to {to}'
-
-        elif self.to:
-            to = self.to.decompile(ctx)
-            expr += f' to {to}'
-
+    def deparse(self) -> str:
+        expr = self.expr.deparse()
+        expr += ' to ' + self.to.deparse()
         return expr
         
-    def eval(self, ctx:'Context', **kwargs):
-        as_list = kwargs.get('as_list', False)
-        as_str = kwargs.get('as_str', False)
+    def eval(self, ctx:'Context') -> 'Context':
+        ctx = ctx.copy()
 
-        if as_list or as_str:
-            return self.expr.eval(ctx, as_list=as_list, as_str=as_str)
-        
-        path = self.expr.eval(ctx, as_path=True)
-        
         new = []
         for table in ctx.data:
-            table = table.cast_in_place(path, self.to)
+            table = table.cast_in_place(self.expr, self.to)
             new.append(table)
         
-        return Data(tables=new)
+        ctx.data = Data(tables=new)
+        return ctx

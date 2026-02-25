@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 import logging
 
 from .__proto__ import Expression
@@ -7,21 +7,17 @@ from Hql.Exceptions import HqlExceptions as hqle
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Functions import Function
+    from Hql.Expressions import NamedReference
 
 class FuncExpr(Expression):
-    def __init__(self, name:Union[Expression, str], args:Union[None, list[Expression]]=None):
-        from Hql.Expressions import NamedReference
+    # I know I'm getting rid of allowing protos for this stuff but 
+    def __init__(self, name:'NamedReference', args:Optional[list[Expression]]=None):
         Expression.__init__(self)
-        
-        if isinstance(name, str):
-            self.name = NamedReference(name)
-        else:
-            self.name = name
-
+        self.name = name
         self.args:list[Expression] = args if args else []
 
     def __bool__(self):
-        return self.name.__bool__()
+        return bool(self.name)
     
     def to_dict(self):
         return {
@@ -30,28 +26,23 @@ class FuncExpr(Expression):
             'args': [x.to_dict() for x in self.args]
         }
 
-    def decompile(self, ctx: 'Context') -> str:
-        name = self.name.decompile(ctx)
+    def deparse(self) -> str:
+        name = self.name.deparse()
 
         args = []
         for i in self.args:
-            args.append(i.decompile(ctx))
+            args.append(i.deparse())
 
         out = f'{name}('
         out += ', '.join(args)
         out += ')'
 
         return out
-    
-    # Evals to function objects
-    def eval(self, ctx:'Context', **kwargs):
-        name = self.name.eval(ctx, as_str=True)
-        if not isinstance(name, str):
-            raise hqle.CompilerException(f'Function name expression returned non-string {name}')
-        
-        func = ctx.get_func(name)
-        logging.debug(f'Resolved func {func}')
 
+    # Evals to function objects
+    def eval(self, ctx:'Context'):
+        name = self.name.str()
+        func = ctx.get_func(name)
         return func(self.args, conf=ctx.config.get_function(name))
         
 class DotCompositeFunction(Expression):

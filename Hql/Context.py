@@ -1,6 +1,7 @@
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import TYPE_CHECKING, Union, Optional
 from Hql.Config import Config
+import logging
 
 if TYPE_CHECKING:
     from Hql.Data import Data
@@ -134,6 +135,7 @@ class Context():
 
     def get_func(self, name:str):
         if name in self.funcs:
+            logging.debug(f'Resolved func {name}')
             return self.funcs[name]
         else:
             raise hqle.CompilerException(f"Unknown function {name} referenced")
