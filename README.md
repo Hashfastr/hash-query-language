@@ -2,8 +2,11 @@
 <p align="center">
   <img src="https://hql.dev/hql-dark-no-text.png" width="300" />
   <h3>Current Phase: Cambrian - Ultra Alpha</h3>
+  <h3>Development paused in this repo for now</h3>
   <s>Current Phase: Primordial Ooze</s>
 </p>
+
+
 
 Hash Query Language (Hql) is a query language designed to implement a consistent feature set across all database backends.
 Is this accomplished by using a modified grammar of [Kusto Query Language](https://github.com/microsoft/Kusto-Query-Language) (KQL), a query language by Microsoft made for Azure Data Explorer, the basis for Log Analytics Workspace.
