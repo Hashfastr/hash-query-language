@@ -49,10 +49,10 @@ class Functions(HqlVisitor):
     Pure path of functions
     '''
     def visitDotCompositeFunctionCallExpression(self, ctx: HqlParser.DotCompositeFunctionCallExpressionContext):
-        from Hql.Expressions import DotCompositeFunction
+        from Hql.Expressions import DotFuncExpr
         funcs = [self.visit(ctx.Call)]
                 
         for i in ctx.Operations:
             funcs.append(self.visit(i))
         
-        return DotCompositeFunction(funcs)
+        return DotFuncExpr(funcs)

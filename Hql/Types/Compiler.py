@@ -41,5 +41,8 @@ class CompilerType():
     def deparse(self):
         return self.name
 
+    def str(self):
+        return self.name
+
     def __len__(self):
         return 1

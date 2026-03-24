@@ -6,25 +6,25 @@ from .__proto__ import Expression
 from Hql.Types.Hql import HqlTypes as hqlt
 
 if TYPE_CHECKING:
-    from Hql.Context import Context
     from Hql.Data import Series
 
 class Literal(Expression):
-    def __init__(self, hql_type:hqlt.HqlType) -> None:
+    def __init__(self, hql_type:hqlt.HqlType, value:object) -> None:
         Expression.__init__(self)
         self.literal = True
         self.hql_type = hql_type
+        self.value = value
 
     def series(self) -> 'Series':
         from Hql.Data import Series
         series = Series(pl.Series([self.value]), self.hql_type)
         return series.cast()
 
-    def polars(self) -> Union[pl.Expr, pl.DataTypeExpr]:
-        return pl.lit(self.value)
+    def polars(self) -> pl.Expr:
+        return pl.lit(self.value).cast(self.hql_type.pl_schema())
 
-    def polars_value(self) -> 'pl.Expr':
-        return pl.lit(self.value)
+    def polars_value(self) -> pl.Expr:
+        return self.polars()
 
     def str(self) -> str:
         return str(self.value)
@@ -43,31 +43,28 @@ class Literal(Expression):
 
 class TypeExpression(Literal):
     def __init__(self, hql_type:Union[str, hqlt.HqlType]):
-        Literal.__init__(self, hqlt.type())
         self.hql_type:hqlt.HqlType = hqlt.from_name(hql_type) if isinstance(hql_type, str) else hql_type
-
-    def polars(self) -> pl.DataTypeExpr:
-        return pl.Decimal().to_dtype_expr()
-
-    def polars_value(self) -> pl.Expr:
-        return NotImplemented
+        Literal.__init__(self, self.hql_type, None)
+    
+    def polars(self) -> pl.Expr:
+        return pl.lit(self.hql_type.pl_schema())
 
     def deparse(self) -> str:
-        return self.hql_type.name
+        return self.hql_type.str()
 
     def dtype(self) -> hqlt.HqlType:
         return self.hql_type
 
 class StringLiteral(Literal):
     def __init__(self, value:Union[str, bytes], verbatim:bool=False, obfuscated:bool=False):
-        Literal.__init__(self, hqlt.string())
-
         if isinstance(value, str):
             value = value.encode('utf-8')
 
         self.value:bytes = value
         self.verbatim = verbatim
         self.obfuscated = obfuscated
+        
+        Literal.__init__(self, hqlt.string(), self.value)
 
     def quote(self, quote:str) -> str:
         import re
@@ -88,9 +85,6 @@ class StringLiteral(Literal):
 
     def str(self) -> str:
         return self.quote('')
-    
-    def dtype(self) -> hqlt.HqlType:
-        return hqlt.string()
 
     def deparse(self) -> str:
         if self.verbatim:
@@ -113,8 +107,8 @@ class StringLiteral(Literal):
 
 class MultiString(StringLiteral):
     def __init__(self, strlits:Optional[list[StringLiteral]]=None):
-        Literal.__init__(self, hqlt.string())
         self.strlits:list[StringLiteral] = strlits if strlits else []
+        Literal.__init__(self, hqlt.string(), None)
 
     def str(self) -> str:
         running = ''
@@ -133,17 +127,17 @@ class MultiString(StringLiteral):
 
 class Integer(Literal):
     def __init__(self, value:Union[str, int]):
-        Literal.__init__(self, hqlt.int())
         self.value = int(value)
+        Literal.__init__(self, hqlt.int(), self.value)
         
 class IP4(Literal):
     def __init__(self, value:Union[Integer, StringLiteral]):
-        Literal.__init__(self, hqlt.ip4())
-        
         if isinstance(value, StringLiteral):
             self.value = hqlt.ip4().cast_single(value)
         else:
             self.value = value
+
+        Literal.__init__(self, hqlt.ip4(), self.value)
 
     def str(self):
         return hqlt.ip4().human_single(self.value)
@@ -159,21 +153,22 @@ class IP4(Literal):
 
 class Float(Literal):
     def __init__(self, value:Union[str, float]):
-        Literal.__init__(self, hqlt.float())
         self.value = float(value)
+        Literal.__init__(self, hqlt.float(), self.value)
 
 class Bool(Literal):
     def __init__(self, value:bool):
-        Literal.__init__(self, hqlt.bool())
         self.value = value
+        Literal.__init__(self, hqlt.bool(), self.value)
 
 class Multivalue(Literal):
     def __init__(self, value:list[Literal]) -> None:
         super_type = hqlt.resolve_conflict([x.hql_type for x in value])
-        Literal.__init__(self, hqlt.multivalue(super_type))
 
         series = pl.Series([x.value for x in value])
         self.value = self.hql_type.cast(series)
+        
+        Literal.__init__(self, hqlt.multivalue(super_type), self.value)
 
     def deparse(self) -> str:
         return NotImplemented
@@ -184,12 +179,12 @@ class Multivalue(Literal):
 class Datetime(Literal):
     def __init__(self, value:Union[StringLiteral, datetime.datetime]) -> None:
         from dateutil import parser
-        Literal.__init__(self, hqlt.datetime())
-
         if isinstance(value, StringLiteral):
             self.value:datetime.datetime = parser.parse(value.value)
         else:
             self.value = value
+        
+        Literal.__init__(self, hqlt.datetime(), self.value)
 
     def render(self, time_format:str="%Y-%m-%dT%H:%M:%S.%f%z", timezone:datetime.timezone=datetime.timezone.utc) -> str:
         dt = self.value.astimezone(timezone)
@@ -201,4 +196,4 @@ class Datetime(Literal):
 
 class Null(Literal):
     def __init__(self) -> None:
-        Literal.__init__(self, hqlt.null())
+        Literal.__init__(self, hqlt.null(), None)

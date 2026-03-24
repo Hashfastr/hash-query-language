@@ -28,11 +28,8 @@ class Table():
             name:Union[str, None]=None
         ):
         
-        if isinstance(df, pl.DataFrame):
-            self.df = df
-        else:
-            self.df = pl.DataFrame()
-            
+        self.df:pl.DataFrame = df if isinstance(df, pl.DataFrame) else pl.DataFrame()
+        
         if isinstance(schema, dict):
             schema = Schema(schema=schema)
         

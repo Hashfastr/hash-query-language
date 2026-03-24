@@ -1,13 +1,11 @@
 from .__proto__ import Expression
-from Hql.PolarsTools import pltools
-from Hql.Exceptions import HqlExceptions as hqle
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Data import Table
-    from Hql.Expressions import NamedReference, Path
+    from Hql.Expressions import Reference
 
 class OrderedExpression(Expression):
     def __init__(self, expr:Expression, order:str='desc', nulls:str=''):
@@ -15,16 +13,22 @@ class OrderedExpression(Expression):
         self.expr = expr
         self.order = order
         self.nulls = nulls
+        self.implicit_nulls = True
         
         if nulls == '':
             if order == 'asc':
                 self.nulls = 'first'
             if order == 'desc':
                 self.nulls = 'last'
+        else:
+            self.implicit_nulls = False
 
     def deparse(self) -> str:
         expr = self.expr.deparse()
-        return f'{expr} {self.order} nulls {self.nulls}'
+        out = f'{expr} {self.order}'
+        if not self.implicit_nulls:
+            out += f' nulls {self.nulls}'
+        return out
         
     def to_dict(self):
         if self.expr == None:
@@ -39,24 +43,18 @@ class OrderedExpression(Expression):
         }
 
 class ByExpression(Expression):
-    def __init__(self, exprs:list[Union['NamedReference', 'Path']]):
+    def __init__(self, exprs:list['Reference']):
         Expression.__init__(self)
         self.exprs = exprs
         
-    def build_table_agg(self, ctx:'Context', table:'Table') -> Optional['Table']:
+    def build_table_agg(self, table:'Table') -> Optional['Table']:
         from Hql.Data import Schema
-
-        if table.schema == None:
-           raise hqle.CompilerException(f'Table passed to by expression is not fully initialized, schema == None')
+        from Hql.PolarsTools import pltools
 
         paths = []
         schema = []
         for expr in self.exprs:
-            path = expr.eval(ctx, as_list=True)
-            
-            if not isinstance(path, list):
-                raise hqle.CompilerException(f'By path expression returned non-list[str] {type(path)}')
-
+            path = expr.list()
             ptype = table.get_type(path)
 
             # failed get_type returns a empty schema
@@ -84,21 +82,23 @@ class ByExpression(Expression):
         
         return table
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         exprs = []
         for i in self.exprs:
-            exprs.append(i.decompile(ctx))
+            exprs.append(i.deparse())
         out = 'by '
         out += ', '.join(exprs)
         return out
     
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:'Context'):
         from Hql.Data import Data
+        ctx = ctx.copy()
 
         new = []
         for table in ctx.data:
-            agg = self.build_table_agg(ctx, table)
+            agg = self.build_table_agg(table)
             if agg:
                 new.append(agg)
-            
-        return Data(tables=new)
+
+        ctx.data = Data(tables=new)
+        return ctx

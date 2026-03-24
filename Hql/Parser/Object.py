@@ -24,7 +24,7 @@ class ParseObject():
     def can_polars(self) -> bool:
         return True
 
-    def polars(self) -> Union[pl.Expr, pl.DataTypeExpr]:
+    def polars(self) -> pl.Expr:
         return NotImplemented
 
     def polars_value(self) -> pl.Expr:
@@ -37,6 +37,9 @@ class ParseObject():
         return NotImplemented
 
     def deparse(self) -> str:
+        return NotImplemented
+    
+    def preprocess(self, ctx:Context) -> object:
         return NotImplemented
 
     def eval(self, ctx:Context) -> Context:

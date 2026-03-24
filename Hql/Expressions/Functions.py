@@ -6,13 +6,16 @@ from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Context import Context
-    from Hql.Functions import Function
+    from Hql.Functions import Function, DotCompositeFunction
     from Hql.Expressions import NamedReference
 
-class FuncExpr(Expression):
+class FuncProto(Expression):
+    ...
+
+class FuncExpr(FuncProto):
     # I know I'm getting rid of allowing protos for this stuff but 
     def __init__(self, name:'NamedReference', args:Optional[list[Expression]]=None):
-        Expression.__init__(self)
+        FuncProto.__init__(self)
         self.name = name
         self.args:list[Expression] = args if args else []
 
@@ -40,80 +43,46 @@ class FuncExpr(Expression):
         return out
 
     # Evals to function objects
-    def eval(self, ctx:'Context'):
+    def preprocess(self, ctx:'Context') -> 'Function':
         name = self.name.str()
         func = ctx.get_func(name)
         return func(self.args, conf=ctx.config.get_function(name))
-        
-class DotCompositeFunction(Expression):
-    def __init__(self, funcs:list[Union[FuncExpr, 'Function']]):
-        Expression.__init__(self)
+
+class DotFuncExpr(FuncProto):
+    def __init__(self, funcs:list[FuncExpr]):
+        FuncProto.__init__(self)
         self.funcs = funcs
+
+    def __new__(cls, funcs:list[FuncExpr]):
+        if len(funcs) == 1:
+            return funcs[0]
+        return super().__new__(cls)
 
     def __bool__(self):
         return bool(self.funcs)
-    
+
     def to_dict(self):
         return {
             'type': self.type,
             'funcs': [x.to_dict() for x in self.funcs]
         }
-        
-    def gen_list(self, ctx:'Context'):
-        func_list = []
-        for i in self.funcs:
-            func_list.append(i.eval(ctx, as_str=True))
-            
-        return func_list
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         funcs = []
         for i in self.funcs:
-            funcs.append(i.decompile(ctx))
-
+            funcs.append(i.deparse())
         return '.'.join(funcs)
+    
+    def preprocess(self, ctx:'Context') -> Union['DotCompositeFunction', 'Function']:
+        from Hql.Functions import DotCompositeFunction
 
-    # Evals to the function objects that can be executed
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Functions import Function
+        funcs = []
+        for i in self.funcs:
+            try:
+                funcs.append(i.preprocess(ctx))
+            except Exception as e:
+                # catching for handling for if a function can't preprocess within the chain
+                e.add_note(f'Occured in {self.deparse()}')
+                raise
 
-        receiver = kwargs.get('receiver', None)
-        no_exec = kwargs.get('no_exec', False)
-        preprocess = kwargs.get('preprocess', False)
-        
-        # Do we even need this? Doesn't make any sense.
-        '''
-        if kwargs.get('as_list', False):
-            return self.gen_list(ctx)
-        
-        if kwargs.get('as_str', False):
-            return '.'.join(self.gen_list(ctx))
-        '''
-        
-        funcs:list[Function] = []
-        for func in self.funcs:
-            if isinstance(func, FuncExpr):
-                func = func.eval(ctx)
-            funcs.append(func)
-
-        func_list = []
-        for func in funcs:
-            if preprocess and not func.preprocess:
-                raise hqle.QueryException(f'Attempting to use function {func.name} in a preprocess context')
-            func_list.append(func)
-            
-            if not no_exec:
-                if not isinstance(func, Function):
-                    raise hqle.CompilerException(f'Function resolution returned non-function object {func}')
-
-                receiver = func.eval(ctx, receiver=receiver)
-
-        if no_exec:
-            return func_list
-
-        elif isinstance(receiver, type(None)):
-            logging.critical(self.to_dict())
-            raise hqle.CompilerException('DotCompositeFunction resulted in None! (see above)')
-
-        else:
-            return receiver
+        return DotCompositeFunction(funcs)
