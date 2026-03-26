@@ -1,13 +1,13 @@
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
 
-from typing import TYPE_CHECKING, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Union
 import logging
 import polars as pl
 
 if TYPE_CHECKING:
     from Hql.Context import Context
-    from Hql.Expressions import StringLiteral, NamedReference, Path
+    from Hql.Expressions import StringLiteral, Reference, Literal
     from Hql.Expressions import BinaryLogic
 
 # descriptive class
@@ -15,11 +15,17 @@ class Logic(Expression):
     def __init__(self):
         Expression.__init__(self)
 
+    def merge(self, expr:'Logic') -> Optional['Logic']:
+        return NotImplemented
+
+    def reduce(self):
+        return self
+
 class Comparator(Logic):
-    def __init__(self, lh:Expression, rh:Union[list[Expression], Expression], cs:bool=True, neq:bool=False, term:bool=False, logic_and:bool=False) -> None:
+    def __init__(self, lh:'Reference', rh:Union[list[Expression], Expression], cs:bool=True, neq:bool=False, term:bool=False, logic_and:bool=False) -> None:
         Logic.__init__(self)
 
-        self.lh:Expression = lh
+        self.lh:'Reference' = lh
         self.rh:list[Expression] = rh if isinstance(rh, list) else [rh]
         
         for i in self.rh:
@@ -43,60 +49,20 @@ class Comparator(Logic):
     def set_rh(self, rh:Union[list[Expression], Expression]):
         self.rh = rh if isinstance(rh, list) else [rh]
     
-    def add_rh(self, rh:Union[list[Expression], Expression]):
-        if not isinstance(rh, list):
-            rh = [rh]
-
-        if not self.can_list:
-            err_s = ''
-            if len(rh) > 1:
-                err_s = 's'
-                logging.critical(f'{[type(x) for x in rh]}')
-            else:
-                logging.critical(f'{type(rh[0])}')
-
-            raise hqle.CompilerException(f'Attempting to add expression{err_s} to non-list comparator {self.type}')
-
-        for i in rh:
-            if not isinstance(i, Expression):
-                raise hqle.CompilerException(f'Invalid rh expression added to {self.type}: {type(i)}')
-
-        self.rh += rh
+    def add_rh(self, rh:Union[list[Expression], Expression]) -> Logic:
+        return NotImplemented
 
     '''
     Simplifys some things, breaks out rhs to a set of singular comparators and a BinaryOperator
     Most languages don't support list right hands, so a lot of repeated code to do this:
     '''
-    def expand_rh(self) -> BinaryLogic:
+    def expand_rh(self) -> Logic:
         exprs = []
         for i in self.rh:
             new = self.dupe()
             new.set_rh(i)
             exprs.append(new)
         return BinaryLogic(exprs, logic_and=self.logic_and)
-    
-    def can_merge(self, expr:'Comparator') -> bool:
-        if type(self) != type(expr) or self.lh != expr.lh or not self.can_list:
-            return False
-
-        attrs = [
-            'cs',
-            'neq',
-            'term',
-            'logic_and'
-        ]
-
-        # this feels smart, but maybe stupid, idk
-        for i in attrs:
-            if self.__getattribute__(i) != expr.__getattribute__(i):
-                return False
-        return True
-
-    def __add__(self, expr:'Comparator'):
-        if not self.can_merge(expr):
-            raise hqle.CompilerException(f'Cannot merge comparators {type(self)} and {type(expr)}, did you use .can_merge() before adding?')
-        self.add_rh(expr.rh)
-        return self
 
     '''
     Create a copy duplicate of this object.
@@ -118,7 +84,7 @@ class Comparator(Logic):
         }
     
     def build_op(self) -> str:
-        raise hqle.CompilerException(f'build_op not implemented for {self.type}')
+        return NotImplemented
 
 '''
 Handles the following direct comparators:
@@ -129,27 +95,47 @@ Handles the following direct comparators:
 Not substring comparators
 '''
 class Equality(Comparator):
-    def __init__(self, lh:Expression, rh:list[Expression], cs:bool=True, neq:bool=False):
+    def __init__(self, lh:'Reference', rh:Union[list[Expression], Expression], cs:bool=True, neq:bool=False):
         Comparator.__init__(self, lh, rh, cs=cs, neq=neq)
         self.cs = cs
         self.neq = neq
         self.logic_and = False
+        self.can_list = True
 
-    # convert if we're given a single BasicRange on the right
-    def __new__(cls, lh:Expression, rh:list[Expression], cs:bool=True, neq:bool=False):
-        if len(rh) > 1:
-            return super().__new__(cls)
-
-        if isinstance(rh[0], BasicRange):
-            return BetweenEquality(lh, rh[0].start, rh[0].end)
-        
-        return super().__new__(cls)
-
+    # for pickle (aka deepcopy)
     def __reduce__(self):
         return (self.__class__, (self.lh, self.rh, self.cs, self.neq))
-        
-    def add_rh(self, rh:Expression):
-        self.rh.append(rh)
+
+    def reduce(self) -> Logic:
+        new = self.dupe()
+
+        or_exprs = []
+        rhs = []
+        for i in new.rh:
+            if isinstance(i, BasicRange):
+                or_exprs.append(BetweenEquality(new.lh, i.start, i.end))
+                continue
+            rhs.append(i)
+
+        # avoids recurse
+        if or_exprs:
+            new.rh = rhs
+            or_exprs = [new] + or_exprs
+            return BinaryLogic(or_exprs, logic_and=False)
+
+        return self
+    
+    def merge(self, expr: 'Logic') -> Optional['Logic']:
+        if not (isinstance(expr, type(self)) and self.lh == expr.lh):
+            return expr
+
+        attrs = ['cs', 'neq', 'logic_and']
+        for i in attrs:
+            if getattr(self, i) != getattr(expr, i):
+                return expr
+
+        self.rh += expr.rh
+        return None
 
     '''
     Justifies the operator to correctly represent the flags given
@@ -176,40 +162,45 @@ class Equality(Comparator):
         return op
 
     def polars(self) -> pl.Expr:
-        if len(self.rh) > 1:
-            expr = self.expand_rh()
-            return expr.polars()
+        reduced = self.reduce()
+        if not isinstance(reduced, Equality):
+            return reduced.polars()
 
-        if isinstance(self.rh[0], BasicRange):
-            expr = BetweenEquality(self.lh, self.rh[0].start, self.rh[0].end, self.neq)
-            return expr.polars()
+        if len(reduced.rh) > 1:
+            return reduced.expand_rh().polars()
 
-        lh = self.lh.polars()
-        rh = self.rh[0].polars()
+        lh = reduced.lh.polars()
+        rh = reduced.rh[0].polars()
 
-        if self.cs:
+        if reduced.cs:
             new = (lh == rh)
         else:
             rh = pl.select(rh.str.escape_regex()).item()
             regex = f'(?i)^{rh}$'
             new = lh.str.contains(regex)
 
-        if self.neq:
+        if reduced.neq:
             new = ~new
         return new
 
     def deparse(self):
-        lh = self.lh.deparse()
+        reduced = self.reduce()
+        if not isinstance(reduced, Equality):
+            return reduced.deparse()
 
-        if len(self.rh) == 1:
-            return f'{lh} {self.build_op()} {self.rh[0].deparse()}'
+        lh = reduced.lh.deparse()
+
+        op = f'{lh} {reduced.build_op()} '
+
+        if len(reduced.rh) == 1:
+            return op + reduced.rh[0].deparse()
 
         rh = []
-        for i in self.rh:
+        for i in reduced.rh:
             rh.append(i.deparse())
         rh = ', '.join(rh)
 
-        return f'{lh} {self.build_op()} ({rh})'
+        return op + f'({rh})'
 
 '''
 Handles the following term operators:
@@ -241,9 +232,10 @@ Non-term operators:
     - non-term suffix/endswith
 '''
 class Substring(Comparator):
-    def __init__(self, lh:Union['NamedReference', 'Path'], rh:list[StringLiteral], term:bool=False, logic_and:bool=False, neq:bool=False, cs:bool=False, startswith:bool=False, endswith:bool=False):
+    def __init__(self, lh:'Reference', rh:list[StringLiteral], term:bool=False, logic_and:bool=False, neq:bool=False, cs:bool=False, startswith:bool=False, endswith:bool=False):
         Comparator.__init__(self, lh, rh)
-        self.lh:Union['NamedReference', 'Path'] = lh
+        # narrow type defs
+        self.lh:'Reference' = lh
         self.rh:list[StringLiteral] = rh
 
         self.term = term
@@ -252,12 +244,13 @@ class Substring(Comparator):
         self.cs = cs
         self.startswith = startswith
         self.endswith = endswith
+        self.can_list = True
 
     def to_dict(self):
         return {
             'type': self.type,
             'lh': self.lh.to_dict(),
-            'op': self.op,
+            'op': self.build_op(),
             'rh': [x.to_dict() for x in self.rh]
         }
 
@@ -286,7 +279,7 @@ class Substring(Comparator):
     contains and has operators
     '''
     def has(self, lh:pl.Expr, rh:Expression):
-        rh_str = pl.escape_regex(rh.stringify())
+        rh_str = pl.escape_regex(rh.str())
 
         regex = '' if self.cs else '(?i)'
         regex += rh_str
@@ -297,7 +290,7 @@ class Substring(Comparator):
     prefix and suffix operators
     '''
     def prefix(self, lh:pl.Expr, rh:Expression):
-        rh_str = pl.escape_regex(rh.stringify())
+        rh_str = pl.escape_regex(rh.str())
         
         regex = '' if self.cs else '(?i)'
         regex += '^' if self.startswith else ''
@@ -307,7 +300,7 @@ class Substring(Comparator):
         return lh.str.contains(regex)
 
     def deparse(self) -> str:
-        lh = self.lh.decompile()
+        lh = self.lh.deparse()
         op = self.build_op()
 
         rh = []
@@ -338,6 +331,18 @@ class Substring(Comparator):
 
         return ~expr if self.neq else expr
 
+    def merge(self, expr: 'Logic') -> Optional['Logic']:
+        if not isinstance(expr, type(self)) or self.lh != expr.lh:
+            return expr
+
+        attrs = ['term', 'logic_and', 'neq', 'cs', 'startswith', 'endswith']
+        for i in attrs:
+            if getattr(self, i) != getattr(expr, i):
+                return expr
+
+        self.add_rh(expr)
+        return None
+
 # Handles relational expressions
 # - <
 # - >
@@ -346,29 +351,16 @@ class Substring(Comparator):
 # As per the grammar
 # Takes after the equality expression
 class Relational(Comparator):
-    def __init__(self, lh: Expression, rh:Union[Expression, list[Expression]], gt:bool, eq:bool) -> None:
+    def __init__(self, lh:'Reference', rh:Expression, gt:bool, eq:bool) -> None:
         Comparator.__init__(self, lh, rh, logic_and=True)
         self.gt = gt
         self.eq = eq
         self.can_list = False
 
-    # Explode if we have too many rhs
-    def __new__(cls, lh: Expression, rh:Union[Expression, list[Expression]], gt:bool, eq:bool):
-        if not isinstance(rh, list):
-            rh = [rh]
-
-        if len(rh) > 1:
-            exprs = []
-            for i in rh:
-                exprs.append(Relational(lh, i, gt, eq)) 
-            return BinaryLogic(exprs, True)
-
-        return super().__new__(cls)
-
     def __reduce__(self):
         return (self.__class__, (self.lh, self.rh, self.gt, self.eq))
 
-    def deparse(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         lh = self.lh.deparse()
         rh = self.rh[0].deparse()
         return f'{lh} {self.build_op()} {rh}'
@@ -402,7 +394,7 @@ class Relational(Comparator):
 # Here lh is the '@timestamp' escaped string literal, and the right hand has
 # the start and end values for the time range.
 class BetweenEquality(Comparator):
-    def __init__(self, lh:Expression, start:Expression, end:Expression, neq:bool=False):
+    def __init__(self, lh:'Reference', start:'Literal', end:'Literal', neq:bool=False):
         Logic.__init__(self)
 
         self.lh = lh
@@ -452,19 +444,12 @@ class BinaryLogic(Logic):
         for i in exprs:
             if not isinstance(i, Logic):
                 raise hqle.CompilerException(f'BinaryLogic passed invalid non-logic expression: {type(i)}')
-
-        # break out needlessly nested binary operators
-        condensed = []
-        for i in exprs:
-            if isinstance(i, BinaryLogic) and self.logic_and == i.logic_and:
-                condensed += i.exprs
-            else:
-                condensed.append(i)
         
-        self.exprs:list[Logic] = condensed
+        self.exprs:list[Logic] = exprs
+        self.exprs = self.condense()
 
     # immediately break down if there's only 1 expr
-    def __new__(cls, exprs:list, logic_and:bool=True):
+    def __new__(cls, exprs:list, logic_and:bool=True) -> Logic:
         if len(exprs) == 1:
             return exprs[0]
         return super().__new__(cls)
@@ -472,37 +457,27 @@ class BinaryLogic(Logic):
     def __reduce__(self):
         return (self.__class__, (self.exprs, self.logic_and))
     
-    def __iter__(self) -> iter[Logic]:
+    def __iter__(self):
         return iter(self.exprs)
 
     '''
     Condense down equality operators so they're more syntactically condensed.
+    Flatten nested logic
     '''
-    def condense(self) -> list:
-        # from Hql.Expressions import NamedReference, Path
-
-        # Make things a bit nicer
-        # eq:dict[Union[NamedReference, Path], Equality] = dict()
-        # other = []
-        # for i in exprs:
-        #     if isinstance(i, target) and i.op in ops:
-        #         if not isinstance(i.lh, (NamedReference, Path)):
-        #             other.append(i)
-
-        #         elif i.lh in eq:
-        #             [eq[i.lh].add_rh(x) for x in i.rh]
-
-        #         else:
-        #             eq[i.lh] = i
-        #     else:
-        #         other.append(i)
-
-        # total = other + [eq[x] for x in eq]
-
+    def condense(self) -> Logic:
         new:list[Logic] = []
         for i in self.exprs:
-            if not isinstance(i, Comparator):
+            if isinstance(i, BinaryLogic):
+                i = i.condense()
+            
+            # second pass, integrate
+            if isinstance(i, BinaryLogic) and i.logic_and == self.logic_and:
+                new += i.exprs
+                continue
+
+            if isinstance(i, Logic):
                 new.append(i)
+                continue
 
             for j in new:
                 if j.can_merge(i):
@@ -511,7 +486,6 @@ class BinaryLogic(Logic):
             new.append(i)
 
         return total
-        
         
     def to_dict(self):
         return {
@@ -557,7 +531,7 @@ class BinaryLogic(Logic):
         return (filt)
 
 class BasicRange(Logic):
-    def __init__(self, start:Expression, end:Expression):
+    def __init__(self, start:Literal, end:Literal):
         Logic.__init__(self)
         self.start = start
         self.end = end
