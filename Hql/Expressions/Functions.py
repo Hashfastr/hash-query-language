@@ -1,8 +1,6 @@
-from typing import TYPE_CHECKING, Optional, Union
-import logging
-
 from .__proto__ import Expression
-from Hql.Exceptions import HqlExceptions as hqle
+
+from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
     from Hql.Context import Context
@@ -13,7 +11,7 @@ class FuncProto(Expression):
     ...
 
 class FuncExpr(FuncProto):
-    # I know I'm getting rid of allowing protos for this stuff but 
+    # I know I'm gettinG rid of allowing protos for this stuff but 
     def __init__(self, name:'NamedReference', args:Optional[list[Expression]]=None):
         FuncProto.__init__(self)
         self.name = name

@@ -2,8 +2,6 @@ from .grammar.HqlVisitor import HqlVisitor
 from .grammar.HqlParser import HqlParser
 
 import Hql.Expressions as Expr
-from Hql.Types.Hql import HqlTypes as hqlt
-
 from Hql.Exceptions import HqlExceptions as hqle
 
 class BaseExpressions(HqlVisitor):

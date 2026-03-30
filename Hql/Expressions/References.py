@@ -1,10 +1,9 @@
 from .__proto__ import Expression
-from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Data import Data, Table, Series
+from Hql.Data import Data, Table
 import polars as pl
 
-from typing import TYPE_CHECKING, Sequence, Union, Optional
+from typing import TYPE_CHECKING, Sequence, Union
 import logging
 
 if TYPE_CHECKING:
@@ -90,18 +89,7 @@ class EscapedNamedReference(NamedReference):
 class Path(Reference):
     def __init__(self, path:Sequence[Union[NamedReference, Path]]):
         Reference.__init__(self)
-
-        new = []
-        for i in path:
-            if isinstance(i, NamedReference):
-                new.append(i)
-            else:
-                new += i.path
-
-        self.path:list[NamedReference] = new
-
-        if not self.path:
-            raise hqle.CompilerException('Attempting to init path with 0 path parts')
+        self.path:list[NamedReference] = self.condense(path)
 
     # allows for collapsing single length paths
     def __new__(cls, path:list):
@@ -129,7 +117,16 @@ class Path(Reference):
         return True
 
     def __hash__(self):
-        return hash(tuple([x.__hash__() for x in self.path]))
+        return hash(tuple([hash(x) for x in self.path]))
+
+    def condense(self, path:Sequence[Reference]) -> list[NamedReference]:
+        new = []
+        for i in path:
+            if isinstance(i, NamedReference):
+                new.append(i)
+            elif isinstance(i, Path):
+                new += self.condense(i.path)
+        return new
       
     def to_dict(self) -> dict:
         return {
@@ -139,9 +136,6 @@ class Path(Reference):
 
     def deparse(self) -> str:
         return '.'.join([x.deparse() for x in self.path])
-
-    def str(self) -> str:
-        return self.deparse()
 
     def list(self) -> list[str]:
         return [x.str() for x in self.path]
@@ -168,7 +162,7 @@ class Path(Reference):
 '''
 Sets a name a value
 
-ip_addr = ip4(destination.ip)
+ip_addr, ip2 = ip4(destination.ip)
 '''
 class NamedExpression(Expression):
     def __init__(self, paths:list[Reference], value:Union[Expression, Function]):
@@ -223,8 +217,11 @@ class NamedExpression(Expression):
             return False
         return True
 
+    ## TODO
     def polars(self) -> 'pl.Expr':
-        if isinstance(self.value, Function):
+        return NotImplemented
+
+        if not self.can_polars():
             logging.error(self.deparse())
             raise hqle.CompilerException(f'Attempting to polars non-polars expression')
 
@@ -236,7 +233,10 @@ class NamedExpression(Expression):
 
         return 
 
+    ## TODO
     def polars_value(self) -> 'pl.Expr':
+        return NotImplemented
+
         if isinstance(self.value, Function):
             logging.error(self.deparse())
             raise hqle.CompilerException(f'Attempting to polars non-polars expression')
@@ -244,6 +244,8 @@ class NamedExpression(Expression):
 
     def eval(self, ctx:'Context', insert:bool=True) -> 'Context':
         from Hql.Expressions import Literal
+
+        ctx = ctx.copy()
 
         if isinstance(self.value, Literal):
             series = self.value.series()
@@ -255,9 +257,6 @@ class NamedExpression(Expression):
 
         if not isinstance(value, Data):
             raise hqle.CompilerException(f'Named expression right hand {self.value} returned non-Data object {type(value)}')
-        
-        if as_value:
-            return value
         
         # Chose which dataset to insert on
         # If set to false it'll create it's own blank dataset
@@ -274,7 +273,7 @@ class NamedExpression(Expression):
             
             # We can assign to multiple names
             for path in self.paths:
-                path = path.eval(ctx, as_list=True)
+                path = path.list()
                 
                 cur = table
 
@@ -303,4 +302,5 @@ class NamedExpression(Expression):
 
         # print(data.to_dict())
 
-        return data
+        ctx.data = data
+        return ctx

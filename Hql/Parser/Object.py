@@ -31,7 +31,7 @@ class ParseObject():
         return NotImplemented
 
     def str(self) -> str:
-        return NotImplemented
+        return self.deparse()
 
     def dtype(self) -> hqlt.HqlType:
         return NotImplemented

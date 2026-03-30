@@ -1,20 +1,25 @@
-from typing import TYPE_CHECKING, Optional, Union
-
-from Hql.Compiler.InstructionSet import InstructionSet
+from typing import TYPE_CHECKING, Union
 
 from .__proto__ import Expression
-from .Logic import *
-from .References import *
-from .Literals import *
-from .Functions import *
+
+from .Logic import Logic, Comparator, Equality, Substring
+from .Logic import Relational, BetweenEquality, BinaryLogic
+from .Logic import BasicRange, Regex, Not
+
+from .References import Reference, NamedReference, Wildcard
+from .References import EscapedNamedReference, Path, NamedExpression
+
+from .Literals import Literal, TypeExpression, StringLiteral
+from .Literals import MultiString, Integer, IP4, Float, Bool
+from .Literals import Multivalue, Datetime, Null
+
+from .Functions import FuncProto, FuncExpr, DotFuncExpr
+
 from .Aggregation import OrderedExpression, ByExpression
 
 if TYPE_CHECKING:
     from Hql.Operators import Operator
     from Hql.Database import Database
-    from Hql.Compiler import InstructionSet
-
-from Hql.Exceptions import HqlExceptions as hqle
 
 class PipeExpression(Expression):
     def __init__(self, pipes:list['Operator'], prepipe:Union['Database', 'Expression', None]=None):
