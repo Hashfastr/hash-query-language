@@ -13,13 +13,11 @@ class Logic(HqlVisitor):
         if ctx.OperatorToken == None:
             return self.visit(ctx.Left)
 
-        right = self.visit(ctx.Right)
-        assert isinstance(right, Expr.Expression)
         op = ctx.OperatorToken.text
 
         expr = Expr.Equality(
             self.visit(ctx.Left),
-            [right],
+            [self.visit(ctx.Right)],
             cs='~' not in op,
             neq='!' in op
         )
@@ -53,7 +51,7 @@ class Logic(HqlVisitor):
             self.visit(ctx.Left),
             start,
             end,
-            '!' in ctx.OperatorToken.text
+            neq='!' in ctx.OperatorToken.text
         )
         
         return expr
@@ -64,15 +62,10 @@ class Logic(HqlVisitor):
         for i in ctx.Operations:
             exprs.append(self.visit(i))
         
-        if len(exprs) == 1:
-            return exprs[0]
-        
-        expr = Expr.BinaryLogic(
+        return Expr.BinaryLogic(
             exprs,
             logic_and=False
         )
-        
-        return expr
     
     def visitLogicalOrOperation(self, ctx: HqlParser.LogicalOrOperationContext):
         return self.visit(ctx.Right)
@@ -83,18 +76,13 @@ class Logic(HqlVisitor):
         for i in ctx.Operations:
             exprs.append(self.visit(i))
         
-        if len(exprs) == 1:
-            return exprs[0]
-        
-        expr = Expr.BinaryLogic(
+        return Expr.BinaryLogic(
             exprs,
             logic_and=True
         )
-        
-        return expr
     
     def visitLogicalAndOperation(self, ctx: HqlParser.LogicalAndOperationContext):
-        return self.visit(ctx.Right)        
+        return self.visit(ctx.Right)
 
     def visitParenthesizedExpression(self, ctx: HqlParser.ParenthesizedExpressionContext):
         return self.visit(ctx.Expression)

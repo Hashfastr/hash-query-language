@@ -1,4 +1,4 @@
-from .Operator import Operator
+from Hql.Operators.Operator import Operator
 
 from Hql.Expressions import NamedReference, Literal
 from Hql.Data import Data, Table, Schema
@@ -21,10 +21,9 @@ class Datatable(Operator):
         self.tabular:bool = True
         
     def to_dict(self):
-        return {
-            'type': self.type,
-            'schema': self.gen_schema().to_dict()
-        }
+        out = super().to_dict()
+        out['schema'] = self.gen_schema().to_dict()
+        return out
 
     def gen_schema(self) -> HqlTypes.object:
         d = dict()

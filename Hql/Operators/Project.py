@@ -1,10 +1,10 @@
-from Hql.Expressions import Expression
-from Hql.Data import Schema, Data, Table
-from Hql.Context import register_op, Context
+from Hql.Data import Data, Table
+from Hql.Context import Context
 from Hql.Operators import Operator
-import polars as pl
-import logging
-from typing import Sequence
+from typing import Sequence, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Expressions import Reference, NamedExpression
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.
@@ -16,26 +16,25 @@ from typing import Sequence
 #
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
-# @register_op('Project')
 class Project(Operator):
-    def __init__(self, optok:str, exprs:Sequence[Expression]):
+    def __init__(self, optok:str, exprs:Sequence[Union['Reference', 'NamedExpression']]):
         Operator.__init__(self)
         self.exprs = exprs
         self.optok = optok
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         out = self.optok
 
         if self.exprs:
             out += ' '
             exprs = []
             for i in self.exprs:
-                exprs.append(i.decompile(ctx))
+                exprs.append(i.deparse())
             out += ', '.join(exprs)
 
         return out
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:'Context'):
         datasets = []
         for i in self.exprs:
             datasets.append(i.eval(ctx, as_value=False))

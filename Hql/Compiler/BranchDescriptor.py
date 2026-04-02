@@ -1,12 +1,14 @@
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Optional
 from Hql.Exceptions import HqlExceptions as hqle
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, NamedReference, Path
-    from Hql.Operators import Operator, Database
+    from Hql.Expressions import Expression
+    from Hql.Operators import Operator
+    from Hql.Database import Database
     from Hql.Query import Query, Statement
     from Hql.Functions import Function
+    from Hql.Expressions import Reference
 
 '''
 Wraps an Expression or Operator with some tagged metadata
@@ -14,16 +16,14 @@ Helpful for finding out if we can compile something
 '''
 class BranchDescriptor():
     def __init__(self):
-        from Hql.Data import Schema
-
         # contains a timeseries element
         self.attrs:dict = dict()
 
         self.expr:Union[None, 'Expression', 'Function'] = None
-        self.op:Union[None, 'Operator'] = None
-        self.statement:Union[None, 'Statement'] = None
-        self.query:Union[None, 'Query'] = None
-        self.db:Union[None, 'Database'] = None
+        self.op:Optional['Operator'] = None
+        self.statement:Optional['Statement'] = None
+        self.query:Optional['Query'] = None
+        self.db:Optional['Database'] = None
         self.str:str = ''
         self.join_attrs:dict = dict()
         self.list_attrs:list[str] = [
@@ -35,13 +35,13 @@ class BranchDescriptor():
         self.references:list = []
         self.removes:list = []
         self.full_schema = False
-        self.mapping:dict[Union['NamedReference', 'Path'], Union['NamedReference', 'Path']] = dict()
+        self.mapping:dict['Reference', 'Reference'] = dict()
         self.symmetric:list = []
 
     def set_attr(self, name:str, value:object=True):
         self.attrs[name] = value
 
-    def add_mapping(self, dest:Union['NamedReference', 'Path'], src:Union['NamedReference', 'Path']):
+    def add_mapping(self, dest:'Reference', src:'Reference'):
         self.mapping[dest] = src
 
     def get_attr(self, name:str):
@@ -92,7 +92,7 @@ class BranchDescriptor():
                 return False
         return True
 
-    def get_expr(self) -> 'Expression':
+    def get_expr(self) -> Union['Expression', 'Function']:
         if isinstance(self.expr, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Expr')
         return self.expr

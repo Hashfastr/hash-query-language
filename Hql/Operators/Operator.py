@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Sequence
 from Hql.Parser import ParseObject
 
 if TYPE_CHECKING:
@@ -26,14 +26,23 @@ class Operator(ParseObject):
     def __init__(self):
         import random
 
-        self.expr:Optional['Expression'] = None
-        self.exprs:list['Expression'] = []
-        self.compatible:list['Operator'] = []
-        self.non_conseq:list['Operator'] = []
+        self._expr:Optional['Expression'] = None
+        self.exprs:Sequence['Expression'] = []
+        self.compatible:Sequence['Operator'] = []
+        self.non_conseq:Sequence['Operator'] = []
         self.methods:list[str] = []
         self.variables:dict = {}
         self.tabular = False
         self.id = '%08x' % random.getrandbits(32)
+
+    # allows covariance
+    @property
+    def expr(self) -> Optional['Expression']:
+        return self._expr
+
+    @expr.setter
+    def expr(self, value:Optional['Expression']) -> None:
+        self._expr = value
 
     def to_dict(self) -> dict:
         out:dict = {

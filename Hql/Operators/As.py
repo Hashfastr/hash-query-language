@@ -1,7 +1,9 @@
 from Hql.Operators import Operator
-from Hql.Expressions import Expression
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_op, Context
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
+    from Hql.Expressions import Expression
 
 '''
 Binds a name to the operator's input tabular expression
@@ -17,13 +19,24 @@ https://learn.microsoft.com/en-us/kusto/query/as-operator
 # Disabling this for now until I decide how to implement
 ## @register_op('As')
 class As(Operator):
-    def __init__(self, expr:Expression):
+    def __init__(self, expr:'Expression'):
         Operator.__init__(self)
         self.expr = expr
 
-    def decompile(self, ctx: 'Context') -> str:
-        expr = self.expr.decompile(ctx)
+    @property
+    def expr(self) -> 'Expression':
+        e = super().expr
+        assert e is not None
+        return e
+
+    @expr.setter
+    def expr(self, value:Optional['Expression']):
+        assert value is not None
+        super().expr = value
+
+    def deparse(self) -> str:
+        expr = self.expr.deparse()
         return f'as {expr}'
         
-    def eval(self, ctx:'Context', **kwargs):
-        return ctx.data
+    def eval(self, ctx: 'Context') -> 'Context':
+        return ctx

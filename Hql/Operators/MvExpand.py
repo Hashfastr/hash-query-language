@@ -1,33 +1,37 @@
-from Hql.Data import Data, Table
 from Hql.Operators import Operator
-from Hql.Context import register_op, Context
-from Hql.Types.Hql import HqlTypes as hqlt
-from typing import Union, TYPE_CHECKING
-from Hql.Exceptions import HqlExceptions as hqle
-import polars as pl
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from Hql.Expressions import ToClause, Integer
+    from Hql.Context import Context
+    from Hql.Data import Table
 
-# @register_op('MvExpand')
 class MvExpand(Operator):
-    def __init__(self, exprs:list['ToClause'], limit:Union[None, 'Integer']=None):
+    def __init__(self, exprs:list['ToClause'], limit:Optional['Integer']=None):
         Operator.__init__(self)
         self.exprs = exprs
         self.limit = limit
+
+    @property
+    def to_clauses(self) -> list['ToClause']:
+        from Hql.Expressions import ToClause
+
+        out:list['ToClause'] = []
+        for e in self.exprs:
+            assert isinstance(e, ToClause)
+            out.append(e)
+        return out
+
+    def explode_table(self, table:'Table', limit:int):
+        from Hql.Types.Hql import HqlTypes as hqlt
+        from Hql.Data import Table
         
-    def explode_table(self, ctx:'Context', table:Table, limit:int):
         schema = table.schema
         df = table.df
 
-        for to in self.exprs:
-            path = to.expr.eval(ctx, as_list=True)
-            if not isinstance(path, list):
-                raise hqle.CompilerException(f'To expression return non-list type {type(path)}')
-
-            pl_expr = to.expr.eval(ctx, as_pl=True)
-            if not isinstance(path, pl.Expr):
-                raise hqle.CompilerException(f'To expression return non-list type {type(path)}')
+        for to in self.to_clauses:
+            path = to.expr.list()
+            pl_expr = to.expr.polars()
 
             to_schema = schema.get_type(path).schema
 
@@ -36,6 +40,7 @@ class MvExpand(Operator):
                 continue
             
             new_type = to_schema.inner
+            # need to fix the typing on this
             df = df.with_columns(
                 pl_expr.list.slice(0, limit)
             ).explode(pl_expr)
@@ -47,29 +52,32 @@ class MvExpand(Operator):
             
         return Table(df=df, schema=schema, name=table.name)
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         out = 'mvexpand '
 
         exprs = []
         for i in self.exprs:
-            exprs.append(i.decompile(ctx))
+            exprs.append(i.deparse())
         out += ', '.join(exprs)
         
         if self.limit:
             out += ' '
-            out += self.limit.decompile(ctx)
+            out += self.limit.deparse()
 
         return out
 
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:'Context'):
+        from Hql.Data import Data
+        ctx = ctx.copy()
+
         # Long literal, just get us the number
         limit = -1
         if self.limit:
-            limit = self.limit.eval(ctx)
-            assert isinstance(limit, int)
+            limit = self.limit.value
 
         new = []
         for table in ctx.data:
-            new.append(self.explode_table(ctx, table, limit))
+            new.append(self.explode_table(table, limit))
         
-        return Data(tables=new)
+        ctx.data = Data(tables=new)
+        return ctx

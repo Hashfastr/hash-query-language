@@ -20,6 +20,8 @@ from .Aggregation import OrderedExpression, ByExpression
 if TYPE_CHECKING:
     from Hql.Operators import Operator
     from Hql.Database import Database
+    from Hql.Types.Hql import HqlTypes as hqlt
+    from Hql.Context import Context
 
 class PipeExpression(Expression):
     def __init__(self, pipes:list['Operator'], prepipe:Union['Database', 'Expression', None]=None):
@@ -72,7 +74,7 @@ class OpParameter(Expression):
         }
 
 class ToClause(Expression):
-    def __init__(self, expr:Reference, to:Union[TypeExpression, hqlt.HqlType]):
+    def __init__(self, expr:Reference, to:Union[TypeExpression, 'hqlt.HqlType']):
         Expression.__init__(self)
         self.expr = expr
         if isinstance(to, TypeExpression):
@@ -92,6 +94,7 @@ class ToClause(Expression):
         return expr
         
     def eval(self, ctx:'Context') -> 'Context':
+        from Hql.Data import Data
         ctx = ctx.copy()
 
         new = []

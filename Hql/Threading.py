@@ -155,16 +155,7 @@ class InstructionThread():
 
     # Runs the query, function that is threaded
     def run(self) -> None:
-        from Hql.Data import Data
-        from Hql.Context import Context
-        import copy
-
-        out = self.inst.eval(self.ctx)
-        if isinstance(out, Data):
-            ctx = copy.deepcopy(self.ctx)
-            ctx.data = out
-            out = ctx
-        self.output = out
+        self.output = self.inst.eval(self.ctx)
 
     def is_alive(self) -> bool:
         if not self.thread or not self.threaded:

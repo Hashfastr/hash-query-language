@@ -52,7 +52,7 @@ class Database(Operator):
                     NamedReference('_hqltimestamp'),
                     Datetime(start),
                     Datetime(end),
-                    'between'
+                    False
                 )
             )
         )
@@ -68,10 +68,8 @@ class Database(Operator):
             'type': self.type,
         }
 
-    def eval(self, ctx:'Context', **kwargs) -> 'Data':
-        from Hql.Data import Data
-        self.ctx = ctx
-        return Data()
+    def eval(self, ctx:'Context') -> 'Context':
+        return NotImplemented
     
     def get_variable(self, name:'NamedReference') -> object:
         raise hqle.QueryException(f'{self.type} database has no variables')

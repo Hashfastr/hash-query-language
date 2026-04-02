@@ -1,21 +1,18 @@
-from . import Operator
-from Hql.Data import Data, Table
-from Hql.Expressions import NamedReference
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import Context
+from Hql.Operators import Operator
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from Hql.Exceptions import HqlExceptions as hqle
+if TYPE_CHECKING:
+    from Hql.Expressions import NamedReference
+    from Hql.Context import Context
 
 # Count simply returns the number of rows given by a record set.
 #
 # https://learn.microsoft.com/en-us/kusto/query/count-operator
-# @register_op('Count')
 class Count(Operator):
-    def __init__(self, name:Optional[NamedReference]=None):
+    def __init__(self, name:Optional['NamedReference']=None):
         Operator.__init__(self)
-        self.name:Optional[NamedReference] = name
+        self.name:Optional['NamedReference'] = name
 
     def deparse(self) -> str:
         return f'count as {self.name.deparse()}' if self.name else 'count'
@@ -26,12 +23,14 @@ class Count(Operator):
             d['name'] = self.name.str()
         return d
 
-    def eval(self, ctx: Context) -> Context:
+    def eval(self, ctx:'Context') -> 'Context':
+        from Hql.Data import Data, Table
+
         counts = dict()
         for table in ctx.data:
             counts[table.name] = len(table)
             
-        # cast count to a field
+        # if sending to a table name, make a new table with counts
         if self.name:
             new_data = []
             for count in counts:
@@ -47,9 +46,9 @@ class Count(Operator):
             ctx = ctx.copy()
 
             new_tables = []
-            for count in counts:
-                new = [{'Count': counts[count]}]
-                new_tables.append(Table(name=count, init_data=new))
+            for name in counts:
+                new = [{'Count': counts[name]}]
+                new_tables.append(Table(name=name, init_data=new))
             ctx.data = Data(tables=new_tables)
 
             return ctx

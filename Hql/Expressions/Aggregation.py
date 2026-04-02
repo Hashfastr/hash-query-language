@@ -1,6 +1,6 @@
 from .__proto__ import Expression
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Sequence
 
 if TYPE_CHECKING:
     from Hql.Context import Context
@@ -43,7 +43,7 @@ class OrderedExpression(Expression):
         }
 
 class ByExpression(Expression):
-    def __init__(self, exprs:list['Reference']):
+    def __init__(self, exprs:Sequence['Reference']):
         Expression.__init__(self)
         self.exprs = exprs
         
