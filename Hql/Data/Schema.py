@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Union, Optional
+from typing import TYPE_CHECKING, Sequence, Union, Optional
 
 import polars as pl
 
@@ -9,7 +9,7 @@ from Hql.Types.Compiler import CompilerType
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
     from Hql.Types.Compiler import CompilerType
-    from Hql.Expressions import Expression, Path, NamedReference
+    from Hql.Expressions import Expression, Path, NamedReference, Reference
     from Hql.Types.Hql import HqlTypes as hqlt
 
 class Schema():
@@ -101,7 +101,7 @@ class Schema():
     def __iter__(self):
         return iter(self.blowup_schema())
 
-    def blowup_schema(self, schema:Optional[dict]=None) -> list[tuple[Union['NamedReference', 'Path'], CompilerType]]:
+    def blowup_schema(self, schema:Optional[dict]=None) -> list[tuple['Reference', CompilerType]]:
         from Hql.Expressions import Path, NamedReference
         if schema == None:
             schema = self.schema
@@ -112,10 +112,10 @@ class Schema():
             if isinstance(schema[key], dict):
                 recurse = self.blowup_schema(schema=schema[key])
                 for path, stype in recurse:
-                    if isinstance(path, NamedReference):
-                        path = Path([name, path])
-                    else:
+                    if isinstance(path, Path):
                         path = Path([name] + path.path)
+                    else:
+                        path = Path([name, path])
                     out.append((path, stype))
             else:
                 out.append((name, schema[key]))
@@ -198,21 +198,21 @@ class Schema():
         return new
 
     # Isolate the schema at a given path
-    def select(self, path:list[str]) -> "Schema":
+    def select(self, path:'Reference') -> "Schema":
         cur = self.unnest(path).schema
-        for part in path[::-1]:
+        for part in path.list()[::-1]:
             cur = {part: cur}
         return Schema(schema=cur)
 
-    def select_many(self, fields:list[list[str]]):
+    def select_many(self, fields:Sequence['Reference']):
         schemas = []
         for field in fields:
             schemas.append(self.select(field))
         return Schema.merge(schemas)
     
-    def unnest(self, path:list[str]) -> "Schema":
+    def unnest(self, path:'Reference') -> "Schema":
         cur = self.schema
-        for part in path:
+        for part in path.list():
             if part not in cur:
                 return Schema()
             else:
@@ -227,7 +227,7 @@ class Schema():
     '''
     Descriptive rename of unnest, might remove later
     '''
-    def get_type(self, path:list[str]):
+    def get_type(self, path:'Reference'):
         return self.unnest(path)
 
     '''
@@ -261,7 +261,7 @@ class Schema():
             cur = cur[key]
         return cur
     
-    def rename(self, src:list[str], dest:list[str]):
+    def rename(self, src:'Reference', dest:'Reference'):
         if not self.assert_field(src):
             raise hqle.QueryException('Attempting to rename a non-existing field')
         
@@ -277,9 +277,9 @@ class Schema():
             else:
                 cur = cur[i]
                 
-    def pop(self, name:list[str]):
+    def pop(self, name:'Reference'):
         if not self.assert_field(name):
-            raise hqle.QueryException('Attempting to pop a non-existing field')
+            raise hqle.QueryException(f'Attempting to pop a non-existing field {name}')
         
         src_type = hqlt.null()
         cur = self.schema
@@ -291,7 +291,7 @@ class Schema():
                 
         return src_type
 
-    def drop(self, path:list[str], schema:Union[dict, None]=None, idx:int=0):
+    def drop(self, path:'Reference', schema:Union[dict, None]=None, idx:int=0):
         if schema == None:
             schema = self.schema
         
@@ -317,7 +317,7 @@ class Schema():
             
         return new
     
-    def drop_many(self, paths:list[list[str]]):
+    def drop_many(self, paths:Sequence['Reference']):
         for path in paths:
             self.drop(path)
         return self
@@ -325,22 +325,13 @@ class Schema():
     '''
     Set a field to a specific type in the schema apply is then expected to be ran
     '''
-    def set(self, path:Union[list[str], 'Path', 'NamedReference'], htype:Union[CompilerType, "Schema", dict], schema:Union[dict, "Schema", None]=None, idx:int=0):
-        from Hql.Expressions import Path, NamedReference
+    def set(self, path:'Reference', htype:Union[CompilerType, "Schema", dict], schema:Union[dict, "Schema", None]=None, idx:int=0):
         if isinstance(htype, Schema):
             htype = htype.schema
         
         schema = schema if schema != None else self.schema
         if isinstance(schema, Schema):
             schema = schema.schema
-
-        if isinstance(path, Path):
-            new = []
-            for i in path.path:
-                new.append(i.name)
-            path = new
-        elif isinstance(path, NamedReference):
-            path = [path.name]
 
         split = path[idx]
 
@@ -413,7 +404,7 @@ class Schema():
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
     '''
-    def gen_pl_schema(self, schema:Union[None, dict]=None):
+    def gen_pl_schema(self, schema:Union[None, hqlt.HqlType, dict]=None):
         schema = schema if schema else self.schema
         
         if not isinstance(schema, dict):
@@ -587,7 +578,7 @@ class Schema():
         return pl.DataFrame(new)
     
     # Asserts by attempting to retrieve the field's value
-    def assert_field(self, field:list[str]):
+    def assert_field(self, field:'Reference'):
         if self.unnest(field) == None:
             return False
         else:
@@ -613,23 +604,21 @@ class Schema():
 
         return pl.DataFrame(newdf)
 
-    def join(self, right:"Schema", on:list[Union['Path', 'NamedReference']], kind:str) -> Schema:
-        from Hql.Expressions import Path, NamedReference
-
+    def join(self, right:"Schema", on:Sequence['Reference'], kind:str) -> Schema:
         # all of these are semantically the same schema wise
         if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter', 'fullouter'):
             new = self.copy()
             for path, stype in right:
+                # change naming for duplicates
                 if path in new and path not in on:
-                    if isinstance(path, Path):
-                        path.path[-1].name = path.path[-1].name + '_right'
-                    else:
-                        path.name = path.name + '_right'
+                    path[-1] += '_right'
                     new.set(path, stype)
 
+                # No duplicate, matches both sets
                 elif path in new and path in on:
                     ...
 
+                # Not yet existing in schema
                 elif path not in new:
                     new.set(path, stype)
             

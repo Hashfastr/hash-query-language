@@ -45,6 +45,9 @@ class Function():
     def __repr__(self) -> str:
         return self.__str__()
 
+    def str(self) -> str:
+        return self.__str__()
+
     def preprocess(self, ctx:'Context', receiver=None) -> object:
         raise hqle.FunctionException(f'Attempting to preprocess non-preprocess function {self.name}')
         

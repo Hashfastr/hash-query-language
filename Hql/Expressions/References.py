@@ -16,6 +16,21 @@ class Reference(Expression):
         Expression.__init__(self)
         self.name = ''
 
+    def __getitem__(self, idx:int) -> str:
+        return self.list()[idx]
+
+    def __setitem__(self, idx:int, value:str):
+        if idx not in (0, -1):
+            raise IndexError(f'Invalid index {idx} for Reference of length {1}')
+        self.name = value
+        return self
+
+    def __iter__(self):
+        return iter(self.list())
+
+    def __len__(self):
+        return len(self.list())
+
     def polars(self) -> 'pl.Expr':
         return NotImplemented
 
@@ -30,6 +45,13 @@ class Reference(Expression):
     
     def get_symbol(self, ctx:'Context'):
         return ctx.symbol_table.get(self.name, None)
+
+    def eval(self, ctx: 'Context', unnest:bool=False) -> 'Context':
+        if unnest:
+            ctx.data = ctx.data.unnest(self)
+        else:
+            ctx.data = ctx.data.select(self)
+        return ctx
 
 # A named reference, can be scoped
 # Scopes are not implemented yet.
@@ -67,13 +89,6 @@ class NamedReference(Reference):
     def polars_value(self) -> 'pl.Expr':
         return pl.col(self.name)
 
-    def eval(self, ctx: 'Context', unnest:bool=False) -> 'Context':
-        if unnest:
-            ctx.data = ctx.data.unnest(self)
-        else:
-            ctx.data = ctx.data.select(self)
-        return ctx
-
 class Wildcard(NamedReference):
     ...
         
@@ -101,9 +116,6 @@ class Path(Reference):
     def __reduce__(self):
         return (self.__class__, (self.path))
 
-    def __iter__(self):
-        return iter(self.path)
-
     def __eq__(self, value: object, /) -> bool:
         if not isinstance(value, Path):
             return super().__eq__(value)
@@ -118,6 +130,10 @@ class Path(Reference):
 
     def __hash__(self):
         return hash(tuple([hash(x) for x in self.path]))
+
+    def __setitem__(self, idx:int, value:str):
+        self.path[idx].name = value
+        return self
 
     def condense(self, path:Sequence[Reference]) -> list[NamedReference]:
         new = []
@@ -242,38 +258,40 @@ class NamedExpression(Expression):
             raise hqle.CompilerException(f'Attempting to polars non-polars expression')
         return self.value.polars()
 
-    def eval(self, ctx:'Context', insert:bool=True) -> 'Context':
+    def eval(self, ctx:'Context', insert:bool=True, unnest:bool=True) -> 'Context':
         from Hql.Expressions import Literal
-
+        from Hql.Data import Data
+        from Hql.Context import Context
         ctx = ctx.copy()
 
-        if isinstance(self.value, Literal):
-            series = self.value.series()
-            value = Data()
-            for i in ctx.data:
-                value.add_table(Table(name=i.name, series=series))
-        else:
-            value = self.value.eval(ctx)
+        def get_value(ref:Union[Expression, Function], ctx:Context) -> Data:
+            if isinstance(ref, Literal):
+                series = ref.series()
+                value = Data()
+                for i in ctx.data:
+                    value.add_table(Table(name=i.name, series=series))
+            else:
+                value = ref.eval(ctx)
 
-        if not isinstance(value, Data):
-            raise hqle.CompilerException(f'Named expression right hand {self.value} returned non-Data object {type(value)}')
-        
-        # Chose which dataset to insert on
-        # If set to false it'll create it's own blank dataset
-        if insert:
-            data = ctx.data
-        else:
-            data = Data()
+                # Will always take place if not a function
+                # Handles Expression case
+                if isinstance(value, Context):
+                    value = value.data
 
-        # loop through value tables as those are the only ones we can vouch for
-        for table in value:
-            # Need this if we're creating a new dataset instead of inserting
-            if table.name not in data.tables:
-                data.add_table(Table(name=table.name))
-            
-            # We can assign to multiple names
-            for path in self.paths:
-                path = path.list()
+                # Functions can return a number of things
+                if not isinstance(value, Data):
+                    raise hqle.QueryException(ref.str() + ' did not eval to Data')
+
+            return value
+
+        def set_value(ref:Reference, value:Data, data:Data) -> Data:
+            # loop through value tables as those are the only ones we can vouch for
+            for table in value:
+                # Need this if we're creating a new dataset instead of inserting
+                if table.name not in data.tables:
+                    data.add_table(Table(name=table.name))
+                
+                path = ref.list()
                 
                 cur = table
 
@@ -294,13 +312,29 @@ class NamedExpression(Expression):
                         schema = cur.series.type
                         cur = cur.series.series
 
+                    # empty case
                     else:
                         continue
 
                 # Insert properly
                 data.tables[table.name].insert(path, cur, schema)
 
-        # print(data.to_dict())
+            return data
+
+        value = get_value(self.value, ctx)
+        if unnest:
+            ctx.data = value
+            return ctx
+
+        # Chose which dataset to insert on
+        # If set to false it'll create it's own blank dataset
+        if insert:
+            data = ctx.data
+        else:
+            data = Data()
+
+        for i in self.paths:
+            data = set_value(i, value, data)
 
         ctx.data = data
         return ctx

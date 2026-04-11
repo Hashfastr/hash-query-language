@@ -33,6 +33,9 @@ class ParseObject():
     def str(self) -> str:
         return self.deparse()
 
+    def list(self) -> list:
+        return NotImplemented
+
     def dtype(self) -> hqlt.HqlType:
         return NotImplemented
 

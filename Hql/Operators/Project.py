@@ -21,7 +21,7 @@ class Project(Operator):
         Operator.__init__(self)
         self.exprs = exprs
         self.optok = optok
-
+    
     def deparse(self) -> str:
         out = self.optok
 
@@ -35,46 +35,56 @@ class Project(Operator):
         return out
         
     def eval(self, ctx:'Context'):
+        ctx = ctx.copy()
+
         datasets = []
         for i in self.exprs:
-            datasets.append(i.eval(ctx, as_value=False))
-            # if we fail a project, just skip it
-            ...
+            if isinstance(i, 'NamedExpression'):
+                datasets.append(i.eval(ctx, insert=False))
+            else:
+                datasets.append(i.eval(ctx))
                 
-        return Data.merge(datasets)
+        ctx.data = Data.merge(datasets)
+        return ctx
 
-# @register_op('ProjectAway')
-class ProjectAway(Project):
-    def eval(self, ctx:'Context', **kwargs):
-        paths = []
-        for i in self.exprs:
-            paths.append(i.eval(ctx, as_list=True))
-        
-        return ctx.data.drop_many(paths)
-
-# @register_op('ProjectKeep')
+# Identical to Project, keeping now for compat
 class ProjectKeep(Project):
     ...
 
-# @register_op('ProjectReorder')
+class ProjectAway(Project):
+    def eval(self, ctx:'Context'):
+        ctx = ctx.copy()
+
+        paths = []
+        for i in self.exprs:
+            paths.append(i.list())
+        
+        ctx.data = ctx.data.drop_many(paths)
+        return ctx
+
 class ProjectReorder(Project):
     '''
     Gonna take out the specific bits and move them to the front
     '''
-    def eval(self, ctx:'Context', **kwargs):
-        new = []
-        cur = ctx.data
-        
-        for expr in self.exprs:
-            path = expr.eval(ctx, as_list=True)
-            new.append(cur.select(path))
-            cur = cur.drop(path)
-        
-        new.append(cur)
-        
-        return Data.merge(new)
+    def eval(self, ctx:'Context'):
+        ctx = ctx.copy()
+        right = ctx.data
 
-# @register_op('ProjectRename')
+        left = super().eval(ctx).data
+
+        paths = []
+        for expr in self.exprs:
+            if isinstance(expr, 'NamedExpression'):
+                paths += [x.list() for x in expr.paths]
+            else:
+                paths.append(expr.list())
+
+        for path in paths:
+            right = right.drop(path)
+
+        ctx.data = Data.merge([left, right])
+        return ctx
+
 class ProjectRename(Project):
     def rename(self, ctx:'Context', table:Table):
         for i in self.exprs:
@@ -90,7 +100,18 @@ class ProjectRename(Project):
 
         return table
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:'Context'):
+        def rename(table:Table, dest:'Reference', src:'Reference') -> Table:
+            destl = dest.list()
+            srcl = src.list()
+            
+            value = table.get_value(srcl)
+            vtype = table.get_type(srcl)
+            table.drop(src)
+            table.insert(destl, value, vtype)
+
+            return table
+
         for table in ctx.data:
             self.rename(ctx, table)
 

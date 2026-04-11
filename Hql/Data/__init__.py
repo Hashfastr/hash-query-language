@@ -10,7 +10,7 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
-    from Hql.Expressions import Path, NamedReference, Reference
+    from Hql.Expressions import Reference
 
 class Data():
     def __init__(self, tables:Union[list[Table], None]=None, merge_rows=True):
@@ -111,17 +111,19 @@ class Data():
         return schemata
 
     # Given a path, select just the data at that path
-    def select(self, ref:Union['NamedReference', 'Path']):
+    def select(self, ref:'Reference'):
         tables = []
         for table in self:
+            path = ref.list()
             tables.append(table.select(path))
 
         return Data(tables=tables)
     
-    def unnest(self, ref:Union['NamedReference', 'Path']):
+    def unnest(self, ref:'Reference'):
         tables = []
         for table in self:
-            new = table.unnest(field)
+            path = ref.list()
+            new = table.unnest(path)
             
             if isinstance(new, Series):
                 new = Table(series=new, name=table.name)
@@ -181,7 +183,7 @@ class Data():
 
         return self
 
-    def join(self, right:"Data", on:Union[list[Union['Path', 'NamedReference']], Union['Path', 'NamedReference']], kind:str='innerunique'):
+    def join(self, right:"Data", on:Union[list['Reference'], 'Reference'], kind:str='innerunique'):
         if not isinstance(on, list):
             on = [on]
 

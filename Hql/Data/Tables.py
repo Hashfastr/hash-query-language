@@ -85,7 +85,7 @@ class Table():
         self.df = schema.apply(self.df)
         self.schema = schema
 
-    def get_type(self, path:list[str]):
+    def get_type(self, path:'Reference'):
         if self.schema:
             return self.schema.get_type(path)
         return None
@@ -477,7 +477,7 @@ class Table():
 
         return self
     
-    def join(self, right:"Table", on:Union[list[Union['Path', 'NamedReference']], Union['Path', 'NamedReference']], kind:str):
+    def join(self, right:"Table", on:Union[list['Reference'], 'Reference'], kind:str):
         from Hql.Context import Context
         from Hql.Data import Data
 
