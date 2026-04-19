@@ -44,5 +44,5 @@ class CompilerType():
     def str(self):
         return self.name
 
-    def __len__(self):
+    def __len__(self) -> int:
         return 1

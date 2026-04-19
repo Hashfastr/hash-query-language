@@ -9,7 +9,7 @@ from Hql.Types.Compiler import CompilerType
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
     from Hql.Types.Compiler import CompilerType
-    from Hql.Expressions import Expression, Path, NamedReference, Reference
+    from Hql.Expressions import Reference
     from Hql.Types.Hql import HqlTypes as hqlt
 
 class Schema():
@@ -21,12 +21,11 @@ class Schema():
         ):
         from Hql.Types.Hql import HqlTypes as hqlt
         
-        self.schema:dict = dict()
+        self.schema:dict[str, Union[hqlt.HqlType, dict]] = dict()
 
         if schema:
-            if isinstance(schema, hqlt.object):
-                schema = schema.schema
-            self.schema = self.normalize(schema)
+            self.schema = schema.schema if isinstance(schema, hqlt.object) else schema
+            self.normalize()
 
         # This is in the case of sample json data
         # A list of dicts
@@ -44,20 +43,16 @@ class Schema():
 
         # Whoopsie
         elif data:
-            raise hqle.CompilerException(f'Non-supported type passed to Schema init {type(data)}')
+            logging.warning(f'Non-supported type passed to Schema init {type(data)}, treating as None')
         
         # Pass through empty case else we get an hqlt.object([])
         # Otherwise immediately convert to HqlTypes
-        if isinstance(self.schema, dict) and len(self.schema):
-            self.schema = self.convert_schema(target='hql')
+        if len(self.schema):
+            self.convert_schema()
     
     def __len__(self) -> int:
         if hasattr(self.schema, '__len__'):
             return len(self.schema)
-        
-        elif self.schema != None:
-            return 1
-        
         else:
             return 0
 
@@ -66,34 +61,10 @@ class Schema():
             return True
         return False
 
-    def __contains__(self, item) -> bool:
-        from Hql.Expressions import NamedReference, Path
-
-        if isinstance(item, NamedReference):
-            path = [item.name]
-        
-        elif isinstance(item, Path):
-            path = [x.name for x in item]
-
-        elif isinstance(item, str):
-            path = [item]
-        
-        elif isinstance(item, list):
-            path = []
-            for i in item:
-                if isinstance(i, str):
-                    path.append(i)
-                elif isinstance(i, NamedReference):
-                    path.append(i.name)
-                else:
-                    return False
-
-        else:
-            return False
-
+    def __contains__(self, item:'Reference') -> bool:
         cur = self.schema
-        for i in path:
-            if i not in cur:
+        for i in item.list():
+            if not isinstance(cur, dict) or i not in cur:
                 return False
             cur = cur[i]
         return True
@@ -101,74 +72,87 @@ class Schema():
     def __iter__(self):
         return iter(self.blowup_schema())
 
-    def blowup_schema(self, schema:Optional[dict]=None) -> list[tuple['Reference', CompilerType]]:
-        from Hql.Expressions import Path, NamedReference
-        if schema == None:
-            schema = self.schema
+    def blowup_schema(self) -> list[tuple['Reference', CompilerType]]:
+        from Hql.Expressions import NamedReference, Path
+        
+        def bs(schema:dict) -> list[tuple['Reference', CompilerType]]:
+            out = []
+            for key in schema:
+                name = NamedReference(key)
 
-        out = []
-        for key in schema:
-            name = NamedReference(key)
-            if isinstance(schema[key], dict):
-                recurse = self.blowup_schema(schema=schema[key])
-                for path, stype in recurse:
-                    if isinstance(path, Path):
-                        path = Path([name] + path.path)
-                    else:
-                        path = Path([name, path])
-                    out.append((path, stype))
-            else:
-                out.append((name, schema[key]))
+                # recurse case
+                if isinstance(schema[key], dict):
+                    recurse = bs(schema[key])
+                    for path, stype in recurse:
+                        if isinstance(path, Path):
+                            path = Path([name] + path.path)
+                        else:
+                            path = Path([name, path])
+                        out.append((path, stype))
+                else:
+                    out.append((name, schema[key]))
 
-        return out
+            return out
 
-    def to_dict(self, recurse:Union[None, dict]=None) -> dict:
-        schema = recurse if recurse else self.schema
+        return bs(self.schema)
 
-        out = dict()
-        for key in schema:
-            if isinstance(schema[key], dict):
-                out[key] = self.to_dict(recurse=schema[key])
-            else:
-                out[key] = schema[key].name
+    def to_dict(self) -> dict:
+        def td(schema:dict):
+            out = dict()
+            for key in schema:
+                if isinstance(schema[key], dict):
+                    out[key] = td(schema[key])
+                else:
+                    out[key] = schema[key].name
+            return out
 
-        return out
+        return td(self.schema)
     
     @staticmethod
-    def merge(schemata:list[Union['Schema', dict]]) -> 'Schema':
-        from Hql.Types.Compiler import CompilerType
+    def merge(schemata:list['Schema']) -> 'Schema':
+        from Hql.Types.Hql import HqlTypes as hqlt
 
-        # Gen keygroups
-        keygroups = dict()
-        for schema in schemata:
-            schema = schema if isinstance(schema, dict) else schema.schema
-            for key in schema:
-                if key not in keygroups:
-                    keygroups[key] = [schema[key]]
-                else:
-                    keygroups[key].append(schema[key])
+        # generates key groups looking for conflicts
+        # only does shallow level
+        def gkg(schemata:list[dict]):
+            keygroups = dict()
+            for schema in schemata:
+                for key in schema:
+                    if key not in keygroups:
+                        keygroups[key] = [schema[key]]
+                    elif schema[key] not in keygroups[key]:
+                        keygroups[key].append(schema[key])
+            return keygroups
 
-        new = dict()
-        for key in keygroups:
-            new[key] = keygroups[key][0]
+        # Create renames based on dupes
+        # Shallow level only
+        def rename(keygroups:dict) -> dict:
+            new = dict()
+            for key in keygroups:
+                # recursable objects
+                objs = []
+                # normal singular types
+                types:list[hqlt.HqlType] = []
 
-            if len(keygroups[key]) == 1:
-                continue
-
-            for schema in keygroups[key][1:]:
-                if isinstance(schema, CompilerType):
-                    if type(schema) == type(new[key]):
-                        continue
-                    new_key = f'{key}_{schema.name}'
-                    new[new_key] = schema
-                elif isinstance(new[key], CompilerType) and isinstance(schema, dict):
-                    new_key = f'{key}_object'
-                    if new_key not in new:
-                        new[new_key] = schema
+                for i in keygroups[key]:
+                    if isinstance(i, dict):
+                        objs.append(i)
                     else:
-                        new[new_key] = Schema.merge([new[new_key], schema]).schema
-                else:
-                    new[key] = Schema.merge([new[key], schema]).schema
+                        types.append(i)
+
+                if objs:
+                    types = [hqlt.object(rename(gkg(objs)))] + types
+
+                for i in types:
+                    if key not in new:
+                        new[key] = i
+                    else:
+                        new[f'{key}_{i.name}'] = i
+
+            return new
+
+        keygroups = gkg([x.schema for x in schemata])
+        new = rename(keygroups)
 
         return Schema(schema=new)
 
@@ -176,49 +160,56 @@ class Schema():
     Created to solve the problem of nested Schema objects in a schema dict.
     Just unnests them such that we have a pure dict structure.
     '''
-    def normalize(self, node:Union[dict, 'Schema', None]=None) -> dict:
-        from Hql.Types.Compiler import CompilerType
+    def normalize(self):
         from Hql.Data import Schema
+        from Hql.Types.Hql import HqlTypes as hqlt
 
-        if node == None:
-            node = self.schema
+        def n(node:Union[dict, 'Schema']) -> dict:
+            if isinstance(node, Schema):
+                return n(node.schema)
 
-        if isinstance(node, Schema):
-            node = node.schema
+            new = dict()
+            for key in node:
+                if isinstance(node[key], (dict, Schema)):
+                    new[key] = n(node[key])
+                elif isinstance(node[key], hqlt.object) and node[key].schema:
+                    new[key] = n(node[key].schema)
+                else:
+                    new[key] = node[key]
+            return new
 
-        if isinstance(node, CompilerType):
-            return node
-
-        new = dict()
-        for key in node:
-            if isinstance(node[key], (dict, Schema)):
-                new[key] = self.normalize(node[key])
-            else:
-                new[key] = node[key]
-        return new
+        self.schema = n(self.schema)
+        return self
 
     # Isolate the schema at a given path
     def select(self, path:'Reference') -> "Schema":
-        cur = self.unnest(path).schema
+        meat = self.unnest(path)
+        cur = meat.schema if isinstance(meat, Schema) else meat
         for part in path.list()[::-1]:
             cur = {part: cur}
+        # The above loop always runs even when path length is 1
+        # It it always be a dict, linter is unsure of this
+        assert isinstance(cur, dict)
         return Schema(schema=cur)
 
-    def select_many(self, fields:Sequence['Reference']):
+    def select_many(self, paths:Sequence['Reference']):
         schemas = []
-        for field in fields:
-            schemas.append(self.select(field))
+        for path in paths:
+            schemas.append(self.select(path))
         return Schema.merge(schemas)
     
-    def unnest(self, path:'Reference') -> "Schema":
+    def unnest(self, path:'Reference') -> Union['Schema', 'hqlt.HqlType']:
         cur = self.schema
         for part in path.list():
-            if part not in cur:
+            if not isinstance(cur, dict) or part not in cur:
                 return Schema()
             else:
                 cur = cur[part]
-                
-        return Schema(schema=cur)
+        
+        if isinstance(cur, dict):
+            return Schema(schema=cur)
+        else:
+            return cur
     
     def copy(self):
         from copy import deepcopy
@@ -227,8 +218,12 @@ class Schema():
     '''
     Descriptive rename of unnest, might remove later
     '''
-    def get_type(self, path:'Reference'):
-        return self.unnest(path)
+    def get_type(self, path:'Reference') -> 'hqlt.HqlType':
+        got = self.unnest(path)
+        if isinstance(got, Schema):
+            return hqlt.object(got.schema)
+        else:
+            return got
 
     '''
     Returns the deep stripped value of a dict with a single value.
@@ -254,12 +249,16 @@ class Schema():
     Doesn't return a schema object as it might be a type or a dict
     Typically this is called with a named expression, so it's gonna build the schema anyways.
     '''
-    def strip(self) -> Union[dict, 'hqlt.HqlType']:
+    def strip(self) -> Union['Schema', 'hqlt.HqlType']:
         cur = self.schema
         while isinstance(cur, dict) and len(cur) == 1:
             key = list(cur.keys())[0]
             cur = cur[key]
-        return cur
+
+        if isinstance(cur, dict):
+            return Schema(schema=cur)
+        else:
+            return cur
     
     def rename(self, src:'Reference', dest:'Reference'):
         if not self.assert_field(src):
@@ -272,6 +271,10 @@ class Schema():
         
         cur = self.schema
         for idx, i in enumerate(dest):
+            # the previous assertion functions guarantee a destination path will work
+            # adding to please the linter
+            assert isinstance(cur, dict)
+
             if idx == len(dest) - 1:
                 cur[i] = src_type
             else:
@@ -284,6 +287,10 @@ class Schema():
         src_type = hqlt.null()
         cur = self.schema
         for idx, i in enumerate(name):
+            # the previous assertion function guarantees our path exists
+            # adding to please the linter
+            assert isinstance(cur, dict)
+
             if idx == len(name) - 1:
                 src_type = cur.pop(i)
             else:
@@ -291,31 +298,27 @@ class Schema():
                 
         return src_type
 
-    def drop(self, path:'Reference', schema:Union[dict, None]=None, idx:int=0):
-        if schema == None:
-            schema = self.schema
-        
-        new = {}
-        for key in schema:
-            if key == path[idx]:
-                if idx == len(path) - 1:
-                    # Silent drop
-                    continue
+    def drop(self, path:'Reference'):
+        def d(path:'Reference', schema:dict, idx:int=0) -> dict:
+            new = {}
+            for key in schema:
+                if key == path[idx]:
+                    if idx == len(path) - 1:
+                        # Silent drop
+                        continue
+                    
+                    if isinstance(schema[key], dict):
+                        rec = d(path, schema[key], idx+1)
+                        if rec:
+                            new[key] = rec
                 
-                if isinstance(schema[key], dict):
-                    rec = self.drop(path, schema=schema[key], idx=idx+1)
-                    if rec:
-                        new[key] = rec
-            
-            # Don't have to do anything
-            else:
-                new[key] = schema[key]
-                
-        if idx == 0:
-            self.schema = new
-            return self
-            
-        return new
+                # Don't have to do anything
+                else:
+                    new[key] = schema[key]
+            return new
+                    
+        self.schema = d(path, self.schema)
+        return self
     
     def drop_many(self, paths:Sequence['Reference']):
         for path in paths:
@@ -325,70 +328,64 @@ class Schema():
     '''
     Set a field to a specific type in the schema apply is then expected to be ran
     '''
-    def set(self, path:'Reference', htype:Union[CompilerType, "Schema", dict], schema:Union[dict, "Schema", None]=None, idx:int=0):
-        if isinstance(htype, Schema):
-            htype = htype.schema
-        
-        schema = schema if schema != None else self.schema
-        if isinstance(schema, Schema):
-            schema = schema.schema
+    def set(self, path:'Reference', htype:Union[CompilerType, "Schema", dict]):
+        if isinstance(htype, 'Schema'):
+            htype = htype.normalize().schema
 
-        split = path[idx]
+        def s(path:'Reference', htype:Union[CompilerType, dict], schema:dict, idx:int=0):
+            split = path[idx]
 
-        if idx == len(path) - 1:
-            schema[split] = htype
+            if idx == len(path) - 1:
+                schema[split] = htype
+                return schema
+
+            if split in schema:
+                schema[split] = s(path, htype, schema[split], idx=idx+1)
+            else:
+                schema[split] = s(path, htype, {}, idx=idx+1)
+
             return schema
 
-        if split in schema:
-            schema[split] = self.set(path, htype, schema=schema[split], idx=idx+1)
-        else:
-            schema[split] = self.set(path, htype, {}, idx=idx+1)
-
-        if idx == 0:
-            self.schema = schema
-        else:
-            return schema
+        self.schema = s(path, htype, self.schema)
+        self.normalize()
+        return self
 
     '''
     Generates a schema converted to a given schema target.
     Default is HqlTypes
     '''
-    def convert_schema(self, schema:Union[dict, type, None]=None, target:str='hql') -> dict:
-        supported = ('hql', 'polars')
-        
-        if target not in supported:
-            logging.critical(f'Unsupported schema conversion type {target}')
-            logging.critical(f'Supported schemas: {supported}')
-            raise hqle.CompilerException(f'Unsupported schema conversion type {target}')
-        
-        if not schema:
-            schema = self.schema
+    def convert_schema(self, target:str='hql') -> 'Schema':
+        from Hql.Types.Hql import HqlTypes as hqlt
 
-        # Endpoint in the tree
-        # Expected to be a type we can convert
-        if not isinstance(schema, dict):
-            if hasattr(schema, 'hql_schema') and target == 'hql':
-                return schema.hql_schema()
-            
-            if hasattr(schema, 'pl_schema') and target == 'polars':
-                return schema.pl_schema()
-            
-            raise hqle.CompilerException(f'Unsupported type to convert {schema}')
+        def ce(node:CompilerType, target:str):
+            if target == 'hql':
+                return node.hql_schema()
+            elif target == 'polars':
+                return node.pl_schema()
+            else:
+                raise hqle.CompilerException(f'Unsupported type to convert {node} to {target}')
 
-        # Base case, create empty object/struct
-        if len(schema) == 0:            
-            return {}
-
-        # Recurse on a populated dict
-        target_schema = dict()
-        for key in schema:
-            if not schema[key]:
-                target_schema[key] = hqlt.null()
-                continue
-            
-            target_schema[key] = self.convert_schema(schema=schema[key], target=target)
+        def cs(schema:dict, target:str):
+            out = dict()
+            for key in schema:
+                # Not sure if this is needed but I put it there anyways
+                '''
+                if not schema[key]:
+                    target_schema[key] = hqlt.null()
+                    continue
+                '''
+                
+                if schema[key] == {}:
+                    out[key] = ce(hqlt.object({}), target)
+                elif isinstance(schema[key], dict):
+                    out[key] = cs(schema[key], target)
+                else:
+                    out[key] = ce(schema[key], target)
         
-        return target_schema
+            return out
+
+        self.schema = cs(self.schema, target)
+        return self
 
     def gen_pl_list_schema(self, schema:Union[dict, list, 'hqlt.HqlType']):
         if isinstance(schema, dict):
@@ -404,27 +401,28 @@ class Schema():
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
     '''
-    def gen_pl_schema(self, schema:Union[None, hqlt.HqlType, dict]=None):
-        schema = schema if schema else self.schema
-        
-        if not isinstance(schema, dict):
-            return schema.pl_schema()
-        
-        new_schema = {}
-        for key in schema:
-            if isinstance(schema[key], dict):
-                if len(schema[key]):
-                    new_schema[key] = pl.Struct(self.gen_pl_schema(schema=schema[key]))
-                else:
-                    new_schema[key] = pl.Struct([])
+    def gen_pl_schema(self) -> dict:
+        def gs(schema:dict):
+            new = {}
+            for key in schema:
+                if isinstance(schema[key], dict):
+                    if len(schema[key]):
+                        new_schema[key] = pl.Struct(self.gen_pl_schema(schema=schema[key]))
+                    else:
+                        new_schema[key] = pl.Struct([])
 
-            elif isinstance(schema[key], list):
-                new_schema[key] = self.gen_pl_list_schema(schema[key])
-                
-            else:
-                new_schema[key] = schema[key].pl_schema()
-    
-        return new_schema
+                elif isinstance(schema[key], list):
+                    new_schema[key] = self.gen_pl_list_schema(schema[key])
+                    
+                else:
+                    new_schema[key] = schema[key].pl_schema()
+        
+            return new_schema
+
+
+
+
+        new = self.convert_schema('polars')
 
     '''
     Gen schema from dicts

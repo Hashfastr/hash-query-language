@@ -17,10 +17,10 @@ if TYPE_CHECKING:
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 class Project(Operator):
-    def __init__(self, optok:str, exprs:Sequence[Union['Reference', 'NamedExpression']]):
+    def __init__(self, exprs:Sequence[Union['Reference', 'NamedExpression']]):
         Operator.__init__(self)
         self.exprs = exprs
-        self.optok = optok
+        self.optok = 'project'
     
     def deparse(self) -> str:
         out = self.optok
@@ -49,9 +49,15 @@ class Project(Operator):
 
 # Identical to Project, keeping now for compat
 class ProjectKeep(Project):
-    ...
+    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+        super().__init__(exprs)
+        self.optok = 'project-keep'
 
 class ProjectAway(Project):
+    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+        super().__init__(exprs)
+        self.optok = 'project-away'
+
     def eval(self, ctx:'Context'):
         ctx = ctx.copy()
 
@@ -63,6 +69,10 @@ class ProjectAway(Project):
         return ctx
 
 class ProjectReorder(Project):
+    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+        super().__init__(exprs)
+        self.optok = 'project-reorder'
+
     '''
     Gonna take out the specific bits and move them to the front
     '''
@@ -86,6 +96,10 @@ class ProjectReorder(Project):
         return ctx
 
 class ProjectRename(Project):
+    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+        super().__init__(exprs)
+        self.optok = 'project-rename'
+
     def rename(self, ctx:'Context', table:Table):
         for i in self.exprs:
             vpath = i.value.eval(ctx, as_list=True)
@@ -105,8 +119,8 @@ class ProjectRename(Project):
             destl = dest.list()
             srcl = src.list()
             
-            value = table.get_value(srcl)
-            vtype = table.get_type(srcl)
+            value = table.get_value(src)
+            vtype = table.get_type(src)
             table.drop(src)
             table.insert(destl, value, vtype)
 

@@ -147,8 +147,8 @@ class Table():
         except pl.exceptions.ColumnNotFoundError as e:
             raise hqle.UnreferencedFieldException(e.args[0])
         
-    def get_value(self, path:list[str]):
-        return pltools.get_element_value(self.df, path)
+    def get_value(self, path:'Reference'):
+        return pltools.get_element_value(self.df, path.list())
 
     @staticmethod
     def merge_rows(tables:list['Table']):

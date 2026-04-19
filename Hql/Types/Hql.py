@@ -32,7 +32,7 @@ class HqlTypes():
 
             return series.cast(self.pl_schema())
 
-        def __len__(self):
+        def __len__(self) -> int:
             return 1
 
         def hql_schema(self):
@@ -333,22 +333,23 @@ class HqlTypes():
     class object(HqlType):
         def __init__(self, schema:dict):
             HqlTypes.HqlType.__init__(self)
-            self.schema = self.convert_dict(schema)
+            self.schema = schema
+            self.convert('hql')
             self.proto = self.pl_schema()
 
-        def convert_dict(self, d:dict, t:str='hql') -> dict:
-            new = {}
-            for i in d:
-                if isinstance(d[i], dict):
-                    new[i] = self.convert_dict(d[i], t=t)
-                elif t == 'hql':
-                    new[i] = d[i].hql_schema()
-                else:
-                    new[i] = d[i].pl_schema()
-            return new
+        def __len__(self):
+            return len(self.schema)
+
+        def convert(self, target:str='hql'):
+            from Hql.Data import Schema
+            schema = Schema(self.schema).convert_schema(target).schema
+            return HqlTypes.object(schema)
 
         def pl_schema(self) -> pl.DataType:
-            return pl.Struct(self.convert_dict(self.schema, t='pl'))
+            from Hql.Data import Schema
+            if not self.schema:
+                return pl.Struct([])
+            return Schema(self.schema).gen_pl_schema()
             
     @register_type('hql_null')
     class null(HqlType):
