@@ -11,9 +11,6 @@ class PythonTypes():
 
             self.priority = 0
             self.super = []
-        
-        def pl_schema(self):
-            return self.hql_schema().pl_schema()
 
         def __len__(self):
             return 1
@@ -21,6 +18,16 @@ class PythonTypes():
     @staticmethod
     def from_name(name:str):
         return get_type(f'python_{name}')
+
+    @staticmethod
+    def from_value(value) -> 'PythonTypes.PythonType':
+        if isinstance(value, dict):
+            new = dict()
+            for i in value:
+                new[i] = PythonTypes.from_value(value[i])
+            return PythonTypes.dict(new)
+        else:
+            return PythonTypes.from_name(type(value).__name__)
 
     @staticmethod
     def resolve_conflict(types:list[PythonType]):
@@ -64,15 +71,10 @@ class PythonTypes():
             return l
 
     @staticmethod
-    def resolve_mv(mv:list):
+    def resolve_mv(mv:list[type]):
         mvset = set()
         for i in mv:
-            if isinstance(i, list):
-                mvset.add(PythonTypes.list(PythonTypes.resolve_mv(i)))
-                
-            else:
-                mvset.add(PythonTypes.from_name(type(i).__name__))
-                
+            mvset.add(PythonTypes.from_name(i.__name__))
         return PythonTypes.resolve_conflict(list(mvset))
             
     @register_type('python_int')
@@ -146,3 +148,23 @@ class PythonTypes():
             PythonTypes.PythonType.__init__(self)
             self.schema = schema
             self.HqlType = hqlt.object(schema)
+
+        def __getitem__(self, key:str):
+            if isinstance(self.schema[key], dict):
+                return PythonTypes.dict(self.schema[key])
+            else:
+                return self.schema[key]
+
+        def hql_schema(self) -> 'hqlt.HqlType':
+            new = dict()
+            for i in self.schema:
+                new[i] = self[i].hql_schema()
+            return hqlt.object(new)
+
+        def pl_schema(self):
+            return self.hql_schema().pl_schema()
+
+        def __eq__(self, value: object, /) -> bool:
+            if not isinstance(value, PythonTypes.dict):
+                return False
+            return hqlt.object.eq(self.schema, value.schema)

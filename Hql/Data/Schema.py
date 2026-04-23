@@ -391,80 +391,26 @@ class Schema():
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
     '''
-    def gen_pl_schema(self) -> dict:
-        def gs(schema:dict) -> Union[dict, list]:
-            new = {}
-            for key in schema:
-                if isinstance(schema[key], dict):
-                    new[key] = pl.Struct(gs(schema[key]))
-                else:
-                    new[key] = schema[key].pl_schema()
-            
-            return new if new else []
-
-        pls = gs(self.schema)
-        if isinstance(pls, list):
-            pls = dict()
-        return pls
+    def gen_pl_schema(self) -> pl.DataType:
+        from Hql.Types.Hql import HqlTypes as hqlt
+        return hqlt.object(self.schema).pl_schema()
 
     '''
     Gen schema from dicts
     Uses python typing
     '''
     @staticmethod
-    def from_json(data:list[dict])-> dict:
+    def from_json(data:list[dict]) -> 'Schema':
         from Hql.Types.Python import PythonTypes as pyt
 
-        # get a set of keys to handle
-        keyset = set()
-        for row in data:
-            if row:
-                keyset |= set(row.keys())
-        keyset = list(keyset)
-        
-        # if we have no keys then we have an empty dict
-        if not len(keyset):
-            return {}
+        # collect groupings of schema
+        schemata = set()
+        for i in data:
+            hql = pyt.from_value(i).hql_schema()
+            schemata.add(hql)
 
-        new = dict()
-        for key in keyset:
-            typeset = set()
-            for row in data:
-                if key not in row:
-                    continue
-                    
-                if isinstance(row[key], dict):
-                    typeset.add(dict)
-                
-                elif isinstance(row[key], list):
-                    typeset.add(pyt.list(pyt.resolve_mv(row[key])))
-                    
-                else:
-                    typeset.add(pyt.from_name(type(row[key]).__name__)())
-            
-            typeset = list(typeset)
 
-            # recurse on an object
-            if dict in typeset:
-                # The only two acceptable existences of dict being in a typeset
-                # are {dict} and {dict, pyt.null}
-                if len(typeset) != 1 and pyt.NoneType not in typeset:
-                    raise Exception(f"Cannot merge types {list(typeset)}")
-                
-                # Unnest the nested dict
-                sub_data = []
-                for row in data:
-                    if key in row:
-                        sub_data.append(row[key])
 
-                # Create the new schema from the unnested dict
-                new[key] = Schema(data=sub_data).schema
-
-            else:
-                # Find the best type
-                new[key] = pyt.resolve_conflict(typeset)
-                
-        return new
     
     '''
     Generates a schema using polars typing

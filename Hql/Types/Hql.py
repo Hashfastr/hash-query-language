@@ -334,22 +334,51 @@ class HqlTypes():
         def __init__(self, schema:dict):
             HqlTypes.HqlType.__init__(self)
             self.schema = schema
-            self.convert('hql')
-            self.proto = self.pl_schema()
+
+        def __eq__(self, value: object, /) -> bool:
+            if not isinstance(value, HqlTypes.object):
+                return False
+            return self.eq(self.schema, value.schema)
 
         def __len__(self):
             return len(self.schema)
 
-        def convert(self, target:str='hql'):
-            from Hql.Data import Schema
-            schema = Schema(self.schema).convert_schema(target).schema
-            return HqlTypes.object(schema)
+        def __getitem__(self, key:str):
+            if isinstance(self.schema[key], dict):
+                return HqlTypes.object(self.schema[key])
+            else:
+                return self.schema[key]
 
+        @staticmethod
+        def eq(l:dict, r:dict) -> bool:
+            if len(l) != len(r):
+                return False
+
+            for i in l:
+                # keycheck
+                if i not in r:
+                    return False
+                
+                # dict check
+                if isinstance(l[i], dict) and not HqlTypes.object.eq(l[i], r[i]):
+                    return False
+
+                # everything else
+                if l[i] != r[i]:
+                    return False
+
+            return True
+        
         def pl_schema(self) -> pl.DataType:
-            from Hql.Data import Schema
-            if not self.schema:
-                return pl.Struct([])
-            return Schema(self.schema).gen_pl_schema()
+            def gs(schema:dict) -> Union[dict, list]:
+                new = {}
+                for key in schema:
+                    if isinstance(schema[key], dict):
+                        new[key] = pl.Struct(gs(schema[key]))
+                    else:
+                        new[key] = schema[key].pl_schema()
+                return new if new else []
+            return pl.Struct(gs(self.schema))
             
     @register_type('hql_null')
     class null(HqlType):
@@ -382,7 +411,6 @@ class HqlTypes():
         def pl_schema(self):
             if isinstance(self.inner, type):
                 return pl.List(self.inner().pl_schema())
-
             return pl.List(self.inner.pl_schema())
         
         # Casts a polars series to List

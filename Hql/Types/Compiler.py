@@ -13,7 +13,13 @@ class CompilerType():
         self.HqlType:Optional['hqlt.HqlType'] = None
         self.inner = inner
         self.name = self.__class__.__name__
-    
+
+    def __eq__(self, value: object, /) -> bool:
+        return type(value) == type(self)
+
+    def __len__(self) -> int:
+        return 1
+
     def hql_schema(self) -> 'hqlt.HqlType':
         if self.HqlType == None:
             raise hqle.CompilerException(f"{self.type}.{self.name} defined without an Hql proto")
@@ -43,6 +49,3 @@ class CompilerType():
 
     def str(self):
         return self.name
-
-    def __len__(self) -> int:
-        return 1
