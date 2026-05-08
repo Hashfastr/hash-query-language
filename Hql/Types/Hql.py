@@ -1,14 +1,17 @@
 import polars as pl
 import logging
-from typing import TYPE_CHECKING, Union, Optional
+from typing import TYPE_CHECKING, Union, Optional, Mapping
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
 from Hql.Types.Compiler import CompilerType
+from Hql.Types.Python import PythonTypes
 
 if TYPE_CHECKING:
     from Hql.Data import Series
     from Hql.Expressions.Literals import Integer, StringLiteral
+
+type SchemaDT = Mapping[str, Union['HqlTypes.HqlType', dict]]
 
 class HqlTypes():
     class HqlType(CompilerType):
@@ -18,7 +21,10 @@ class HqlTypes():
                 
             self.complex:bool = False
             self.priority:int = 0
-            self.super:list[type] = [HqlTypes.string, HqlTypes.multivalue]
+            self.super:list[HqlTypes.HqlType] = [HqlTypes.string(), HqlTypes.multivalue(self.__class__())]
+
+        def __len__(self) -> int:
+            return 1
 
         def pl_schema(self) -> pl.DataType:
             if self.proto == None:
@@ -32,9 +38,6 @@ class HqlTypes():
 
             return series.cast(self.pl_schema())
 
-        def __len__(self) -> int:
-            return 1
-
         def hql_schema(self):
             return self
     
@@ -44,15 +47,56 @@ class HqlTypes():
     
     @staticmethod
     def resolve_conflict(types:list[HqlType]) -> HqlType:
+        if len(types) == 0:
+            raise hqle.CompilerException('Passed empty types list to resolve conflict')
+
         if len(types) == 1:
             return types[0]
+
+        # dedupe
+        types = list(set(types))
+
+        def res_obj(objs:list[HqlTypes.HqlType]) -> HqlTypes.HqlType:
+            for i in objs:
+                # only common type is string
+                if not isinstance(i, HqlTypes.object):
+                    return HqlTypes.string()
+
+            keyset:dict[str, set] = dict()
+            for i in list(set(objs)):
+                # ew, linter
+                assert isinstance(i, HqlTypes.object)
+                for j in i.schema:
+                    if j not in keyset:
+                        keyset[j] = set()
+                    keyset[j].add(i.schema[j])
+
+            out:dict[str, HqlTypes.HqlType] = dict()
+            for i in keyset:
+                if len(keyset[i]) == 1:
+                    out[i] = list(keyset[i])[0]
+                else:
+                    out[i] = HqlTypes.resolve_conflict(list(keyset[i]))
+
+            return HqlTypes.object(out)
+
+        ### objs
+
+        obj = True
+        for i in types:
+            if not isinstance(i, HqlTypes.object):
+                obj = False
+
+        if obj:
+            return res_obj(types)
+
+        ### multivalue
         
         # Check to see if there's a multivalue we need to handle
         mv = False
         for i in types:
             if isinstance(i, HqlTypes.multivalue):
                 mv = True
-                break
         
         # Handle multivalue
         if mv:
@@ -62,26 +106,30 @@ class HqlTypes():
                     inner_set.add(i.inner)
                 else:
                     inner_set.add(i)
-            types = list(inner_set)
 
-        # set to default basecase
+            inner = HqlTypes.resolve_conflict(list(inner_set))
+            return HqlTypes.multivalue(inner)
+
+        ### base types
+
+        # set to default basecase, always lowest rung
         l = HqlTypes.null()
         for r in types:
-            # Check to see if we need to instanciate
-            if isinstance(r, type):
-                r = r()
-            
             if l.priority > r.priority:
                 continue
-
-            if type(r) in l.super:
+            
+            # promotion case
+            if r in l.super:
                 l = r
-                continue
+            
+            # find common super case
+            # this might be the source of a bug in the future
+            else:
+                for i in l.super:
+                    if i in r.super:
+                        l = i
 
-        if mv:
-            return HqlTypes.multivalue(l)
-        else:
-            return l
+        return l
 
     @register_type('hql_type')
     class type(HqlType):
@@ -102,7 +150,6 @@ class HqlTypes():
             self.proto = pl.Float32()
 
             self.priority = 3
-            self.super = [HqlTypes.string, HqlTypes.multivalue]
 
     @register_type('hql_double')
     class double(HqlType):
@@ -129,7 +176,7 @@ class HqlTypes():
             self.proto = pl.Int32()
             
             self.priority = 2
-            self.super = [HqlTypes.float, HqlTypes.string, HqlTypes.multivalue]
+            self.super += [HqlTypes.float()]
     
     @register_type('hql_long') 
     class long(HqlType):
@@ -303,7 +350,7 @@ class HqlTypes():
             self.proto = pl.String()
             
             self.priority = 4
-            self.super = [HqlTypes.multivalue]
+            self.super = [HqlTypes.multivalue(HqlTypes.string())]
         
     @register_type('hql_enum') 
     class enum(HqlType):
@@ -324,14 +371,14 @@ class HqlTypes():
             self.proto = pl.Boolean()
             
             self.priority = 1
-            self.super = [HqlTypes.int, HqlTypes.string, HqlTypes.multivalue]
+            self.super = [HqlTypes.int()]
 
     '''
     This is a generic object, unspecified the contents
     '''
     @register_type('hql_object')
     class object(HqlType):
-        def __init__(self, schema:dict):
+        def __init__(self, schema:SchemaDT):
             HqlTypes.HqlType.__init__(self)
             self.schema = schema
 
@@ -344,13 +391,17 @@ class HqlTypes():
             return len(self.schema)
 
         def __getitem__(self, key:str):
-            if isinstance(self.schema[key], dict):
-                return HqlTypes.object(self.schema[key])
+            # linter trick
+            val = self.schema[key]
+            if isinstance(val, dict):
+                return HqlTypes.object(val)
             else:
-                return self.schema[key]
+                return val
 
+        # generic to be used for other types resembling this one
+        # reduces repeat code which might become inconsistent
         @staticmethod
-        def eq(l:dict, r:dict) -> bool:
+        def eq(l:SchemaDT, r:SchemaDT) -> bool:
             if len(l) != len(r):
                 return False
 
@@ -358,25 +409,33 @@ class HqlTypes():
                 # keycheck
                 if i not in r:
                     return False
-                
+
+                # another linter trick
+                lv = l[i]
+                rv = r[i]
+
                 # dict check
-                if isinstance(l[i], dict) and not HqlTypes.object.eq(l[i], r[i]):
-                    return False
+                if isinstance(lv, Mapping) and isinstance(rv, Mapping):
+                    if not HqlTypes.object.eq(lv, rv):
+                        return False
 
                 # everything else
-                if l[i] != r[i]:
+                if lv != rv:
                     return False
 
             return True
         
         def pl_schema(self) -> pl.DataType:
-            def gs(schema:dict) -> Union[dict, list]:
+            # returns list in the case of empty dict
+            # polars likes it better
+            def gs(schema:Union[SchemaDT, dict]) -> Union[dict, list]:
                 new = {}
                 for key in schema:
-                    if isinstance(schema[key], dict):
-                        new[key] = pl.Struct(gs(schema[key]))
+                    cur = schema[key]
+                    if isinstance(cur, dict):
+                        new[key] = pl.Struct(gs(cur))
                     else:
-                        new[key] = schema[key].pl_schema()
+                        new[key] = cur.pl_schema()
                 return new if new else []
             return pl.Struct(gs(self.schema))
             
@@ -387,7 +446,7 @@ class HqlTypes():
             self.proto = pl.Null()
             
             self.priority = 0
-            self.super = [HqlTypes.bool, HqlTypes.int, HqlTypes.float, HqlTypes.string, HqlTypes.multivalue]
+            self.super += [HqlTypes.bool(), HqlTypes.int(), HqlTypes.float()]
         
     @register_type('hql_unknown')
     class unknown(HqlType, pl.Unknown):
