@@ -155,6 +155,11 @@ class PythonTypes():
             else:
                 return self.schema[key]
 
+        def __eq__(self, value: object, /) -> bool:
+            if not isinstance(value, PythonTypes.dict):
+                return False
+            return hqlt.object.eq(self.schema, value.schema)
+
         def hql_schema(self) -> 'hqlt.HqlType':
             new = dict()
             for i in self.schema:
@@ -163,8 +168,3 @@ class PythonTypes():
 
         def pl_schema(self):
             return self.hql_schema().pl_schema()
-
-        def __eq__(self, value: object, /) -> bool:
-            if not isinstance(value, PythonTypes.dict):
-                return False
-            return hqlt.object.eq(self.schema, value.schema)

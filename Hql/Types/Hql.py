@@ -10,6 +10,7 @@ from Hql.Types.Python import PythonTypes
 if TYPE_CHECKING:
     from Hql.Data import Series
     from Hql.Expressions.Literals import Integer, StringLiteral
+    from Hql.Expressions import Reference
 
 type SchemaDT = Mapping[str, Union['HqlTypes.HqlType', dict]]
 
@@ -380,7 +381,10 @@ class HqlTypes():
     class object(HqlType):
         def __init__(self, schema:SchemaDT):
             HqlTypes.HqlType.__init__(self)
-            self.schema = schema
+            self.schema:SchemaDT = schema
+
+        def __bool__(self):
+            return bool(self.schema)
 
         def __eq__(self, value: object, /) -> bool:
             if not isinstance(value, HqlTypes.object):
@@ -390,13 +394,44 @@ class HqlTypes():
         def __len__(self):
             return len(self.schema)
 
-        def __getitem__(self, key:str):
-            # linter trick
-            val = self.schema[key]
-            if isinstance(val, dict):
-                return HqlTypes.object(val)
-            else:
-                return val
+        def __getitem__(self, key:'Reference'):
+            from Hql.Expressions import Path
+
+            def get(data:SchemaDT, key:'Reference'):
+                base = key[0]
+                if base not in data:
+                    raise IndexError
+                out = data[base]
+
+                if isinstance(key, Path):
+                    if isinstance(out, HqlTypes.HqlType):
+                        raise IndexError
+                    return get(out, Path(key.list()[1:]))
+
+                return out
+
+            got = get(self.schema, key)
+            if isinstance(got, dict):
+                got = HqlTypes.object(got)
+            return got
+
+        def to_dict(self) -> dict:
+            def td(schema:SchemaDT):
+                out = dict()
+                for key in schema:
+                    cur = schema[key]
+                    if isinstance(cur, HqlTypes.object):
+                        out[key] = cur.to_dict()
+
+                    elif isinstance(cur, dict):
+                        out[key] = td(cur)
+                    
+                    elif isinstance(cur, HqlTypes.type):
+                        out[key] = cur.name
+
+                return out
+
+            return td(self.schema)
 
         # generic to be used for other types resembling this one
         # reduces repeat code which might become inconsistent

@@ -5,6 +5,7 @@ import polars as pl
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Types.Compiler import CompilerType 
+from Hql.Types.Hql import SchemaDT
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
@@ -15,40 +16,42 @@ if TYPE_CHECKING:
 class Schema():
     def __init__(
             self,
-            data: Union[pl.DataFrame, dict, list[dict], None]=None,
-            schema:Union[dict, 'hqlt.object', None]=None,
+            schema:Union[SchemaDT, 'hqlt.object', None]=None,
+            data:Union[pl.DataFrame, dict, list[dict], None]=None,
             sample_size:int=1
         ):
         from Hql.Types.Hql import HqlTypes as hqlt
         
-        self.schema:dict[str, Union[hqlt.HqlType, dict]] = dict()
+        self.schema:hqlt.object = hqlt.object(dict())
 
         if schema:
-            self.schema = schema.schema if isinstance(schema, hqlt.object) else schema
+            self.schema = schema if isinstance(schema, hqlt.object) else hqlt.object(schema)
             self.normalize()
-
-        # This is in the case of sample json data
-        # A list of dicts
-        elif isinstance(data, list):
-            sample = data[:sample_size] if sample_size > 0 else data
-            self.schema = Schema.from_json(sample)
-
-        # Instanciate from a single json object
-        elif isinstance(data, dict):
-            self.schema = Schema.from_json([data])
-
-        # Instanciate from a Polars DataFrame
-        elif isinstance(data, pl.DataFrame):
-            self.schema = Schema.from_df(data)
-
-        # Whoopsie
-        elif data:
-            logging.warning(f'Non-supported type passed to Schema init {type(data)}, treating as None')
         
         # Pass through empty case else we get an hqlt.object([])
         # Otherwise immediately convert to HqlTypes
         if len(self.schema):
             self.convert_schema()
+
+    # do this here if we have sample data
+    def __new__(cls,
+            schema:Union[SchemaDT, 'hqlt.object', None]=None,
+            data:Union[pl.DataFrame, dict, list[dict], None]=None,
+            sample_size:int=1
+        ) -> 'Schema':
+            
+        if isinstance(data, (list, dict)):
+            if isinstance(data, dict):
+                data = [data]
+
+            sample = data[:sample_size] if sample_size > 0 else data
+            return Schema.from_json(sample)
+
+        # Instanciate from a Polars DataFrame
+        elif isinstance(data, pl.DataFrame):
+            return Schema.from_df(data)
+        
+        return super().__new__(cls)
     
     def __len__(self) -> int:
         if hasattr(self.schema, '__len__'):
@@ -57,9 +60,7 @@ class Schema():
             return 0
 
     def __bool__(self) -> bool:
-        if len(self.schema):
-            return True
-        return False
+        return bool(self.schema)
 
     def __contains__(self, item:'Reference') -> bool:
         cur = self.schema
@@ -75,38 +76,29 @@ class Schema():
     def blowup_schema(self) -> list[tuple['Reference', CompilerType]]:
         from Hql.Expressions import NamedReference, Path
         
-        def bs(schema:dict) -> list[tuple['Reference', CompilerType]]:
+        def bs(schema:SchemaDT) -> list[tuple['Reference', CompilerType]]:
             out = []
             for key in schema:
                 name = NamedReference(key)
+                cur = schema[key]
 
-                # recurse case
-                if isinstance(schema[key], dict):
-                    recurse = bs(schema[key])
+                if isinstance(cur, hqlt.object):
+                    cur = cur.schema
+
+                if isinstance(cur, dict):
+                    recurse = bs(cur)
                     for path, stype in recurse:
-                        if isinstance(path, Path):
-                            path = Path([name] + path.path)
-                        else:
-                            path = Path([name, path])
+                        path = Path([name, path])
                         out.append((path, stype))
                 else:
                     out.append((name, schema[key]))
 
             return out
 
-        return bs(self.schema)
+        return bs(self.schema.schema)
 
     def to_dict(self) -> dict:
-        def td(schema:dict):
-            out = dict()
-            for key in schema:
-                if isinstance(schema[key], dict):
-                    out[key] = td(schema[key])
-                else:
-                    out[key] = schema[key].name
-            return out
-
-        return td(self.schema)
+        return self.schema.to_dict()
     
     @staticmethod
     def merge(schemata:list['Schema']) -> 'Schema':
@@ -402,36 +394,46 @@ class Schema():
     @staticmethod
     def from_json(data:list[dict]) -> 'Schema':
         from Hql.Types.Python import PythonTypes as pyt
+        from Hql.Types.Hql import HqlTypes as hqlt
+
+        def from_sample(data:dict) -> pyt.dict:
+            new = dict()
+            for i in data:
+                new[i] = pyt.from_value(data[i])
+            return pyt.dict(new)
 
         # collect groupings of schema
-        schemata = set()
+        schemata:set[hqlt.HqlType] = set()
         for i in data:
-            hql = pyt.from_value(i).hql_schema()
+            hql = from_sample(i).hql_schema()
             schemata.add(hql)
 
+        schema = hqlt.resolve_conflict(list(schemata))
 
-
+        # Always expect object from dict
+        assert isinstance(schema, hqlt.object)
+        return Schema(schema=schema)
     
     '''
     Generates a schema using polars typing
     '''
     @staticmethod
-    def from_df(df:pl.DataFrame) -> dict:
+    def from_df(df:pl.DataFrame) -> Schema:
         from Hql.Types.Polars import PolarsTypes as plt
 
-        schema = dict()
-        
-        for col in df:
-            if isinstance(col.dtype, pl.Struct):
-                schema[col.name] = Schema.from_df(pl.DataFrame(col).unnest(col.name))
-                continue
+        def gen_schema(df:pl.DataFrame) -> hqlt.object:
+            schema = dict()
             
-            if col.dtype == pl.Object:
-                raise Exception('poop')
+            for col in df:
+                if isinstance(col.dtype, pl.Struct):
+                    schema[col.name] = Schema.from_df(pl.DataFrame(col).unnest(col.name))
+                    continue
+                
+                schema[col.name] = plt.from_pure_polars(col.dtype).hql_schema()
+                
+            return hqlt.object(schema)
 
-            schema[col.name] = plt.from_pure_polars(col.dtype)
-            
-        return schema
+        return Schema(schema=gen_schema(df))
 
     # Adjusts json to multivalue
     def adjust_mv(self, data:list[dict], schema:Union[dict, None]=None) -> list[dict]:
