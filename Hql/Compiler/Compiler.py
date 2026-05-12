@@ -19,16 +19,24 @@ class Compiler():
         self.ctx = Context(Data())
 
         self.ops:list['Operator'] = []
+        self.stmts:list['Statement'] = []
 
+    '''
+    What?
+
+    This is to get the operator method for a compiler
+    Might want to change this
+    '''
     def from_name(self, name:str) -> Callable:
-        if hasattr(self, name):
-            return getattr(self, name)
-        raise hqle.CompilerException(f'Attempting to get non-existant compiler function for {name}')
+        return getattr(self, name)
 
     def run(self, ctx:Union[Context, None]=None) -> Context:
         ctx = ctx if ctx else self.ctx
         return self.ctx
 
+    '''
+    Returns None, op as an auto denial
+    '''
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
         from Hql.Compiler import BranchDescriptor
         if isinstance(op, BranchDescriptor):
@@ -57,9 +65,16 @@ class Compiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
-        if src == None:
-            raise hqle.CompilerException('Unimplemented root compile')
+    def compile(self, preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
+        return None, None
+
+    def compile_op(self, src:'Operator', preprocess:bool=True) -> tuple[Optional[object], Optional['Operator']]:
+        return self.from_name(src.type)(src, preprocess=preprocess)
+
+    def compile_expr(self, src:'Expression', preprocess:bool=True) -> tuple[Optional[object], Optional['Expression']]:
+        return self.from_name(src.type)(src, preprocess=preprocess)
+
+    def compile_stmt(self, src:'Statement', preprocess:bool=True) -> tuple[Optional[object], Optional['Statement']]:
         return self.from_name(src.type)(src, preprocess=preprocess)
 
     def decompile(self) -> str:
@@ -85,8 +100,7 @@ class Compiler():
             BetweenEquality(
                 NamedReference('_hqltimestamp'),
                 Datetime(start),
-                Datetime(end),
-                'between'
+                Datetime(end)
             )
         )
 
@@ -244,12 +258,6 @@ class Compiler():
         return None, expr
 
     def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr, preprocess=preprocess)
-
-    def Keyword(self, expr:'Hql.Expressions.Keyword', preprocess:bool=True) -> tuple[object, object]:
-        return self.NamedReference(expr, preprocess=preprocess)
-
-    def Identifier(self, expr:'Hql.Expressions.Identifier', preprocess:bool=True) -> tuple[object, object]:
         return self.NamedReference(expr, preprocess=preprocess)
 
     def Wildcard(self, expr:'Hql.Expressions.Wildcard', preprocess:bool=True) -> tuple[object, object]:

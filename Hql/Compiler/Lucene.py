@@ -37,7 +37,7 @@ class LuceneCompiler(Compiler):
 
         # still missing a root
         if src == None:
-            acc, _ = self.compile(Bool('true'), preprocess=False)
+            acc, _ = self.compile(Bool(True), preprocess=False)
             return acc, None
 
         out = super().compile(src, preprocess=preprocess)

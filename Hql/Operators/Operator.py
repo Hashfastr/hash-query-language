@@ -26,7 +26,7 @@ class Operator(ParseObject):
     def __init__(self):
         import random
 
-        self._expr:Optional['Expression'] = None
+        self._expr = None
         self.exprs:Sequence['Expression'] = []
         self.compatible:Sequence['Operator'] = []
         self.non_conseq:Sequence['Operator'] = []

@@ -1,9 +1,9 @@
-from typing import Optional, Union, TYPE_CHECKING, Callable, Sequence
+from typing import Optional, Union, TYPE_CHECKING
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
-import logging
-from datetime import datetime, timedelta
+
+from . import Compiler
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
@@ -12,66 +12,76 @@ if TYPE_CHECKING:
     from Hql.Query import Statement
     import Hql
 
-class Compiler():
+class KustoCompiler(Compiler):
     def __init__(self):
         from Hql.Data import Data
         self.type = self.__class__.__name__
         self.ctx = Context(Data())
 
-        self.ops:list['Operator'] = []
-
-    def from_name(self, name:str) -> Callable:
-        if hasattr(self, name):
-            return getattr(self, name)
-        raise hqle.CompilerException(f'Attempting to get non-existant compiler function for {name}')
-
-    def run(self, ctx:Union[Context, None]=None) -> Context:
-        ctx = ctx if ctx else self.ctx
-        return self.ctx
-
-    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
-        from Hql.Compiler import BranchDescriptor
-        if isinstance(op, BranchDescriptor):
-            op = op.get_op()
-        return None, op
-    
-    def add_ops(self, ops:Sequence[Union['Operator', 'BranchDescriptor']]) -> Optional[list['Operator']]:
-        from Hql.Operators import Operator
-
-        for idx, op in enumerate(ops):
-            _, rej = self.add_op(op)
-            if rej:
-                post = []
-                for i in ops[idx+1:]:
-                    if isinstance(i, Operator):
-                        post.append(i)
-                    else:
-                        post.append(i.get_op())
-                return [rej] + post
-        return None
+        self.stmts:list['Statement'] = []
 
     def optimize(self, ops: list['BranchDescriptor']) -> list['BranchDescriptor']:
         return ops
 
-    '''
-    You'll want to replace this with something like a string that you'll query your database with.
-    Default returns optimized operators for running in Hql-land
-    '''
-    def compile(self, src:Union['Expression', 'Operator', 'Statement', None], preprocess:bool=True) -> tuple[Optional[object], Optional[object]]:
-        if src == None:
-            raise hqle.CompilerException('Unimplemented root compile')
+    def compile(self, preprocess:bool=True) -> tuple[Union[str, list['Statement']], None]:
+        stmts = []
+        for i in self.stmts:
+            acc, _ = self.compile_stmt(i, preprocess=preprocess)
+            stmts.append(acc)
+
+        if preprocess:
+            return stmts, None
+        return '\n;\n'.join(stmts), None
+
+    def compile_op(self, src:'Operator', preprocess:bool=True) -> tuple[Union['Operator', str, None], Optional['Operator']]:
         return self.from_name(src.type)(src, preprocess=preprocess)
 
-    def decompile(self) -> str:
-        from Hql.Expressions import PipeExpression
-        logging.critical("Decompilation doesn't actually work right now, sorry")
-        # return PipeExpression(pipes=self.ops).decompile(self.ctx)
-        return ''
+    def compile_expr(self, src:'Expression', preprocess:bool=True) -> tuple[Union['Expression', str, None], Optional['Expression']]:
+        return self.from_name(src.type)(src, preprocess=preprocess)
+
+    def compile_stmt(self, src:'Statement', preprocess:bool=True) -> tuple[Union['Statement', str, None], Optional['Statement']]:
+        from Hql.Query import QueryStatement
+        from Hql.Expressions import Expression, PipeExpression
+
+        if isinstance(src, QueryStatement):
+            acc, rej = self.compile_expr(src.root, preprocess=preprocess)
+        else:
+            return None, src
+
+        if rej:
+            return None, src
+
+        if isinstance(acc, Expression):
+            assert isinstance(acc, PipeExpression)
+            return QueryStatement(acc), None
+        
+        return acc, None
 
     '''
     By default, all of these return themselves as they are being
     'rejected' back to the compiler
     '''
+
+    def Tabular(self, expr:'Hql.Expressions.Expression') -> tuple[Optional['InstructionSet'], Optional['Hql.Expressions.Expression']]:
+        return None, expr
+
+    def PipeExpression(self, expr:'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[object, object]:
+        from Hql.Expressions import Expression, PipeExpression
+
+        if isinstance(expr.prepipe, Expression):
+            acc, rej = self.compile_expr(expr.prepipe, preprocess=preprocess)
+            if rej:
+                return None, expr
+            prepipe = acc
+        else:
+            prepipe = None
+
+        for i in expr.pipes:
+            i.
+
+
+
+        return None, expr
 
     '''
     Operators
@@ -79,13 +89,15 @@ class Compiler():
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[object, object]:
         from Hql.Operators import Where
+        from Hql.Expressions import Logic
+
         if preprocess:
-            expr, _ = self.compile(op.expr)
-            assert isinstance(expr, 'Expression')
+            expr, _ = self.compile_expr(op.expr)
+            assert isinstance(expr, Logic)
             return Where(expr), None
 
-        out = '| where '
-        expr, _ = self.compile(op.expr, preprocess=False)
+        out = 'where '
+        expr, _ = self.compile_expr(op.expr, preprocess=False)
         assert isinstance(expr, str)
         return out + expr, None
 
@@ -215,12 +227,6 @@ class Compiler():
     '''
     Expressions
     '''
-
-    def Tabular(self, expr:'Hql.Expressions.Expression') -> tuple[Optional['InstructionSet'], Optional['Hql.Expressions.Expression']]:
-        return None, expr
-
-    def PipeExpression(self, expr:'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[object, object]:
-        return None, expr
 
     def OpParameter(self, expr:'Hql.Expressions.OpParameter', preprocess:bool=True) -> tuple[object, object]:
         return None, expr

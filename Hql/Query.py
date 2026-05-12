@@ -1,9 +1,12 @@
 import json
-from typing import Union
+from typing import TYPE_CHECKING, Union
 from Hql import Expressions
 from Hql.Expressions import Expression
 from Hql.Operators import Operator
 from Hql.Context import Context
+
+if TYPE_CHECKING:
+    from Hql.Expressions import PipeExpression
 
 # Top most object, a query.
 # Comprised of multiple statements
@@ -23,10 +26,10 @@ class Query():
     def __init__(self, statements:list['Statement']):
         self.statements = statements
 
-    def decompile(self, ctx:Context):
+    def deparse(self):
         statements = []
         for i in self.statements:
-            statements.append(i.decompile(ctx))
+            statements.append(i.deparse())
         return '\n;\n'.join(statements)
 
     def to_dict(self):
@@ -39,55 +42,59 @@ class Query():
 
 # Generic for a statement, see children as this can be very diverse
 class Statement():
-    def __init__(self, root):
+    def __init__(self):
         self.type = self.__class__.__name__
-        self.root = root
     
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             'type': self.type,
-            'root': self.root.to_dict()
         }
 
-    def decompile(self, ctx:Context):
-        return self.root.decompile(ctx)
+    def deparse(self) -> str:
+        return ''
     
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
 
 class QueryStatement(Statement):
-    def __init__(self, root):
-        from Hql.Expressions import PipeExpression
-        Statement.__init__(self, root)
-        assert isinstance(self.root, PipeExpression)
+    def __init__(self, root:'PipeExpression'):
+        Statement.__init__(self)
+        self.root = root
+
+    def to_dict(self):
+        out = super().to_dict()
+        out['query'] = self.deparse()
+        return out
+
+    def deparse(self):
+        return self.root.deparse()
 
 class LetStatement(Statement):
-    def __init__(self, name:Expression, value:Union[Expression, list[Operator]], lettype:str):
-        Statement.__init__(self, value)
+    def __init__(self, name:Expression, value:'PipeExpression', macro:bool=False):
+        Statement.__init__(self)
+        self.root = value
         self.name = name
-        self.lettype = lettype
+        self.macro = macro
         
     def to_dict(self):
         return {
             'type': self.type,
-            'lettype': self.lettype,
+            'macro': self.macro,
             'name': self.name.to_dict(),
             'value': self.root.to_dict()
         }
 
-    def decompile(self, ctx: Context):
-        name = self.name.decompile(ctx)
-        value = self.root.decompile(ctx)
+    def deparse(self):
+        name = self.name.deparse()
+        value = self.root.deparse()
         return f'let {name} = {value}'
         
-    def eval(self, ctx:'Context', **kwargs):
-        name = self.name.eval(ctx, as_str=True)
+    def eval(self, ctx:'Context') -> 'Context':
+        name = self.name.str()
         
-        if self.lettype == 'macro':
+        if self.macro:
             ctx.macros[name] = self.root
-
-        elif kwargs.get('no_exec', False):
+        else:
             ctx.symbol_table[name] = self.root
 
-        else:
-            ctx.symbol_table[name] = self.root.eval(ctx)
+        return ctx
