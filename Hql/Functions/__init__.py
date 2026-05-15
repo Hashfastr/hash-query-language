@@ -49,7 +49,7 @@ class Function():
         return self.__str__()
 
     def preprocess(self, ctx:'Context', receiver=None) -> object:
-        raise hqle.FunctionException(f'Attempting to preprocess non-preprocess function {self.name}')
+        return self
         
     def eval(self, ctx:'Context', receiver=None) -> object:
         return NotImplemented
