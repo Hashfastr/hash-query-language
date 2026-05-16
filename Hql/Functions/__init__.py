@@ -1,15 +1,16 @@
 import importlib, pkgutil
 
 import json
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Sequence
 
 from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Context import Context
+    from Hql.Expressions import Expression
 
 class Function():
-    def __init__(self, args:list, min:int, max:int, conf:Optional[dict]=None):
+    def __init__(self, args:Sequence['Expression'], min:int, max:int, conf:Optional[dict]=None):
         self.name = self.__class__.__name__
         self.type = 'Function'
         self.args = args
@@ -17,7 +18,7 @@ class Function():
         # Can disable by passing -1
         self.can_preprocess = False
         self.max = max
-        self.static = False
+        # self.static = False
         self.conf = conf if conf else dict()
         
         if len(args) < min:
@@ -49,6 +50,11 @@ class Function():
         return self.__str__()
 
     def preprocess(self, ctx:'Context', receiver=None) -> object:
+        args = []
+        for i in self.args:
+            args.append(i.preprocess(ctx))
+        self.args = args
+
         return self
         
     def eval(self, ctx:'Context', receiver=None) -> object:

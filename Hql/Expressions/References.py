@@ -46,6 +46,12 @@ class Reference(Expression):
     def get_symbol(self, ctx:'Context'):
         return ctx.symbol_table.get(self.name, None)
 
+    def preprocess(self, ctx: Context) -> object:
+        rec = ctx.symbol_table.get(self.name, self)
+        if isinstance(rec, dict):
+            return self
+        return rec
+
     def eval(self, ctx: 'Context', unnest:bool=False) -> 'Context':
         if unnest:
             ctx.data = ctx.data.unnest(self)
@@ -167,6 +173,27 @@ class Path(Reference):
         for i in self.path[1:]:
             expr = expr.struct.field(i.str())
         return expr
+
+    def preprocess(self, ctx: Context) -> object:
+        rec = self.path[0].get_symbol(ctx)
+        if not rec or not isinstance(rec, dict):
+            return self
+
+        for i in self.path[1:-1]:
+            if i.name in rec:
+                rec = rec[i.name]
+            else:
+                return self
+
+        if self.path[-1].name in rec:
+            rec = rec[self.path[-1].name]
+        else:
+            return self
+
+        if isinstance(rec, dict):
+            return self
+
+        return rec
 
     def eval(self, ctx: 'Context', unnest:bool=False) -> 'Context':
         if unnest:

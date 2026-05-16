@@ -3,12 +3,12 @@ from Hql.Exceptions import HqlExceptions as hqle
 
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 import logging
-import polars as pl
 
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Expressions import StringLiteral, Reference, Literal
-    from Hql.Expressions import BinaryLogic
+    from Hql.Expressions import BinaryLogic, Bool
+    import polars as pl
 
 # descriptive class
 class Logic(Expression):
@@ -16,7 +16,7 @@ class Logic(Expression):
         Expression.__init__(self)
 
     def merge(self, expr:'Logic') -> Optional['Logic']:
-        return NotImplemented
+        return expr
 
     def reduce(self):
         return self
@@ -86,6 +86,47 @@ class Comparator(Logic):
     
     def build_op(self) -> str:
         return NotImplemented
+
+    def preprocess(self, ctx: 'Context') -> object:
+        from Hql.Expressions import Literal, StringLiteral, Bool, Reference
+
+        if len(self.rh) > 1:
+            rh = self.expand_rh().preprocess(ctx)
+            if isinstance(rh, Logic):
+                return rh.reduce()
+            return rh
+
+        lh = self.lh.preprocess(ctx)
+        rh = self.rh[0].preprocess(ctx)
+
+        if isinstance(lh, Literal) and isinstance(rh, Literal):
+            if isinstance(lh, StringLiteral):
+                return Bool(lh.cmp(rh, self.cs) != self.neq)
+            else:
+                return Bool((lh == rh) != self.neq)
+
+        if isinstance(lh, Reference) and lh == rh:
+            return Bool(True != self.neq)
+
+        assert isinstance(lh, Expression)
+        assert isinstance(rh, Expression)
+
+        if not isinstance(lh, Reference):
+            if isinstance(rh, Reference):
+                tmp = lh
+                lh = rh
+                rh = tmp
+            else:
+                new = self.dupe()
+                logging.error(f'Expression: {self.deparse()}')
+                logging.error(f'Is invalid with preprocessed operands {lh.deparse()} and {rh.deparse()}')
+                hqle.QueryException(f'Invalid preprocessed expression')
+
+        new = self.dupe()
+        assert isinstance(lh, Reference)
+        new.lh = lh
+        new.rh = [rh]
+        return new
 
 '''
 Handles the following direct comparators:
@@ -157,7 +198,9 @@ class Equality(Comparator):
             op += '=' if self.cs else '~'
         return op
 
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
+        import polars as pl
+
         reduced = self.reduce()
         if not isinstance(reduced, Equality):
             return reduced.polars()
@@ -241,6 +284,48 @@ class Substring(Comparator):
         self.startswith = startswith
         self.endswith = endswith
         self.can_list = True
+
+    def preprocess(self, ctx: 'Context') -> object:
+        from Hql.Expressions import Literal, StringLiteral, Bool, Reference
+
+        if len(self.rh) > 1:
+            rh = self.expand_rh().preprocess(ctx)
+            if isinstance(rh, Logic):
+                return rh.reduce()
+            return rh
+
+        lh = self.lh.preprocess(ctx)
+        rh = self.rh[0].preprocess(ctx)
+
+        # short circuit
+        if isinstance(lh, Literal) and isinstance(rh, Literal):
+            if not isinstance(lh, StringLiteral):
+                lh = StringLiteral(lh.str())
+                
+            if not isinstance(rh, StringLiteral):
+                rh = StringLiteral(rh.str())
+
+            if self.startswith:
+                return Bool(lh.startswith(rh, self.cs) != self.neq)
+            elif self.endswith:
+                return Bool(lh.endswith(rh, self.cs) != self.neq)
+            else:
+                return Bool(lh.contains(rh, self.cs) != self.neq)
+
+        assert isinstance(lh, Expression)
+        assert isinstance(rh, Expression)
+
+        if not isinstance(lh, Reference) or isinstance(rh, Reference):
+            logging.error(f'Expression: {self.deparse()}')
+            logging.error(f'Is invalid with preprocessed operands {lh.deparse()} and {rh.deparse()}')
+            hqle.QueryException(f'Invalid preprocessed expression')
+
+        new = self.dupe()
+        assert isinstance(lh, Reference)
+        new.lh = lh
+        new.rh = [rh]
+
+        return self
 
     def to_dict(self):
         return {
@@ -353,6 +438,57 @@ class Relational(Comparator):
         self.eq = eq
         self.can_list = False
 
+    def preprocess(self, ctx: 'Context') -> object:
+        from Hql.Expressions import Literal, StringLiteral, Bool, Reference
+
+        def compare(lh, rh, op:str) -> bool:
+            if op == '<':
+                return lh.value < rh.value
+            elif op == '>':
+                return lh.value > rh.value
+            elif op == '<=':
+                return lh.value <= rh.value
+            else:
+                return lh.value >= rh.value
+
+        if len(self.rh) > 1:
+            rh = self.expand_rh().preprocess(ctx)
+            if isinstance(rh, Logic):
+                return rh.reduce()
+            return rh
+
+        lh = self.lh.preprocess(ctx)
+        rh = self.rh[0].preprocess(ctx)
+
+        if isinstance(lh, Literal) and isinstance(rh, Literal):
+            return Bool(compare(lh, rh, op=self.build_op()))
+
+        if isinstance(lh, Reference) and lh == rh:
+            return Bool(True != self.neq)
+
+        assert isinstance(lh, Expression)
+        assert isinstance(rh, Expression)
+
+        new = self.dupe()
+
+        if not isinstance(lh, Reference):
+            if isinstance(rh, Reference):
+                tmp = lh
+                lh = rh
+                rh = tmp
+
+                new.gt = not self.gt
+                new.eq = not self.eq
+            else:
+                logging.error(f'Expression: {self.deparse()}')
+                logging.error(f'Is invalid with preprocessed operands {lh.deparse()} and {rh.deparse()}')
+                hqle.QueryException(f'Invalid preprocessed expression')
+
+        assert isinstance(lh, Reference)
+        new.lh = lh
+        new.rh = [rh]
+        return new
+
     def __reduce__(self):
         return (self.__class__, (self.lh, self.rh, self.gt, self.eq))
 
@@ -397,6 +533,38 @@ class BetweenEquality(Comparator):
         self.start = start
         self.end = end
         self.neq = neq
+
+    def preprocess(self, ctx: 'Context') -> object:
+        from Hql.Expressions import Literal, Bool, Reference
+
+        def compare(lh, start, end):
+            return lh.value > start.value and lh.value < end.value
+
+        lh = self.lh.preprocess(ctx)
+        start = self.start.preprocess(ctx)
+        end = self.end.preprocess(ctx)
+
+        if isinstance(lh, Literal) and isinstance(start, Literal) and isinstance(end, Literal):
+            if lh.hql_type != start.hql_type or lh.hql_type != end.hql_type:
+                return Bool(False != self.neq)
+            return Bool(compare(lh, start, end) != self.neq)
+
+        assert isinstance(lh, Expression)
+
+        new = self.dupe()
+
+        if isinstance(start, Reference) or isinstance(end, Reference):
+            assert isinstance(start, Expression)
+            assert isinstance(end, Expression)
+            logging.error(f'Expression: {self.deparse()}')
+            logging.error(f'Is invalid with preprocessed operands {lh.deparse()}, {start.deparse()}, and {end.deparse()}')
+            hqle.QueryException(f'Invalid preprocessed expression')
+
+        assert isinstance(lh, Reference)
+        new.lh = lh
+        new.start = start
+        new.end = end
+        return new
     
     def to_dict(self) -> dict:
         return {
@@ -436,11 +604,34 @@ class BinaryLogic(Logic):
         self.exprs:Sequence[Logic] = exprs
 
     # immediately break down if there's only 1 expr
-    def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Logic:
-        if len(exprs) == 1:
-            return exprs[0]
+    # and short circuit some logic
+    def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Union[Logic, 'Bool']:
+        from Hql.Expressions import Bool
+
         if len(exprs) == 0:
             raise hqle.CompilerException('BinaryLogic given no expressions!')
+        if len(exprs) == 1:
+            return exprs[0]
+        if not logic_and and Bool(True) in exprs:
+            return Bool(True)
+        if logic_and and Bool(False) in exprs:
+            return Bool(False)
+
+        prelen = len(exprs)
+
+        new = set([exprs[0]])
+        for i in exprs[1:]:
+            if i == Bool(True) and logic_and:
+                continue
+            if i == Bool(False) and not logic_and:
+                continue
+            new.add(i)
+        new = list(new)
+
+        # do this to condense the new list
+        if len(new) != prelen:
+            return BinaryLogic(new, logic_and=logic_and)
+
         return super().__new__(cls)
 
     def __reduce__(self):
@@ -448,6 +639,16 @@ class BinaryLogic(Logic):
     
     def __iter__(self):
         return iter(self.exprs)
+
+    def preprocess(self, ctx: Context) -> object:
+        exprs = []
+        for i in self.exprs:
+            exprs.append(i.preprocess(ctx))
+
+        new = BinaryLogic(exprs, self.logic_and)
+        if isinstance(new, BinaryLogic):
+            new = new.condense()
+        return new
 
     '''
     Condense down equality operators so they're more syntactically condensed.
@@ -601,6 +802,35 @@ class Regex(Logic):
         rh = pl.lit(rh)
 
         return lh.str.contains(rh)
+
+    def preprocess(self, ctx: Context) -> object:
+        from Hql.Expressions import Reference, Bool, StringLiteral
+
+        lh = self.lh.preprocess(ctx)
+        assert isinstance(lh, Expression)
+        rh = self.rh.preprocess(ctx)
+        assert isinstance(rh, StringLiteral)
+
+        if isinstance(lh, Reference):
+            return self
+
+        if isinstance(lh, StringLiteral):
+            import polars as pl
+
+            rh = rh.str()
+            if self.i:
+                rh = '(?i)' + rh
+            rh = pl.lit(rh)
+
+            return Bool(
+                pl.select(
+                    pl.lit(lh.str()).str.contains(rh).alias('matches')
+                ).item()
+            )
+
+        logging.error(f'Expression: {self.deparse()}')
+        logging.error(f'Is invalid with preprocessed operands {lh.deparse()} and {rh.deparse()}')
+        hqle.QueryException(f'Invalid preprocessed expression')
 
 class Not(Logic):
     def __init__(self, expr:Expression) -> None:

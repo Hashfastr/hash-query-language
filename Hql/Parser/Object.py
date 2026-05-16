@@ -43,7 +43,7 @@ class ParseObject():
         return NotImplemented
     
     def preprocess(self, ctx:Context) -> object:
-        return NotImplemented
+        return self
 
     def eval(self, ctx:Context) -> Context:
         return NotImplemented

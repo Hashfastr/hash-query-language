@@ -51,7 +51,7 @@ class base64enc(Function):
 @register_func('base64dec')
 @register_func('b64dec')
 class base64dec(Function):
-    def __init__(self, args: list):
+    def __init__(self, args:list['Expression']):
         from Hql.Expressions import StringLiteral, NamedReference, Path
         Function.__init__(self, args, 1, 2)
 

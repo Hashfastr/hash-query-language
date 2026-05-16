@@ -5,8 +5,11 @@ import datetime
 from .__proto__ import Expression
 from Hql.Types.Hql import HqlTypes as hqlt
 
+from Hql.Expressions import Logic
+
 if TYPE_CHECKING:
     from Hql.Data import Series
+    from Hql.Context import Context
 
 class Literal(Expression):
     def __init__(self, hql_type:hqlt.HqlType, value:object) -> None:
@@ -45,6 +48,11 @@ class TypeExpression(Literal):
     def __init__(self, hql_type:Union[str, hqlt.HqlType]):
         self.hql_type:hqlt.HqlType = hqlt.from_name(hql_type) if isinstance(hql_type, str) else hql_type
         Literal.__init__(self, self.hql_type, None)
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, TypeExpression):
+            return False
+        return self.hql_type == value.hql_type
     
     def polars(self) -> pl.Expr:
         return pl.lit(self.hql_type.pl_schema())
@@ -65,6 +73,37 @@ class StringLiteral(Literal):
         self.obfuscated = obfuscated
         
         Literal.__init__(self, hqlt.string(), self.value)
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, StringLiteral):
+            return False
+        return value.value == self.value
+
+    def cmp(self, value:Expression, cs:bool=True):
+        from Hql.Expressions import StringLiteral
+
+        if cs or not isinstance(value, StringLiteral):
+            return self == value
+        else:
+            return self.str().lower() == value.str().lower()
+
+    def startswith(self, value:StringLiteral, cs:bool=True) -> bool:
+        if cs:
+            return self.value.startswith(value.value)
+        else:
+            return self.str().lower().startswith(value.str().lower())
+
+    def endswith(self, value:StringLiteral, cs:bool=True) -> bool:
+        if cs:
+            return self.value.endswith(value.value)
+        else:
+            return self.str().lower().endswith(value.str().lower())
+
+    def contains(self, value:StringLiteral, cs:bool=True) -> bool:
+        if cs:
+            return value.value in self.value
+        else:
+            return value.str().lower() in self.str().lower()
 
     def quote(self, quote:str) -> str:
         import re
@@ -125,10 +164,18 @@ class MultiString(StringLiteral):
             'value': [x.to_dict() for x in self.strlits]
         }
 
+    def preprocess(self, ctx:'Context') -> object:
+        return StringLiteral(self.str())
+
 class Integer(Literal):
     def __init__(self, value:Union[str, int]):
         self.value = int(value)
         Literal.__init__(self, hqlt.int(), self.value)
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Integer):
+            return False
+        return value.value == self.value
         
 class IP4(Literal):
     def __init__(self, value:Union[Integer, StringLiteral]):
@@ -144,6 +191,11 @@ class IP4(Literal):
 
     def deparse(self) -> str:
         return f"ip4('{self.str()}')"
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, IP4):
+            return False
+        return value.value == self.value
         
     def to_dict(self):
         return {
@@ -156,10 +208,20 @@ class Float(Literal):
         self.value = float(value)
         Literal.__init__(self, hqlt.float(), self.value)
 
-class Bool(Literal):
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Float):
+            return False
+        return value.value == self.value
+
+class Bool(Logic, Literal):
     def __init__(self, value:bool):
         self.value = value
         Literal.__init__(self, hqlt.bool(), self.value)
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Bool):
+            return False
+        return value.value == self.value
 
 class Multivalue(Literal):
     def __init__(self, value:list[Literal]) -> None:
@@ -170,11 +232,34 @@ class Multivalue(Literal):
         
         Literal.__init__(self, hqlt.multivalue(super_type), self.value)
 
+    def __len__(self):
+        return len(self.value)
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Multivalue):
+            return False
+
+        '''
+        # for later if we want to consider a single multivalue as a comparison
+        if not isinstance(value, Literal):
+            return False
+        value = Multivalue([value])
+        '''
+        
+        if len(self) != len(value):
+            return False
+
+        for idx, _ in enumerate(self.value):
+            if self.value[idx] != value.value[idx]:
+                return False
+
+        return True
+
     def deparse(self) -> str:
         return NotImplemented
-        self.hql_type.inner()
-        dec = [ for x in self.value]
-        return 'make_mv(' + ', '.join(dec) + ')'
+        # self.hql_type.inner()
+        # dec = [ for x in self.value]
+        # return 'make_mv(' + ', '.join(dec) + ')'
 
 class Datetime(Literal):
     def __init__(self, value:Union[StringLiteral, datetime.datetime]) -> None:
