@@ -14,7 +14,7 @@ Generates a time delta
 class template(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 1)
-        
-    def eval(self, ctx:'Context', **kwargs):
+
+    def eval(self, ctx: 'Context', receiver=None) -> object:
         from datetime import timedelta
         return timedelta()
