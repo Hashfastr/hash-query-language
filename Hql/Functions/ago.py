@@ -1,10 +1,9 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from . import Function
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Data import Data, Series, Table, Schema
+from Hql.Context import register_func
 
-import logging
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 '''
 Static function, can be precomputed

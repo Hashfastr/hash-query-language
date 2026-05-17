@@ -1,12 +1,9 @@
 import json
-from typing import TYPE_CHECKING, Union
-from Hql import Expressions
-from Hql.Expressions import Expression
-from Hql.Operators import Operator
-from Hql.Context import Context
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Expressions import PipeExpression
+    from Hql.Expressions import Expression, PipeExpression
+    from Hql.Context import Context
 
 # Top most object, a query.
 # Comprised of multiple statements
@@ -70,7 +67,7 @@ class QueryStatement(Statement):
         return self.root.deparse()
 
 class LetStatement(Statement):
-    def __init__(self, name:Expression, value:'PipeExpression', macro:bool=False):
+    def __init__(self, name:'Expression', value:'PipeExpression', macro:bool=False):
         Statement.__init__(self)
         self.root = value
         self.name = name

@@ -1,10 +1,10 @@
-from typing import Optional, Union
-from Hql.Exceptions import HqlExceptions as hqle
+from typing import Optional
 from Hql.Context import register_type, get_type
-from Hql.Types.Hql import HqlTypes as hqlt
 from Hql.Types.Compiler import CompilerType
 
 class PythonTypes():
+    from Hql.Types.Hql import HqlTypes as hqlt
+
     class PythonType(CompilerType):
         def __init__(self, inner:Optional['PythonTypes.PythonType']=None):
             CompilerType.__init__(self, inner=inner)
@@ -81,7 +81,7 @@ class PythonTypes():
     class int(PythonType):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            self.HqlType = hqlt.int()
+            self.HqlType = PythonTypes.hqlt.int()
             
             self.priority = 2
             self.super = (PythonTypes.float, PythonTypes.str, PythonTypes.list) 
@@ -90,7 +90,7 @@ class PythonTypes():
     class float(PythonType):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            self.HqlType = hqlt.float()
+            self.HqlType = PythonTypes.hqlt.float()
             
             self.priority = 3
             self.super = (PythonTypes.str, PythonTypes.list)
@@ -99,13 +99,13 @@ class PythonTypes():
     class complex(PythonType):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            self.HqlType = hqlt.string()
+            self.HqlType = PythonTypes.hqlt.string()
         
     @register_type('python_str')
     class str(PythonType):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            self.HqlType = hqlt.string()
+            self.HqlType = PythonTypes.hqlt.string()
  
             self.priority = 4
             self.super = [PythonTypes.list]
@@ -118,7 +118,7 @@ class PythonTypes():
     class bool(PythonType):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            self.HqlType = hqlt.bool()
+            self.HqlType = PythonTypes.hqlt.bool()
                         
             self.priority = 1
             self.super = (PythonTypes.int, PythonTypes.str, PythonTypes.list)
@@ -127,7 +127,7 @@ class PythonTypes():
     class NoneType(PythonType):
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
-            self.HqlType = hqlt.null()
+            self.HqlType = PythonTypes.hqlt.null()
                         
             self.priority = 0
             self.super = (PythonTypes.bool, PythonTypes.int, PythonTypes.float, PythonTypes.str, PythonTypes.list)
@@ -137,7 +137,7 @@ class PythonTypes():
         def __init__(self, inner:'PythonTypes.PythonType'):
             PythonTypes.PythonType.__init__(self, inner=inner)
             self.inner = inner
-            self.HqlType = hqlt.multivalue(inner.hql_schema())
+            self.HqlType = PythonTypes.hqlt.multivalue(inner.hql_schema())
             
             self.priority = 5
             self.super = []
@@ -147,7 +147,7 @@ class PythonTypes():
         def __init__(self, schema:dict):
             PythonTypes.PythonType.__init__(self)
             self.schema = schema
-            self.HqlType = hqlt.object(schema)
+            self.HqlType = PythonTypes.hqlt.object(schema)
 
         def __getitem__(self, key:str):
             if isinstance(self.schema[key], dict):
@@ -158,13 +158,13 @@ class PythonTypes():
         def __eq__(self, value: object, /) -> bool:
             if not isinstance(value, PythonTypes.dict):
                 return False
-            return hqlt.object.eq(self.schema, value.schema)
+            return PythonTypes.hqlt.object.eq(self.schema, value.schema)
 
-        def hql_schema(self) -> 'hqlt.HqlType':
+        def hql_schema(self) -> 'PythonTypes.hqlt.HqlType':
             new = dict()
             for i in self.schema:
                 new[i] = self[i].hql_schema()
-            return hqlt.object(new)
+            return PythonTypes.hqlt.object(new)
 
         def pl_schema(self):
             return self.hql_schema().pl_schema()

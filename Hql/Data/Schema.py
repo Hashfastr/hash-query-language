@@ -1,7 +1,4 @@
-import logging
-from typing import TYPE_CHECKING, Sequence, Union, Optional
-
-import polars as pl
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Types.Compiler import CompilerType 
@@ -12,6 +9,7 @@ if TYPE_CHECKING:
     from Hql.Types.Compiler import CompilerType
     from Hql.Expressions import Reference
     from Hql.Types.Hql import HqlTypes as hqlt
+    import polars as pl
 
 class Schema():
     def __init__(
@@ -36,7 +34,7 @@ class Schema():
     # do this here if we have sample data
     def __new__(cls,
             schema:Union[SchemaDT, 'hqlt.object', None]=None,
-            data:Union[pl.DataFrame, dict, list[dict], None]=None,
+            data:Union['pl.DataFrame', dict, list[dict], None]=None,
             sample_size:int=1
         ) -> 'Schema':
             
@@ -48,7 +46,7 @@ class Schema():
             return Schema.from_json(sample)
 
         # Instanciate from a Polars DataFrame
-        elif isinstance(data, pl.DataFrame):
+        elif isinstance(data, 'pl.DataFrame'):
             return Schema.from_df(data)
         
         return super().__new__(cls)
@@ -383,7 +381,7 @@ class Schema():
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
     '''
-    def gen_pl_schema(self) -> pl.DataType:
+    def gen_pl_schema(self) -> 'pl.DataType':
         from Hql.Types.Hql import HqlTypes as hqlt
         return hqlt.object(self.schema).pl_schema()
 
@@ -418,8 +416,9 @@ class Schema():
     Generates a schema using polars typing
     '''
     @staticmethod
-    def from_df(df:pl.DataFrame) -> Schema:
+    def from_df(df:'pl.DataFrame') -> Schema:
         from Hql.Types.Polars import PolarsTypes as plt
+        import polars as pl
 
         def gen_schema(df:pl.DataFrame) -> hqlt.object:
             schema = dict()
@@ -465,7 +464,9 @@ class Schema():
     If a col is not defined in the schema, then it just skips over it
     Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:Union[pl.DataFrame, pl.Series], schema:Union[None, dict, 'Schema', CompilerType]=None):
+    def apply(self, df:Union['pl.DataFrame', 'pl.Series'], schema:Union[None, dict, 'Schema', CompilerType]=None):
+        import polars as pl
+
         if isinstance(schema, Schema):
             schema = schema.schema
         
@@ -513,7 +514,7 @@ class Schema():
         else:
             return True
         
-    def present_complex(self, df:pl.DataFrame, schema:Union[None, dict]=None):
+    def present_complex(self, df:'pl.DataFrame', schema:Optional[dict]=None):
         schema = schema if schema != None else self.schema
 
         newdf = {}

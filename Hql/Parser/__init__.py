@@ -1,7 +1,6 @@
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Expressions import PipeExpression 
 from .grammar.HqlLexer import HqlLexer
 from .grammar.HqlParser import HqlParser
 from .grammar.HqlVisitor import HqlVisitor
@@ -142,6 +141,8 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         return PipeExpression(pipes, prepipe=prepipe)
 
     def visitEmptyPipedExpression(self, ctx: HqlParser.EmptyPipedExpressionContext):
+        from Hql.Expressions import PipeExpression 
+        
         pipes = []
         for i in ctx.Operators:
             try:

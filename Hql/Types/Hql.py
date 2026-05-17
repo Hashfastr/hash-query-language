@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Union, Optional, Mapping
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
 from Hql.Types.Compiler import CompilerType
-from Hql.Types.Python import PythonTypes
 
 if TYPE_CHECKING:
     from Hql.Data import Series

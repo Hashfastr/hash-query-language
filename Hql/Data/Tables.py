@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Union
 import polars as pl
 from polars.dataframe.group_by import GroupBy
 
-from .Schema import Schema
 from .Series import Series
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.PolarsTools import pltools
@@ -12,7 +11,8 @@ from Hql.Types.Hql import HqlTypes as hqlt
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, Path, NamedReference, Reference
+    from Hql.Expressions import Reference
+    from .Schema import Schema
 
 '''
 Table for a structure of data, includes schema definition.
@@ -24,9 +24,10 @@ class Table():
             df:Union[pl.DataFrame, None]=None,
             series:Union[Series, None]=None,
             init_data:Union[list[dict], None]=None,
-            schema:Union[Schema, dict, None]=None,
+            schema:Union['Schema', dict, None]=None,
             name:Union[str, None]=None
         ):
+        from Hql.Data import Schema
         
         self.df:pl.DataFrame = df if isinstance(df, pl.DataFrame) else pl.DataFrame()
         
@@ -127,7 +128,7 @@ class Table():
             
         return pl.DataFrame(new)
     
-    def drop_many(self, paths:list[list[str]]):
+    def drop_many(self, paths:list['Reference']):
         for path in paths:
             self.drop(path)
         return self
@@ -152,6 +153,8 @@ class Table():
 
     @staticmethod
     def merge_rows(tables:list['Table']):
+        from Hql.Data import Schema
+
         if not tables:
             return Table()
         
@@ -216,6 +219,7 @@ class Table():
     @staticmethod
     def merge(tables:list["Table"], merge_rows=True):
         from Hql.Types.Compiler import CompilerType
+        from Hql.Data import Schema
 
         if merge_rows:
             return Table.merge_rows(tables)
@@ -279,6 +283,8 @@ class Table():
         return Table(df=df, schema=schema, name=self.name)
 
     def unnest(self, field:list[str]) -> Union[Series, 'Table']:
+        from Hql.Data import Schema
+
         if not isinstance(self.schema, Schema):
             raise hqle.CompilerException('Attempting to unnest an uninitalized table object with a None Schema')
 

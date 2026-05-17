@@ -90,9 +90,11 @@ class NamedReference(Reference):
         return [self.name]
 
     def polars(self) -> 'pl.Expr':
+        import polars as pl
         return pl.col(self.name)
 
     def polars_value(self) -> 'pl.Expr':
+        import polars as pl
         return pl.col(self.name)
 
 class Wildcard(NamedReference):
@@ -163,6 +165,7 @@ class Path(Reference):
         return [x.str() for x in self.path]
 
     def polars(self) -> 'pl.Expr':
+        import polars as pl
         expr = self.polars_value()
         for i in self.path[::-1][1:]:
             expr = pl.struct(expr).alias(i.str())

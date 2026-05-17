@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, Union, Optional
-import polars as pl
 import datetime
 
 from .__proto__ import Expression
@@ -10,6 +9,7 @@ from Hql.Expressions import Logic
 if TYPE_CHECKING:
     from Hql.Data import Series
     from Hql.Context import Context
+    import polars as pl
 
 class Literal(Expression):
     def __init__(self, hql_type:hqlt.HqlType, value:object) -> None:
@@ -20,13 +20,15 @@ class Literal(Expression):
 
     def series(self) -> 'Series':
         from Hql.Data import Series
+        import polars as pl
         series = Series(pl.Series([self.value]), self.hql_type)
         return series.cast()
 
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
+        import polars as pl
         return pl.lit(self.value).cast(self.hql_type.pl_schema())
 
-    def polars_value(self) -> pl.Expr:
+    def polars_value(self) -> 'pl.Expr':
         return self.polars()
 
     def str(self) -> str:
@@ -54,7 +56,8 @@ class TypeExpression(Literal):
             return False
         return self.hql_type == value.hql_type
     
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
+        import polars as pl
         return pl.lit(self.hql_type.pl_schema())
 
     def deparse(self) -> str:
@@ -120,6 +123,7 @@ class StringLiteral(Literal):
         return quote + cur + quote
 
     def polars(self) -> 'pl.Expr':
+        import polars as pl
         return pl.lit(self.str())
 
     def str(self) -> str:
@@ -225,6 +229,7 @@ class Bool(Logic, Literal):
 
 class Multivalue(Literal):
     def __init__(self, value:list[Literal]) -> None:
+        import polars as pl
         super_type = hqlt.resolve_conflict([x.hql_type for x in value])
 
         series = pl.Series([x.value for x in value])

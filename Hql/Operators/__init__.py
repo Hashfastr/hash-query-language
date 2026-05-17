@@ -21,7 +21,6 @@
 # ]
 
 from Hql.Operators.Operator import Operator
-from Hql.Operators.Database import Database
 
 from Hql.Operators.Where import Where
 from Hql.Operators.Project import Project, ProjectAway, ProjectKeep, ProjectReorder, ProjectRename

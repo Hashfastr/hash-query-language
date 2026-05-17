@@ -359,7 +359,9 @@ class Substring(Comparator):
     '''
     contains and has operators
     '''
-    def has(self, lh:pl.Expr, rh:Expression):
+    def has(self, lh:'pl.Expr', rh:Expression):
+        import polars as pl
+
         rh_str = pl.escape_regex(rh.str())
 
         regex = '' if self.cs else '(?i)'
@@ -370,7 +372,9 @@ class Substring(Comparator):
     '''
     prefix and suffix operators
     '''
-    def prefix(self, lh:pl.Expr, rh:Expression):
+    def prefix(self, lh:'pl.Expr', rh:Expression):
+        import polars as pl
+
         rh_str = pl.escape_regex(rh.str())
         
         regex = '' if self.cs else '(?i)'
@@ -397,7 +401,7 @@ class Substring(Comparator):
 
         return out
 
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
         if self.term:
             logging.warning('Term matching not supported in Hql-land, do not expect increased performance')
 
@@ -502,7 +506,7 @@ class Relational(Comparator):
         op += '=' if self.eq else ''
         return op
 
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
         lh = self.lh.polars()
         rh = self.rh[0].polars()
 
@@ -584,7 +588,7 @@ class BetweenEquality(Comparator):
         op = '!between' if self.neq else 'between'
         return f'{lh} {op} ({start} .. {end})'
 
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
         lh = self.lh.polars()
         start = self.start.polars()
         end = self.end.polars()
@@ -793,7 +797,9 @@ class Regex(Logic):
         rh = self.rh.deparse()
         return f'{lh} matches regex {rh}'
 
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
+        import polars as pl
+
         lh = self.lh.polars()
         rh = self.rh.str()
 
@@ -841,5 +847,5 @@ class Not(Logic):
         expr = self.expr.deparse()
         return f'not({expr})'
 
-    def polars(self) -> pl.Expr:
+    def polars(self) -> 'pl.Expr':
         return self.expr.polars().not_()
