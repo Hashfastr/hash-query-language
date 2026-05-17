@@ -1,10 +1,10 @@
 from Hql.Data import Data, Table
 from Hql.Context import Context
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from typing import Sequence, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Reference, NamedExpression
+    from Hql.Expressions.References import Reference, NamedExpression
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.

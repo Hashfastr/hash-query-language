@@ -12,7 +12,7 @@ from Hql.Helpers import can_thread
 if TYPE_CHECKING:
     from Hql.Config import Config
     from Hql.Hac import Hac
-    from Hql.Parser import SigmaParser
+    from Hql.Parser.Sigma import SigmaParser
     from Hql.Data import Data
     from Hql.Compiler import HqlCompiler
 
@@ -149,7 +149,7 @@ class Detection():
     def __init__(self, txt:str, src:str, config:'Config', no_hac:bool=False) -> None:
         import uuid
         from Hql.Parser import Parser as HqlParser
-        from Hql.Parser import SigmaParser
+        from Hql.Parser.Sigma import SigmaParser
 
         self.src = src
         self.txt = txt
@@ -190,7 +190,7 @@ class Detection():
 
     def gen_hac(self) -> tuple[Optional['Hac'], Optional['SigmaParser']]:
         from Hql.Hac import Parser as HaCParser
-        from Hql.Parser import SigmaParser
+        from Hql.Parser.Sigma import SigmaParser
 
         parser = None
         hac = None

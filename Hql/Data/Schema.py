@@ -7,7 +7,7 @@ from Hql.Types.Hql import SchemaDT
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
     from Hql.Types.Compiler import CompilerType
-    from Hql.Expressions import Reference
+    from Hql.Expressions.References import Reference
     from Hql.Types.Hql import HqlTypes as hqlt
     import polars as pl
 
@@ -72,7 +72,7 @@ class Schema():
         return iter(self.blowup_schema())
 
     def blowup_schema(self) -> list[tuple['Reference', CompilerType]]:
-        from Hql.Expressions import NamedReference, Path
+        from Hql.Expressions.References import NamedReference, Path
         
         def bs(schema:SchemaDT) -> list[tuple['Reference', CompilerType]]:
             out = []

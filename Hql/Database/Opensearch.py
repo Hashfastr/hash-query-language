@@ -7,7 +7,7 @@ from Hql.Compiler import LuceneCompiler
 from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Compiler import BranchDescriptor
     from Hql.Data import Data
     from Hql.Context import Context
@@ -72,7 +72,7 @@ class Opensearch(Database):
 
     def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Compiler import BranchDescriptor
-        from Hql.Operators import Take, Operator
+        from Hql.Operators.Take import Take, Operator
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()

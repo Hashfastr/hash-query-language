@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Optional, Sequence
-from Hql.Parser import ParseObject
+from Hql.Parser.Object import ParseObject
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression, NamedReference
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
 
 # The proto for an operator.
 # An operator is simply a operation denoted by a pipe (|).

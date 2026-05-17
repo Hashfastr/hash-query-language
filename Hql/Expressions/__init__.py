@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Union
 
 from .__proto__ import Expression
 
+'''
 from .Logic import Logic, Comparator, Equality, Substring
 from .Logic import Relational, BetweenEquality, BinaryLogic
 from .Logic import BasicRange, Regex, Not
@@ -16,9 +17,10 @@ from .Literals import Multivalue, Datetime, Null
 from .Functions import FuncProto, FuncExpr, DotFuncExpr
 
 from .Aggregation import OrderedExpression, ByExpression
+'''
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Database import Database
     from Hql.Types.Hql import HqlTypes as hqlt
     from Hql.Context import Context

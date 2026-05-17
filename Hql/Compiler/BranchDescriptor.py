@@ -4,11 +4,11 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Database import Database
     from Hql.Query import Query, Statement
     from Hql.Functions import Function
-    from Hql.Expressions import Reference
+    from Hql.Expressions.References import Reference
 
 '''
 Wraps an Expression or Operator with some tagged metadata

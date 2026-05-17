@@ -11,7 +11,7 @@ from Hql.Types.Hql import HqlTypes as hqlt
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Reference
+    from Hql.Expressions.References import Reference
     from .Schema import Schema
 
 '''

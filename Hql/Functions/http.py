@@ -2,7 +2,7 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql import Config
 from Hql.Context import register_func, Context
-from Hql.Expressions import StringLiteral
+from Hql.Expressions.Literals import StringLiteral
 from typing import Optional
 
 # This is a meta function resolved while parsing

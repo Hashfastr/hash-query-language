@@ -1,4 +1,4 @@
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Context import register_op, Context
 from typing import TYPE_CHECKING
 

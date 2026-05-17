@@ -1,4 +1,4 @@
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:

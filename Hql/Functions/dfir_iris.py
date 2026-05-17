@@ -1,4 +1,4 @@
-from Hql.Expressions import NamedExpression, NamedReference
+from Hql.Expressions.References import NamedExpression, NamedReference
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
@@ -32,8 +32,8 @@ class dfir_iris(Function):
         }
 
     def union(self, data:Data) -> Data:
-        from Hql.Operators import Union
-        from Hql.Expressions import Wildcard
+        from Hql.Operators.Union import Union
+        from Hql.Expressions.References import Wildcard
         return Union([Wildcard('*')]).eval(Context(data))
     
     def alerts(self, ctx:'Context', session:ClientSession) -> Data:

@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING, Sequence, Union
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Context import Context
 
 if TYPE_CHECKING:
     from Hql.Data import Data
-    from Hql.Expressions import NamedExpression, Reference
+    from Hql.Expressions.References import NamedExpression, Reference
 
 # Creates a field with a value in the extend
 #

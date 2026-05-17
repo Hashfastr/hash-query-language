@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
     import Hql
@@ -44,7 +44,7 @@ class Compiler():
         return None, op
     
     def add_ops(self, ops:Sequence[Union['Operator', 'BranchDescriptor']]) -> Optional[list['Operator']]:
-        from Hql.Operators import Operator
+        from Hql.Operators.Operator import Operator
 
         for idx, op in enumerate(ops):
             _, rej = self.add_op(op)
@@ -84,8 +84,8 @@ class Compiler():
         return ''
 
     def add_time_bound(self, start:Union[datetime, timedelta], end:Union[datetime, timedelta, None]=None):
-        from Hql.Operators import Where
-        from Hql.Expressions import BetweenEquality, NamedReference, Datetime
+        from Hql.Operators.Where import Where
+        from Hql.Expressions.Logic import BetweenEquality, NamedReference, Datetime
 
         if end == None:
             end = datetime.now()

@@ -1,4 +1,4 @@
-from Hql.Parser import ParseObject
+from Hql.Parser.Object import ParseObject
 
 # An expression is any grouping of other expressions
 # Typically children of an operation, an expression can also contain operators itself

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Sequence
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Data import Table
-    from Hql.Expressions import Reference
+    from Hql.Expressions.References import Reference
 
 class OrderedExpression(Expression):
     def __init__(self, expr:Expression, order:str='desc', nulls:str=''):

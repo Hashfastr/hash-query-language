@@ -1,4 +1,4 @@
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 from typing import Sequence, Union, Optional, TYPE_CHECKING
@@ -41,7 +41,7 @@ class Join(Operator):
 
     # Gets the data resulting from a compiled right side
     def get_right(self, ctx:Context) -> 'Data':
-        from Hql.Operators import Where
+        from Hql.Operators.Where import Where
         from Hql.Compiler import InstructionSet
 
         if not isinstance(self.rh, InstructionSet):
@@ -55,12 +55,12 @@ class Join(Operator):
         return self.rh.eval(ctx).data
 
     def gen_optimization(self, data:'Data') -> 'Expression':
-        from Hql.Operators import Summarize, Union
-        from Hql.Expressions import Wildcard, ByExpression
+        from Hql.Operators.Summarize import Summarize, Union
+        from Hql.Expressions.References import Wildcard, ByExpression
         from Hql.Database import Static
         from Hql.Compiler import InstructionSet
         from Hql.Data import Data
-        from Hql.Expressions import Equality, BinaryLogic
+        from Hql.Expressions.Logic import Equality, BinaryLogic
 
         ops = [
             Summarize([], ByExpression(self.on)),
@@ -83,7 +83,7 @@ class Join(Operator):
         return BinaryLogic(exprs, logic_and=False)
 
     def name_from_dict(self, data:dict) -> 'Reference':
-        from Hql.Expressions import Path, NamedReference
+        from Hql.Expressions.References import Path, NamedReference
         path = []
         while True:
             key = list(data.keys())[0]

@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING, Optional, Union
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 import datetime
 import logging
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from Hql.Data import Data
     from Hql.Context import Context
     from Hql.Compiler import BranchDescriptor
-    from Hql.Expressions import NamedReference, PipeExpression
+    from Hql.Expressions.References import NamedReference, PipeExpression
 
 class Database(Operator):
     def __init__(self, config:dict, name:str='unnamed-database'):
@@ -38,8 +38,8 @@ class Database(Operator):
         return self.compiler.add_op(op)
 
     def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple['Database', Union[None, 'Operator']]:
-        from Hql.Operators import Where
-        from Hql.Expressions import BetweenEquality, Datetime, NamedReference
+        from Hql.Operators.Where import Where
+        from Hql.Expressions.Logic import BetweenEquality, Datetime, NamedReference
 
         if not self.config.get('timeseries', True):
             # Fake consume it if we don't use it

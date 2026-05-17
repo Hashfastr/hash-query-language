@@ -6,8 +6,8 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Context import Context
-    from Hql.Expressions import StringLiteral, Reference, Literal
-    from Hql.Expressions import BinaryLogic, Bool
+    from Hql.Expressions.Literals import StringLiteral, Reference, Literal
+    from Hql.Expressions.Logic import BinaryLogic, Bool
     import polars as pl
 
 # descriptive class
@@ -88,7 +88,7 @@ class Comparator(Logic):
         return NotImplemented
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions import Literal, StringLiteral, Bool, Reference
+        from Hql.Expressions.Literals import Literal, StringLiteral, Bool, Reference
 
         if len(self.rh) > 1:
             rh = self.expand_rh().preprocess(ctx)
@@ -286,7 +286,7 @@ class Substring(Comparator):
         self.can_list = True
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions import Literal, StringLiteral, Bool, Reference
+        from Hql.Expressions.Literals import Literal, StringLiteral, Bool, Reference
 
         if len(self.rh) > 1:
             rh = self.expand_rh().preprocess(ctx)
@@ -443,7 +443,7 @@ class Relational(Comparator):
         self.can_list = False
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions import Literal, StringLiteral, Bool, Reference
+        from Hql.Expressions.Literals import Literal, StringLiteral, Bool, Reference
 
         def compare(lh, rh, op:str) -> bool:
             if op == '<':
@@ -539,7 +539,7 @@ class BetweenEquality(Comparator):
         self.neq = neq
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions import Literal, Bool, Reference
+        from Hql.Expressions.Literals import Literal, Bool, Reference
 
         def compare(lh, start, end):
             return lh.value > start.value and lh.value < end.value
@@ -610,7 +610,7 @@ class BinaryLogic(Logic):
     # immediately break down if there's only 1 expr
     # and short circuit some logic
     def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Union[Logic, 'Bool']:
-        from Hql.Expressions import Bool
+        from Hql.Expressions.Literals import Bool
 
         if len(exprs) == 0:
             raise hqle.CompilerException('BinaryLogic given no expressions!')
@@ -810,7 +810,7 @@ class Regex(Logic):
         return lh.str.contains(rh)
 
     def preprocess(self, ctx: Context) -> object:
-        from Hql.Expressions import Reference, Bool, StringLiteral
+        from Hql.Expressions.References import Reference, Bool, StringLiteral
 
         lh = self.lh.preprocess(ctx)
         assert isinstance(lh, Expression)

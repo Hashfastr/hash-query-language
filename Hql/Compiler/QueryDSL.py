@@ -7,7 +7,7 @@ import json
 
 if TYPE_CHECKING:
     import Hql
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
     from Hql.Compiler import BranchDescriptor
@@ -45,7 +45,7 @@ class QueryDSLCompiler(Compiler):
         return out
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
-        from Hql.Operators import Where
+        from Hql.Operators.Where import Where
         from Hql.Compiler import BranchDescriptor
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
@@ -60,8 +60,8 @@ class QueryDSLCompiler(Compiler):
         return acc, rej
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[Union[None, 'Hql.Operators.Where', dict], Union[None, 'Hql.Operators.Where', dict]]:
-        from Hql.Operators import Where
-        from Hql.Expressions import BinaryLogic, Expression
+        from Hql.Operators.Where import Where
+        from Hql.Expressions.Logic import BinaryLogic, Expression
 
         acc, rej = self.compile(op.expr, preprocess=preprocess)
 
@@ -89,7 +89,7 @@ class QueryDSLCompiler(Compiler):
         return acc, rej
         
     def BinaryLogic(self, expr: 'Hql.Expressions.BinaryLogic', preprocess: bool = True) -> tuple[Union[None, 'Hql.Expressions.BinaryLogic', dict], Union[None, 'Hql.Expressions.BinaryLogic']]:
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         if preprocess:
             rejs = []
@@ -141,7 +141,7 @@ class QueryDSLCompiler(Compiler):
         return ret, None
 
     def Not(self, expr: 'Hql.Expressions.Not', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Not, Expression
+        from Hql.Expressions.Logic import Not, Expression
 
         if preprocess:
             acc, rej = self.compile(expr.expr)
@@ -165,7 +165,7 @@ class QueryDSLCompiler(Compiler):
         return out, None
 
     def Equality(self, expr: 'Hql.Expressions.Equality', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Equality, Expression, Not
+        from Hql.Expressions.Logic import Equality, Expression, Not
 
         if preprocess:
             # if expr.cs:
@@ -282,7 +282,7 @@ class QueryDSLCompiler(Compiler):
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ"), None
 
     def Multivalue(self, expr: 'Hql.Expressions.Multivalue', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Multivalue
+        from Hql.Expressions.Literals import Multivalue
 
         exprs = []
         for i in expr.value:
@@ -311,7 +311,7 @@ class QueryDSLCompiler(Compiler):
         return expr.name, None
 
     def Path(self, expr: 'Hql.Expressions.Path', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Path
+        from Hql.Expressions.References import Path
         if preprocess:
             parts = []
             for i in expr.path:
@@ -332,7 +332,7 @@ class QueryDSLCompiler(Compiler):
         return '.'.join(parts), None
 
     def Relational(self, expr: 'Hql.Expressions.Relational', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Relational, Expression, StringLiteral
+        from Hql.Expressions.Logic import Relational, Expression, StringLiteral
         if preprocess:
             if expr.op not in ('<', '>', '<=', '>='):
                 return None, expr
@@ -385,7 +385,7 @@ class QueryDSLCompiler(Compiler):
         return ret, None
 
     def BetweenEquality(self, expr: 'Hql.Expressions.BetweenEquality', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import BetweenEquality, Expression, BasicRange
+        from Hql.Expressions.Logic import BetweenEquality, Expression, BasicRange
 
         if preprocess:
             acc, rej = self.compile(expr.lh)
@@ -428,7 +428,7 @@ class QueryDSLCompiler(Compiler):
         return ret, None
 
     def BasicRange(self, expr: 'Hql.Expressions.BasicRange', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import BasicRange, Expression
+        from Hql.Expressions.Logic import BasicRange, Expression
         if preprocess:
             acc, rej = self.compile(expr.start)
             if rej:
@@ -459,7 +459,7 @@ class QueryDSLCompiler(Compiler):
         return {'gte': start, 'lte': end}, None
 
     def Regex(self, expr: 'Hql.Expressions.Regex', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Regex, Expression, StringLiteral
+        from Hql.Expressions.Logic import Regex, Expression, StringLiteral
 
         if preprocess:
             # No flags supported
@@ -508,8 +508,8 @@ class QueryDSLCompiler(Compiler):
         return ret, None
 
     def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Substring, Expression, StringLiteral, Regex
-        from Hql.Expressions import NamedReference, Path
+        from Hql.Expressions.Logic import Substring, Expression, StringLiteral, Regex
+        from Hql.Expressions.References import NamedReference, Path
         import re
 
         if preprocess:

@@ -41,7 +41,7 @@ class Visitor(SigmaVisitor):
         return self.visit(ctx.Statement)
 
     def visitOrStatement(self, ctx: SigmaParser.OrStatementContext):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         lh = self.visit(ctx.Left)
 
@@ -55,7 +55,7 @@ class Visitor(SigmaVisitor):
         return BinaryLogic(lh, rh, 'or')
 
     def visitAndStatement(self, ctx: SigmaParser.AndStatementContext):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         lh = self.visit(ctx.Left)
 
@@ -69,7 +69,7 @@ class Visitor(SigmaVisitor):
         return BinaryLogic(lh, rh, 'and')
 
     def visitNotStatement(self, ctx: SigmaParser.NotStatementContext):
-        from Hql.Expressions import FuncExpr
+        from Hql.Expressions.Functions import FuncExpr
         inner = self.visit(ctx.Statement)
         return FuncExpr('not', [inner])
 
@@ -77,7 +77,7 @@ class Visitor(SigmaVisitor):
         return self.visit(ctx.Statement)
 
     def visitOfStatement(self, ctx: SigmaParser.OfStatementContext):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         specifier = self.visit(ctx.Specifier)
 

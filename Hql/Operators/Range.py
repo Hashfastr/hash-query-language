@@ -1,11 +1,11 @@
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Data import Data, Table, Schema
 from Hql.PolarsTools import pltools
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_op
 import polars as pl
 import numpy as np
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 
 from typing import TYPE_CHECKING
 

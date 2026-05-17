@@ -14,9 +14,9 @@ from elasticsearch import Elasticsearch as ES
 from elasticsearch import AuthenticationException as ESAuthExcept
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Compiler import BranchDescriptor
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions.References import NamedReference
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Elasticsearch')
@@ -93,7 +93,7 @@ class Elasticsearch(Database):
     def compile(self) -> tuple[dict, list['Operator']]:
         from Hql.Compiler import HqlCompiler
         from Hql.Config import Config
-        from Hql.Operators import Where
+        from Hql.Operators.Where import Where
         import copy
 
         compiler = copy.deepcopy(self.compiler)
@@ -144,7 +144,7 @@ class Elasticsearch(Database):
 
     def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Compiler import BranchDescriptor
-        from Hql.Operators import Take, Operator
+        from Hql.Operators.Take import Take, Operator
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()

@@ -1,9 +1,9 @@
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions.References import NamedReference
     from Hql.Context import Context
 
 # Count simply returns the number of rows given by a record set.

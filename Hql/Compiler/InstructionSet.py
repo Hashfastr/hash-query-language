@@ -8,7 +8,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 import polars.exceptions as ple
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Database import Database
     from Hql.Compiler import BranchDescriptor
     from Hql.Config import Config
@@ -34,7 +34,7 @@ class InstructionSet():
         return not (self.upstream or self.ops)
 
     def to_dict(self):
-        from Hql.Operators import Join
+        from Hql.Operators.Join import Join
 
         ops = []
         for i in self.ops:

@@ -15,7 +15,7 @@ class Functions(HqlVisitor):
     myfunc().Name
     '''
     def visitFunctionCallOrPathPathExpression(self, ctx: HqlParser.FunctionCallOrPathPathExpressionContext):
-        from Hql.Expressions import Path
+        from Hql.Expressions.References import Path
         path = []
         
         expr = self.visit(ctx.Expression)
@@ -37,7 +37,7 @@ class Functions(HqlVisitor):
     The basic function call
     '''
     def visitFunctionCallExpression(self, ctx: HqlParser.FunctionCallExpressionContext):
-        from Hql.Expressions import FuncExpr
+        from Hql.Expressions.Functions import FuncExpr
         expr = FuncExpr(self.visit(ctx.Name))
         
         for i in ctx.Arguments:
@@ -49,7 +49,7 @@ class Functions(HqlVisitor):
     Pure path of functions
     '''
     def visitDotCompositeFunctionCallExpression(self, ctx: HqlParser.DotCompositeFunctionCallExpressionContext):
-        from Hql.Expressions import DotFuncExpr
+        from Hql.Expressions.Functions import DotFuncExpr
         funcs = [self.visit(ctx.Call)]
                 
         for i in ctx.Operations:

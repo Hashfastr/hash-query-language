@@ -6,7 +6,7 @@ import logging
 
 if TYPE_CHECKING:
     import Hql
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
     from Hql.Compiler import BranchDescriptor
@@ -29,7 +29,7 @@ class LuceneCompiler(Compiler):
         self.expr:Union['Expression', None] = None
 
     def compile(self, src: Union['Expression', 'Operator', 'Statement', None], preprocess: bool = True) -> tuple[Union[object, None], Union[object, None]]:
-        from Hql.Expressions import Bool
+        from Hql.Expressions.Literals import Bool
 
         if src == None:
             src = self.expr
@@ -44,7 +44,7 @@ class LuceneCompiler(Compiler):
         return out
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
-        from Hql.Operators import Where
+        from Hql.Operators.Where import Where
         from Hql.Compiler import BranchDescriptor
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
@@ -59,8 +59,8 @@ class LuceneCompiler(Compiler):
         return acc, rej
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[Union[None, 'Hql.Operators.Where', str], Union[None, 'Hql.Operators.Where', str]]:
-        from Hql.Operators import Where
-        from Hql.Expressions import BinaryLogic, Expression
+        from Hql.Operators.Where import Where
+        from Hql.Expressions.Logic import BinaryLogic, Expression
 
         acc, rej = self.compile(op.expr, preprocess=preprocess)
 
@@ -88,7 +88,7 @@ class LuceneCompiler(Compiler):
         return acc, rej
         
     def BinaryLogic(self, expr: 'Hql.Expressions.BinaryLogic', preprocess: bool = True) -> tuple[Union[None, 'Hql.Expressions.BinaryLogic', str], Union[None, 'Hql.Expressions.BinaryLogic', str]]:
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         if preprocess:
             rejs = []
@@ -130,7 +130,7 @@ class LuceneCompiler(Compiler):
         return f'({ret})', None
 
     def Not(self, expr: 'Hql.Expressions.Not', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Not, Expression
+        from Hql.Expressions.Logic import Not, Expression
 
         if preprocess:
             acc, rej = self.compile(expr.expr)
@@ -143,7 +143,7 @@ class LuceneCompiler(Compiler):
         return f'(NOT {inner})', None
 
     def Equality(self, expr: 'Hql.Expressions.Equality', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Equality, Expression
+        from Hql.Expressions.Logic import Equality, Expression
 
         if preprocess:
             if expr.cs:
@@ -246,7 +246,7 @@ class LuceneCompiler(Compiler):
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ"), None
 
     def Multivalue(self, expr: 'Hql.Expressions.Multivalue', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Multivalue
+        from Hql.Expressions.Literals import Multivalue
 
         exprs = []
         for i in expr.value:
@@ -275,7 +275,7 @@ class LuceneCompiler(Compiler):
         return f'{expr.name}', None
 
     def Path(self, expr: 'Hql.Expressions.Path', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Path
+        from Hql.Expressions.References import Path
         if preprocess:
             parts = []
             for i in expr.path:
@@ -296,7 +296,7 @@ class LuceneCompiler(Compiler):
         return '.'.join(parts), None
 
     def Relational(self, expr: 'Hql.Expressions.Relational', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Relational, Expression, StringLiteral
+        from Hql.Expressions.Logic import Relational, Expression, StringLiteral
         if preprocess:
             if expr.op not in ('<', '>', '<=', '>='):
                 return None, expr
@@ -330,7 +330,7 @@ class LuceneCompiler(Compiler):
         return f'{lh}:{expr.op}{rh}', None
 
     def BetweenEquality(self, expr: 'Hql.Expressions.BetweenEquality', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import BetweenEquality, Expression
+        from Hql.Expressions.Logic import BetweenEquality, Expression
 
         if preprocess:
             acc, rej = self.compile(expr.lh)
@@ -378,7 +378,7 @@ class LuceneCompiler(Compiler):
         return ret, None
 
     def BasicRange(self, expr: 'Hql.Expressions.BasicRange', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import BasicRange, Expression
+        from Hql.Expressions.Logic import BasicRange, Expression
         if preprocess:
             acc, rej = self.compile(expr.start)
             if rej:
@@ -409,7 +409,7 @@ class LuceneCompiler(Compiler):
         return f'[{start} TO {end}]', None
 
     def Regex(self, expr: 'Hql.Expressions.Regex', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Regex, Expression, StringLiteral
+        from Hql.Expressions.Logic import Regex, Expression, StringLiteral
 
         if preprocess:
             # No flags supported
@@ -449,8 +449,8 @@ class LuceneCompiler(Compiler):
         return f'{lh}:/{rh}/', None
 
     def Substring(self, expr: 'Hql.Expressions.Substring', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions import Substring, Expression, StringLiteral, Regex
-        from Hql.Expressions import Path, NamedReference
+        from Hql.Expressions.Logic import Substring, Expression, StringLiteral, Regex
+        from Hql.Expressions.References import Path, NamedReference
         import re
 
         if preprocess:

@@ -1,9 +1,9 @@
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Context import register_op, Context
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Expressions import OrderedExpression
+    from Hql.Expressions.Aggregation import OrderedExpression
 
 class Sort(Operator):
     def __init__(self, exprs:list['OrderedExpression']):

@@ -3,9 +3,9 @@ from Hql.Exceptions import HqlExceptions as hqle
 import json
 
 if TYPE_CHECKING:
-    from Hql.Operators import Project, Where, Take, Join
+    from Hql.Operators.Project import Project, Where, Take, Join
     from Hql.Compiler import SqlCompiler
-    from Hql.Expressions import NamedReference, Path
+    from Hql.Expressions.References import NamedReference, Path
 
 class SqlStatement():
     def __init__(self) -> None:
@@ -85,7 +85,7 @@ class SELECT(SqlStatement):
         )
 
     def collapse_join(self) -> tuple[Union['SqlStatement', 'NamedReference', None], list['Join']]:
-        from Hql.Operators import Join
+        from Hql.Operators.Join import Join
         from Hql.Compiler import InstructionSet
 
         if not self.join_only():
@@ -159,7 +159,7 @@ class SELECT(SqlStatement):
 
 class JOIN(SqlStatement):
     def __init__(self, joins:list['Join']) -> None:
-        from Hql.Expressions import NamedReference
+        from Hql.Expressions.References import NamedReference
         SqlStatement.__init__(self)
         self.lname = NamedReference(self.random_label())
         self.joins:list['Join'] = joins
@@ -187,9 +187,9 @@ class JOIN(SqlStatement):
 
     def collapse_join(self, join:'Join') -> list['Join']:
         from Hql.Compiler import InstructionSet, SqlCompiler
-        from Hql.Operators import Join
+        from Hql.Operators.Join import Join
         from Hql.Operators.Database import SQLite, Database
-        from Hql.Expressions import NamedReference
+        from Hql.Expressions.References import NamedReference
 
         if isinstance(join.rh, NamedReference):
             return [join]
@@ -228,8 +228,8 @@ class JOIN(SqlStatement):
 
     def compile_join(self, op:'Join', compiler:'SqlCompiler') -> str:
         from Hql.Compiler import InstructionSet, SqlCompiler
-        from Hql.Operators import Where
-        from Hql.Expressions import BinaryLogic, Path, FuncExpr, NamedReference, Equality
+        from Hql.Operators.Where import Where
+        from Hql.Expressions.Logic import BinaryLogic, Path, FuncExpr, NamedReference, Equality
         from Hql.Operators.Database import Database
 
         rname = NamedReference(self.random_label())

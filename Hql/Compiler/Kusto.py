@@ -7,7 +7,7 @@ from . import Compiler
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
     import Hql
@@ -88,8 +88,8 @@ class KustoCompiler(Compiler):
     '''
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Operators import Where
-        from Hql.Expressions import Logic
+        from Hql.Operators.Where import Where
+        from Hql.Expressions.Logic import Logic
 
         if preprocess:
             expr, _ = self.compile_expr(op.expr)

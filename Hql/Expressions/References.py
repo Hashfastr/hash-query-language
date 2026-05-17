@@ -102,7 +102,7 @@ class Wildcard(NamedReference):
         
 class EscapedNamedReference(NamedReference):
     def deparse(self) -> str:
-        from Hql.Expressions import StringLiteral
+        from Hql.Expressions.Literals import StringLiteral
         return "[" + StringLiteral(self.name).quote("'") + "]"
 
 # Why again?
@@ -289,7 +289,7 @@ class NamedExpression(Expression):
         return self.value.polars()
 
     def eval(self, ctx:'Context', insert:bool=True, unnest:bool=True) -> 'Context':
-        from Hql.Expressions import Literal
+        from Hql.Expressions.Literals import Literal
         from Hql.Data import Data
         from Hql.Context import Context
         ctx = ctx.copy()

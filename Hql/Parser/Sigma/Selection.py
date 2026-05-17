@@ -18,7 +18,7 @@ class Selection():
         self.fields = []
 
     def build_selection(self):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
         exprs = []
 
         if isinstance(self.selection, list):
@@ -91,7 +91,7 @@ class Selection():
         return Substring(lh, op, exprs)
 
     def cidr(self, name:'Expr.NamedReference', field:list):
-        from Hql.Expressions import Equality
+        from Hql.Expressions.Logic import Equality
 
         exprs = []
         for i in field:
@@ -112,7 +112,7 @@ class Selection():
             return Equality(name, 'in', exprs)
 
     def relational(self, name:'Expr.NamedReference', modifiers:list[str], field:list):
-        from Hql.Expressions import Relational
+        from Hql.Expressions.Logic import Relational
 
         exprs = []
         for i in field:
@@ -134,7 +134,7 @@ class Selection():
         return Relational(name, op, exprs)
 
     def fieldref(self, name:'Expr.NamedReference', field:list):
-        from Hql.Expressions import NamedReference, Equality
+        from Hql.Expressions.References import NamedReference, Equality
 
         exprs = []
         for i in field:
@@ -146,8 +146,8 @@ class Selection():
             return Equality(name, 'in', exprs)
 
     def regex(self, name:'Expr.NamedReference', modifiers:list[str], field:list):
-        from Hql.Expressions import Regex
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import Regex
+        from Hql.Expressions.Logic import BinaryLogic
 
         patterns = []
         for i in field:
@@ -168,7 +168,7 @@ class Selection():
         return BinaryLogic(name, exprs, 'or')
 
     def equality(self, name:'Expr.NamedReference', field:list):
-        from Hql.Expressions import Equality, BinaryLogic, Expression
+        from Hql.Expressions.Logic import Equality, BinaryLogic, Expression
 
         rhs = []
         other = []

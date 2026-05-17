@@ -2,8 +2,8 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Series, Table, Schema
-from Hql.Operators import Union
-from Hql.Expressions import Wildcard, NamedReference, NamedExpression, StringLiteral
+from Hql.Operators.Union import Union
+from Hql.Expressions.References import Wildcard, NamedReference, NamedExpression, StringLiteral
 from Hql.Hac import Hac
 import requests
 import json

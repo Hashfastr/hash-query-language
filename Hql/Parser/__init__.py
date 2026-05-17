@@ -12,16 +12,12 @@ from Hql.Parser.Functions import Functions as ParseFunctions
 from Hql.Parser.Operators import Operators as ParseOperators
 from Hql.Parser.Logic import Logic as ParseLogic
 
-from Hql.Parser.Sigma import SigmaParser
-
-from Hql.Parser.Object import ParseObject
-
 import logging
 from typing import Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Query import Query, Statement
 
 class HqlErrorListener(ErrorListener):

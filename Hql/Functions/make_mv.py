@@ -3,7 +3,7 @@ from Hql.Expressions import Expression
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Series, Table, Schema
 from Hql.Types.Hql import HqlTypes as hqlt
-from Hql.Operators import Project
+from Hql.Operators.Project import Project
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import Optional
 

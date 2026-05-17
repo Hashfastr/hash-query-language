@@ -7,7 +7,7 @@ from pathlib import Path
 if TYPE_CHECKING:
     from Hql.Config import Config
     from Hql.Data import Data
-    from Hql.Operators import Database
+    from Hql.Operators.Database import Database
     from Hql.Compiler import InstructionSet
     from Hql.Context import Context
     from Hql.Hac.Engine import Detection

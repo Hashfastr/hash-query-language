@@ -4,7 +4,7 @@ import datetime
 from .__proto__ import Expression
 from Hql.Types.Hql import HqlTypes as hqlt
 
-from Hql.Expressions import Logic
+from Hql.Expressions.Logic import Logic
 
 if TYPE_CHECKING:
     from Hql.Data import Series
@@ -83,7 +83,7 @@ class StringLiteral(Literal):
         return value.value == self.value
 
     def cmp(self, value:Expression, cs:bool=True):
-        from Hql.Expressions import StringLiteral
+        from Hql.Expressions.Literals import StringLiteral
 
         if cs or not isinstance(value, StringLiteral):
             return self == value

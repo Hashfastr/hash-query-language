@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
-    from Hql.Expressions import NamedReference, StringLiteral
+    from Hql.Expressions.References import NamedReference, StringLiteral
     from Hql.Compiler import SqlCompiler
 
 class SqlExpression():

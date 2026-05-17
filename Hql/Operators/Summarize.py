@@ -2,10 +2,10 @@ from typing import TYPE_CHECKING
 from Hql.Expressions import Expression
 from Hql.Data import Schema, Data, Table
 from Hql.Context import register_op, Context
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
-    from Hql.Expressions import ByExpression
+    from Hql.Expressions.Aggregation import ByExpression
 
 # @register_op('Summarize')
 class Summarize(Operator):

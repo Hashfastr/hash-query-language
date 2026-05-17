@@ -1,5 +1,5 @@
 from typing import Optional
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Expressions import Expression
 from Hql.Context import register_op, Context
 from Hql.Exceptions import HqlExceptions as hqle

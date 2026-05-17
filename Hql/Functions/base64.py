@@ -5,14 +5,14 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Functions import Function
 
 if TYPE_CHECKING:
-    from Hql.Expressions import StringLiteral
+    from Hql.Expressions.Literals import StringLiteral
     from Hql.Context import Context
 
 @register_func('base64')
 @register_func('b64')
 class base64enc(Function):
     def __init__(self, args: list, conf:Optional[dict]=None):
-        from Hql.Expressions import StringLiteral, Reference
+        from Hql.Expressions.Literals import StringLiteral, Reference
         Function.__init__(self, args, 1, 2, conf=conf)
 
         for i in args:
@@ -23,7 +23,7 @@ class base64enc(Function):
         self.enc = args[0] if len(args) == 2 else StringLiteral('ascii')
 
     def preprocess(self, ctx: 'Context', receiver=None) -> object:
-        from Hql.Expressions import StringLiteral
+        from Hql.Expressions.Literals import StringLiteral
 
         def static(val:str, enc:str) -> 'StringLiteral':
             from base64 import b64encode
@@ -52,7 +52,7 @@ class base64enc(Function):
 @register_func('b64dec')
 class base64dec(Function):
     def __init__(self, args:list['Expression']):
-        from Hql.Expressions import StringLiteral, NamedReference, Path
+        from Hql.Expressions.Literals import StringLiteral, NamedReference, Path
         Function.__init__(self, args, 1, 2)
 
         if isinstance(args[0], StringLiteral):
@@ -95,7 +95,7 @@ class base64dec(Function):
 @register_func('b64off')
 class base64off(Function):
     def __init__(self, args: list):
-        from Hql.Expressions import StringLiteral, NamedReference, Path
+        from Hql.Expressions.Literals import StringLiteral, NamedReference, Path
         Function.__init__(self, args, 1, 2)
 
         if isinstance(args[0], StringLiteral):
@@ -116,7 +116,7 @@ class base64off(Function):
 
     def calc_offset(self, val:str, encoding:str) -> list[StringLiteral]:
         from base64 import b64encode
-        from Hql.Expressions import StringLiteral
+        from Hql.Expressions.Literals import StringLiteral
         
         start_offsets = (0, 2, 3)
         end_offsets = (None, -3, -2)

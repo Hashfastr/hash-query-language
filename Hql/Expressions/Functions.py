@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Union
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Functions import Function, DotCompositeFunction
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions.References import NamedReference
 
 class FuncProto(Expression):
     ...

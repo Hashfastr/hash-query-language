@@ -17,7 +17,7 @@ class tolower(Function):
             self.src = pl.Series([self.src.value]).str.to_lowercase()
         
     def eval(self, ctx:'Context', **kwargs):
-        from Hql.Expressions import StringLiteral
+        from Hql.Expressions.Literals import StringLiteral
         from Hql.Types.Hql import HqlTypes as hqlt
         
         if isinstance(self.src, pl.Series):

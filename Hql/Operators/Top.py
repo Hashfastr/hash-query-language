@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Data import Data
 from Hql.Expressions import Expression
 from Hql.Exceptions import HqlExceptions as hqle
@@ -7,7 +7,7 @@ from Hql.Context import register_op, Context
 import polars as pl
 
 if TYPE_CHECKING:
-    from Hql.Expressions import ByExpression
+    from Hql.Expressions.Aggregation import ByExpression
 
 '''
 Give the top, or bottom, x values for a given field in a dataframe

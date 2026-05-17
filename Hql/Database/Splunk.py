@@ -10,9 +10,9 @@ import json
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Compiler import BranchDescriptor
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions.References import NamedReference
 
 # Index in a database to grab data from, extremely simple.
 @register_database('Splunk')
@@ -63,8 +63,8 @@ class Splunk(Database):
         }
 
     def compile(self) -> str:
-        from Hql.Operators import Take, Where
-        from Hql.Expressions import Integer, BinaryLogic, StringLiteral, NamedReference, PipeExpression
+        from Hql.Operators.Take import Take, Where
+        from Hql.Expressions.Literals import Integer, BinaryLogic, StringLiteral, NamedReference, PipeExpression
         from Hql.Compiler import HqlCompiler
         from Hql.Config import Config
         import copy

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from Hql.Expressions import Expression
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Context import register_op, Context
 
 if TYPE_CHECKING:

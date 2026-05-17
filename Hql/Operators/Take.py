@@ -1,4 +1,4 @@
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Data import Data
 from Hql.Expressions import Expression
 from Hql.Exceptions import HqlExceptions as hqle

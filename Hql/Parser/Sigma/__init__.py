@@ -77,7 +77,7 @@ class SigmaParser():
 
     def gen_src(self, src:dict) -> 'DotCompositeFunction':
         from Hql.Expressions import DotCompositeFunction
-        from Hql.Expressions import FuncExpr, StringLiteral
+        from Hql.Expressions.Functions import FuncExpr, StringLiteral
 
         '''
         Category can contain a set of product/service combos
@@ -97,7 +97,7 @@ class SigmaParser():
         return DotCompositeFunction(funcs)
 
     def parse_dac(self, dac:dict):
-        from Hql.Operators import Where
+        from Hql.Operators.Where import Where
 
         selections = []
         for i in dac:

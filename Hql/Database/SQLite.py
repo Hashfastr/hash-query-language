@@ -10,9 +10,9 @@ from pathlib import Path
 
 if TYPE_CHECKING:
     from Hql.Data import Data
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Compiler import BranchDescriptor
-    from Hql.Expressions import NamedReference
+    from Hql.Expressions.References import NamedReference
 
 @register_database('SQLite')
 class SQLite(Database):
@@ -36,7 +36,7 @@ class SQLite(Database):
         self.projected = False
 
     def add_index(self, index:str):
-        from Hql.Expressions import NamedReference
+        from Hql.Expressions.References import NamedReference
         self.get_variable(NamedReference(index))
 
     def get_variable(self, name:'NamedReference') -> 'SQLite':
@@ -49,7 +49,7 @@ class SQLite(Database):
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         from Hql.Compiler import BranchDescriptor
-        from Hql.Operators import Project
+        from Hql.Operators.Project import Project
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
@@ -64,8 +64,8 @@ class SQLite(Database):
         return op, None
 
     def compile(self) -> str:
-        from Hql.Operators import Take
-        from Hql.Expressions import Integer
+        from Hql.Operators.Take import Take
+        from Hql.Expressions.Literals import Integer
         import copy
 
         if self.limit > 0:
@@ -90,8 +90,8 @@ class SQLite(Database):
 
     def eval(self, ctx:'Context', **kwargs) -> 'Data':
         from Hql.Data import Data, Table
-        from Hql.Operators import Take, Project
-        from Hql.Expressions import Integer, NamedReference
+        from Hql.Operators.Take import Take, Project
+        from Hql.Expressions.Literals import Integer, NamedReference
         import copy
         self.ctx = ctx
         

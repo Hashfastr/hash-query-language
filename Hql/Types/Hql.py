@@ -9,7 +9,7 @@ from Hql.Types.Compiler import CompilerType
 if TYPE_CHECKING:
     from Hql.Data import Series
     from Hql.Expressions.Literals import Integer, StringLiteral
-    from Hql.Expressions import Reference
+    from Hql.Expressions.References import Reference
 
 type SchemaDT = Mapping[str, Union['HqlTypes.HqlType', dict]]
 
@@ -394,7 +394,7 @@ class HqlTypes():
             return len(self.schema)
 
         def __getitem__(self, key:'Reference'):
-            from Hql.Expressions import Path
+            from Hql.Expressions.References import Path
 
             def get(data:SchemaDT, key:'Reference'):
                 base = key[0]

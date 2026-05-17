@@ -13,7 +13,7 @@ from ..Compiler import Compiler
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Operators.Database import Database
     from Hql.Query import Statement
     import Hql
@@ -26,7 +26,7 @@ class SqlCompiler(Compiler):
         from Hql.Data import Data
         from Hql.Compiler import HqlCompiler
         from Hql.Config import Config
-        from Hql.Expressions import Wildcard
+        from Hql.Expressions.References import Wildcard
         self.type = self.__class__.__name__
         self.ctx = Context(Data())
         self.vestigial_compiler = HqlCompiler(Config())
@@ -44,7 +44,7 @@ class SqlCompiler(Compiler):
     @override
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional[SqlStatement], Optional['Operator']]:
         from Hql.Compiler import BranchDescriptor
-        from Hql.Operators import Operator, Join
+        from Hql.Operators.Operator import Operator, Join
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
@@ -91,7 +91,7 @@ class SqlCompiler(Compiler):
     '''
 
     def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Operators import Where
+        from Hql.Operators.Where import Where
         from Hql.Expressions import Expression, BinaryLogic
 
         if preprocess:
@@ -118,7 +118,7 @@ class SqlCompiler(Compiler):
         return self.compile(op.expr, preprocess=False)
 
     def Project(self, op:'Hql.Operators.Project', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Operators import Project
+        from Hql.Operators.Project import Project
         from Hql.Expressions import Expression
         
         if preprocess:
@@ -281,7 +281,7 @@ class SqlCompiler(Compiler):
         return None, expr
 
     def Equality(self, expr:'Hql.Expressions.Equality', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import Equality, Expression
+        from Hql.Expressions.Logic import Equality, Expression
 
         if preprocess:
             acc, rej = self.compile(expr.lh)
@@ -325,9 +325,9 @@ class SqlCompiler(Compiler):
         return val, None
 
     def Substring(self, expr:'Hql.Expressions.Substring', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import Substring, NamedReference
-        from Hql.Expressions import Integer, Float, StringLiteral
-        from Hql.Expressions import Regex
+        from Hql.Expressions.Logic import Substring, NamedReference
+        from Hql.Expressions.Literals import Integer, Float, StringLiteral
+        from Hql.Expressions.Logic import Regex
 
         if preprocess:
             if expr.term:
@@ -372,7 +372,7 @@ class SqlCompiler(Compiler):
         return None, expr
 
     def BetweenEquality(self, expr:'Hql.Expressions.BetweenEquality', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import Literal, NamedReference, BetweenEquality
+        from Hql.Expressions.Literals import Literal, NamedReference, BetweenEquality
 
         if preprocess:
             acc, rej = self.compile(expr.lh)
@@ -400,7 +400,7 @@ class SqlCompiler(Compiler):
         return val, None
 
     def BinaryLogic(self, expr:'Hql.Expressions.BinaryLogic', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         if preprocess:
             accs = []
@@ -464,7 +464,7 @@ class SqlCompiler(Compiler):
         return None, expr
 
     def Regex(self, expr:'Hql.Expressions.Regex', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import NamedReference, StringLiteral, Regex
+        from Hql.Expressions.References import NamedReference, StringLiteral, Regex
 
         if preprocess:
             acc, rej = self.compile(expr.lh)
@@ -541,7 +541,7 @@ class SqlCompiler(Compiler):
         return None, expr
 
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import NamedReference, Path
+        from Hql.Expressions.References import NamedReference, Path
 
         if preprocess:
             path = []

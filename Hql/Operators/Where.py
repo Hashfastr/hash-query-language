@@ -1,5 +1,5 @@
 from numpy import isin
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 import logging
@@ -31,14 +31,14 @@ class Where(Operator):
 
     @expr.setter
     def expr(self, value:Optional['Expression']) -> None:
-        from Hql.Expressions import Logic
+        from Hql.Expressions.Logic import Logic
 
         if value is None or not isinstance(value, Logic):
             raise hqle.CompilerException('Setting Where expression to non-Logic')
         self._expr = value
 
     def deparse(self) -> str:
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         out = 'where '
 
@@ -53,7 +53,7 @@ class Where(Operator):
         return out
 
     def split_by_length(self, max_length:int=80) -> list[Where]:
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         expr = self.expr
         if max_length < 0 or not isinstance(expr, BinaryLogic):
@@ -65,7 +65,7 @@ class Where(Operator):
         
 
     def integrate(self, op: 'Operator'):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         if not isinstance(op, Where):
             return op

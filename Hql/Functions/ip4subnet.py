@@ -2,7 +2,7 @@ from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
 from Hql.Types.Hql import HqlTypes as hqlt
-from Hql.Expressions import BasicRange, Integer
+from Hql.Expressions.Logic import BasicRange, Integer
 from typing import Optional
 
 import polars as pl

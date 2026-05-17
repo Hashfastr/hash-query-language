@@ -1,10 +1,10 @@
 from Hql.Operators.Operator import Operator
 
-from Hql.Expressions import NamedReference, Literal
+from Hql.Expressions.References import NamedReference, Literal
 from Hql.Data import Data, Table, Schema
 from Hql.Context import Context
 import polars as pl
-from Hql.Operators import Operator
+from Hql.Operators.Operator import Operator
 from Hql.Types.Hql import HqlTypes
 
 from typing import Optional
