@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Sequence, Union
+from Hql.Exceptions import HqlExceptions as hqle
 
 from .__proto__ import Expression
 
@@ -24,15 +25,35 @@ if TYPE_CHECKING:
     from Hql.Database import Database
     from Hql.Types.Hql import HqlTypes as hqlt
     from Hql.Context import Context
+    from Hql.Expressions.References import Reference
+    from Hql.Expressions.Literals import TypeExpression 
+    from Hql.Expressions.Functions import Function, DotCompositeFunction
 
 class PipeExpression(Expression):
-    def __init__(self, pipes:list['Operator'], prepipe:Union['Database', 'Expression', None]=None):
+    def __init__(self, pipes:list['Operator'], prepipe:Union['Function', 'DotCompositeFunction', 'Database', Expression, None]=None):
         Expression.__init__(self)
-        self.prepipe                = prepipe
-        self.pipes:list['Operator'] = pipes
+        self.prepipe                    = prepipe
+        self.pipes:Sequence['Operator'] = pipes
 
     def __bool__(self):
         return bool(self.prepipe) or bool(self.pipes)
+
+    def preprocess(self, ctx: Context) -> 'PipeExpression':
+        from Hql.Expressions.Functions import Function, DotCompositeFunction
+        from Hql.Database import Database
+
+        pipes = []
+        for i in self.pipes:
+            pipes.append(i.preprocess(ctx))
+        self.pipes = pipes
+
+        if self.prepipe:
+            prepipe = self.prepipe.preprocess(ctx)
+            if not isinstance(prepipe, (Function, DotCompositeFunction, Database, Expression)):
+                raise hqle.QueryException(f'Invalid prepipe following preprocess: {type(prepipe)}')
+            self.prepipe = prepipe
+
+        return self
         
     def to_dict(self):
         d:dict = {
@@ -59,7 +80,7 @@ class PipeExpression(Expression):
         return out
 
 class OpParameter(Expression):
-    def __init__(self, name:Reference, value:Expression):
+    def __init__(self, name:'Reference', value:Expression):
         Expression.__init__(self)
         self.name = name
         self.value = value
@@ -76,7 +97,9 @@ class OpParameter(Expression):
         }
 
 class ToClause(Expression):
-    def __init__(self, expr:Reference, to:Union[TypeExpression, 'hqlt.HqlType']):
+    def __init__(self, expr:'Reference', to:Union['TypeExpression', 'hqlt.HqlType']):
+        from Hql.Expressions.Literals import TypeExpression 
+
         Expression.__init__(self)
         self.expr = expr
         if isinstance(to, TypeExpression):

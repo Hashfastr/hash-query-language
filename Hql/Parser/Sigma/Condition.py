@@ -52,7 +52,7 @@ class Visitor(SigmaVisitor):
         if not rh:
             return lh
 
-        return BinaryLogic(lh, rh, 'or')
+        return BinaryLogic([lh] + rh, logic_and=False)
 
     def visitAndStatement(self, ctx: SigmaParser.AndStatementContext):
         from Hql.Expressions.Logic import BinaryLogic
@@ -66,12 +66,13 @@ class Visitor(SigmaVisitor):
         if not rh:
             return lh
 
-        return BinaryLogic(lh, rh, 'and')
+        return BinaryLogic([lh] + rh, logic_and=True)
 
     def visitNotStatement(self, ctx: SigmaParser.NotStatementContext):
         from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference
         inner = self.visit(ctx.Statement)
-        return FuncExpr('not', [inner])
+        return FuncExpr(NamedReference('not'), [inner])
 
     def visitBracketStatement(self, ctx: SigmaParser.BracketStatementContext):
         return self.visit(ctx.Statement)
@@ -82,9 +83,9 @@ class Visitor(SigmaVisitor):
         specifier = self.visit(ctx.Specifier)
 
         if specifier == '1':
-            op = 'or'
+            logic_and = False
         elif specifier == 'all':
-            op = 'and'
+            logic_and = True
         else:
             raise Exception(f'Invalid of specifier {specifier}')
 
@@ -94,7 +95,7 @@ class Visitor(SigmaVisitor):
             return target[0].build_selection()
         else:
             target = [x.build_selection() for x in target]
-            return BinaryLogic(target[0], target[1:], op)
+            return BinaryLogic(target, logic_and)
 
     def visitOfSpecifier(self, ctx: SigmaParser.OfSpecifierContext):
         if ctx.Int:

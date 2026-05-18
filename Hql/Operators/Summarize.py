@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 from Hql.Expressions import Expression
 from Hql.Data import Schema, Data, Table
 from Hql.Context import register_op, Context
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 # @register_op('Summarize')
 class Summarize(Operator):
-    def __init__(self, aggregate_exprs:list[Expression], by_expr:'ByExpression'):
+    def __init__(self, aggregate_exprs:Sequence[Expression], by_expr:'ByExpression'):
         Operator.__init__(self)
         self.aggregate_exprs = aggregate_exprs
         self.by_expr = by_expr

@@ -1,5 +1,5 @@
-from .grammar.HqlVisitor import HqlVisitor
-from .grammar.HqlParser import HqlParser
+from Hql.Parser.grammar.HqlVisitor import HqlVisitor
+from Hql.Parser.grammar.HqlParser import HqlParser
 
 from Hql.Exceptions import HqlExceptions as hqle
 

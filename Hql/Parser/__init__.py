@@ -1,11 +1,11 @@
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
-from Hql.Exceptions import HqlExceptions as hqle
-from .grammar.HqlLexer import HqlLexer
-from .grammar.HqlParser import HqlParser
-from .grammar.HqlVisitor import HqlVisitor
 
-from Hql.Query import Query, QueryStatement, LetStatement
+from Hql.Exceptions import HqlExceptions as hqle
+
+from Hql.Parser.grammar.HqlLexer import HqlLexer
+from Hql.Parser.grammar.HqlParser import HqlParser
+from Hql.Parser.grammar.HqlVisitor import HqlVisitor
 
 from Hql.Parser.BaseExpressions import BaseExpressions as ParseBaseExpressions
 from Hql.Parser.Functions import Functions as ParseFunctions
@@ -112,6 +112,8 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         return Query(statements)
     
     def visitQueryStatement(self, ctx: HqlParser.QueryStatementContext):
+        from Hql.Query import QueryStatement
+
         expr = self.visit(ctx.Expression)
         
         if not expr:
@@ -149,11 +151,13 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         return PipeExpression(pipes)
 
     def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
+        from Hql.Query import LetStatement
         name = self.visit(ctx.Name)
         value = self.visit(ctx.Expression)
-        return LetStatement(name, value, 'variable')
+        return LetStatement(name, value)
 
     def visitLetMacroDeclaration(self, ctx: HqlParser.LetMacroDeclarationContext):
+        from Hql.Query import LetStatement
         name = self.visit(ctx.Name)
         pipes = self.visit(ctx.Pipes)
-        return LetStatement(name, pipes, 'macro')
+        return LetStatement(name, pipes, macro=True)

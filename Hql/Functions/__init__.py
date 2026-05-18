@@ -1,7 +1,7 @@
 import importlib, pkgutil
 
 import json
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -61,11 +61,16 @@ class Function():
         return NotImplemented
 
 class DotCompositeFunction():
-    def __init__(self, funcs:list[Function]):
+    def __init__(self, funcs:Sequence[Union[Function, 'DotCompositeFunction']]):
         self.type = self.__class__.__name__
-        self.funcs = funcs
+        self.funcs:list[Function] = []
+        for i in funcs:
+            if isinstance(i, DotCompositeFunction):
+                self.funcs += i.funcs
+            else:
+                self.funcs.append(i)
 
-    def __new__(cls, funcs:list[Function]):
+    def __new__(cls, funcs:Sequence[Union[Function, 'DotCompositeFunction']]):
         if len(funcs) == 1:
             return funcs[0]
         return super().__new__(cls)

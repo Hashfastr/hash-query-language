@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 import logging, json
 
 if TYPE_CHECKING:
-    from Hql.Expressions import DotCompositeFunction
+    from Hql.Expressions.Functions import DotCompositeFunction, Function
     from Hql.Hac import Hac
 
 class SigmaParser():
@@ -75,9 +75,10 @@ class SigmaParser():
         statement = QueryStatement(expr)
         self.assembly = Query([statement])
 
-    def gen_src(self, src:dict) -> 'DotCompositeFunction':
-        from Hql.Expressions import DotCompositeFunction
-        from Hql.Expressions.Functions import FuncExpr, StringLiteral
+    def gen_src(self, src:dict) -> Union['DotCompositeFunction', 'Function']:
+        from Hql.Expressions.Functions import FuncExpr, DotCompositeFunction
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import NamedReference
 
         '''
         Category can contain a set of product/service combos
@@ -89,7 +90,7 @@ class SigmaParser():
 
         for i in order:
             if i in src:
-                funcs.append(FuncExpr(i, [StringLiteral(src[i])]))
+                funcs.append(FuncExpr(NamedReference(i), [StringLiteral(src[i])]))
 
         if len(funcs) == 0:
             raise hqle.QueryException(f'Sigma provided no log sources!')
