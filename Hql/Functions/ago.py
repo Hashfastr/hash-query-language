@@ -10,10 +10,13 @@ Static function, can be precomputed
 Generates a time delta
 '''
 @register_func('ago')
-class template(Function):
+class ago(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.Literals import StringLiteral
         Function.__init__(self, args, 1, 1)
+        val = args[0]
+        assert isinstance(val, StringLiteral)
+        self.delta = val
 
-    def eval(self, ctx: 'Context', receiver=None) -> object:
-        from datetime import timedelta
-        return timedelta()
+    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+        return self.delta

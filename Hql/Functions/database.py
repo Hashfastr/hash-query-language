@@ -1,33 +1,27 @@
-import json
 from . import Function
-from Hql import Config
-from Hql.Context import register_func, Context
+from Hql.Context import register_func
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Expressions import PipeExpression, StringLiteral
-from typing import TYPE_CHECKING, Optional
-from Hql.Compiler import HqlCompiler
+from typing import TYPE_CHECKING, Optional, Union
 
 import logging
 
 if TYPE_CHECKING:
     from Hql.Expressions import PipeExpression
+    from Hql.Context import Context
 
 # This is a meta function resolved while parsing
 @register_func('database')
 class database(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
-        Function.__init__(self, args, 0, 1)
-        self.preprocess = True
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import Reference
+        Function.__init__(self, args, 1, 1)
 
-        if args and not isinstance(args[0], StringLiteral):
-            raise hqle.ArgumentException(f'Bad database argument datatype {args[0].type}')
+        dbname = args[0]
+        if not isinstance(dbname, (StringLiteral, Reference)):
+            raise hqle.ArgumentException(f'Bad database argument datatype {dbname.type}')
 
-        if args:
-            self.dbname = self.args[0].eval(None, as_str=True)
-            self.default = self.dbname == ''
-        else:
-            self.dbname = ''
-            self.default = True
+        self.dbname:Union[StringLiteral, Reference] = dbname
 
     def parse_preamble(self, preamble:dict, src:str) -> 'PipeExpression':
         from Hql.Parser import Parser
@@ -42,31 +36,26 @@ class database(Function):
             raise hqle.ConfigException(f'Invalid preamble expression in {src}')
 
         return parser.assembly
-            
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Operators.Database import Database
-        from Hql.Compiler import InstructionSet
-        compiler = HqlCompiler(ctx.config)
 
-        if self.default:
-            dbconf = ctx.config.get_default_db()
-            name = 'default'
-        else:
-            dbconf = ctx.config.get_database(self.dbname)
-            name = self.dbname
+    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+        from Hql.Database import Database
+        from Hql.Expressions.Literals import StringLiteral
+
+        dbname = self.dbname.preprocess(ctx)
+        if not isinstance(dbname, StringLiteral):
+            raise hqle.QueryException(f'Given database name is not StringLiteral, {type(dbname)}')
+
+        dbconf = ctx.config.get_database(dbname.str())
         
         if 'type' not in dbconf:
             logging.critical('Missing database type in database config')
             logging.critical(f"Available DB types: {', '.join(ctx.get_db_types())}")
-            raise hqle.ConfigException(f'Missing TYPE definition in database config for {name}')
+            raise hqle.ConfigException(f'Missing TYPE definition in database config for {dbname.str()}')
 
-        db = ctx.get_db(dbconf['type'])(dbconf, name=name)
+        db = ctx.get_db(dbconf['type'])(dbconf, name=dbname.str())
         assert isinstance(db, Database)
         if db.get_preamble():
             preamble = self.parse_preamble(db.get_preamble(), f'{db.name}/preamble')
             db.preamble = preamble
 
         return db
-
-
-

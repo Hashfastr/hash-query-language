@@ -1,14 +1,10 @@
 from . import Function
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Data import Data, Series, Table, Schema
+from Hql.Context import register_func
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from Hql.Context import Context
-
-import logging
-import polars as pl
+    import polars as pl
 
 @register_func('isnotempty')
 class isnotempty(Function):
@@ -17,20 +13,13 @@ class isnotempty(Function):
         Function.__init__(self, args, 1, -1)
 
     def gen_filter(self, ctx:'Context') -> pl.Expr:
-        expr:Optional[pl.Expr] = None
+        expr:'pl.Expr' = pl.lit(True)
 
         for i in self.args:
-            cur = i.eval(ctx, as_pl=True)
-            assert isinstance(cur, pl.Expr)
-            cur = cur.is_null().not_()
+            cur = i.polars().is_null().not_()
+            expr = expr.and_(cur)
 
-            if isinstance(expr, type(None)):
-                expr = cur
-            else:
-                expr = expr.and_(cur)
-
-        assert isinstance(expr, pl.Expr)
         return expr
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: 'Context', receiver=None) -> object:
         return self.gen_filter(ctx)

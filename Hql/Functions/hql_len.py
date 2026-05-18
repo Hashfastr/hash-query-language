@@ -1,10 +1,13 @@
 from . import Function
-from Hql.Context import register_func, Context
+from Hql.Context import register_func
 from Hql.Data import Data, Table, Schema
 from Hql.Types.Hql import HqlTypes as hqlt
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import logging
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 @register_func('len')
 @register_func('array_length')
@@ -14,7 +17,7 @@ class hql_len(Function):
         self.args = args
         self.count_type = hqlt.ulong()
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: 'Context', receiver=None) -> object:
         path = self.args[0].eval(ctx, as_list=True)
         filter = self.args[0].eval(ctx, as_pl=True)
         

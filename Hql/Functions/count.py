@@ -2,7 +2,10 @@ from . import Function
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Table
 from Hql.Types.Hql import HqlTypes as hqlt
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from Hql.Expressions.References import Reference
 
 @register_func('count')
 class count(Function):
@@ -11,7 +14,8 @@ class count(Function):
         self.count_name = name
         self.count_type = hqlt.uint()
         
-    def get_count_name(self, agg):
+    def get_count_name(self, agg) -> 'Reference':
+        from Hql.Expressions.References import NamedReference
         name = self.count_name
         
         # Unsure if this is a performant solution
@@ -21,9 +25,9 @@ class count(Function):
             i += 1
             name = f'{name}{i}'
             
-        return name
+        return NamedReference(name)
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: 'Context', receiver=None) -> object:
         tables = []
         for table in ctx.data:
             if not table.agg:
@@ -32,8 +36,8 @@ class count(Function):
             
             cname = self.get_count_name(table.agg)
             
-            df = table.agg.len(name=cname)
-            schema = table.agg_schema.copy().set([cname], self.count_type)
+            df = table.agg.len(name=cname.str())
+            schema = table.agg_schema.copy().set(cname, self.count_type)
             new = Table(df=df, schema=schema, name=table.name)
             new = new.drop_many(table.agg_paths)
                         

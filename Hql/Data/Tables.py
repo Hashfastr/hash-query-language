@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import polars as pl
 from polars.dataframe.group_by import GroupBy
@@ -39,15 +39,15 @@ class Table():
         self.schema = Schema() # safe default
        
         # rely on self.agg being None for the existence of an aggregation
-        self.agg:Union[None, GroupBy] = None
-        self.agg_paths:list[list[str]] = []
+        self.agg:Optional[GroupBy] = None
+        self.agg_paths:list['Reference'] = []
         self.agg_schema:Schema = Schema()
 
         if series:
             self.series = series
 
         elif init_data and not schema:
-            self.schema = Schema(init_data, sample_size=100)
+            self.schema = Schema(data=init_data, sample_size=100)
             init_data = self.schema.adjust_mv(init_data)
             pl_schema = self.schema.gen_pl_schema()
             self.df = pl.from_dicts(init_data, schema=pl_schema)

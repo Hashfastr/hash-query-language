@@ -1,20 +1,24 @@
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Data import Data, Series, Table, Schema
-from Hql.Operators.Union import Union
-from Hql.Expressions.References import Wildcard, NamedReference, NamedExpression, StringLiteral
-from Hql.Hac import Hac
+from Hql.Context import register_func
 import requests
 import json
 import urllib.parse
 
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from Hql.Data import Data, Table
+    from Hql.Hac import Hac
+    from Hql.Context import Context
 
 @register_func('scot4')
 class scot4(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import NamedExpression
+
         Function.__init__(self, args, 0, -1, conf)
         self.params = {
             'server': self.conf.get('default', None),
@@ -60,8 +64,10 @@ class scot4(Function):
         self.timeout = 5
         self.owner = 'HaC-Engine'
 
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: 'Context', receiver=None) -> object:
+        from Hql.Data import Data, Table
         import time
+        
         if not ctx.hac or not ctx.data:
             return Data()
 
@@ -121,10 +127,14 @@ class scot4(Function):
 
         return res
 
-    def post_alertgroup(self, data:Data, hac:Hac):
+    def post_alertgroup(self, data:'Data', hac:'Hac'):
+        from Hql.Expressions.References import Wildcard, NamedReference
+        from Hql.Operators.Union import Union as HqlUnion
+        from Hql.Context import Context
+
         union = self.conf.get('always_union', False)
         if union:
-           data = Union([Wildcard('*')], NamedReference('scot4_unioned')).eval(Context(data))
+           data = HqlUnion([Wildcard('*')], NamedReference('scot4_unioned')).eval(Context(data))
 
         srcs = hac.get('references')
         assert isinstance(srcs, list)
@@ -165,7 +175,7 @@ class scot4(Function):
 
         return out
 
-    def update_hac(self, hac:Hac):
+    def update_hac(self, hac:'Hac'):
         guide = self.get_guide(hac)
         if guide['resultCount']:
             guide = guide['result'][0]
@@ -185,7 +195,7 @@ class scot4(Function):
         sig = self.update_signature(sig_id, hac)
         self.link_guide(guide, sig)
 
-    def create_signature(self, hac:Hac):
+    def create_signature(self, hac:'Hac'):
         signature = {
             'name': hac.get('title'),
             'owner': self.owner,
@@ -194,7 +204,7 @@ class scot4(Function):
         raw_return = self.post('/api/v1/signature/', signature).text
         return json.loads(raw_return)
     
-    def update_signature(self, sig_id:int, hac:Hac):
+    def update_signature(self, sig_id:int, hac:'Hac'):
         signature = {
             'name': hac.get('title'),
             'owner': self.owner,
@@ -215,12 +225,12 @@ class scot4(Function):
         raw_return = self.get('/api/v1/signature/', params={'name':subject}).text
         return json.loads(raw_return)
 
-    def get_guide(self, hac:Hac):
+    def get_guide(self, hac:'Hac'):
         title = hac.get('title')
         raw_return = self.get('/api/v1/guide/', params={'subject':title}).text
         return json.loads(raw_return)
 
-    def make_guide(self, hac:Hac):
+    def make_guide(self, hac:'Hac'):
         guide = {
             'guide': {
                 'owner': self.owner,
@@ -233,7 +243,7 @@ class scot4(Function):
         raw_return = self.post('/api/v1/guide/', guide).text
         return json.loads(raw_return)
 
-    def update_guide(self, guide:dict, hac:Hac):
+    def update_guide(self, guide:dict, hac:'Hac'):
         entries = self.get_guide_entries(guide)
         if not entries:
             self.make_guide_entry(guide, hac)
@@ -245,7 +255,7 @@ class scot4(Function):
         raw_return = self.get(f'/api/v1/guide/{gid}/entry').text
         return json.loads(raw_return)['result']
     
-    def make_guide_entry(self, guide:dict, hac:Hac):
+    def make_guide_entry(self, guide:dict, hac:'Hac'):
         entry = {
             'entry': {
                 'owner': self.owner,
@@ -260,7 +270,7 @@ class scot4(Function):
         raw_return = self.post('/api/v1/entry/', entry).text
         return json.loads(raw_return)
 
-    def update_guide_entry(self, entry:int, hac:Hac):
+    def update_guide_entry(self, entry:int, hac:'Hac'):
         entry_data = {
             'entry_data': {
                 'html': hac.render(target='html')
@@ -295,7 +305,7 @@ class scot4(Function):
         raw_return = self.post('/api/v1/link/', link).text
         return json.loads(raw_return)
 
-    def gen_alerts(self, table:Table):
+    def gen_alerts(self, table:'Table'):
         limit = self.conf['row_limit']
         alerts = []
         for i in table.to_dicts()[:limit]:

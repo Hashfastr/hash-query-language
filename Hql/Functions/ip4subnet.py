@@ -1,23 +1,29 @@
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Types.Hql import HqlTypes as hqlt
-from Hql.Expressions.Logic import BasicRange, Integer
-from typing import Optional
+from Hql.Context import register_func
+from Hql.Expressions.Logic import BasicRange
+from typing import TYPE_CHECKING, Optional
 
-import polars as pl
+
+if TYPE_CHECKING:
+    from Hql.Expressions.Literals import StringLiteral
+    from Hql.Context import Context
 
 @register_func('ip4subnet')
 class ip4subnet(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 1)
-        self.preprocess = True
-    
-    def eval(self, ctx:'Context', **kwargs) -> BasicRange:
+        self.subnet:'StringLiteral' = args[0]
+
+    def eval(self, ctx: 'Context', receiver=None) -> BasicRange:
+        from Hql.Expressions.Literals import Integer
+        from Hql.Types.Hql import HqlTypes as hqlt
+        import polars as pl
         import re
+        
         subnet_regex = '(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\/(\\d{1,2})'
 
-        subnet_text = self.args[0].eval(ctx, as_str=True)
+        subnet_text = self.subnet.str()
         ip_text   = re.match(subnet_regex, subnet_text)
         mask_text = re.match(subnet_regex, subnet_text)
 

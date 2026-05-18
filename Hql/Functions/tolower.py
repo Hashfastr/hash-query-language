@@ -1,22 +1,24 @@
 from . import Function
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Data import Data, Series, Table, Schema
-import polars as pl
+from Hql.Context import register_func
 
-import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 @register_func('tolower')
 class tolower(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        import polars as pl
         Function.__init__(self, args, 1, 1, conf)
         self.src = args[0]
 
         if self.src.literal:
             self.src = pl.Series([self.src.value]).str.to_lowercase()
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: 'Context', receiver=None) -> object:
+        import polars as pl
+        from Hql.Data import Data, Table
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Types.Hql import HqlTypes as hqlt
         

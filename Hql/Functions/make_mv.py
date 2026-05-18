@@ -3,12 +3,12 @@ from Hql.Expressions import Expression
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Series, Table, Schema
 from Hql.Types.Hql import HqlTypes as hqlt
-from Hql.Operators.Project import Project
 from Hql.Exceptions import HqlExceptions as hqle
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, Sequence
 
-import polars as pl
-import polars.dataframe.group_by as group_by
+if TYPE_CHECKING:
+    import polars as pl
+    from Hql.Expressions.References import Reference
 
 '''
 This function is both an aggregate function and a normal function,
@@ -38,7 +38,7 @@ class make_mv(Function):
     Each type is then set to a hqlt.multivalue type
     Output schema only contains the multivalue types of those paths.
     '''
-    def gen_schema(self, schema:Schema, paths:list[list[str]]):
+    def gen_schema(self, schema:Schema, paths:Sequence['Reference']):
         schema = schema.select_many(paths)
         
         new = Schema()
@@ -63,8 +63,8 @@ class make_mv(Function):
         cols = []
         paths = []
         for arg in self.args:
-            cols.append(arg.eval(ctx, as_pl=True))
-            paths.append(arg.eval(ctx, as_list=True))
+            cols.append(arg.polars())
+            paths.append(arg)
         
         if table.agg == None:
             raise hqle.CompilerException('Attempting to aggregate with a None Table.agg')
@@ -83,7 +83,7 @@ class make_mv(Function):
     Recursively create a list of series for each value referenced in a schema
 
     '''
-    def get_series(self, df:pl.DataFrame, schema:dict):
+    def get_series(self, df:'pl.DataFrame', schema:dict):
         cur = []
                 
         for key in schema:
@@ -105,12 +105,15 @@ class make_mv(Function):
     Returns a Series with a multivalue type
     '''
     def normal(self, ctx:'Context', table:Table):
+        import polars as pl
+        from Hql.Operators.Project import Project
+
         # Only operate on the single table
         ctx.data = Data(tables=[table])
 
         # Create the data subset and grab the table
         # Using project as it resolves functions for us, clever huh?
-        data:Data = Project(self.args).eval(ctx)
+        data:Data = Project(self.args).eval(ctx).data
         table = data.table_by_index(0)
         series = self.get_series(table.df, table.schema.schema)
         
@@ -122,7 +125,10 @@ class make_mv(Function):
         
         return Series(series, mv_type)
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: 'Context', receiver=None) -> object:
+        import polars as pl
+        import polars.dataframe.group_by as group_by
+
         as_value = kwargs.get('as_value', False)
         
         new = []

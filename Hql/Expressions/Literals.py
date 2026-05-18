@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union, Optional
+from typing import TYPE_CHECKING, Sequence, Union, Optional
 import datetime
 
 from .__proto__ import Expression
@@ -228,7 +228,7 @@ class Bool(Logic, Literal):
         return value.value == self.value
 
 class Multivalue(Literal):
-    def __init__(self, value:list[Literal]) -> None:
+    def __init__(self, value:Sequence[Literal]) -> None:
         import polars as pl
         super_type = hqlt.resolve_conflict([x.hql_type for x in value])
 

@@ -188,7 +188,9 @@ class Schema():
             schemas.append(self.select(path))
         return Schema.merge(schemas)
     
-    def unnest(self, path:'Reference') -> Union['Schema', 'hqlt.HqlType']:
+    def unnest(self, path:'Reference') -> hqlt.HqlType:
+        from Hql.Types.Hql import HqlTypes as hqlt
+
         cur = self.schema
         for part in path.list():
             if not isinstance(cur, dict) or part not in cur:
@@ -196,10 +198,7 @@ class Schema():
             else:
                 cur = cur[part]
         
-        if isinstance(cur, dict):
-            return Schema(schema=cur)
-        else:
-            return cur
+        return hqlt.object(cur) if isinstance(cur, dict) else cur
     
     def copy(self):
         from copy import deepcopy
@@ -209,11 +208,7 @@ class Schema():
     Descriptive rename of unnest, might remove later
     '''
     def get_type(self, path:'Reference') -> 'hqlt.HqlType':
-        got = self.unnest(path)
-        if isinstance(got, Schema):
-            return hqlt.object(got.schema)
-        else:
-            return got
+        return self.unnest(path)
 
     '''
     Returns the deep stripped value of a dict with a single value.
@@ -381,9 +376,10 @@ class Schema():
     Generates a schema for use in polars using their types
     Uses structs for nested objects instead of json objects
     '''
-    def gen_pl_schema(self) -> 'pl.DataType':
-        from Hql.Types.Hql import HqlTypes as hqlt
-        return hqlt.object(self.schema).pl_schema()
+    def gen_pl_schema(self):
+        schema = self.schema.pl_schema()
+        assert isinstance(schema, pl.Struct)
+        return schema.to_schema()
 
     '''
     Gen schema from dicts

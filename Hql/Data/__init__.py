@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union, Iterator
+from typing import TYPE_CHECKING, Optional, Union, Iterator
 from fnmatch import fnmatch
 
 from .Tables import Table
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import Reference
 
 class Data():
-    def __init__(self, tables:Union[list[Table], None]=None, merge_rows=True):
+    def __init__(self, tables:Optional[list[Table]]=None, merge_rows=True):
         self.tables = dict()
 
         # empty base case
