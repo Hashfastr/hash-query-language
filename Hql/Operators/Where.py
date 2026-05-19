@@ -63,9 +63,10 @@ class Where(Operator):
             return [self]
 
         splits = expr.split_by_length(max_length=max_length)
+        print(splits)
+        raise Exception('')
 
         return [Where(x, self.parameters) for x in splits]
-        
 
     def integrate(self, op: 'Operator'):
         from Hql.Expressions.Logic import BinaryLogic

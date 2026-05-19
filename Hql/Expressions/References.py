@@ -45,6 +45,11 @@ class Reference(Expression):
     
     def get_symbol(self, ctx:'Context'):
         return ctx.symbol_table.get(self.name, None)
+        from copy import deepcopy
+        val = ctx.symbol_table.get(self.name, None)
+        if val:
+            val = deepcopy(val)
+        return val
 
     def preprocess(self, ctx: Context) -> object:
         rec = ctx.symbol_table.get(self.name, self)

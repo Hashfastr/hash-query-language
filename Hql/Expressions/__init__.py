@@ -68,11 +68,24 @@ class PipeExpression(Expression):
         return d
 
     def deparse(self) -> str:
+        from Hql.Operators.Where import Where
+        from Hql.Expressions.Logic import BinaryLogic
         prepipe = self.prepipe.deparse() if self.prepipe else ''
-        pipes = [x.deparse() for x in self.pipes]
+
+        def dp(ops:Sequence['Operator']) -> list[str]:
+            out:list[str] = []
+            for i in ops:
+                if isinstance(i, Where):
+                    if isinstance(i.expr, BinaryLogic) and not i.expr.logic_and:
+                        i.expr = i.expr.demorgan()
+                    split = i.split_by_length()
+                    out += [x.deparse() for x in split]
+                else:
+                    out.append(i.deparse())
+            return out
 
         out = prepipe
-        for i in pipes:
+        for i in dp(self.pipes):
             if out:
                 out += '\n'
             out += f'| {i}'

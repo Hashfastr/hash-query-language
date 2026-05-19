@@ -690,6 +690,12 @@ class BinaryLogic(Logic):
                 merged = False
 
         return BinaryLogic(new, self.logic_and)
+
+    def demorgan(self):
+        exprs = []
+        for i in self.exprs:
+            exprs.append(Not(i))
+        return BinaryLogic(exprs, not self.logic_and)
         
     def to_dict(self):
         return {
@@ -702,25 +708,33 @@ class BinaryLogic(Logic):
         return 'and' if self.logic_and else 'or'
 
     def split_by_length(self, max_length:int=80) -> list[BinaryLogic]:
+        from copy import deepcopy
+
         if max_length < 0 or not self.logic_and:
             return [self]
 
-        pad = len(self.build_op()) + 2
-
-        counts = [] 
-        for i in self.exprs:
-            counts.append((i, len(i.deparse())))
+        def get_len(exprs:list):
+            pad = len(self.build_op()) + 2
+            lens = [len(x.deparse()) for x in exprs]
+            return sum(lens) + (len(lens) * pad)
 
         out = []
-        cur = [counts[0]]
-        for i, j in counts:
-            cur_len = sum([x[1] for x in cur]) + j + (len(cur) * pad)
+        cur:list[Logic] = []
+        for i in self.exprs:
+            if not cur:
+                cur = [i]
 
-            if cur_len > max_length:
-                out.append(BinaryLogic([x[0] for x in cur], logic_and=self.logic_and))
-                cur = [(i, j)]
+            if get_len(cur) > max_length:
+                out.append(BinaryLogic(cur, logic_and=True))
+                cur = []
+            else:
+                cur.append(i)
+        
+        if cur:
+            out.append(BinaryLogic(cur, logic_and=True))
 
-        out.append(BinaryLogic([x[0] for x in cur], logic_and=self.logic_and))
+        for i in out:
+            print(type(i))
 
         return out
 
