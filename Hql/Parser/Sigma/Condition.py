@@ -43,30 +43,20 @@ class Visitor(SigmaVisitor):
     def visitOrStatement(self, ctx: SigmaParser.OrStatementContext):
         from Hql.Expressions.Logic import BinaryLogic
 
-        lh = self.visit(ctx.Left)
-
-        rh = []
+        exprs = [self.visit(ctx.Left)]
         for i in ctx.Right:
-            rh.append(self.visit(i))
+            exprs.append(self.visit(i))
 
-        if not rh:
-            return lh
-
-        return BinaryLogic([lh] + rh, logic_and=False)
+        return BinaryLogic(exprs, logic_and=False)
 
     def visitAndStatement(self, ctx: SigmaParser.AndStatementContext):
         from Hql.Expressions.Logic import BinaryLogic
 
-        lh = self.visit(ctx.Left)
-
-        rh = []
+        exprs = [self.visit(ctx.Left)]
         for i in ctx.Right:
-            rh.append(self.visit(i))
+            exprs.append(self.visit(i))
 
-        if not rh:
-            return lh
-
-        return BinaryLogic([lh] + rh, logic_and=True)
+        return BinaryLogic(exprs, logic_and=True)
 
     def visitNotStatement(self, ctx: SigmaParser.NotStatementContext):
         from Hql.Expressions.Functions import FuncExpr
@@ -89,13 +79,8 @@ class Visitor(SigmaVisitor):
         else:
             raise Exception(f'Invalid of specifier {specifier}')
 
-        target = self.visit(ctx.Target)
-
-        if len(target) == 1:
-            return target[0].build_selection()
-        else:
-            target = [x.build_selection() for x in target]
-            return BinaryLogic(target, logic_and)
+        target = [x.build_selection() for x in self.visit(ctx.Target)]
+        return BinaryLogic(target, logic_and)
 
     def visitOfSpecifier(self, ctx: SigmaParser.OfSpecifierContext):
         if ctx.Int:

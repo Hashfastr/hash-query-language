@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 class Operator(ParseObject):
     def __init__(self):
         import random
+        ParseObject.__init__(self)
 
         self._expr = None
         self.exprs:Sequence['Expression'] = []

@@ -607,25 +607,13 @@ Handles binary logic, simple ands and ors
 '''
 class BinaryLogic(Logic):
     def __init__(self, exprs:Sequence[Logic], logic_and:bool=True):
-        Logic.__init__(self)
-        self.logic_and = logic_and
-        self.exprs:Sequence[Logic] = exprs
-
-    # immediately break down if there's only 1 expr
-    # and short circuit some logic
-    def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Union[Logic, 'Bool']:
         from Hql.Expressions.Literals import Bool
+        Logic.__init__(self)
 
-        if len(exprs) == 0:
-            raise hqle.CompilerException('BinaryLogic given no expressions!')
-        if len(exprs) == 1:
-            return exprs[0]
-        if not logic_and and Bool(True) in exprs:
-            return Bool(True)
-        if logic_and and Bool(False) in exprs:
-            return Bool(False)
-
-        prelen = len(exprs)
+        if len(exprs) == 1 and isinstance(exprs[0], BinaryLogic):
+            self.logic_and = exprs[0].logic_and
+            self.exprs = list(exprs[0].exprs)
+            return
 
         new = set([exprs[0]])
         for i in exprs[1:]:
@@ -634,11 +622,21 @@ class BinaryLogic(Logic):
             if i == Bool(False) and not logic_and:
                 continue
             new.add(i)
-        new = list(new)
 
-        # do this to condense the new list
-        if len(new) != prelen:
-            return BinaryLogic(new, logic_and=logic_and)
+        self.logic_and = logic_and
+        self.exprs = list(new)
+
+    def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Union[Logic, 'Bool']:
+        from Hql.Expressions.Literals import Bool
+
+        if len(exprs) == 0:
+            raise hqle.CompilerException('BinaryLogic given no expressions!')
+        if len(exprs) == 1 and not isinstance(exprs[0], cls):
+            return exprs[0]
+        if not logic_and and Bool(True) in exprs:
+            return Bool(True)
+        if logic_and and Bool(False) in exprs:
+            return Bool(False)
 
         return super().__new__(cls)
 
@@ -732,9 +730,6 @@ class BinaryLogic(Logic):
         
         if cur:
             out.append(BinaryLogic(cur, logic_and=True))
-
-        for i in out:
-            print(type(i))
 
         return out
 
