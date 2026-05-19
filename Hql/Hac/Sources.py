@@ -37,6 +37,7 @@ class Source():
         return InstructionSet(isets)
 
     def product(self, pattern:str):
+        print('pattern')
         from fnmatch import fnmatch
         for i in self.conf:
             if not fnmatch(i, pattern):
