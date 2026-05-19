@@ -55,7 +55,10 @@ class TypeExpression(Literal):
         if not isinstance(value, TypeExpression):
             return False
         return self.hql_type == value.hql_type
-    
+
+    def __hash__(self):
+        return hash(self.hql_type)
+
     def polars(self) -> 'pl.Expr':
         import polars as pl
         return pl.lit(self.hql_type.pl_schema())
@@ -81,6 +84,9 @@ class StringLiteral(Literal):
         if not isinstance(value, StringLiteral):
             return False
         return value.value == self.value
+
+    def __hash__(self):
+        return hash(self.value)
 
     def cmp(self, value:Expression, cs:bool=True):
         from Hql.Expressions.Literals import StringLiteral
@@ -180,7 +186,10 @@ class Integer(Literal):
         if not isinstance(value, Integer):
             return False
         return value.value == self.value
-        
+
+    def __hash__(self):
+        return hash(self.value)
+
 class IP4(Literal):
     def __init__(self, value:Union[Integer, StringLiteral]):
         if isinstance(value, StringLiteral):
@@ -200,7 +209,10 @@ class IP4(Literal):
         if not isinstance(value, IP4):
             return False
         return value.value == self.value
-        
+
+    def __hash__(self):
+        return hash(self.value)
+
     def to_dict(self):
         return {
             'type': self.type,
@@ -217,6 +229,9 @@ class Float(Literal):
             return False
         return value.value == self.value
 
+    def __hash__(self):
+        return hash(self.value)
+
 class Bool(Logic, Literal):
     def __init__(self, value:bool):
         self.value = value
@@ -226,6 +241,9 @@ class Bool(Logic, Literal):
         if not isinstance(value, Bool):
             return False
         return value.value == self.value
+
+    def __hash__(self):
+        return hash(self.value)
 
 class Multivalue(Literal):
     def __init__(self, value:Sequence[Literal]) -> None:
@@ -259,6 +277,9 @@ class Multivalue(Literal):
                 return False
 
         return True
+
+    def __hash__(self):
+        return hash(tuple(self.value.to_list()))
 
     def deparse(self) -> str:
         return NotImplemented

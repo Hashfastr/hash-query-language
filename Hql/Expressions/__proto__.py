@@ -13,3 +13,6 @@ class Expression(ParseObject):
         self.value       = None
         self.tabular     = False
         self.requires_lh = False
+
+    def __hash__(self):
+        return id(self)

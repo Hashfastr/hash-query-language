@@ -6,9 +6,9 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Context import Context
-    from Hql.Expressions.Literals import StringLiteral, Literal
+    from Hql.Expressions.Literals import StringLiteral, Literal, Bool
     from Hql.Expressions.References import Reference
-    from Hql.Expressions.Logic import BinaryLogic, Bool
+    from Hql.Expressions.Logic import BinaryLogic
     import polars as pl
 
 # descriptive class
@@ -89,7 +89,8 @@ class Comparator(Logic):
         return NotImplemented
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions.Literals import Literal, StringLiteral, Bool, Reference
+        from Hql.Expressions.Literals import Literal, StringLiteral, Bool
+        from Hql.Expressions.References import Reference
 
         if len(self.rh) > 1:
             rh = self.expand_rh().preprocess(ctx)
@@ -541,7 +542,8 @@ class BetweenEquality(Comparator):
         self.neq = neq
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions.Literals import Literal, Bool, Reference
+        from Hql.Expressions.Literals import Literal, Bool
+        from Hql.Expressions.References import Reference
 
         def compare(lh, start, end):
             return lh.value > start.value and lh.value < end.value
@@ -812,7 +814,8 @@ class Regex(Logic):
         return lh.str.contains(rh)
 
     def preprocess(self, ctx: Context) -> object:
-        from Hql.Expressions.References import Reference, Bool, StringLiteral
+        from Hql.Expressions.References import Reference
+        from Hql.Expressions.Literals import Bool, StringLiteral
 
         lh = self.lh.preprocess(ctx)
         assert isinstance(lh, Expression)

@@ -240,6 +240,9 @@ class NamedExpression(Expression):
 
         return True
 
+    def __hash__(self):
+        return hash((frozenset(self.paths), self.value))
+
     def to_dict(self):        
         return {
             'type': self.type,
