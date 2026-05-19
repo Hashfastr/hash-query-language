@@ -188,7 +188,7 @@ class JOIN(SqlStatement):
     def collapse_join(self, join:'Join') -> list['Join']:
         from Hql.Compiler import InstructionSet, SqlCompiler
         from Hql.Operators.Join import Join
-        from Hql.Operators.Database import SQLite, Database
+        from Hql.Database import SQLite, Database
         from Hql.Expressions.References import NamedReference
 
         if isinstance(join.rh, NamedReference):
@@ -230,7 +230,7 @@ class JOIN(SqlStatement):
         from Hql.Compiler import InstructionSet, SqlCompiler
         from Hql.Operators.Where import Where
         from Hql.Expressions.Logic import BinaryLogic, Path, FuncExpr, NamedReference, Equality
-        from Hql.Operators.Database import Database
+        from Hql.Database import Database
 
         rname = NamedReference(self.random_label())
         join_op = 'INNER'

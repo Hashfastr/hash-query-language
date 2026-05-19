@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, Optional, Union, Sequence
-from Hql.Context import Context
 import logging
 import time
 import json
@@ -11,6 +10,7 @@ if TYPE_CHECKING:
     from Hql.Operators.Operator import Operator
     from Hql.Database import Database
     from Hql.Compiler import BranchDescriptor
+    from Hql.Context import Context
     from Hql.Config import Config
 
 class InstructionSet():
@@ -20,6 +20,10 @@ class InstructionSet():
         
         if not isinstance(upstream, Sequence):
             upstream = [upstream]
+
+        if not upstream:
+            raise hqle.CompilerException('InstructionSet given empty upstream')
+
         self.upstream = upstream
 
         self.ops:list['Operator'] = operators if operators else []
@@ -29,6 +33,12 @@ class InstructionSet():
         if len(self.upstream) == 1 and isinstance(self.upstream[0], InstructionSet):
             self.ops = self.upstream[0].ops + self.ops
             self.upstream = self.upstream[0].upstream
+
+    def preprocess(self, ctx:'Context') -> Union['Database', 'InstructionSet']:
+        new = self.recompile(ctx.config)
+        if len(new.upstream) == 1 and not new.ops:
+            return new.upstream[0]
+        return new
 
     def is_empty(self) -> bool:
         return not (self.upstream or self.ops)

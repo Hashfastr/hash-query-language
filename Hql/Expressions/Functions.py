@@ -11,7 +11,7 @@ class FuncProto(Expression):
     ...
 
 class FuncExpr(FuncProto):
-    # I know I'm gettinG rid of allowing protos for this stuff but 
+    # I know I'm getting rid of allowing protos for this stuff but 
     def __init__(self, name:'NamedReference', args:Optional[Sequence[Expression]]=None):
         FuncProto.__init__(self)
         self.name = name

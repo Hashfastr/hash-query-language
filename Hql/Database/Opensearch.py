@@ -1,6 +1,6 @@
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
-from Hql.Operators.Database import Database
+from Hql.Database import Database
 
 from Hql.Compiler import LuceneCompiler
 

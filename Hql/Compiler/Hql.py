@@ -57,7 +57,7 @@ class HqlCompiler(Compiler):
 
     def QueryStatement(self, statement: 'Hql.Query.QueryStatement', preprocess:bool=True) -> InstructionSet:
         from Hql.Hac import Source
-        from Hql.Operators.Database import Database
+        from Hql.Database import Database
         acc, _ = self.compile(statement.root)
 
         if isinstance(acc, InstructionSet):
@@ -81,7 +81,7 @@ class HqlCompiler(Compiler):
         return None
 
     def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression', InstructionSet]) -> tuple[Optional[InstructionSet], Optional['Hql.Expressions.Expression']]:
-        from Hql.Operators.Database import Database, Static
+        from Hql.Database import Database, Static
         from Hql.Expressions import DotCompositeFunction, NamedReference
         from Hql.Operators.Range import Range, Datatable, Union
         from Hql.Hac import Source
@@ -1032,7 +1032,7 @@ class HqlCompiler(Compiler):
     
     def NamedReference(self, expr:'Hql.Expressions.NamedReference', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import PipeExpression
-        from Hql.Operators.Database import Database
+        from Hql.Database import Database
 
         desc = BranchDescriptor()
 
@@ -1068,7 +1068,7 @@ class HqlCompiler(Compiler):
     def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions.References import Path, EscapedNamedReference, Wildcard
         from Hql.Expressions import PipeExpression
-        from Hql.Operators.Database import Database
+        from Hql.Database import Database
         
         desc = BranchDescriptor()
         desc.set_attr('nested_objects')

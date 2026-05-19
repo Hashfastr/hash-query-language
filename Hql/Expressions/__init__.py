@@ -28,9 +28,13 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import Reference
     from Hql.Expressions.Literals import TypeExpression 
     from Hql.Functions import Function, DotCompositeFunction
+    from Hql.Compiler.InstructionSet import InstructionSet
+    from Hql.Operators.Union import Union as HqlUnion
+
+type PrepipeType = Union['Function', 'DotCompositeFunction', 'Database', 'HqlUnion', Expression]
 
 class PipeExpression(Expression):
-    def __init__(self, pipes:list['Operator'], prepipe:Union['Function', 'DotCompositeFunction', 'Database', Expression, None]=None):
+    def __init__(self, pipes:list['Operator'], prepipe:Union[PrepipeType, None]=None):
         Expression.__init__(self)
         self.prepipe                    = prepipe
         self.pipes:Sequence['Operator'] = pipes
@@ -38,9 +42,12 @@ class PipeExpression(Expression):
     def __bool__(self):
         return bool(self.prepipe) or bool(self.pipes)
 
-    def preprocess(self, ctx: Context) -> 'PipeExpression':
+    def preprocess(self, ctx: Context) -> Union['PipeExpression', 'InstructionSet']:
+        from Hql.Compiler.InstructionSet import InstructionSet
         from Hql.Functions import Function, DotCompositeFunction
         from Hql.Database import Database
+        from Hql.Hac import Source
+        from Hql.Operators.Union import Union as HqlUnion
 
         pipes = []
         for i in self.pipes:
@@ -49,7 +56,15 @@ class PipeExpression(Expression):
 
         if self.prepipe:
             prepipe = self.prepipe.preprocess(ctx)
-            if not isinstance(prepipe, (Function, DotCompositeFunction, Database, Expression)):
+
+            if isinstance(prepipe, Source):
+                prepipe = prepipe.preprocess(ctx)
+
+            if not isinstance(prepipe, (Function, DotCompositeFunction, Database, Expression, HqlUnion)):
+                if isinstance(prepipe, InstructionSet):
+                    iset = InstructionSet(prepipe, pipes)
+                    return iset
+
                 raise hqle.QueryException(f'Invalid prepipe following preprocess: {type(prepipe)}')
             self.prepipe = prepipe
 
@@ -70,6 +85,7 @@ class PipeExpression(Expression):
     def deparse(self) -> str:
         from Hql.Operators.Where import Where
         from Hql.Expressions.Logic import BinaryLogic
+        # print(self.prepipe.exprs)
         prepipe = self.prepipe.deparse() if self.prepipe else ''
 
         def dp(ops:Sequence['Operator']) -> list[str]:
@@ -77,15 +93,20 @@ class PipeExpression(Expression):
             for i in ops:
                 if isinstance(i, Where):
                     if isinstance(i.expr, BinaryLogic) and not i.expr.logic_and:
+                        print('morgan')
                         i.expr = i.expr.demorgan()
                     split = i.split_by_length()
                     out += [x.deparse() for x in split]
                 else:
                     out.append(i.deparse())
+            # print([type(x) for x in out])
             return out
 
         out = prepipe
         for i in dp(self.pipes):
+            # print(i)
+            # print(type(i))
+            # print(out)
             if out:
                 out += '\n'
             out += f'| {i}'

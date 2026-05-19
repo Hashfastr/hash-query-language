@@ -1,5 +1,5 @@
 from Hql.Operators.Operator import Operator
-from Hql.Context import register_op, Context
+from Hql.Context import Context
 
 # @register_op('Template')
 class Template(Operator):

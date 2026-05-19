@@ -1,7 +1,10 @@
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
-from typing import Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
+
+if TYPE_CHECKING:
+    from Hql.Hac import Source
 
 @register_func('product')
 class product(Function):
@@ -15,7 +18,7 @@ class product(Function):
             assert isinstance(i, (Reference, StringLiteral))
             self.names.append(i)
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: 'Context', receiver=None) -> 'Source':
         from Hql.Hac import Source
         from Hql.Expressions.Literals import StringLiteral
 

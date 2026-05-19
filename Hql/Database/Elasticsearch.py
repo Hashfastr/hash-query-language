@@ -1,6 +1,6 @@
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context, register_database
-from Hql.Operators.Database import Database
+from Hql.Database import Database
 from Hql.Data import Schema, Data, Table
 from Hql.Types.Elasticsearch import ESTypes
 from Hql.Compiler import LuceneCompiler, QueryDSLCompiler

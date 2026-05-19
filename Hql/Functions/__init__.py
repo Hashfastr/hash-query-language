@@ -91,10 +91,15 @@ class DotCompositeFunction():
         return '.'.join(funcs)
 
     def preprocess(self, ctx:'Context') -> object:
+        from Hql.Expressions.Functions import FuncExpr
         ctx = ctx.copy()
             
         rec = None
         for i in self.funcs:
+            if isinstance(i, FuncExpr):
+                i = i.preprocess(ctx)
+                assert isinstance(i, Function)
+
             try:
                 rec = i.preprocess(ctx, receiver=rec)
             except hqle.FunctionException as e:

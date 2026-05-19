@@ -2,7 +2,7 @@ from Hql.Operators.Operator import Operator
 from Hql.Data import Data
 from Hql.Expressions import Expression
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_op, Context
+from Hql.Context import Context
 
 # Take, limits the number of results given an integer
 # Ensures that only integers are given, if not then errors

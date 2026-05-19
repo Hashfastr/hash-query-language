@@ -14,7 +14,7 @@ from ..Compiler import Compiler
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
     from Hql.Operators.Operator import Operator
-    from Hql.Operators.Database import Database
+    from Hql.Database import Database
     from Hql.Query import Statement
     import Hql
 

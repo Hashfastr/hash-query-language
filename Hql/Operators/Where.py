@@ -48,11 +48,7 @@ class Where(Operator):
             out += ' '.join(exprs)
             out += ' '
 
-        inner = self.expr.deparse()
-        if inner[0] == '(' and inner[-1] == ')':
-            inner = inner[1:-1]
-
-        out += inner
+        out += self.expr.deparse()
         return out
 
     def split_by_length(self, max_length:int=80) -> list[Where]:

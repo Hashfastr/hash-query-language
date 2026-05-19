@@ -1,9 +1,8 @@
 from typing import Optional
 from Hql.Operators.Operator import Operator
 from Hql.Expressions import Expression
-from Hql.Context import register_op, Context
+from Hql.Context import Context
 from Hql.Exceptions import HqlExceptions as hqle
-import json
 
 class Union(Operator):
     def __init__(self, exprs:list[Expression], name:Optional[Expression]=None):
@@ -11,15 +10,26 @@ class Union(Operator):
         self.exprs = exprs
         self.name = name
 
-    def decompile(self, ctx: 'Context', split: bool = False) -> str:
+        if not self.exprs:
+            raise hqle.CompilerException('Union without expressions')
+
+    def deparse(self) -> str:
         exprs = []
         for i in self.exprs:
-            exprs.append(i.decompile(ctx))
+            exprs.append(i.deparse())
         out = 'union ' + ', '.join(exprs)
         if self.name:
             out += ' as '
-            out += self.name.decompile(ctx)
+            out += self.name.deparse()
         return out
+
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'type': self.type,
+            'exprs': [x.to_dict() for x in self.exprs],
+            'name': self.name.to_dict() if self.name else None
+        }
 
     def eval(self, ctx:'Context', **kwargs):
         from Hql.Data import Data, Table, Schema

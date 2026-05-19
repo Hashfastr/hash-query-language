@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Union
 from Hql.Compiler.Sql.Statements import SELECT
-from Hql.Operators.Database import Database
+from Hql.Database import Database
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context, register_database
 import polars as pl

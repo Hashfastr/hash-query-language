@@ -1,26 +1,38 @@
-from Hql.Context import Context
 from Hql.Parser import Parser
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Query import Query, QueryStatement
 from Hql.Expressions import PipeExpression
 import logging
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
+
+if TYPE_CHECKING:
+    from Hql.Compiler.InstructionSet import InstructionSet
+    from Hql.Expressions.References import Reference
+    from Hql.Expressions.Functions import Function, DotCompositeFunction
+    from Hql.Context import Context
 
 class Source():
-    def __init__(self, ctx:Context) -> None:
+    def __init__(self, ctx:'Context') -> None:
         self.ctx = ctx
         self.products:list[Product] = []
         self.conf:dict = self.ctx.config.conf['products']
 
-    def assemble(self):
+    def preprocess(self, ctx:'Context') -> Union['InstructionSet', 'Reference', 'Function', 'DotCompositeFunction']:
         from Hql.Compiler import InstructionSet
+        from Hql.Expressions.References import NamedReference
 
         isets = []
         for i in self.products:
-            iset = i.assemble()
+            iset = i.preprocess(ctx)
             if iset.is_empty():
                 continue
             isets.append(iset)
+
+        if not isets:
+            return NamedReference('FUCK')
+
+        if len(isets) == 1:
+            return isets[0]
 
         return InstructionSet(isets)
 
@@ -112,7 +124,7 @@ class HaCStatement():
             raise hqle.ConfigException('Attempting to add empty pipes to empty query with HaC')
 
 class Product():
-    def __init__(self, name:str, conf:dict, ctx:Context) -> None:
+    def __init__(self, name:str, conf:dict, ctx:'Context') -> None:
         self.name = name
         self.ctx = ctx
         self.conf = conf
@@ -170,9 +182,10 @@ class Product():
         else:
             self.splits.add_pipes(expr)
 
-    def assemble(self):
+    def preprocess(self, ctx:'Context') -> 'InstructionSet':
         from Hql.Query import Query, QueryStatement
         from Hql.Compiler import InstructionSet, HqlCompiler
+        print('poop')
         self.splits.add_query(self.product)
         self.splits.add_level()
 
@@ -183,6 +196,7 @@ class Product():
             self.service('*')
 
         for i in self.selection['services']:
+            print(i)
             self.integrate(i)
 
         if self.selection['services']:
@@ -194,10 +208,12 @@ class Product():
         #     self.category('*')
 
         for i in self.selection['categories']:
+            print(i)
             self.integrate(i)
 
         isets = []
         for i in self.splits.cur:
+            print(i)
             # Skip over useless stuff
             if not i.query:
                 continue

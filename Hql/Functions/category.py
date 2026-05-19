@@ -1,7 +1,10 @@
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Hac import Source
 
 @register_func('category')
 class category(Function):
@@ -15,7 +18,7 @@ class category(Function):
             assert isinstance(i, (Reference, StringLiteral))
             self.names.append(i)
 
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: 'Context', receiver=None) -> 'Source':
         from Hql.Hac import Source
         from Hql.Expressions.Literals import StringLiteral
         
@@ -23,7 +26,9 @@ class category(Function):
         if not src:
             src = Source(ctx)
             src.product('*')
-        assert isinstance(src, Source)
+
+        if not isinstance(src, Source):
+            raise hqle.CompilerException(f'Expected Source got {type(src)} for category preprocess')
 
         for i in self.names:
             arg = i.preprocess(ctx)
