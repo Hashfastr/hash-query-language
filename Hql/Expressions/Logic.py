@@ -6,7 +6,8 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Context import Context
-    from Hql.Expressions.Literals import StringLiteral, Reference, Literal
+    from Hql.Expressions.Literals import StringLiteral, Literal
+    from Hql.Expressions.References import Reference
     from Hql.Expressions.Logic import BinaryLogic, Bool
     import polars as pl
 
@@ -286,7 +287,8 @@ class Substring(Comparator):
         self.can_list = True
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions.Literals import Literal, StringLiteral, Bool, Reference
+        from Hql.Expressions.Literals import Literal, StringLiteral, Bool
+        from Hql.Expressions.References import Reference
 
         if len(self.rh) > 1:
             rh = self.expand_rh().preprocess(ctx)

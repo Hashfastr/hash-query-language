@@ -74,10 +74,5 @@ class SigmaVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by SigmaParser#regexIdentifier.
-    def visitRegexIdentifier(self, ctx:SigmaParser.RegexIdentifierContext):
-        return self.visitChildren(ctx)
-
-
 
 del SigmaParser

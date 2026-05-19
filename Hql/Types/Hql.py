@@ -7,7 +7,6 @@ from Hql.Context import register_type, get_type
 from Hql.Types.Compiler import CompilerType
 
 if TYPE_CHECKING:
-    from Hql.Data import Series
     from Hql.Expressions.Literals import Integer, StringLiteral
     from Hql.Expressions.References import Reference
 
@@ -21,7 +20,7 @@ class HqlTypes():
                 
             self.complex:bool = False
             self.priority:int = 0
-            self.super:list[HqlTypes.HqlType] = [HqlTypes.string(), HqlTypes.multivalue(self.__class__())]
+            self.super:list[HqlTypes.HqlType] = [] # [HqlTypes.string(), HqlTypes.multivalue(self.__class__())]
 
         def __len__(self) -> int:
             return 1
@@ -350,7 +349,7 @@ class HqlTypes():
             self.proto = pl.String()
             
             self.priority = 4
-            self.super = [HqlTypes.multivalue(HqlTypes.string())]
+            self.super = []
         
     @register_type('hql_enum') 
     class enum(HqlType):

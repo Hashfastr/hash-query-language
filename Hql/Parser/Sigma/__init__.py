@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 import logging, json
 
 if TYPE_CHECKING:
-    from Hql.Expressions.Functions import DotCompositeFunction, Function
+    from Hql.Functions import DotCompositeFunction, Function
     from Hql.Hac import Hac
 
 class SigmaParser():
@@ -76,9 +76,10 @@ class SigmaParser():
         self.assembly = Query([statement])
 
     def gen_src(self, src:dict) -> Union['DotCompositeFunction', 'Function']:
-        from Hql.Expressions.Functions import FuncExpr, DotCompositeFunction
+        from Hql.Expressions.Functions import FuncExpr
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import NamedReference
+        from Hql.Functions import DotCompositeFunction
 
         '''
         Category can contain a set of product/service combos

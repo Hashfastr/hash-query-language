@@ -122,8 +122,8 @@ class Visitor(SigmaVisitor):
     def visitSelectionIdentifier(self, ctx: SigmaParser.SelectionIdentifierContext):
         if ctx.Basic:
             identifier = self.visit(ctx.Basic)
+            print(identifier)
             return self.condition.get_sel(identifier)[0].build_selection()
-
         else:
             return None
 

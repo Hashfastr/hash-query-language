@@ -55,3 +55,8 @@ grun Hql top ../tests/simple.txt -gui
 # Clean up via
 rm *.java *.class
 ```
+
+### Mac hack
+```
+java -Xmx500M -cp "$PWD/antlr4/antlr-4.13.2-complete.jar:$CLASSPATH" org.antlr.v4.Tool -Dlanguage=Python3 -visitor Sigma.g4
+```

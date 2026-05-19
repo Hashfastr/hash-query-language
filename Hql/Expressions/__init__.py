@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Expressions.References import Reference
     from Hql.Expressions.Literals import TypeExpression 
-    from Hql.Expressions.Functions import Function, DotCompositeFunction
+    from Hql.Functions import Function, DotCompositeFunction
 
 class PipeExpression(Expression):
     def __init__(self, pipes:list['Operator'], prepipe:Union['Function', 'DotCompositeFunction', 'Database', Expression, None]=None):
@@ -39,7 +39,7 @@ class PipeExpression(Expression):
         return bool(self.prepipe) or bool(self.pipes)
 
     def preprocess(self, ctx: Context) -> 'PipeExpression':
-        from Hql.Expressions.Functions import Function, DotCompositeFunction
+        from Hql.Functions import Function, DotCompositeFunction
         from Hql.Database import Database
 
         pipes = []

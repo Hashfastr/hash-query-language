@@ -117,6 +117,5 @@ for loader, name, is_pkg in pkgutil.iter_modules(__path__):
     skip = ['template', 'typecasting']
     for i in skip:
         if i in name:
-            print(name)
             continue
     importlib.import_module(f"{__name__}.{name}")
