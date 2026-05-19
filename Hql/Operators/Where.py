@@ -7,7 +7,8 @@ import logging
 from typing import TYPE_CHECKING, Union, Optional
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, Logic
+    from Hql.Expressions import Expression
+    from Hql.Expressions.Logic import Logic
     from Hql.Expressions import OpParameter
 
 # Where operator
@@ -38,8 +39,6 @@ class Where(Operator):
         self._expr = value
 
     def deparse(self) -> str:
-        from Hql.Expressions.Logic import BinaryLogic
-
         out = 'where '
 
         if self.parameters:
@@ -49,7 +48,11 @@ class Where(Operator):
             out += ' '.join(exprs)
             out += ' '
 
-        out += self.expr.deparse()
+        inner = self.expr.deparse()
+        if inner[0] == '(' and inner[-1] == ')':
+            inner = inner[1:-1]
+
+        out += inner
         return out
 
     def split_by_length(self, max_length:int=80) -> list[Where]:

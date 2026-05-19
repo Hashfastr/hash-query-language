@@ -2,7 +2,8 @@ from typing import TYPE_CHECKING, Optional, Sequence
 from Hql.Parser.Object import ParseObject
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, NamedReference
+    from Hql.Expressions import Expression
+    from Hql.Expressions.References import Reference
     from Hql.Operators.Operator import Operator
 
 # The proto for an operator.
@@ -67,8 +68,8 @@ class Operator(ParseObject):
     def has_method(self, name:str):
         return name in self.methods
 
-    def get_variable(self, name:NamedReference):
-        return self.variables[name.name]
+    def get_variable(self, name:'Reference'):
+        return self.variables[name.str()]
 
     def can_integrate(self, t:str):
         return t in self.compatible

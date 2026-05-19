@@ -2,7 +2,8 @@ import json
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, PipeExpression
+    from Hql.Expressions import PipeExpression
+    from Hql.Expressions import Reference
     from Hql.Context import Context
 
 # Top most object, a query.
@@ -21,7 +22,20 @@ if TYPE_CHECKING:
 # The root statement is denoted by EOF, but can have a ; regardless
 class Query():
     def __init__(self, statements:list['Statement']):
+        from Hql.Context import Context
+        from Hql.Data import Data
+        
         self.statements = statements
+        self.ctx = Context(Data())
+
+    def preprocess(self):
+        for i in self.statements:
+            if isinstance(i, LetStatement):
+                self.ctx.symbol_table[i.name.name] = i.root.preprocess(self.ctx)
+            elif isinstance(i, QueryStatement):
+                i.root = i.root.preprocess(self.ctx)
+                self.statements = [i]
+                break
 
     def deparse(self):
         statements = []
@@ -67,7 +81,7 @@ class QueryStatement(Statement):
         return self.root.deparse()
 
 class LetStatement(Statement):
-    def __init__(self, name:'Expression', value:'PipeExpression', macro:bool=False):
+    def __init__(self, name:'Reference', value:'PipeExpression', macro:bool=False):
         Statement.__init__(self)
         self.root = value
         self.name = name
