@@ -19,7 +19,6 @@ class Source():
 
     def preprocess(self, ctx:'Context') -> Union['InstructionSet', 'Reference', 'Function', 'DotCompositeFunction']:
         from Hql.Compiler import InstructionSet
-        from Hql.Expressions.References import NamedReference
 
         isets = []
         for i in self.products:
@@ -29,7 +28,7 @@ class Source():
             isets.append(iset)
 
         if not isets:
-            return NamedReference('FUCK')
+            raise hqle.QueryException('No sources resolved from product/category/service config')
 
         if len(isets) == 1:
             return isets[0]
@@ -37,12 +36,11 @@ class Source():
         return InstructionSet(isets)
 
     def product(self, pattern:str):
-        print('pattern')
         from fnmatch import fnmatch
         for i in self.conf:
             if not fnmatch(i, pattern):
                 continue
-            
+
             for j in self.conf[i]['upstream']:
                 self.products.append(Product(i, j, self.ctx))
         return self
@@ -52,10 +50,17 @@ class Source():
             i.service(pattern)
         return self
 
-    def category(self, pattern:str):
+    def category(self, pattern:str) -> int:
+        matched = 0
         for i in self.products:
-            i.category(pattern)
-        return self
+            matched += i.category(pattern)
+        return matched
+
+    def category_standalone(self, name:str):
+        cat_conf = self.ctx.config.get_category(name)
+        if not cat_conf:
+            raise hqle.QueryException(f'Category {name} not found in any product or standalone config')
+        self.products.append(Product(name, cat_conf, self.ctx))
 
 class Splits():
     def __init__(self):
@@ -186,39 +191,30 @@ class Product():
     def preprocess(self, ctx:'Context') -> 'InstructionSet':
         from Hql.Query import Query, QueryStatement
         from Hql.Compiler import InstructionSet, HqlCompiler
-        print('poop')
+
         self.splits.add_query(self.product)
         self.splits.add_level()
 
-        # Assume using all services
         if not self.selection['services'] and not self.selection['categories']:
             if self.set_services:
                 return InstructionSet([])
-            self.service('*')
+            if self.services:
+                self.service('*')
 
         for i in self.selection['services']:
-            print(i)
             self.integrate(i)
 
         if self.selection['services']:
             self.splits.add_level()
-        
-        # if self.selection['categories']:
-        #     if self.set_categories:
-        #         return InstructionSet([])
-        #     self.category('*')
 
         for i in self.selection['categories']:
-            print(i)
             self.integrate(i)
 
         isets = []
         for i in self.splits.cur:
-            print(i)
-            # Skip over useless stuff
             if not i.query:
                 continue
-            
+
             query = Query(i.pre + [QueryStatement(i.query)])
             iset = HqlCompiler(self.ctx.config, query).root
             isets.append(iset)
@@ -227,7 +223,7 @@ class Product():
 
     def service(self, pat:str) -> 'Product':
         from fnmatch import fnmatch
-        self.set_categories = True
+        self.set_services = True
 
         services = []
         for i in self.services:
@@ -243,7 +239,7 @@ class Product():
 
         return self
 
-    def category(self, pat:str) -> 'Product':
+    def category(self, pat:str) -> int:
         from fnmatch import fnmatch
         self.set_categories = True
 
@@ -255,8 +251,5 @@ class Product():
             hql = self.categories[i]['hql']
             categories.append(self.parse_category(i, hql))
 
-        if not categories:
-            raise hqle.QueryException(f'Invalid category: {pat}')
         self.selection['categories'] += categories
-
-        return self
+        return len(categories)

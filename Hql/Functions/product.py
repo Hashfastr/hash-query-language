@@ -22,13 +22,13 @@ class product(Function):
         from Hql.Hac import Source
         from Hql.Expressions.Literals import StringLiteral
 
-        src = Source(ctx)
+        src = receiver if isinstance(receiver, Source) else Source(ctx)
 
         for i in self.names:
             arg = i.preprocess(ctx)
 
             if not isinstance(arg, StringLiteral):
-                raise hqle.QueryException(f"Invalid argument type passed to function service {type(i)} eval'd to {type(arg)}")
-            src.category(arg.str())
+                raise hqle.QueryException(f"Invalid argument type passed to function product {type(i)} eval'd to {type(arg)}")
+            src.product(arg.str())
 
         return src

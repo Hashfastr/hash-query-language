@@ -21,7 +21,7 @@ class category(Function):
     def preprocess(self, ctx: 'Context', receiver=None) -> 'Source':
         from Hql.Hac import Source
         from Hql.Expressions.Literals import StringLiteral
-        
+
         src = receiver
         if not src:
             src = Source(ctx)
@@ -34,7 +34,10 @@ class category(Function):
             arg = i.preprocess(ctx)
 
             if not isinstance(arg, StringLiteral):
-                raise hqle.QueryException(f"Invalid argument type passed to function service {type(i)} eval'd to {type(arg)}")
-            src.category(arg.str())
+                raise hqle.QueryException(f"Invalid argument type passed to function category {type(i)} eval'd to {type(arg)}")
+
+            matched = src.category(arg.str())
+            if not matched:
+                src.category_standalone(arg.str())
 
         return src

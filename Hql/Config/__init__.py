@@ -12,6 +12,7 @@ class Config():
             'general': {},
             'databases': {},
             'products': {},
+            'categories': {},
             'functions': {},
             'sigma': {
                 'posthql': {}
@@ -60,7 +61,12 @@ class Config():
                     self.load_general(src, i[j])
 
                 elif j == 'product':
-                    self.load_product(src, i[j])
+                    for k in i[j]:
+                        self.load_product(k, i[j][k], src)
+
+                elif j == 'category':
+                    for k in i[j]:
+                        self.load_category(k, i[j][k], src)
 
                 elif j == 'function':
                     self.load_function(src, i[j])
@@ -108,25 +114,35 @@ class Config():
         name = self.conf['general']['default_db']
         return self.get_database(name)
 
-    def load_product(self, src:str, config:dict):
+    def load_product(self, name:str, config:dict, src:str):
         if not config.get('configured', True):
             return
 
-        if 'name' not in config:
-            raise hqle.ConfigException(f'Product config {src} missing required key name')
-
         if 'hql' not in config and 'upstream' not in config:
-            raise hqle.ConfigException(f'Product config {src} missing required key hql or upstream')
+            raise hqle.ConfigException(f'Product config {name} missing required key hql or upstream')
 
         if 'hql' in config:
             config['upstream'] = [config.pop('hql')]
 
-        name = config['name']
-
         if name in self.conf['products']:
-            raise hqle.ConfigException(f'Duplicate product definition: {name} in {src}')
+            raise hqle.ConfigException(f'Duplicate product definition for {name} in {src}')
 
         self.conf['products'][name] = config
+
+    def load_category(self, name:str, config:dict, src:str):
+        if not config.get('configured', True):
+            return
+
+        if 'hql' not in config:
+            raise hqle.ConfigException(f'Category config {name} missing required key hql in {src}')
+
+        if name in self.conf['categories']:
+            raise hqle.ConfigException(f'Duplicate category definition for {name} in {src}')
+
+        self.conf['categories'][name] = config
+
+    def get_category(self, name:str) -> Optional[dict]:
+        return self.conf['categories'].get(name, None)
 
     def load_function(self, src:str, config:dict):
         for i in ['name', 'conf']:
