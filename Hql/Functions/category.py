@@ -21,6 +21,9 @@ class category(Function):
     def preprocess(self, ctx: 'Context', receiver=None) -> 'Source':
         from Hql.Hac import Source
         from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import NamedReference
+
+        return NamedReference('Test')
 
         src = receiver
         if not src:
