@@ -1,4 +1,4 @@
-# Generated from Hql.g4 by ANTLR 4.13.2
+# Generated from ./Hql.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .HqlParser import HqlParser
@@ -61,6 +61,11 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#letMacroDeclaration.
     def visitLetMacroDeclaration(self, ctx:HqlParser.LetMacroDeclarationContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#letLogicDeclaration.
+    def visitLetLogicDeclaration(self, ctx:HqlParser.LetLogicDeclarationContext):
         return self.visitChildren(ctx)
 
 

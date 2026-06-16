@@ -1,10 +1,12 @@
-from . import Hac
 import logging
-import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from . import Hac
 
 class HacDoc():
-    def __init__(self, hac:Hac) -> None:
-        self.hac:Hac = hac
+    def __init__(self, hac:'Hac') -> None:
+        self.hac:'Hac' = hac
         self.md_table_fields = [
             'status',
             'level',
@@ -39,7 +41,8 @@ class HacDoc():
         md += '\n'
 
         md += '### Description\n'
-        md += self.hac.get('description')
+        desc = self.hac.get('description')
+        md += desc if isinstance(desc, str) else ' '.join(desc)
         md += '\n'
 
         tags = self.hac.get('tags')
@@ -85,6 +88,7 @@ class HacDoc():
         return md
 
     def decompile(self):
+        import datetime
         from copy import deepcopy
         asm:dict = deepcopy(self.hac.asm)
         long = False

@@ -1,13 +1,9 @@
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Compiler import InstructionSet
-from pathlib import Path
 import datetime
 import logging
 import time
-
-from Hql.Helpers import can_thread
 
 if TYPE_CHECKING:
     from Hql.Config import Config
@@ -15,6 +11,7 @@ if TYPE_CHECKING:
     from Hql.Parser.Sigma import SigmaParser
     from Hql.Data import Data
     from Hql.Compiler import HqlCompiler
+    from pathlib import Path
 
 class CronException(Exception):
     def __init__(self, message:str=""):
@@ -189,7 +186,7 @@ class Detection():
         return res
 
     def gen_hac(self) -> tuple[Optional['Hac'], Optional['SigmaParser']]:
-        from Hql.Hac import Parser as HaCParser
+        from Hql.Hac.Parser import Parser as HaCParser
         from Hql.Parser.Sigma import SigmaParser
 
         parser = None
@@ -210,8 +207,6 @@ class Detection():
 
     def deparse(self) -> str:
         from Hql.Query import Query
-        from Hql.Context import Context
-        from Hql.Data import Data
 
         deparse = ''
 
@@ -226,7 +221,7 @@ class Detection():
         if not isinstance(self.parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(self.parser.assembly)}')
 
-        deparse += self.parser.assembly.decompile(Context(Data()))
+        deparse += self.parser.assembly.deparse()
         
         return deparse
 
@@ -295,13 +290,14 @@ class Detection():
         return ctx.data
 
 class HacEngine():
-    def __init__(self, path:Path, directory:bool, conf_path:Path, tz:Optional[datetime.tzinfo]=None) -> None:
+    def __init__(self, path:'Path', directory:bool, conf_path:'Path', tz:Optional[datetime.tzinfo]=None) -> None:
         from Hql.Threading import HacPool, HacThread
         from Hql.Apiserver import Apiserver
+        from Hql.Helpers import can_thread
 
         self.path = path
         self.directory = directory
-        self.files:list[Path] = self.scan_files()
+        self.files:list['Path'] = self.scan_files()
         self.conf_path = conf_path
         self.config = self.load_conf()
         self.detections:dict[str, Detection] = self.load_files()
@@ -322,7 +318,7 @@ class HacEngine():
         from Hql.Config import Config
         return Config(self.conf_path)
 
-    def scan_files(self) -> list[Path]:
+    def scan_files(self) -> list['Path']:
         files = []
 
         if self.directory:
@@ -374,12 +370,11 @@ class HacEngine():
         return detection
 
     def wait_till(self, stamp:int, pad:int=0):
-        from time import sleep
         cur = datetime.datetime.now(tz=self.tz).timestamp()
         if stamp <= cur:
             return
         delta = (stamp - cur) - pad
-        sleep(delta)
+        time.sleep(delta)
 
     def clean_old(self):
         for t in self.completed:

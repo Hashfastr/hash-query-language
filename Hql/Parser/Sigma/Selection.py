@@ -15,6 +15,15 @@ class Selection():
         self.name = name
         self.selection = selection
         self.fields = []
+    
+    def gen_let(self):
+        from Hql.Query import LetLogicStatement
+        from Hql.Expressions.References import NamedReference
+
+        return LetLogicStatement(
+            NamedReference(self.name),
+            self.build_selection()
+        )
 
     def build_selection(self):
         from Hql.Expressions.Logic import BinaryLogic

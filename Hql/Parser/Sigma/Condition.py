@@ -7,6 +7,7 @@ from fnmatch import fnmatch
 
 if TYPE_CHECKING:
     from . import Selection
+    from Hql.Expressions.References import NamedReference
 
 class Condition():
     def __init__(self, text:str, selections:list['Selection']):
@@ -14,11 +15,14 @@ class Condition():
         self.selections = selections
         self.tree = self.parse()
 
-    def get_sel(self, name:str) -> list['Selection']:
+    def get_sel(self, name:str) -> list['NamedReference']:
+        from Hql.Expressions.References import NamedReference
+
         matches = []
         for i in self.selections:
             if fnmatch(i.name, name):
-                matches.append(i)
+                matches.append(NamedReference(i.name))
+
         return matches
 
     def parse(self):
@@ -89,7 +93,7 @@ class Visitor(SigmaVisitor):
         if ctx.All:
             return ctx.All.text
 
-    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list['Selection']:
+    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list['NamedReference']:
         # pattern or 'them'
         # 'them' means all selections
         if ctx.Pattern:
@@ -107,7 +111,7 @@ class Visitor(SigmaVisitor):
     def visitSelectionIdentifier(self, ctx: SigmaParser.SelectionIdentifierContext):
         if ctx.Basic:
             identifier = self.visit(ctx.Basic)
-            return self.condition.get_sel(identifier)[0].build_selection()
+            return self.condition.get_sel(identifier)[0]
         else:
             return None
 

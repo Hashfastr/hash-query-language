@@ -6,9 +6,10 @@ from Hql.Exceptions import HqlExceptions as hqle
 if TYPE_CHECKING:
     from Hql.Compiler.InstructionSet import InstructionSet
     from Hql.Expressions import PipeExpression
-    from Hql.Expressions import Reference
+    from Hql.Expressions.References import Reference
     from Hql.Context import Context
     from Hql.Operators.Operator import Operator
+    from Hql.Expressions.Logic import Bool, Logic
 
 # Top most object, a query.
 # Comprised of multiple statements
@@ -125,19 +126,29 @@ class Query():
 
     def deparse(self):
         from Hql.Expressions.References import NamedReference
+        from Hql.Compiler.InstructionSet import InstructionSet
         self.expand_iset()
 
         statements = []
         for i in self.ctx.symbol_table:
+            if isinstance(self.ctx.symbol_table[i], InstructionSet):
+                raise Exception('Attempting to deparse compiled Query')
             statements.append(LetStatement(NamedReference(i), self.ctx.symbol_table[i]))
         statements += self.statements
-        
-        print([type(x) for x in statements])
 
-        out = []
+        out = ''
+        cur = ''
         for i in statements:
-            out.append(i.deparse())
-        return '\n;\n'.join(out)
+            if cur:
+                if len(cur) < 120:
+                    out += ';\n'
+                else:
+                    out += '\n;\n'
+
+            cur = i.deparse()
+            out += cur
+
+        return out
 
     def to_dict(self):
         return {
@@ -174,6 +185,11 @@ class QueryStatement(Statement):
         return out
 
     def deparse(self):
+        from Hql.Compiler.InstructionSet import InstructionSet
+
+        if isinstance(self.root, InstructionSet):
+            raise Exception('Attempting to deparse compiled QueryStatement')
+
         return self.root.deparse()
 
 class LetStatement(Statement):
@@ -204,4 +220,22 @@ class LetStatement(Statement):
         else:
             ctx.symbol_table[name] = self.root
 
+        return ctx
+
+class LetLogicStatement(LetStatement):
+    def __init__(self, name:'Reference', value:Union['Logic', 'Bool']):
+        Statement.__init__(self)
+        self.root = value
+        self.name = name
+
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'name': self.name.to_dict(),
+            'value': self.root.to_dict()
+        }
+
+    def eval(self, ctx:'Context') -> 'Context':
+        name = self.name.str()
+        ctx.symbol_table[name] = self.root
         return ctx

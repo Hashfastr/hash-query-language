@@ -7,7 +7,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 if TYPE_CHECKING:
     from Hql.Config import Config
 
-import logging, json
+import logging
 
 if TYPE_CHECKING:
     from Hql.Functions import DotCompositeFunction, Function
@@ -45,16 +45,17 @@ class SigmaParser():
 
     def assemble(self):
         from Hql.Expressions import PipeExpression
-        from Hql.Query import Query, QueryStatement
+        from Hql.Query import Query, QueryStatement, LetLogicStatement
         from Hql.Parser import Parser as HqlParser
+        from Hql.Operators.Where import Where
 
-        hac = self.gen_hac()
+        # hac = self.gen_hac()
         dac = self.loaded['detection']
         src = self.loaded['logsource']
 
         prepipe = self.gen_src(src)
-        pipe = self.parse_dac(dac)
-        expr = PipeExpression([pipe], prepipe=prepipe)
+        condition:Condition = self.parse_dac(dac)
+        expr = PipeExpression([Where(condition.assemble())], prepipe=prepipe)
 
         posthql_src = ''
         if 'posthql' not in self.loaded['detection'] and 'default' in self.config.conf['sigma']['posthql']:
@@ -72,8 +73,12 @@ class SigmaParser():
                 raise hqle.ConfigException(f'Posthql definition does not compile to an empty piped operator')
             expr.pipes += asm.pipes
 
-        statement = QueryStatement(expr)
-        self.assembly = Query([statement])
+        stmts = []
+        for i in condition.selections:
+            stmts.append(i.gen_let())
+
+        stmts += [QueryStatement(expr)]
+        self.assembly = Query(stmts)
 
     def gen_src(self, src:dict) -> Union['DotCompositeFunction', 'Function']:
         from Hql.Expressions.Functions import FuncExpr
@@ -98,9 +103,7 @@ class SigmaParser():
 
         return DotCompositeFunction(funcs)
 
-    def parse_dac(self, dac:dict):
-        from Hql.Operators.Where import Where
-
+    def parse_dac(self, dac:dict) -> Condition:
         selections = []
         for i in dac:
             if i == 'condition':
@@ -108,10 +111,7 @@ class SigmaParser():
 
             selections.append(Selection(dac[i], name=i))
 
-        condition = Condition(dac['condition'], selections)
-        expr = Where(condition.assemble())
-
-        return expr
+        return Condition(dac['condition'], selections)
 
     def gen_hql(self, src:dict, dac:dict):
         selections = []

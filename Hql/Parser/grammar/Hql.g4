@@ -32,6 +32,7 @@ letStatement:
     | Materialized=letMaterializeDeclaration
     | EntityGroup=letEntityGroupDeclaration
     | Macro=letMacroDeclaration
+    | Logic=letLogicDeclaration
     ;
 
 letVariableDeclaration:
@@ -55,6 +56,8 @@ letEntityGroupDeclaration:
 letMacroDeclaration:
     LET Name=simpleNameReference '=' Pipes=emptyPipedExpression;
 
+letLogicDeclaration:
+    LET Name=simpleNameReference '=' Logic=unnamedExpression;
 
 letFunctionParameterList:
     TabularParameters+=tabularParameter (',' TabularParameters+=tabularParameter) (',' ScalarParameters+=scalarParameter)

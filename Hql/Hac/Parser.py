@@ -1,4 +1,3 @@
-import logging
 import re
 from typing import Optional, TYPE_CHECKING, Union
 from Hql.Exceptions import HacExceptions as hace
