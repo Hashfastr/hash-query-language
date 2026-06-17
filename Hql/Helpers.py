@@ -17,7 +17,7 @@ def run_query(text:str, conf:'Config', name:str='', **kwargs) -> Union['Data', s
     from Hql.Parser import Parser
     from Hql.Parser.Sigma import SigmaParser
     from Hql.Compiler import HqlCompiler
-    from Hql.Hac import Parser as HaCParser
+    from Hql.Hac.Parser import Parser as HaCParser
     from Hql.Query import Query
     from Hql.Hac import Hac
 

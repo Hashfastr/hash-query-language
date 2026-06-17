@@ -4,7 +4,7 @@ from Hql.Context import register_func, Context
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 if TYPE_CHECKING:
-    from Hql.Hac import Source
+    from Hql.Hac.Sources import Source
 
 @register_func('product')
 class product(Function):
@@ -19,7 +19,7 @@ class product(Function):
             self.names.append(i)
         
     def preprocess(self, ctx: 'Context', receiver=None) -> 'Source':
-        from Hql.Hac import Source
+        from Hql.Hac.Sources import Source
         from Hql.Expressions.Literals import StringLiteral
 
         src = receiver if isinstance(receiver, Source) else Source(ctx)

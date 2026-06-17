@@ -17,7 +17,7 @@ class service(Function):
             self.names.append(i)
         
     def eval(self, ctx: 'Context', receiver=None) -> object:
-        from Hql.Hac import Source
+        from Hql.Hac.Sources import Source
         from Hql.Expressions.Literals import StringLiteral
         
         src = receiver

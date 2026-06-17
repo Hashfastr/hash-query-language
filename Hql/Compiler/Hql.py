@@ -56,7 +56,7 @@ class HqlCompiler(Compiler):
         return acc
 
     def QueryStatement(self, statement: 'Hql.Query.QueryStatement', preprocess:bool=True) -> InstructionSet:
-        from Hql.Hac import Source
+        from Hql.Hac.Sources import Source
         from Hql.Database import Database
         acc, _ = self.compile(statement.root)
 
@@ -84,7 +84,7 @@ class HqlCompiler(Compiler):
         from Hql.Database import Database, Static
         from Hql.Expressions import DotCompositeFunction, NamedReference
         from Hql.Operators.Range import Range, Datatable, Union
-        from Hql.Hac import Source
+        from Hql.Hac.Sources import Source
 
         if isinstance(expr, InstructionSet):
             return expr, None

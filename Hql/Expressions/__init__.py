@@ -46,7 +46,7 @@ class PipeExpression(Expression):
         from Hql.Compiler.InstructionSet import InstructionSet
         from Hql.Functions import Function, DotCompositeFunction
         from Hql.Database import Database
-        from Hql.Hac import Source
+        from Hql.Hac.Sources import Source
         from Hql.Operators.Union import Union as HqlUnion
 
         pipes = []

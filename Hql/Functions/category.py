@@ -4,7 +4,7 @@ from Hql.Context import register_func, Context
 from typing import Optional, Sequence, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Hac import Source
+    from Hql.Hac.Sources import Source
 
 @register_func('category')
 class category(Function):
@@ -19,7 +19,7 @@ class category(Function):
             self.names.append(i)
 
     def preprocess(self, ctx: 'Context', receiver=None) -> 'Source':
-        from Hql.Hac import Source
+        from Hql.Hac.Sources import Source
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import NamedReference
 

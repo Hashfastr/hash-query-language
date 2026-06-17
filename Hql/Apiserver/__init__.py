@@ -15,7 +15,7 @@ import logging
 from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
-    from Hql.Hac import HacEngine
+    from Hql.Hac.Engine import HacEngine
 
 class HqlRequest(BaseModel):
     hql: str
@@ -106,7 +106,7 @@ class Apiserver():
 
         @self.app.post('/api/detections/retro')
         def retro_hunt(hql:HqlRequest):
-            from Hql.Hac import Detection
+            from Hql.Hac.Engine import Detection
 
             det = Detection(hql.hql, 'api', self.hacengine.config, no_hac=True)
             if not det.hac or not det.schedule:
@@ -154,7 +154,7 @@ class Apiserver():
 
         @self.app.post('/api/hql/runs')
         def submit_hql_query(hql:HqlRequest):
-            from Hql.Hac import Detection
+            from Hql.Hac.Engine import Detection
             if not hql.run:
                 return {'id': ''}
 
@@ -164,7 +164,7 @@ class Apiserver():
 
         @self.app.post('/api/hql/deparse')
         def reparse_hql(hql:HqlRequest):
-            from Hql.Hac import Detection
+            from Hql.Hac.Engine import Detection
 
             det = Detection(hql.hql, 'api', self.hacengine.config)
             deparsed = det.deparse()
@@ -179,7 +179,8 @@ class Apiserver():
 
         @self.app.post('/api/hql/init_hac')
         def add_hac(hql:HqlRequest):
-            from Hql.Hac import Detection, Hac
+            from Hql.Hac.Engine import Detection
+            from Hql.Hac import Hac
 
             det = Detection(hql.hql, 'api', self.hacengine.config)
             if not det.hac:
