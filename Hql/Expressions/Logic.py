@@ -288,47 +288,27 @@ class Substring(Comparator):
         self.can_list = True
 
     def preprocess(self, ctx: 'Context') -> object:
-        from Hql.Expressions.Literals import Literal, StringLiteral, Bool
+        from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference
-
-        if len(self.rh) > 1:
-            rh = self.expand_rh().preprocess(ctx)
-            if isinstance(rh, Logic):
-                return rh.reduce()
-            return rh
+        from Hql.Expressions import Expression
 
         lh = self.lh.preprocess(ctx)
-        rh = self.rh[0].preprocess(ctx)
 
-        # short circuit
-        if isinstance(lh, Literal) and isinstance(rh, Literal):
-            if not isinstance(lh, StringLiteral):
-                lh = StringLiteral(lh.str())
-                
+        if not isinstance(lh, Reference):
+            raise Exception(f'Substring lh resolved to {type(lh)} not Reference')
+        
+        rhs = []
+        for i in self.rh:
+            rh = i.preprocess(ctx)
+            assert isinstance(rh, Expression)
             if not isinstance(rh, StringLiteral):
                 rh = StringLiteral(rh.str())
-
-            if self.startswith:
-                return Bool(lh.startswith(rh, self.cs) != self.neq)
-            elif self.endswith:
-                return Bool(lh.endswith(rh, self.cs) != self.neq)
-            else:
-                return Bool(lh.contains(rh, self.cs) != self.neq)
-
-        assert isinstance(lh, Expression)
-        assert isinstance(rh, Expression)
-
-        if not isinstance(lh, Reference) or isinstance(rh, Reference):
-            logging.error(f'Expression: {self.deparse()}')
-            logging.error(f'Is invalid with preprocessed operands {lh.deparse()} and {rh.deparse()}')
-            hqle.QueryException(f'Invalid preprocessed expression')
+            rhs.append(rh)
 
         new = self.dupe()
-        assert isinstance(lh, Reference)
         new.lh = lh
-        new.rh = [rh]
-
-        return self
+        new.rh = rhs
+        return new
 
     def to_dict(self):
         return {
@@ -623,11 +603,17 @@ class BinaryLogic(Logic):
                 continue
             new.add(i)
 
+        # print(new)
+        # print()
+
         self.logic_and = logic_and
         self.exprs = list(new)
 
     def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Union[Logic, 'Bool']:
         from Hql.Expressions.Literals import Bool
+
+        # print('fuck')
+        # print(exprs)
 
         if len(exprs) == 0:
             raise hqle.CompilerException('BinaryLogic given no expressions!')

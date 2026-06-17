@@ -27,20 +27,24 @@ class Selection():
 
     def build_selection(self):
         from Hql.Expressions.Logic import BinaryLogic
-        exprs = []
+        
+        def build_dict(sel:dict):
+            exprs = []
+            for i in sel:
+                expr = self.process_field(i, sel[i])
+                exprs.append(expr)
+            return BinaryLogic(exprs)
 
         if isinstance(self.selection, list):
-            logic_and = False
-            for i in self.selection:
-                expr = Selection(i).build_selection()
-                exprs.append(expr)
+            sel = self.selection
         else:
-            logic_and = True
-            for i in self.selection:
-                expr = self.process_field(i, self.selection[i])
-                exprs.append(expr)
+            sel = [self.selection]
 
-        return BinaryLogic(exprs, logic_and)
+        exprs = []
+        for i in sel:
+            expr = build_dict(i)
+            exprs.append(expr)
+        return BinaryLogic(exprs, logic_and=False)
 
     def to_literal_object(self, value, modifiers:list[str]):
         from Hql.Expressions.Literals import StringLiteral, Integer, Float
@@ -67,7 +71,7 @@ class Selection():
 
         return expr
 
-    def substring(self, lh:'NamedReference', modifiers:list, rh):
+    def substring(self, lh:'NamedReference', modifiers:list, rh:list):
         from Hql.Expressions.Logic import Substring
         if not isinstance(rh, list):
             rh = [rh]

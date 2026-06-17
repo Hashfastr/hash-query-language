@@ -1,11 +1,10 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
 
-from .Selection import Selection
-from .Condition import Condition
 from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Config import Config
+    from Hql.Parser.Sigma.Condition import Condition
 
 import logging
 
@@ -23,7 +22,7 @@ class SigmaParser():
         if isinstance(self.loaded, str):
             raise hqle.QueryException('Invalid sigma supplied to parser')
 
-        self.assembly:Union[None, Query] = None
+        self.assembly:Optional[Query] = None
 
         if self.loaded.get('status', '') == 'deprecated':
             raise hqle.QueryException(f'Sigma rule is deprecated')
@@ -45,7 +44,7 @@ class SigmaParser():
 
     def assemble(self):
         from Hql.Expressions import PipeExpression
-        from Hql.Query import Query, QueryStatement, LetLogicStatement
+        from Hql.Query import Query, QueryStatement
         from Hql.Parser import Parser as HqlParser
         from Hql.Operators.Where import Where
 
@@ -54,7 +53,7 @@ class SigmaParser():
         src = self.loaded['logsource']
 
         prepipe = self.gen_src(src)
-        condition:Condition = self.parse_dac(dac)
+        condition:'Condition' = self.parse_dac(dac)
         expr = PipeExpression([Where(condition.assemble())], prepipe=prepipe)
 
         posthql_src = ''
@@ -103,7 +102,10 @@ class SigmaParser():
 
         return DotCompositeFunction(funcs)
 
-    def parse_dac(self, dac:dict) -> Condition:
+    def parse_dac(self, dac:dict) -> 'Condition':
+        from Hql.Parser.Sigma.Condition import Condition
+        from Hql.Parser.Sigma.Selection import Selection
+
         selections = []
         for i in dac:
             if i == 'condition':

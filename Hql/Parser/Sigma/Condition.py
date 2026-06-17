@@ -6,7 +6,7 @@ from .grammar.SigmaVisitor import SigmaVisitor
 from fnmatch import fnmatch
 
 if TYPE_CHECKING:
-    from . import Selection
+    from Hql.Parser.Sigma.Selection import Selection
     from Hql.Expressions.References import NamedReference
 
 class Condition():

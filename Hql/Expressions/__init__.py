@@ -37,7 +37,7 @@ class PipeExpression(Expression):
     def __init__(self, pipes:list['Operator'], prepipe:Union[PrepipeType, None]=None):
         Expression.__init__(self)
         self.prepipe                    = prepipe
-        self.pipes:Sequence['Operator'] = pipes
+        self.pipes:list['Operator'] = pipes
 
     def __bool__(self):
         return bool(self.prepipe) or bool(self.pipes)
