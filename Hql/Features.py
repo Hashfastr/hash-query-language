@@ -7,6 +7,11 @@ if TYPE_CHECKING:
     import Hql.Expressions as Expr
     import Hql.Operators as Ops
 
+'''
+Likely to trash
+
+old idea, solved by newer one, never used
+'''
 class FeatureSet():
     def __init__(self) -> None:
         self.name = type(self).__name__

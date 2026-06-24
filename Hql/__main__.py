@@ -9,7 +9,6 @@ import time
 import logging
 import argparse, sys
 import cProfile, pstats
-from typing import Union
 from pathlib import Path
 
 def config_logging(level:int):
