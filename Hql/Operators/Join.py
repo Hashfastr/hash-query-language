@@ -41,7 +41,7 @@ class Join(Operator):
                 self.kind = i.value.str()
 
     # Gets the data resulting from a compiled right side
-    def get_right(self, ctx:'Context') -> 'Data':
+    def get_right(self, ctx:'Context', where:'Logic') -> 'Data':
         from Hql.Operators.Where import Where
         from Hql.Compiler import InstructionSet
 
@@ -55,7 +55,7 @@ class Join(Operator):
 
         return self.rh.eval(ctx).data
 
-    def gen_optimization(self, data:'Data') -> 'Expression':
+    def gen_optimization(self, data:'Data') -> 'Logic':
         from Hql.Operators.Summarize import Summarize
         from Hql.Operators.Union import Union
         from Hql.Expressions.References import Wildcard
@@ -134,71 +134,33 @@ class Join(Operator):
         from Hql.Compiler import InstructionSet
         from Hql.Expressions import PipeExpression
 
-        out = 'join'
-
-        if self.params:
-            out += ' ' + ' '.join([x.deparse() for x in self.params])
-
-        if isinstance(self.rh, InstructionSet):
-            out += ' INSTRUCTION_RH'
-        elif isinstance(self.rh, PipeExpression):
-            out += ' (' + self.rh.deparse() + ')'
-        else:
-            out += ' ' + self.rh.deparse()
-
-        if self.on:
-            out += ' on '
-            out += ', '.join([x.deparse() for x in self.on])
-
-        if self.where:
-            out += ' where '
-            out += self.where.deparse()
-
-        return out
-
-    def decompile(self, ctx: 'Context') -> str:
-        from Hql.Compiler import InstructionSet
-        from Hql.Expressions import PipeExpression
-
         out = 'join '
 
         if isinstance(self.rh, InstructionSet):
             out += 'INSTRUCTION_RH'
         else:
-            rh = self.rh.decompile(ctx)
             if isinstance(self.rh, PipeExpression):
-                assert isinstance(rh, str)
-                rh = rh.replace('\n', ' ')
-                out += '(' + rh + ')'
+                out += '(' + self.rh.deparse() + ')'
             else:
-                out += rh
+                out += self.rh.deparse()
 
         if self.params:
-            out += ' '
-            params = []
-            for i in self.params:
-                params.append(i.decompile(ctx))
-            out += ' '.join(params)
+            out += ' ' + ' '.join([x.deparse() for x in self.params])
 
         if self.on:
-            out += ' '
-            out += 'on '
-            out += ', '.join([x.decompile(ctx) for x in self.on])
+            out += ' on ' + ', '.join([x.deparse() for x in self.on])
 
         if self.where:
-            out += ' '
-            out += 'where '
-            out += self.where.decompile(ctx)
+            out += ' where ' + self.where.deparse()
 
         return out
 
-    def eval(self, ctx:'Context', **kwargs):
-        self.process_params(ctx)
+    def eval(self, ctx:'Context'):
+        self.process_params()
 
         left = ctx.data
         expr = self.gen_optimization(left)
         right = self.get_right(ctx, expr)
 
-        data = left.join(right, self.on, kind=self.kind)
-
-        return data
+        ctx.data = left.join(right, self.on, kind=self.kind)
+        return ctx

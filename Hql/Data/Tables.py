@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 import polars as pl
 from polars.dataframe.group_by import GroupBy
@@ -485,7 +485,7 @@ class Table():
 
         return self
     
-    def join(self, right:"Table", on:Union[list['Reference'], 'Reference'], kind:str):
+    def join(self, right:"Table", on:Sequence['Reference'], kind:str):
         from Hql.Context import Context
         from Hql.Data import Data
 

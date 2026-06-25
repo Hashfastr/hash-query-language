@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Union, Iterator
+from typing import TYPE_CHECKING, Optional, Sequence, Union, Iterator
 from fnmatch import fnmatch
 
 from .Tables import Table
@@ -183,10 +183,7 @@ class Data():
 
         return self
 
-    def join(self, right:"Data", on:Union[list['Reference'], 'Reference'], kind:str='innerunique'):
-        if not isinstance(on, list):
-            on = [on]
-
+    def join(self, right:"Data", on:Sequence['Reference'], kind:str='innerunique'):
         tables = []
         for lt in self:
             new = []
