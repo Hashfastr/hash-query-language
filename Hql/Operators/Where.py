@@ -1,14 +1,13 @@
+import logging
+from typing import TYPE_CHECKING, Union, Optional
 from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import Context
-import logging
-
-from typing import TYPE_CHECKING, Union, Optional
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Expressions.Logic import Logic
     from Hql.Expressions import OpParameter
+    from Hql.Context import Context
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.
@@ -49,7 +48,7 @@ class Where(Operator):
         out += self.expr.deparse()
         return out
 
-    def split_by_length(self, max_length:int=80) -> list[Where]:
+    def split_by_length(self, max_length:int=80) -> list['Where']:
         from Hql.Expressions.Logic import BinaryLogic
 
         expr = self.expr
@@ -76,6 +75,7 @@ class Where(Operator):
     '''
     def eval(self, ctx:'Context') -> 'Context':
         from Hql.Data import Data
+
         pl_filter = self.expr.eval(ctx, as_pl=True)
 
         new = []

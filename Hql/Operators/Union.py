@@ -1,11 +1,13 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from Hql.Operators.Operator import Operator
-from Hql.Expressions import Expression
-from Hql.Context import Context
 from Hql.Exceptions import HqlExceptions as hqle
 
+if TYPE_CHECKING:
+    from Hql.Expressions import Expression
+    from Hql.Context import Context
+
 class Union(Operator):
-    def __init__(self, exprs:list[Expression], name:Optional[Expression]=None):
+    def __init__(self, exprs:list['Expression'], name:Optional['Expression']=None):
         Operator.__init__(self)
         self.exprs = exprs
         self.name = name
@@ -32,7 +34,8 @@ class Union(Operator):
         }
 
     def eval(self, ctx:'Context', **kwargs):
-        from Hql.Data import Data, Table, Schema
+        from Hql.Data import Data, Table
+
         patterns = []
         for i in self.exprs:
             pattern = i.eval(ctx, as_str=True)

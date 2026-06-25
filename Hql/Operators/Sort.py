@@ -1,11 +1,10 @@
 from typing import Sequence, TYPE_CHECKING
 from Hql.Operators.Operator import Operator
-from Hql.Context import Context
-from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Expressions.Aggregation import OrderedExpression
+    from Hql.Context import Context
 
 class Sort(Operator):
     _exprs: Sequence['OrderedExpression']
@@ -21,6 +20,8 @@ class Sort(Operator):
     @exprs.setter
     def exprs(self, value:Sequence['Expression']) -> None:
         from Hql.Expressions.Aggregation import OrderedExpression
+        from Hql.Exceptions import HqlExceptions as hqle
+
         new:list['OrderedExpression'] = []
         for v in value:
             if not isinstance(v, OrderedExpression):

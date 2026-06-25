@@ -1,6 +1,5 @@
-from Hql.Operators.Operator import Operator
-from Hql.Exceptions import HqlExceptions as hqle
 from typing import Optional, TYPE_CHECKING
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
     from Hql.Context import Context
@@ -31,6 +30,8 @@ class As(Operator):
 
     @expr.setter
     def expr(self, value:Optional['Expression']) -> None:
+        from Hql.Exceptions import HqlExceptions as hqle
+
         if value is None:
             raise hqle.CompilerException('Setting As expression to None')
         self._expr = value

@@ -1,7 +1,9 @@
+from typing import TYPE_CHECKING
 from Hql.Operators.Operator import Operator
-from Hql.Context import Context
 
-# @register_op('Template')
+if TYPE_CHECKING:
+    from Hql.Context import Context
+
 class Template(Operator):
     def __init__(self):
         Operator.__init__(self)

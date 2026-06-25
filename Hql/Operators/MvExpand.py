@@ -1,8 +1,9 @@
-from Hql.Operators.Operator import Operator
 from typing import TYPE_CHECKING, Optional
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
-    from Hql.Expressions import ToClause, Integer
+    from Hql.Expressions import ToClause
+    from Hql.Expressions.Literals import Integer
     from Hql.Context import Context
     from Hql.Data import Table
 
@@ -25,7 +26,7 @@ class MvExpand(Operator):
     def explode_table(self, table:'Table', limit:int):
         from Hql.Types.Hql import HqlTypes as hqlt
         from Hql.Data import Table
-        
+
         schema = table.schema
         df = table.df
 
@@ -38,7 +39,7 @@ class MvExpand(Operator):
             # Short circuit case
             if not isinstance(to_schema, hqlt.multivalue):
                 continue
-            
+
             new_type = to_schema.inner
             # need to fix the typing on this
             df = df.with_columns(
@@ -47,9 +48,9 @@ class MvExpand(Operator):
 
             if to.to:
                 new_type = to.to
-                        
+
             schema.set(path, new_type)
-            
+
         return Table(df=df, schema=schema, name=table.name)
 
     def deparse(self) -> str:
@@ -59,7 +60,7 @@ class MvExpand(Operator):
         for i in self.exprs:
             exprs.append(i.deparse())
         out += ', '.join(exprs)
-        
+
         if self.limit:
             out += ' '
             out += self.limit.deparse()
@@ -68,6 +69,7 @@ class MvExpand(Operator):
 
     def eval(self, ctx:'Context'):
         from Hql.Data import Data
+
         ctx = ctx.copy()
 
         # Long literal, just get us the number
@@ -78,6 +80,6 @@ class MvExpand(Operator):
         new = []
         for table in ctx.data:
             new.append(self.explode_table(table, limit))
-        
+
         ctx.data = Data(tables=new)
         return ctx

@@ -1,12 +1,11 @@
-from Hql.Data import Data, Table
-from Hql.Context import Context
-from Hql.Operators.Operator import Operator
-from Hql.Exceptions import HqlExceptions as hqle
 from typing import Sequence, Union, TYPE_CHECKING
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Expressions.References import Reference, NamedExpression
+    from Hql.Context import Context
+    from Hql.Data import Table
 
 # Project my beloved
 # Defines a number of fields to be kept in the output following this operator.
@@ -33,7 +32,9 @@ class Project(Operator):
     @exprs.setter
     def exprs(self, value:Sequence['Expression']) -> None:
         from Hql.Expressions.References import NamedExpression, Reference
-        new:list[Union[Reference, NamedExpression]] = []
+        from Hql.Exceptions import HqlExceptions as hqle
+
+        new:list[Union['Reference', 'NamedExpression']] = []
         for v in value:
             if not isinstance(v, (Reference, NamedExpression)):
                 raise hqle.CompilerException('Setting Project exprs to non-Reference/NamedExpression')
@@ -49,6 +50,7 @@ class Project(Operator):
         return out
 
     def eval(self, ctx:'Context') -> 'Context':
+        from Hql.Data import Data
         from Hql.Expressions.References import NamedExpression
 
         ctx = ctx.copy()
@@ -90,6 +92,7 @@ class ProjectReorder(Project):
     Gonna take out the specific bits and move them to the front
     '''
     def eval(self, ctx:'Context') -> 'Context':
+        from Hql.Data import Data
         from Hql.Expressions.References import NamedExpression
 
         ctx = ctx.copy()
@@ -115,7 +118,7 @@ class ProjectRename(Project):
         super().__init__(exprs)
         self.optok = 'project-rename'
 
-    def rename(self, ctx:'Context', table:Table):
+    def rename(self, ctx:'Context', table:'Table'):
         for i in self.exprs:
             vpath = i.value.eval(ctx, as_list=True)
             value = table.get_value(vpath)

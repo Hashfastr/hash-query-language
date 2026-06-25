@@ -1,17 +1,16 @@
 from typing import TYPE_CHECKING, Sequence
-from Hql.Expressions import Expression
 from Hql.Operators.Operator import Operator
-from Hql.Context import Context
 
 if TYPE_CHECKING:
+    from Hql.Expressions import Expression
     from Hql.Context import Context
 
 class Unnest(Operator):
-    def __init__(self, field:Expression, tables:Sequence[Expression]):
+    def __init__(self, field:'Expression', tables:Sequence['Expression']):
         Operator.__init__(self)
         self.field = field
         self.tables = tables
-        
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -38,22 +37,22 @@ class Unnest(Operator):
             if i.str() == '*':
                 return True
         return False
-            
+
     def eval(self, ctx: 'Context') -> 'Context':
         self.ctx = ctx
 
         field = self.field.eval(ctx, as_list=True)
-        
+
         # loop through tables defined by 'on'
         for i in self.tables:
             table = i.eval(ctx, as_list=True)
-            
+
             # match tables matching the pattern
             tables = ctx.data.get_tables(table[0])
-            
+
             # loop through matching tables
             for j in tables:
                 new_table = j.unnest(field)
                 ctx.data.replace_table(new_table)
-        
+
         return ctx.data

@@ -1,12 +1,11 @@
 from typing import TYPE_CHECKING, Optional
-from Hql.Expressions.Literals import Integer
 from Hql.Operators.Operator import Operator
-from Hql.Context import Context
-from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
+    from Hql.Expressions.Literals import Integer
     from Hql.Expressions.Aggregation import ByExpression
+    from Hql.Context import Context
 
 '''
 Give the top, or bottom, x values for a given field in a dataframe
@@ -25,19 +24,22 @@ Preserves the other fields as well
 https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
 class Top(Operator):
-    def __init__(self, expr:Integer, by:'ByExpression'):
+    def __init__(self, expr:'Integer', by:'ByExpression'):
         Operator.__init__(self)
-        self._expr:Integer = expr
+        self._expr:'Integer' = expr
         self.by = by
 
     @property
-    def expr(self) -> Integer:
+    def expr(self) -> 'Integer':
         expr = self._expr
         assert expr
         return expr
 
     @expr.setter
     def expr(self, value:Optional['Expression']) -> None:
+        from Hql.Expressions.Literals import Integer
+        from Hql.Exceptions import HqlExceptions as hqle
+
         if value is None or not isinstance(value, Integer):
             raise hqle.CompilerException('Setting Top expression to non-Integer')
         self._expr = value

@@ -1,8 +1,8 @@
-from Hql.Operators.Operator import Operator
-from Hql.Context import Context
 from typing import TYPE_CHECKING
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
+    from Hql.Context import Context
     from Hql.Expressions import ToClause
 
 class Rename(Operator):

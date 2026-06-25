@@ -1,13 +1,14 @@
+from typing import Sequence, Union, Optional, TYPE_CHECKING
 from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import Context
-from typing import Sequence, Union, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, Reference, Logic
+    from Hql.Expressions import Expression, OpParameter
+    from Hql.Expressions.References import Reference
+    from Hql.Expressions.Logic import Logic
     from Hql.Data import Data
-    from Hql.Expressions import OpParameter
     from Hql.Compiler import InstructionSet
+    from Hql.Context import Context
 
 class Join(Operator):
     def __init__(self, rh:Union['Expression', 'InstructionSet'], on:Sequence['Reference'], params:Optional[list['OpParameter']]=None, where:Optional['Logic']=None):
@@ -40,25 +41,28 @@ class Join(Operator):
                 self.kind = i.value.str()
 
     # Gets the data resulting from a compiled right side
-    def get_right(self, ctx:Context) -> 'Data':
+    def get_right(self, ctx:'Context') -> 'Data':
         from Hql.Operators.Where import Where
         from Hql.Compiler import InstructionSet
 
         if not isinstance(self.rh, InstructionSet):
             raise hqle.CompilerException('Join attempting to get right without compilation, error?')
-        
+
         # Add a right side filter
         if self.where:
             self.rh.add_op(Where(self.where))
             self.rh.recompile(ctx.config)
-        
+
         return self.rh.eval(ctx).data
 
     def gen_optimization(self, data:'Data') -> 'Expression':
-        from Hql.Operators.Summarize import Summarize, Union
-        from Hql.Expressions.References import Wildcard, ByExpression
+        from Hql.Operators.Summarize import Summarize
+        from Hql.Operators.Union import Union
+        from Hql.Expressions.References import Wildcard
+        from Hql.Expressions.Aggregation import ByExpression
         from Hql.Database import Static
         from Hql.Compiler import InstructionSet
+        from Hql.Context import Context
         from Hql.Data import Data
         from Hql.Expressions.Logic import Equality, BinaryLogic
 
@@ -84,6 +88,7 @@ class Join(Operator):
 
     def name_from_dict(self, data:dict) -> 'Reference':
         from Hql.Expressions.References import Path, NamedReference
+
         path = []
         while True:
             key = list(data.keys())[0]
@@ -95,6 +100,7 @@ class Join(Operator):
 
     def value_from_dict(self, data:dict):
         from Hql.Expressions.Literals import Integer, StringLiteral, Float
+
         while True:
             key = list(data.keys())[0]
             if not isinstance(data[key], dict):
@@ -120,13 +126,14 @@ class Join(Operator):
             for j in up:
                 out.append({i: j})
         return out
-    
+
     def resolve_on_clause(self):
         ...
 
     def decompile(self, ctx: 'Context') -> str:
         from Hql.Compiler import InstructionSet
         from Hql.Expressions import PipeExpression
+
         out = 'join '
 
         if isinstance(self.rh, InstructionSet):
@@ -165,7 +172,7 @@ class Join(Operator):
         left = ctx.data
         expr = self.gen_optimization(left)
         right = self.get_right(ctx, expr)
-        
+
         data = left.join(right, self.on, kind=self.kind)
-        
+
         return data

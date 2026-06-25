@@ -1,11 +1,10 @@
 from typing import TYPE_CHECKING, Sequence, Union
 from Hql.Operators.Operator import Operator
-from Hql.Context import Context
-from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Expressions.References import NamedExpression, Reference
+    from Hql.Context import Context
 
 # Creates a field with a value in the extend
 #
@@ -28,7 +27,9 @@ class Extend(Operator):
     @exprs.setter
     def exprs(self, value:Sequence['Expression']) -> None:
         from Hql.Expressions.References import NamedExpression, Reference
-        new:list[Union[Reference, NamedExpression]] = []
+        from Hql.Exceptions import HqlExceptions as hqle
+
+        new:list[Union['Reference', 'NamedExpression']] = []
         for v in value:
             if not isinstance(v, (Reference, NamedExpression)):
                 raise hqle.CompilerException('Setting Extend exprs to non-Reference/NamedExpression')
