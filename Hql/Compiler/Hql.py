@@ -742,9 +742,10 @@ class HqlCompiler(Compiler):
         return desc, None
 
     def FuncExpr(self, expr:'Hql.Expressions.FuncExpr', prep:bool=True, dotcomp:bool=False) -> tuple[object, None]:
-        from Hql.Expressions.Functions import FuncExpr, NamedReference, Expression
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference
         from Hql.Functions import Function, typecasting
-        from Hql.Operators.Operator import Operator, Database
+        from Hql.Database import Database
         desc = BranchDescriptor()
 
         acc, _ = self.compile(expr.name)
@@ -759,27 +760,92 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             args.append(acc.get_expr())
 
-        desc.set_attr('functions', name.value)
-        desc.expr = FuncExpr(name, args).eval(self.ctx)
+        desc.set_attr('functions', name.str())
+        desc.expr = FuncExpr(name, args).preprocess(self.ctx)
         assert isinstance(desc.expr, Function)
 
         if isinstance(desc.expr, typecasting.Typecast):
             desc.set_attr('type_casting')
 
-        if desc.expr.preprocess and preprocess and not dotcomp:
-            res = desc.expr.eval(self.ctx, preprocess=True)
-            if isinstance(res, (Expression, Operator)) and not isinstance(res, Database):
-                return self.compile(res)
-            return res, None
+        if prep and not dotcomp:
+            res = desc.expr.preprocess(self.ctx)
+            if res is not desc.expr:
+                desc.expr = res
+                if isinstance(res, Database):
+                    desc.db = res
 
         return desc, None
 
-    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', prep:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import DotCompositeFunction, Expression, FuncExpr
+    def ReceiverFuncExpr(self, expr:'Hql.Expressions.ReceiverFuncExpr', prep:bool=True) -> tuple[object, None]:
+        from Hql.Database import Database
+        from Hql.Expressions.__proto__ import Expression
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference
         from Hql.Functions import Function
-        from Hql.Operators.Operator import Operator, Database
+        from Hql.Operators.Operator import Operator
+
         desc = BranchDescriptor()
-        func_preprocess = True
+
+        receiver = None
+        if isinstance(expr.receiver, NamedReference):
+            if expr.receiver in self.ctx.symbol_table:
+                receiver = self.ctx.symbol_table[expr.receiver]
+            elif expr.receiver.name in self.ctx.symbol_table:
+                receiver = self.ctx.symbol_table[expr.receiver.name]
+
+        if receiver is None:
+            acc, _ = self.compile(expr.receiver)
+            desc.merge(acc)
+            receiver = acc.get_expr()
+
+        if isinstance(receiver, Function):
+            preprocessed = receiver.preprocess(self.ctx)
+            if preprocessed is not receiver:
+                receiver = preprocessed
+
+        acc, _ = self.compile(expr.call.name)
+        desc.merge(acc)
+        name = acc.get_expr()
+        assert isinstance(name, NamedReference)
+
+        args = []
+        for i in expr.call.args:
+            acc, _ = self.compile(i)
+            desc.merge(acc)
+            args.append(acc.get_expr())
+
+        desc.set_attr('functions', name.str())
+        func = FuncExpr(name, args).preprocess(self.ctx)
+        assert isinstance(func, Function)
+        func.preprocess(self.ctx, receiver=receiver)
+        res = func.eval(self.ctx, receiver=receiver)
+
+        if isinstance(res, (InstructionSet, Database)):
+            return res, None
+
+        if isinstance(res, (Expression, Operator)):
+            return self.compile(res)
+
+        desc.expr = res
+        return desc, None
+
+    def DotFuncExpr(self, expr:'Hql.Expressions.DotFuncExpr', prep:bool=True) -> tuple[object, None]:
+        from Hql.Functions import DotCompositeFunction, Function
+
+        preprocessed = expr.preprocess(self.ctx)
+        if isinstance(preprocessed, DotCompositeFunction):
+            return self.DotCompositeFunction(preprocessed, prep=prep)
+
+        assert isinstance(preprocessed, Function)
+        return self.Function(preprocessed)
+
+    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Database import Database
+        from Hql.Expressions.__proto__ import Expression
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Functions import DotCompositeFunction, Function
+        from Hql.Operators.Operator import Operator
+        desc = BranchDescriptor()
 
         funcs:list[Function] = []
         for i in expr.funcs:
@@ -795,12 +861,8 @@ class HqlCompiler(Compiler):
             assert isinstance(acc, Function)
             funcs.append(acc)
 
-        for i in funcs:
-            if not i.preprocess:
-                func_preprocess = False
-
-        if func_preprocess:
-            res = DotCompositeFunction(funcs).eval(self.ctx, preprocess=True)
+        if prep:
+            res = DotCompositeFunction(funcs).eval(self.ctx)
             if isinstance(res, (Expression, Operator)) and not isinstance(res, Database):
                 return self.compile(res)
             return res, None

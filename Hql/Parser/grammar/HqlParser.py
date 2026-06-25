@@ -5196,15 +5196,12 @@ class HqlParser ( Parser ):
             localctx.Operators.append(localctx._pipedOperator)
             self.state = 903
             self._errHandler.sync(self)
-            _alt = self._interp.adaptivePredict(self._input,30,self._ctx)
-            while _alt!=2 and _alt!=ATN.INVALID_ALT_NUMBER:
-                if _alt==1:
-                    self.state = 900
-                    localctx._pipedOperator = self.pipedOperator()
-                    localctx.Operators.append(localctx._pipedOperator) 
+            while self._input.LA(1) == HqlParser.BAR:
+                self.state = 900
+                localctx._pipedOperator = self.pipedOperator()
+                localctx.Operators.append(localctx._pipedOperator)
                 self.state = 905
                 self._errHandler.sync(self)
-                _alt = self._interp.adaptivePredict(self._input,30,self._ctx)
 
         except RecognitionException as re:
             localctx.exception = re
@@ -9868,7 +9865,10 @@ class HqlParser ( Parser ):
                 _alt = self._interp.adaptivePredict(self._input,80,self._ctx)
 
             self.state = 1346
-            localctx.Table = self.unnamedExpression()
+            if self._input.LA(1) == HqlParser.OPENPAREN:
+                localctx.Table = self.parenthesizedExpression()
+            else:
+                localctx.Table = self.unnamedExpression()
             self.state = 1349
             self._errHandler.sync(self)
             token = self._input.LA(1)
@@ -20217,6 +20217,10 @@ class HqlParser ( Parser ):
             return self.getTypedRuleContext(HqlParser.FunctionalCallOrPathPathOperationContext,0)
 
 
+        def functionCallOrPathCallOperation(self):
+            return self.getTypedRuleContext(HqlParser.FunctionCallOrPathCallOperationContext,0)
+
+
         def functionCallOrPathElementOperation(self):
             return self.getTypedRuleContext(HqlParser.FunctionCallOrPathElementOperationContext,0)
 
@@ -20250,28 +20254,92 @@ class HqlParser ( Parser ):
         localctx = HqlParser.FunctionCallOrPathOperationContext(self, self._ctx, self.state)
         self.enterRule(localctx, 436, self.RULE_functionCallOrPathOperation)
         try:
-            self.state = 2399
-            self._errHandler.sync(self)
-            la_ = self._interp.adaptivePredict(self._input,215,self._ctx)
-            if la_ == 1:
+            if (
+                self._input.LA(1) == HqlParser.DOT
+                and self._input.LA(2) != HqlParser.OPENBRACKET
+                and self._input.LA(3) == HqlParser.OPENPAREN
+            ):
                 self.enterOuterAlt(localctx, 1)
                 self.state = 2396
-                self.functionalCallOrPathPathOperation()
-                pass
+                self.functionCallOrPathCallOperation()
 
-            elif la_ == 2:
-                self.enterOuterAlt(localctx, 2)
-                self.state = 2397
-                self.functionCallOrPathElementOperation()
-                pass
+            else:
+                self.state = 2399
+                self._errHandler.sync(self)
+                la_ = self._interp.adaptivePredict(self._input,215,self._ctx)
+                if la_ == 1:
+                    self.enterOuterAlt(localctx, 2)
+                    self.state = 2397
+                    self.functionalCallOrPathPathOperation()
+                    pass
 
-            elif la_ == 3:
-                self.enterOuterAlt(localctx, 3)
-                self.state = 2398
-                self.legacyFunctionCallOrPathElementOperation()
-                pass
+                elif la_ == 2:
+                    self.enterOuterAlt(localctx, 3)
+                    self.state = 2398
+                    self.functionCallOrPathElementOperation()
+                    pass
+
+                elif la_ == 3:
+                    self.enterOuterAlt(localctx, 4)
+                    self.state = 2399
+                    self.legacyFunctionCallOrPathElementOperation()
+                    pass
 
 
+        except RecognitionException as re:
+            localctx.exception = re
+            self._errHandler.reportError(self, re)
+            self._errHandler.recover(self, re)
+        finally:
+            self.exitRule()
+        return localctx
+
+
+    class FunctionCallOrPathCallOperationContext(ParserRuleContext):
+        __slots__ = 'parser'
+
+        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
+            super().__init__(parent, invokingState)
+            self.parser = parser
+            self.Call = None # FunctionCallExpressionContext
+
+        def DOT(self):
+            return self.getToken(HqlParser.DOT, 0)
+
+        def functionCallExpression(self):
+            return self.getTypedRuleContext(HqlParser.FunctionCallExpressionContext,0)
+
+
+        def getRuleIndex(self):
+            return HqlParser.RULE_functionCallOrPathOperation
+
+        def enterRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "enterFunctionCallOrPathCallOperation" ):
+                listener.enterFunctionCallOrPathCallOperation(self)
+
+        def exitRule(self, listener:ParseTreeListener):
+            if hasattr( listener, "exitFunctionCallOrPathCallOperation" ):
+                listener.exitFunctionCallOrPathCallOperation(self)
+
+        def accept(self, visitor:ParseTreeVisitor):
+            if hasattr( visitor, "visitFunctionCallOrPathCallOperation" ):
+                return visitor.visitFunctionCallOrPathCallOperation(self)
+            else:
+                return visitor.visitChildren(self)
+
+
+
+
+    def functionCallOrPathCallOperation(self):
+
+        localctx = HqlParser.FunctionCallOrPathCallOperationContext(self, self._ctx, self.state)
+        self.enterRule(localctx, 436, self.RULE_functionCallOrPathOperation)
+        try:
+            self.enterOuterAlt(localctx, 1)
+            self.state = 2400
+            self.match(HqlParser.DOT)
+            self.state = 2401
+            localctx.Call = self.functionCallExpression()
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)
@@ -26699,8 +26767,4 @@ class HqlParser ( Parser ):
         finally:
             self.exitRule()
         return localctx
-
-
-
-
 

@@ -233,12 +233,14 @@ class Operators(HqlVisitor):
             params.append(self.visit(i))
         
         on = self.visit(ctx.OnClause)
-        assert isinstance(on, Expression)
+        if isinstance(on, Expression):
+            on = [on]
+        assert isinstance(on, list)
         
         if ctx.WhereClause:
             where = self.visit(ctx.WhereClause)
         
-        return Join(table, [on], params=params, where=where)
+        return Join(table, on, params=params, where=where)
     
     def visitJoinOperatorOnClause(self, ctx: HqlParser.JoinOperatorOnClauseContext):
         exprs = []

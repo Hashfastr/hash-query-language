@@ -130,6 +130,32 @@ class Join(Operator):
     def resolve_on_clause(self):
         ...
 
+    def deparse(self) -> str:
+        from Hql.Compiler import InstructionSet
+        from Hql.Expressions import PipeExpression
+
+        out = 'join'
+
+        if self.params:
+            out += ' ' + ' '.join([x.deparse() for x in self.params])
+
+        if isinstance(self.rh, InstructionSet):
+            out += ' INSTRUCTION_RH'
+        elif isinstance(self.rh, PipeExpression):
+            out += ' (' + self.rh.deparse() + ')'
+        else:
+            out += ' ' + self.rh.deparse()
+
+        if self.on:
+            out += ' on '
+            out += ', '.join([x.deparse() for x in self.on])
+
+        if self.where:
+            out += ' where '
+            out += self.where.deparse()
+
+        return out
+
     def decompile(self, ctx: 'Context') -> str:
         from Hql.Compiler import InstructionSet
         from Hql.Expressions import PipeExpression

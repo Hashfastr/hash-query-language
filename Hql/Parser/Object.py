@@ -3,7 +3,14 @@ import polars as pl
 from Hql.Context import Context
 import json
 from Hql.Types.Hql import HqlTypes as hqlt
-from warnings import deprecated
+
+try:
+    from warnings import deprecated
+except ImportError:
+    def deprecated(reason:str):
+        def decorator(func):
+            return func
+        return decorator
 
 class ParseObject():
     def __init__(self) -> None:

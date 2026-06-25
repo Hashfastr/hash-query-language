@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type

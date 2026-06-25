@@ -48,6 +48,31 @@ class FuncExpr(FuncProto):
         func = ctx.get_func(name)
         return func(self.args, conf=ctx.config.get_function(name))
 
+class ReceiverFuncExpr(FuncProto):
+    def __init__(self, receiver:Expression, call:FuncExpr):
+        FuncProto.__init__(self)
+        self.receiver = receiver
+        self.call = call
+
+    def __bool__(self):
+        return bool(self.receiver) and bool(self.call)
+
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'receiver': self.receiver.to_dict(),
+            'call': self.call.to_dict()
+        }
+
+    def deparse(self) -> str:
+        return f'{self.receiver.deparse()}.{self.call.deparse()}'
+
+    def preprocess(self, ctx:'Context') -> object:
+        func = self.call.preprocess(ctx)
+        receiver = self.receiver.preprocess(ctx)
+        receiver = receiver.preprocess(ctx) if hasattr(receiver, 'preprocess') and receiver is not self.receiver else receiver
+        return func.eval(ctx, receiver=receiver)
+
 class DotFuncExpr(FuncProto):
     def __init__(self, funcs:list[FuncExpr]):
         FuncProto.__init__(self)

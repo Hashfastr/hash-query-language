@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from . import Function
 from Hql.Context import register_func
 from typing import Optional, TYPE_CHECKING

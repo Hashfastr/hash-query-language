@@ -105,6 +105,8 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         self.filename = filename
     
     def visitQuery(self, ctx: HqlParser.QueryContext):
+        from Hql.Query import Query
+
         statements = []
         for i in ctx.Statements:
             statements.append(self.visit(i))

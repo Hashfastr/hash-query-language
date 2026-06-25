@@ -18,26 +18,26 @@ if TYPE_CHECKING:
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 class Project(Operator):
-    _exprs: Sequence[Union['Reference', 'NamedExpression']]
+    _exprs: Sequence['Expression']
 
-    def __init__(self, exprs:Sequence[Union['Reference', 'NamedExpression']]):
+    def __init__(self, exprs:Sequence['Expression']):
         Operator.__init__(self)
         self.exprs = exprs
         self.optok = 'project'
 
     @property
-    def exprs(self) -> Sequence[Union['Reference', 'NamedExpression']]:
+    def exprs(self) -> Sequence['Expression']:
         return self._exprs
 
     @exprs.setter
     def exprs(self, value:Sequence['Expression']) -> None:
-        from Hql.Expressions.References import NamedExpression, Reference
+        from Hql.Expressions import Expression
         from Hql.Exceptions import HqlExceptions as hqle
 
-        new:list[Union['Reference', 'NamedExpression']] = []
+        new:list['Expression'] = []
         for v in value:
-            if not isinstance(v, (Reference, NamedExpression)):
-                raise hqle.CompilerException('Setting Project exprs to non-Reference/NamedExpression')
+            if not isinstance(v, Expression):
+                raise hqle.CompilerException('Setting Project exprs to non-Expression')
             new.append(v)
         self._exprs = new
 

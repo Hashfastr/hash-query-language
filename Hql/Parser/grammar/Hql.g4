@@ -442,8 +442,12 @@ invokeOperator:
     INVOKE FunctionCall=dotCompositeFunctionCallExpression;
 
 joinOperator:
-    JOIN (Parameters+=relaxedQueryOperatorParameter)* Table=unnamedExpression 
+    JOIN (Parameters+=relaxedQueryOperatorParameter)* Table=joinOperatorTable
     (OnClause=joinOperatorOnClause | WhereClause=joinOperatorWhereClause)?;
+
+joinOperatorTable:
+    parenthesizedExpression
+    | unnamedExpression;
 
 joinOperatorOnClause:
     ON Expressions+=unnamedExpression (',' Expressions+=unnamedExpression)*;
@@ -1038,10 +1042,14 @@ functionCallOrPathPathExpression:
     Expression=functionCallOrPathRoot (Operations+=functionCallOrPathOperation)+;
 
 functionCallOrPathOperation:
-    functionalCallOrPathPathOperation 
+    functionCallOrPathCallOperation
+    | functionalCallOrPathPathOperation
     | functionCallOrPathElementOperation 
     | legacyFunctionCallOrPathElementOperation
     ;
+
+functionCallOrPathCallOperation:
+    '.' Call=functionCallExpression;
 
 functionalCallOrPathPathOperation:
     '.' Name=simpleNameReference;
@@ -1616,4 +1624,3 @@ jsonLong:
 
 jsonReal:
     (SignToken='-')? LiteralToken=REALLITERAL;
-

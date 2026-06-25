@@ -45,6 +45,7 @@ class macro(Function):
             i = i.preprocess(ctx)
             if not isinstance(i, StringLiteral):
                 raise hqle.QueryException(f'File function give argument that doesn\'t resolve to string literal: {type(i)}')
+            new.append(i)
 
         self.names = new
 
@@ -52,7 +53,7 @@ class macro(Function):
         
     def eval(self, ctx: 'Context', receiver=None) -> object:
         from Hql.Compiler import InstructionSet, HqlCompiler
-        from Hql.Query import PipeExpression
+        from Hql.Expressions import PipeExpression
 
         self.preprocess(ctx)
         

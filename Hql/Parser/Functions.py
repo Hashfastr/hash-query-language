@@ -16,6 +16,7 @@ class Functions(HqlVisitor):
     '''
     def visitFunctionCallOrPathPathExpression(self, ctx: HqlParser.FunctionCallOrPathPathExpressionContext):
         from Hql.Expressions.References import Path
+        from Hql.Expressions.Functions import FuncExpr, ReceiverFuncExpr
         path = []
         
         expr = self.visit(ctx.Expression)
@@ -29,9 +30,27 @@ class Functions(HqlVisitor):
                 
         path.append(expr)
         for i in ctx.Operations:
-            path.append(self.visit(i))
+            op = self.visit(i)
+
+            # short cut if there is a function
+            if isinstance(op, FuncExpr):
+                path = [ReceiverFuncExpr(Path(path), op)]
+                continue
+
+            if isinstance(path[-1], ReceiverFuncExpr):
+                raise hqle.SemanticException(
+                    'Path segment after receiver function call is unsupported',
+                    ctx.start.line,
+                    ctx.start.column
+                )
+            path.append(op)
         
         return Path(path)
+
+    def visitScopedFunctionCallExpression(self, ctx: HqlParser.ScopedFunctionCallExpressionContext):
+        from Hql.Expressions.Functions import ReceiverFuncExpr
+
+        return ReceiverFuncExpr(self.visit(ctx.Scope), self.visit(ctx.FunctionCall))
     
     '''
     The basic function call

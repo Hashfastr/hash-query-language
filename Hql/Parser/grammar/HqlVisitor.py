@@ -1104,6 +1104,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#functionCallOrPathCallOperation.
+    def visitFunctionCallOrPathCallOperation(self, ctx:HqlParser.FunctionCallOrPathCallOperationContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#functionalCallOrPathPathOperation.
     def visitFunctionalCallOrPathPathOperation(self, ctx:HqlParser.FunctionalCallOrPathPathOperationContext):
         return self.visitChildren(ctx)

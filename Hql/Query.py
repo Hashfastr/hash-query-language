@@ -1,5 +1,6 @@
 import json
 from typing import TYPE_CHECKING, Union
+from warnings import deprecated
 
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -51,6 +52,7 @@ class Query():
                 self.statements = [i]
                 break
 
+    @deprecated('Dumb idea, maybe an idea in the future')
     def expand_iset(self):
         from Hql.Expressions.References import NamedReference
         from Hql.Operators.Union import Union as HqlUnion
@@ -127,7 +129,7 @@ class Query():
     def deparse(self):
         from Hql.Expressions.References import NamedReference
         from Hql.Compiler.InstructionSet import InstructionSet
-        self.expand_iset()
+        # self.expand_iset()
 
         statements = []
         for i in self.ctx.symbol_table:

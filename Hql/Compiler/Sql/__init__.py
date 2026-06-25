@@ -1,4 +1,10 @@
-from typing import Optional, Union, TYPE_CHECKING, Callable, override
+from typing import Optional, Union, TYPE_CHECKING, Callable
+
+try:
+    from typing import override
+except ImportError:
+    def override(func):
+        return func
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
