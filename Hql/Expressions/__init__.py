@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 from Hql.Exceptions import HqlExceptions as hqle
 
 from .__proto__ import Expression
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 type PrepipeType = Union['Function', 'DotCompositeFunction', 'Database', 'HqlUnion', Expression]
 
 class PipeExpression(Expression):
-    def __init__(self, pipes:list['Operator'], prepipe:Union[PrepipeType, None]=None):
+    def __init__(self, pipes:list['Operator'], prepipe:Optional[PrepipeType]=None):
         Expression.__init__(self)
         self.prepipe                    = prepipe
         self.pipes:list['Operator'] = pipes

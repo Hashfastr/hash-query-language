@@ -177,7 +177,7 @@ class Statement():
 class QueryStatement(Statement):
     def __init__(self, root:'PipeExpression'):
         Statement.__init__(self)
-        self.root:Union['PipeExpression', 'InstructionSet'] = root
+        self.root:'PipeExpression' = root
 
     def to_dict(self):
         out = super().to_dict()

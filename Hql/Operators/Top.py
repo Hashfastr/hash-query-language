@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+from Hql.Expressions.Literals import Integer
 from Hql.Operators.Operator import Operator
 from Hql.Data import Data
 from Hql.Expressions import Expression
@@ -27,33 +28,33 @@ https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
 # @register_op('Top')
 class Top(Operator):
-    def __init__(self, expr:Expression, by:'ByExpression'):
+    def __init__(self, expr:Integer, by:'ByExpression'):
         Operator.__init__(self)
-        self.expr = expr
+        self._expr:Integer = expr
         self.by = by
         
     def to_dict(self):
+        assert self.expr
         return {
             'type': self.type,
             'quota': self.expr.to_dict(),
             'by': self.by.to_dict()
         }
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         out = 'top '
-        out += self.expr.decompile(ctx)
+        assert self.expr
+        out += self.expr.deparse()
         out += ' by '
-        out += self.by.decompile(ctx)
+        out += self.by.deparse()
 
         return out
         
-    def eval(self, ctx:'Context', **kwargs):
-        name = self.by.name.eval(ctx, as_str=True, as_list=True)
-        if isinstance(name, str):
-            name = [name]
-            
-        quota = self.expr.eval(ctx)
-        order = self.by.order
-        nulls = self.by.nulls
+    def eval(self, ctx:'Context'):
+        assert self.expr
+        limit = self.expr.value
+        assert isinstance(limit, int)
         
-        return pl.DataFrame({name: series})
+        ctx = self.by.eval(ctx)
+        [x.truncate(limit) for x in ctx.data]
+        return ctx

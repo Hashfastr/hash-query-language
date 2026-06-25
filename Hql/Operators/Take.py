@@ -1,6 +1,7 @@
+from Hql.Expressions.References import NamedReference
 from Hql.Operators.Operator import Operator
 from Hql.Data import Data
-from Hql.Expressions import Expression
+from Hql.Expressions.Literals import Integer
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
 
@@ -11,10 +12,16 @@ from Hql.Context import Context
 # https://learn.microsoft.com/en-us/kusto/query/take-operator
 # @register_op('Take')
 class Take(Operator):
-    def __init__(self, limit:Expression, tables:list[Expression]):
+    def __init__(self, limit:Integer, tables:list[NamedReference]):
         Operator.__init__(self)
-        self.expr = limit
+        self._expr:Integer = limit
         self.tables = tables
+
+    @property
+    def expr(self) -> Integer:
+        expr = self._expr
+        assert expr
+        return expr
 
     def to_dict(self):
         return {
@@ -27,26 +34,21 @@ class Take(Operator):
     def get_limits(self):
         ctx = Context(Data())
         limit = self.expr.eval(ctx)
-        tables = [x.eval(ctx, as_str=True) for x in self.tables]
+        tables = [x.str() for x in self.tables]
 
         return {
             'limit': limit,
             'tables': tables
         }
 
-    def decompile(self, ctx: 'Context') -> str:
-        out = 'take '
-        expr = self.expr.decompile(ctx)
-        if not isinstance(expr, str):
-            raise hqle.DecompileStringException(type(self.expr), type(expr))
-
-        out += expr
+    def deparse(self) -> str:
+        out = 'take ' + self.expr.deparse()
 
         if self.tables:
             out += ' from '
             exprs = []
             for i in self.tables:
-                exprs.append(i.decompile(ctx))
+                exprs.append(i.deparse())
             out += ', '.join(exprs)
 
         return out
@@ -58,15 +60,12 @@ class Take(Operator):
     the sum of all tables is less than or equal to the take amount.
     Unimplemented.
     '''
-    def eval(self, ctx:'Context', **kwargs):        
-        limit = self.expr.eval(ctx)
+    def eval(self, ctx:'Context'):        
+        limit = self.expr.value
 
-        if not isinstance(limit, int):
-            raise hqle.QueryException(f'Take operator passed non-int type {type(self.expr)}')
-        
         table_names = []
         for i in self.tables:
-            table_names.append(i.eval(ctx, as_str=True))
+            table_names.append(i.str())
             
         if not table_names:
             table_names.append('*')
@@ -76,4 +75,4 @@ class Take(Operator):
             for j in tables:
                 j.truncate(limit)
 
-        return ctx.data
+        return ctx

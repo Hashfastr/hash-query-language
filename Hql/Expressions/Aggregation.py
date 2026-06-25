@@ -54,16 +54,15 @@ class ByExpression(Expression):
         paths = []
         schema = []
         for expr in self.exprs:
-            path = expr.list()
-            ptype = table.get_type(path)
+            ptype = table.get_type(expr)
 
             # failed get_type returns a empty schema
             # Might reference a field that exists in another table but not this one.
             if not ptype:
                 continue
 
-            paths.append(path)
-            schema.append(table.schema.select(path))
+            paths.append(expr)
+            schema.append(table.schema.select(expr))
         
         pl_exprs = []
         for path in paths:

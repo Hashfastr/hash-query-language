@@ -41,7 +41,7 @@ class QueryDSLCompiler(Compiler):
             }
             return out, None
 
-        out = super().compile(src, preprocess=preprocess)
+        out = super().compile(src, prep=prep)
         return out
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Optional['Operator'], Optional['Operator']]:
@@ -59,11 +59,11 @@ class QueryDSLCompiler(Compiler):
         assert not (isinstance(acc, dict) or isinstance(rej, dict))
         return acc, rej
 
-    def Where(self, op:'Hql.Operators.Where', preprocess:bool=True) -> tuple[Union[None, 'Hql.Operators.Where', dict], Union[None, 'Hql.Operators.Where', dict]]:
+    def Where(self, op:'Hql.Operators.Where', prep:bool=True) -> tuple[Union[None, 'Hql.Operators.Where', dict], Union[None, 'Hql.Operators.Where', dict]]:
         from Hql.Operators.Where import Where
         from Hql.Expressions.Logic import BinaryLogic, Expression
 
-        acc, rej = self.compile(op.expr, preprocess=preprocess)
+        acc, rej = self.compile(op.expr, prep=prep)
 
         if preprocess:
             if acc != None:
@@ -224,7 +224,7 @@ class QueryDSLCompiler(Compiler):
             return ret, None
 
     # only executes static functions on preprocess and sees if we can handle the result
-    def Function(self, expr:'Hql.Functions.Function', preprocess:bool=True) -> tuple[object, object]:
+    def Function(self, expr:'Hql.Functions.Function', prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions import Expression, Regex, StringLiteral, Not
 
         if expr.name == 'isnull':
@@ -286,7 +286,7 @@ class QueryDSLCompiler(Compiler):
 
         exprs = []
         for i in expr.value:
-            acc, rej = self.compile(i, preprocess=preprocess)
+            acc, rej = self.compile(i, prep=prep)
             if rej:
                 return None, expr
             exprs.append(acc)

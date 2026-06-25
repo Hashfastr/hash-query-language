@@ -1,4 +1,3 @@
-from numpy import isin
 from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
