@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 # Can also take a number of parameters, although I'm not sure what they are
 # but they can exist.
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
-# @register_op('Where')
 class Where(Operator):
     # Pass in the parser context here for helpful debugging
     def __init__(self, expr:'Logic', params:Union[None, list['OpParameter']]=None):
@@ -75,7 +74,7 @@ class Where(Operator):
     If there is a field reference error, the filter does not apply to that table
     so drop it
     '''
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:'Context') -> 'Context':
         from Hql.Data import Data
         pl_filter = self.expr.eval(ctx, as_pl=True)
 
@@ -87,4 +86,5 @@ class Where(Operator):
             except hqle.UnreferencedFieldException as e:
                 logging.warning(e)
 
-        return Data(new)
+        ctx.data = Data(new)
+        return ctx

@@ -1,47 +1,40 @@
 from typing import TYPE_CHECKING, Sequence
 from Hql.Expressions import Expression
-from Hql.Data import Schema, Data, Table
-from Hql.Context import register_op, Context
+from Hql.Data import Data, Table
+from Hql.Context import Context
 from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
     from Hql.Expressions.Aggregation import ByExpression
 
-# @register_op('Summarize')
 class Summarize(Operator):
     def __init__(self, aggregate_exprs:Sequence[Expression], by_expr:'ByExpression'):
         Operator.__init__(self)
         self.aggregate_exprs = aggregate_exprs
         self.by_expr = by_expr
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         out = 'summarize'
 
         if self.aggregate_exprs:
-            out += ' '
-            exprs = []
-            for i in self.aggregate_exprs:
-                exprs.append(i.decompile(ctx))
-            out += ', '.join(exprs)
+            out += ' ' + ', '.join(i.deparse() for i in self.aggregate_exprs)
 
         if self.by_expr:
-            out += ' '
-            out += self.by_expr.decompile(ctx)
+            out += ' ' + self.by_expr.deparse()
 
         return out
 
-    def eval(self, ctx:'Context', **kwargs):
-        ctx.data = self.by_expr.eval(ctx)
-        
+    def eval(self, ctx:'Context') -> 'Context':
+        ctx = self.by_expr.eval(ctx)
+
         agg_data = []
         for expr in self.aggregate_exprs:
             agg_data.append(expr.eval(ctx, insert=False))
-        
+
         new = []
         for table in ctx.data:
             table = Table(table.agg.agg(), schema=table.agg_schema, name=table.name)
             new.append(table)
-            
-        new = Data(tables=new)
-        
-        return Data.merge([new] + agg_data)
+
+        ctx.data = Data.merge([Data(tables=new)] + agg_data)
+        return ctx

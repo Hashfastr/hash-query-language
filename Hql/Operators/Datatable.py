@@ -1,6 +1,7 @@
 from Hql.Operators.Operator import Operator
 
-from Hql.Expressions.References import NamedReference, Literal
+from Hql.Expressions.References import NamedReference
+from Hql.Expressions.Literals import Literal
 from Hql.Data import Data, Table, Schema
 from Hql.Context import Context
 import polars as pl

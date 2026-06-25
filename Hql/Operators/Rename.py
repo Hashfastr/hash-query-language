@@ -1,5 +1,5 @@
 from Hql.Operators.Operator import Operator
-from Hql.Context import register_op, Context
+from Hql.Context import Context
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

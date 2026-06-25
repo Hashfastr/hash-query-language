@@ -1,4 +1,5 @@
 from Hql.Operators.Operator import Operator
+from Hql.Exceptions import HqlExceptions as hqle
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -16,27 +17,26 @@ database("tf11-elastic").index("so-beats-2022.10.*")
 
 https://learn.microsoft.com/en-us/kusto/query/as-operator
 '''
-# Disabling this for now until I decide how to implement
-## @register_op('As')
+# Disabled until implementation is decided
 class As(Operator):
     def __init__(self, expr:'Expression'):
         Operator.__init__(self)
-        self.expr = expr
+        self._expr:'Expression' = expr
 
     @property
     def expr(self) -> 'Expression':
-        e = super().expr
-        assert e is not None
-        return e
+        expr = self._expr
+        assert expr
+        return expr
 
     @expr.setter
-    def expr(self, value:Optional['Expression']):
-        assert value is not None
-        super().expr = value
+    def expr(self, value:Optional['Expression']) -> None:
+        if value is None:
+            raise hqle.CompilerException('Setting As expression to None')
+        self._expr = value
 
     def deparse(self) -> str:
-        expr = self.expr.deparse()
-        return f'as {expr}'
-        
+        return f'as {self.expr.deparse()}'
+
     def eval(self, ctx: 'Context') -> 'Context':
         return ctx
