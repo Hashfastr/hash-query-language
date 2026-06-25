@@ -25,6 +25,7 @@ class Database(Operator):
         self.name = name
         self.index = ''
         self.preamble:Optional['PipeExpression'] = None
+        self.can_push = False
 
     def __eq__(self, value: object, /) -> bool:
         if isinstance(value, Database):
@@ -33,6 +34,17 @@ class Database(Operator):
             else:
                 return False
         return super().__eq__(value)
+
+    def verify_config(self, config:dict, fields:list):
+        failed = []
+
+        for i in fields:
+            if i not in config:
+                logging.critical(f'Missing field {i} in config')
+                failed.append(i)
+
+        if failed:
+            raise hqle.ConfigException(f'Missing fields in config: {failed}')
 
     def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
         return self.compiler.add_op(op)
@@ -72,6 +84,9 @@ class Database(Operator):
         from Hql.Data import Data
         self.ctx = ctx
         return Data()
+
+    def push(self, ctx:'Context', **kwargs) -> bool:
+        return NotImplemented
     
     def get_variable(self, name:'NamedReference') -> object:
         raise hqle.QueryException(f'{self.type} database has no variables')

@@ -10,6 +10,7 @@ from Hql.PolarsTools import pltools
 from Hql.Types.Hql import HqlTypes as hqlt
 
 import logging
+import json
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression, Path, NamedReference
@@ -52,11 +53,20 @@ class Table():
             self.schema = Schema(init_data, sample_size=100)
             init_data = self.schema.adjust_mv(init_data)
             pl_schema = self.schema.gen_pl_schema()
-            self.df = pl.from_dicts(init_data, schema=pl_schema)
+
+            try:
+                self.df = pl.from_dicts(init_data, schema=pl_schema, strict=False)
+            except pl.exceptions.ComputeError as e:
+                logging.error(e)
+                logging.error('Possible typing issue caught when loading dicts')
+                logging.error(f'Offending table: {self.name}')
+                logging.error(f'Offending schema: {json.dumps(self.schema.to_dict())}')
+                logging.error('Just giving an empty dataframe')
+                self.df = pl.DataFrame()
         
         elif init_data and schema:
             self.schema = schema
-            self.df = pl.from_dicts(init_data, schema=schema.convert_schema(target='polars'))
+            self.df = pl.from_dicts(init_data, schema=schema.convert_schema(target='polars'), strict=False)
         
         elif not self.df.is_empty() and schema:
             self.schema = schema

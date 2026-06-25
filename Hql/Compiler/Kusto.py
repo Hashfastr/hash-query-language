@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from Hql.Query import Statement
     import Hql
 
-class Compiler():
+class KustoCompiler():
     def __init__(self):
         from Hql.Data import Data
         self.type = self.__class__.__name__

@@ -246,6 +246,7 @@ PROJECTKEEP: 'project-keep';
 PROJECTRENAME: 'project-rename';
 PROJECTREORDER: 'project-reorder';
 PROJECTSMART: 'project-smart';
+PUSH: 'push';
 QUERYPARAMETERS: 'query_parameters';
 RANGE: 'range';
 REDUCE: 'reduce';

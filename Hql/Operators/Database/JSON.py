@@ -8,7 +8,12 @@ import requests
 import logging
 import polars as pl
 
-from typing import Union, Optional
+from pathlib import Path
+from typing import Union, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Compiler import BranchDescriptor
+    from Hql.Operators import Operator
 
 # Index in a database to grab data from, extremely simple.
 @register_database('JSON')
@@ -17,10 +22,10 @@ class JSON(Database):
         Database.__init__(self, config, name=name)
         
         self.name = name
-        self.files:list[str] = []
+        self.files:list[Path] = []
         self.urls:list[str] = []
         conf = config.get('conf', dict())
-        self.local_base = conf.get('local-base', None)
+        self.local_base = Path(conf.get('local-base', None))
         self.http_base = conf.get('http-base', None)
 
         if not (self.local_base or self.http_base):
@@ -38,18 +43,32 @@ class JSON(Database):
         return {
             'id': self.id,
             'type': self.type,
-            'files': [self.local_base + x for x in self.files],
+            'files': [self.local_base / x for x in self.files],
             'urls': [self.http_base + x for x in self.urls],
+            'limits': self.limits
         }
-    
-    def from_file(self, filename:str):
-        if self.local_base:
-            path = f'{self.local_base}{os.sep}{filename}'
-        else:
-            path = filename
 
-        return open(path, mode='r')
-        
+    def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+        from Hql.Compiler import BranchDescriptor
+        from Hql.Operators import Take
+
+        if isinstance(op, BranchDescriptor):
+            assert op.op
+            op = op.op
+
+        if not isinstance(op, Take):
+            return None, op
+
+        limits = op.get_limits()
+
+        if not limits['tables']:
+            self.set_limit('*', limits['limit'])
+
+        for i in limits['tables']:
+            self.set_limit(i, limits['limit'])
+
+        return op, None
+    
     def from_url(self, url:str):
         from io import StringIO
 
@@ -77,6 +96,7 @@ class JSON(Database):
         except:
             try:
                 # df = pl.read_ndjson(data, n_rows=self.limit)
+                f.seek(0)
                 reader = ndjson.reader(f)
                 data = [x for x in reader]
             except:
@@ -114,6 +134,11 @@ class JSON(Database):
             self.limits[name] = limit if limit < cur else cur
     
     def eval(self, ctx:Context, **kwargs) -> Data:
+        def file_2_table(file:Path, name:str) -> Table:
+            name = file.name
+            data = self.load_data(open(file, mode='r'), name)
+            return Table(init_data=data, name=name)
+
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to JSON database')
@@ -124,13 +149,17 @@ class JSON(Database):
             logging.critical('Similarly, file.json represents a file on a server prepended by BASE_PATH')
             logging.critical('If basepath is not specified it is taken as literal for http, or current dir for file.')
             raise hqle.QueryException('No file provided to JSON database')
+
+        files:list[Path] = []
+        for i in self.files:
+            files += list((self.local_base / i).parent.glob(i.name))
         
         tables = []
-        for file in self.files:
-            f = self.from_file(file)
-            data = self.load_data(f, file)
-            table = Table(init_data=data, name=file)
-            tables.append(table)
+        for file in files:
+            if file.is_file():
+                tables.append(file_2_table(file, file.name))
+            else:
+                tables += [file_2_table(x, file.name) for x in file.iterdir() if x.is_file()]
 
         for url in self.urls:
             s = self.from_url(url)
