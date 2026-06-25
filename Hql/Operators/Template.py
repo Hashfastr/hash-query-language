@@ -8,8 +8,8 @@ class Template(Operator):
     def __init__(self):
         Operator.__init__(self)
 
-    def decompile(self, ctx: 'Context', split: bool = False) -> str:
+    def deparse(self) -> str:
         return ''
 
-    def eval(self, ctx:'Context', **kwargs):
-        return ctx.data
+    def eval(self, ctx:'Context'):
+        return ctx
