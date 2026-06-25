@@ -274,17 +274,16 @@ class Table():
     Returns a Table with just the data of that path
     If not found then it returns an empty table with the parent name.
     '''
-    def select(self, field:list[str]):
+    def select(self, field:'Reference'):
         if not self.assert_field(field):
             return Table(name=self.name)
         
-        assert isinstance(self.df, pl.DataFrame)
-        df = pltools.get_element(self.df, field)
+        df = pltools.get_element(self.df, field.list())
         schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)
 
-    def unnest(self, field:list[str]) -> Union[Series, 'Table']:
+    def unnest(self, field:'Reference') -> Union[Series, 'Table']:
         from Hql.Data import Schema
 
         if not isinstance(self.schema, Schema):
@@ -473,8 +472,8 @@ class Table():
     
     # Asserts by checking against schema
     # Schema should always be sync'd with the table data
-    def assert_field(self, field:list[str]):
-        return self.schema.assert_field(field)
+    def assert_field(self, field:'Reference'):
+        self.schema.assert_field(field)
     
     def cast_in_place(self, path:Reference, cast_type:hqlt.HqlType):
         if not self.assert_field(path):
@@ -503,9 +502,7 @@ class Table():
 
         pl_on = []
         for i in on:
-            expr = i.eval(ctx, as_pl=True)
-            assert isinstance(expr, pl.Expr)
-            pl_on.append(expr)
+            pl_on.append(i.polars())
 
         if kind == 'inner':
             df = self.df.join(right.df, on=pl_on, how='inner')

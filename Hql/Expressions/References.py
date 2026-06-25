@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Functions import Function
     from Hql.Data import Data
+    from polars import Expr as plExpr
 
 class Reference(Expression):
     def __init__(self):
@@ -31,13 +32,13 @@ class Reference(Expression):
     def __len__(self):
         return len(self.list())
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> 'plExpr':
         return NotImplemented
 
-    def polars_value(self) -> 'pl.Expr':
+    def polars_value(self) -> 'plExpr':
         return NotImplemented
 
-    def polars_reference(self) -> 'pl.Expr':
+    def polars_reference(self) -> 'plExpr':
         return NotImplemented
 
     def list(self) -> list[str]:
@@ -94,13 +95,13 @@ class NamedReference(Reference):
     def list(self) -> list[str]:
         return [self.name]
 
-    def polars(self) -> 'pl.Expr':
-        import polars as pl
-        return pl.col(self.name)
+    def polars(self) -> 'plExpr':
+        from polars import col
+        return col(self.name)
 
-    def polars_value(self) -> 'pl.Expr':
-        import polars as pl
-        return pl.col(self.name)
+    def polars_value(self) -> 'plExpr':
+        from polars import col
+        return col(self.name)
 
 class Wildcard(NamedReference):
     ...
@@ -169,14 +170,14 @@ class Path(Reference):
     def list(self) -> list[str]:
         return [x.str() for x in self.path]
 
-    def polars(self) -> 'pl.Expr':
-        import polars as pl
+    def polars(self) -> 'plExpr':
+        from polars import struct
         expr = self.polars_value()
         for i in self.path[::-1][1:]:
-            expr = pl.struct(expr).alias(i.str())
+            expr = struct(expr).alias(i.str())
         return expr
 
-    def polars_value(self) -> 'pl.Expr':
+    def polars_value(self) -> 'plExpr':
         expr = self.path[0].polars_value()
         for i in self.path[1:]:
             expr = expr.struct.field(i.str())
@@ -272,7 +273,7 @@ class NamedExpression(Expression):
         return True
 
     ## TODO
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> 'plExpr':
         return NotImplemented
 
         if not self.can_polars():
@@ -288,7 +289,7 @@ class NamedExpression(Expression):
         return 
 
     ## TODO
-    def polars_value(self) -> 'pl.Expr':
+    def polars_value(self) -> 'plExpr':
         return NotImplemented
 
         if isinstance(self.value, Function):

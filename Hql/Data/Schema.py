@@ -507,10 +507,7 @@ class Schema():
     
     # Asserts by attempting to retrieve the field's value
     def assert_field(self, field:'Reference'):
-        if self.unnest(field) == None:
-            return False
-        else:
-            return True
+        return self.unnest(field) != None
         
     def present_complex(self, df:'pl.DataFrame', schema:Optional[dict]=None):
         schema = schema if schema != None else self.schema
