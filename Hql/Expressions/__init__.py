@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 from Hql.Exceptions import HqlExceptions as hqle
 
@@ -31,7 +33,7 @@ if TYPE_CHECKING:
     from Hql.Compiler.InstructionSet import InstructionSet
     from Hql.Operators.Union import Union as HqlUnion
 
-type PrepipeType = Union['Function', 'DotCompositeFunction', 'Database', 'HqlUnion', Expression]
+PrepipeType = Union['Function', 'DotCompositeFunction', 'Database', 'HqlUnion', Expression]
 
 class PipeExpression(Expression):
     def __init__(self, pipes:list['Operator'], prepipe:Optional[PrepipeType]=None):

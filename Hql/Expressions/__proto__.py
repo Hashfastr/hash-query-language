@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from Hql.Parser.Object import ParseObject
 
 # An expression is any grouping of other expressions

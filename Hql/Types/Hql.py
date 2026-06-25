@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import polars as pl
 import logging
 from typing import TYPE_CHECKING, Union, Optional, Mapping
@@ -10,7 +12,7 @@ if TYPE_CHECKING:
     from Hql.Expressions.Literals import Integer, StringLiteral
     from Hql.Expressions.References import Reference
 
-type SchemaDT = Mapping[str, Union['HqlTypes.HqlType', dict]]
+SchemaDT = Mapping[str, Union['HqlTypes.HqlType', dict]]
 
 class HqlTypes():
     class HqlType(CompilerType):

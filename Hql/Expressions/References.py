@@ -1,7 +1,7 @@
+from __future__ import annotations
+
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Data import Data, Table
-import polars as pl
 
 from typing import TYPE_CHECKING, Sequence, Union
 import logging
@@ -298,7 +298,7 @@ class NamedExpression(Expression):
 
     def eval(self, ctx:'Context', insert:bool=True, unnest:bool=True) -> 'Context':
         from Hql.Expressions.Literals import Literal
-        from Hql.Data import Data
+        from Hql.Data import Data, Table
         from Hql.Context import Context
         ctx = ctx.copy()
 

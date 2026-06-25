@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .__proto__ import Expression
 
 from typing import TYPE_CHECKING, Optional, Sequence
@@ -74,7 +76,7 @@ class ByExpression(Expression):
         
         # Groups and coelesces the schemas together for each field
         # Probably need to rework and change maintain_order here in the future
-        # Without it, it fucks up the aggregation functions but is much faster
+        # Without it, it ####s up the aggregation functions but is much faster
         table.agg = table.df.group_by(pl_exprs, maintain_order=True)
         table.agg_paths = paths
         table.agg_schema = Schema.merge(schema)

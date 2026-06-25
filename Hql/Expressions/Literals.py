@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Sequence, Union, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 import datetime
 
 from .__proto__ import Expression
@@ -89,8 +91,6 @@ class StringLiteral(Literal):
         return hash(self.value)
 
     def cmp(self, value:Expression, cs:bool=True):
-        from Hql.Expressions.Literals import StringLiteral
-
         if cs or not isinstance(value, StringLiteral):
             return self == value
         else:

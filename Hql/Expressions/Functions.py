@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .__proto__ import Expression
 
 from typing import TYPE_CHECKING, Optional, Sequence, Union
