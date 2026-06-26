@@ -2,27 +2,35 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
+import polars as pl
+
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Types.Compiler import CompilerType 
-from Hql.Types.Hql import SchemaDT
+from Hql.Types.Hql import HqlTypes as hqlt, SchemaDT
 
 if TYPE_CHECKING:
-    from Hql.Types.Hql import HqlTypes as hqlt
-    from Hql.Types.Compiler import CompilerType
     from Hql.Expressions.References import Reference
-    from Hql.Types.Hql import HqlTypes as hqlt
-    import polars as pl
 
 class Schema():
     def __init__(
             self,
-            schema:Union[SchemaDT, 'hqlt.object', None]=None,
+            schema:Union[SchemaDT, hqlt.object, None]=None,
             data:Union[pl.DataFrame, dict, list[dict], None]=None,
             sample_size:int=1
         ):
-        from Hql.Types.Hql import HqlTypes as hqlt
-        
         self.schema:hqlt.object = hqlt.object(dict())
+
+        if isinstance(data, (list, dict)):
+            if isinstance(data, dict):
+                data = [data]
+
+            sample = data[:sample_size] if sample_size > 0 else data
+            self.schema = Schema.from_json(sample).schema
+            return
+
+        if isinstance(data, pl.DataFrame):
+            self.schema = Schema.from_df(data).schema
+            return
 
         if schema:
             self.schema = schema if isinstance(schema, hqlt.object) else hqlt.object(schema)
@@ -32,26 +40,6 @@ class Schema():
         # Otherwise immediately convert to HqlTypes
         if len(self.schema):
             self.convert_schema()
-
-    # do this here if we have sample data
-    def __new__(cls,
-            schema:Union[SchemaDT, 'hqlt.object', None]=None,
-            data:Union['pl.DataFrame', dict, list[dict], None]=None,
-            sample_size:int=1
-        ) -> 'Schema':
-            
-        if isinstance(data, (list, dict)):
-            if isinstance(data, dict):
-                data = [data]
-
-            sample = data[:sample_size] if sample_size > 0 else data
-            return Schema.from_json(sample)
-
-        # Instanciate from a Polars DataFrame
-        elif isinstance(data, 'pl.DataFrame'):
-            return Schema.from_df(data)
-        
-        return super().__new__(cls)
     
     def __len__(self) -> int:
         if hasattr(self.schema, '__len__'):
@@ -106,10 +94,10 @@ class Schema():
 
         # generates key groups looking for conflicts
         # only does shallow level
-        def gkg(schemata:list[dict]):
+        def gkg(schemata:list[hqlt.object]):
             keygroups = dict()
             for schema in schemata:
-                for key in schema:
+                for key in schema.schema:
                     if key not in keygroups:
                         keygroups[key] = [schema[key]]
                     elif schema[key] not in keygroups[key]:
@@ -156,8 +144,10 @@ class Schema():
         from Hql.Data import Schema
         from Hql.Types.Hql import HqlTypes as hqlt
 
-        def n(node:Union[dict, 'Schema']) -> dict:
+        def n(node:Union[SchemaDT, 'Schema', hqlt.object]) -> dict:
             if isinstance(node, Schema):
+                return n(node.schema)
+            if isinstance(node, hqlt.object):
                 return n(node.schema)
 
             new = dict()
@@ -190,9 +180,7 @@ class Schema():
             schemas.append(self.select(path))
         return Schema.merge(schemas)
     
-    def unnest(self, path:'Reference') -> hqlt.HqlType:
-        from Hql.Types.Hql import HqlTypes as hqlt
-
+    def unnest(self, path:'Reference') -> Union[hqlt.HqlType, "Schema"]:
         cur = self.schema
         for part in path.list():
             if not isinstance(cur, dict) or part not in cur:
@@ -209,7 +197,7 @@ class Schema():
     '''
     Descriptive rename of unnest, might remove later
     '''
-    def get_type(self, path:'Reference') -> 'hqlt.HqlType':
+    def get_type(self, path:'Reference') -> Union[hqlt.HqlType, "Schema"]:
         return self.unnest(path)
 
     '''
@@ -316,7 +304,7 @@ class Schema():
     Set a field to a specific type in the schema apply is then expected to be ran
     '''
     def set(self, path:'Reference', htype:Union[CompilerType, "Schema", dict]):
-        if isinstance(htype, 'Schema'):
+        if isinstance(htype, Schema):
             htype = htype.normalize().schema
 
         def s(path:'Reference', htype:Union[CompilerType, dict], schema:dict, idx:int=0):
@@ -379,7 +367,7 @@ class Schema():
     Uses structs for nested objects instead of json objects
     '''
     def gen_pl_schema(self):
-        schema = self.schema.pl_schema()
+        schema = hqlt.object(self.schema).pl_schema()
         assert isinstance(schema, pl.Struct)
         return schema.to_schema()
 
@@ -392,19 +380,46 @@ class Schema():
         from Hql.Types.Python import PythonTypes as pyt
         from Hql.Types.Hql import HqlTypes as hqlt
 
+        def from_value(value) -> pyt.PythonType:
+            if isinstance(value, dict):
+                new = dict()
+                for key in value:
+                    new[key] = from_value(value[key])
+                return pyt.dict(new)
+
+            if isinstance(value, list):
+                if not value:
+                    return pyt.list(pyt.NoneType())
+
+                return pyt.list(merge_python_types([from_value(item) for item in value]))
+
+            ptype = pyt.from_name(type(value).__name__)
+            return ptype() if isinstance(ptype, type) else ptype
+
         def from_sample(data:dict) -> pyt.dict:
             new = dict()
             for i in data:
-                new[i] = pyt.from_value(data[i])
+                new[i] = from_value(data[i])
             return pyt.dict(new)
 
-        # collect groupings of schema
-        schemata:set[hqlt.HqlType] = set()
-        for i in data:
-            hql = from_sample(i).hql_schema()
-            schemata.add(hql)
+        def merge_python_types(types:list[pyt.PythonType]) -> pyt.PythonType:
+            if all(isinstance(ptype, pyt.dict) for ptype in types):
+                keys = set()
+                for ptype in types:
+                    keys.update(ptype.schema)
 
-        schema = hqlt.resolve_conflict(list(schemata))
+                merged = dict()
+                for key in keys:
+                    values = []
+                    for ptype in types:
+                        values.append(ptype.schema.get(key, pyt.NoneType()))
+                    merged[key] = merge_python_types(values)
+
+                return pyt.dict(merged)
+
+            return pyt.resolve_conflict(types)
+
+        schema = merge_python_types([from_sample(i) for i in data]).hql_schema()
 
         # Always expect object from dict
         assert isinstance(schema, hqlt.object)
@@ -414,9 +429,8 @@ class Schema():
     Generates a schema using polars typing
     '''
     @staticmethod
-    def from_df(df:'pl.DataFrame') -> Schema:
+    def from_df(df:pl.DataFrame) -> Schema:
         from Hql.Types.Polars import PolarsTypes as plt
-        import polars as pl
 
         def gen_schema(df:pl.DataFrame) -> hqlt.object:
             schema = dict()
@@ -507,7 +521,7 @@ class Schema():
     
     # Asserts by attempting to retrieve the field's value
     def assert_field(self, field:'Reference'):
-        return self.unnest(field) != None
+        return field in self
         
     def present_complex(self, df:'pl.DataFrame', schema:Optional[dict]=None):
         schema = schema if schema != None else self.schema

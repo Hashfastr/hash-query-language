@@ -16,6 +16,15 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import Reference
     from .Schema import Schema
 
+def _reference_from_parts(parts:Sequence[str]) -> 'Reference':
+    from Hql.Expressions.References import NamedReference, Path
+
+    refs = [NamedReference(part) for part in parts]
+    if not refs:
+        raise hqle.CompilerException('Cannot create a Reference from an empty path')
+
+    return Path(refs)
+
 '''
 Table for a structure of data, includes schema definition.
 Mimics a pl.DataFrame
@@ -56,7 +65,8 @@ class Table():
         
         elif init_data and schema:
             self.schema = schema
-            self.df = pl.from_dicts(init_data, schema=schema.convert_schema(target='polars'))
+            pl_schema = schema.gen_pl_schema()
+            self.df = pl.from_dicts(init_data, schema=pl_schema)
         
         elif not self.df.is_empty() and schema:
             self.schema = schema
@@ -130,7 +140,7 @@ class Table():
             
         return pl.DataFrame(new)
     
-    def drop_many(self, paths:list['Reference']):
+    def drop_many(self, paths:Sequence['Reference']):
         for path in paths:
             self.drop(path)
         return self
@@ -268,9 +278,8 @@ class Table():
         return Table(df=df, schema=schema, name=name)
 
     '''
-    Takes in a list of path parts
+    Takes in a reference path
     client.ip.src
-    ['client', 'ip', 'src']
     Returns a Table with just the data of that path
     If not found then it returns an empty table with the parent name.
     '''
@@ -290,10 +299,12 @@ class Table():
             raise hqle.CompilerException('Attempting to unnest an uninitalized table object with a None Schema')
 
         if not self.assert_field(field):
-            raise hqle.QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
+            raise hqle.QueryException(f"Could not unnest field {field.deparse()} from table {self.name}")
         
         df = self.get_value(field)
-        dtype = self.schema.unnest(field).schema
+        dtype = self.schema.unnest(field)
+        if isinstance(dtype, hqlt.object):
+            dtype = dtype.schema
         
         if isinstance(df, pl.Series):
             if not isinstance(dtype, hqlt.HqlType):
@@ -335,7 +346,12 @@ class Table():
             path.append(key)
         
         # Using this instead of strip to ensure we're in sync
-        schema = self.schema.unnest(path).schema
+        if path:
+            schema = self.schema.unnest(_reference_from_parts(path))
+            if isinstance(schema, hqlt.object):
+                schema = schema.schema
+        else:
+            schema = self.schema.schema
 
         if isinstance(cur, pl.Series):
             if isinstance(schema, dict):
@@ -349,7 +365,7 @@ class Table():
 
         return Table(df=cur, schema=schema, name=self.name)
 
-    def rename(self, src:list[str], dest:list[str]):
+    def rename(self, src:'Reference', dest:'Reference'):
         if not self.assert_field(src):
             raise hqle.QueryException('Attempting to rename a non-existing field')
         
@@ -373,7 +389,7 @@ class Table():
     # Inserts a piece of data at a given name
     def insert(
             self,
-            name:list[str],
+            name:'Reference',
             value:Union[pl.DataFrame, pl.Series],
             vtype:Union[hqlt.HqlType, dict],
             cur_df:Union[None, pl.DataFrame]=None,
@@ -405,7 +421,7 @@ class Table():
         # Recurse up a nested object
         elif cur_df[split].dtype == pl.Struct:        
             recurse = self.insert(name, value, vtype, cur_df=cur_df.select(split).unnest(split), idx=idx + 1)
-            cur_df = cur_df.remove(split)
+            cur_df = cur_df.drop(split)
             new = pl.DataFrame({split: recurse})
         
         # Conflict, a base type is where we're trying to put a struct
@@ -433,7 +449,7 @@ class Table():
         
         return new
 
-    def remove(self, name:list[str], cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
+    def remove(self, name:'Reference', cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
         if isinstance(cur_df, type(None)):
             cur_df = self.df
             
@@ -441,7 +457,7 @@ class Table():
             return cur_df
             
         split = name[idx]
-        mask = cur_df.remove(split)
+        mask = cur_df.drop(split)
         
         if idx == len(name) - 1:
             return mask
@@ -459,7 +475,7 @@ class Table():
 
         return merged
             
-    def pop(self, name:list[str]):
+    def pop(self, name:'Reference'):
         if not self.assert_field(name):
             raise hqle.QueryException('Attempting to pop a non-existing field')
         
@@ -473,7 +489,7 @@ class Table():
     # Asserts by checking against schema
     # Schema should always be sync'd with the table data
     def assert_field(self, field:'Reference'):
-        self.schema.assert_field(field)
+        return self.schema.assert_field(field)
     
     def cast_in_place(self, path:Reference, cast_type:hqlt.HqlType):
         if not self.assert_field(path):

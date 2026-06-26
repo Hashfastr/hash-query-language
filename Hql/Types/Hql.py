@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import polars as pl
 import logging
-from typing import TYPE_CHECKING, Union, Optional, Mapping
+from typing import TYPE_CHECKING, Iterator, Union, Optional, Mapping
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_type, get_type
@@ -414,6 +414,14 @@ class HqlTypes():
             if isinstance(got, dict):
                 got = HqlTypes.object(got)
             return got
+
+        def __iter__(self) -> Iterator[Reference]:
+            from Hql.Expressions.References import NamedReference
+
+            keys = []
+            for i in self.schema:
+                keys.append(NamedReference(i))
+            return iter(keys)
 
         def to_dict(self) -> dict:
             def td(schema:SchemaDT):

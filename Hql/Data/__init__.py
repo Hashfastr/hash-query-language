@@ -114,16 +114,14 @@ class Data():
     def select(self, ref:'Reference'):
         tables = []
         for table in self:
-            path = ref.list()
-            tables.append(table.select(path))
+            tables.append(table.select(ref))
 
         return Data(tables=tables)
     
     def unnest(self, ref:'Reference'):
         tables = []
         for table in self:
-            path = ref.list()
-            new = table.unnest(path)
+            new = table.unnest(ref)
             
             if isinstance(new, Series):
                 new = Table(series=new, name=table.name)
@@ -157,7 +155,7 @@ class Data():
 
     # Ensures that the field exists in at least one table
     # Returns the tables where it does exists
-    def assert_field(self, field:list[str]):
+    def assert_field(self, field:'Reference'):
         exists = []
         
         if not self.tables:
@@ -168,12 +166,12 @@ class Data():
                 exists.append(table)
 
         if not len(exists):
-            logging.warning(f"Could not find {'.'.join(field)} in any tables in the dataset")
+            logging.warning(f"Could not find {field.deparse()} in any tables in the dataset")
             logging.warning(', '.join([x.name for x in self]))
         
         return exists
     
-    def cast_in_place(self, field:list[str], cast_type:'hqlt.HqlType'):
+    def cast_in_place(self, field:'Reference', cast_type:'hqlt.HqlType'):
         tables = self.assert_field(field)
         if not tables:
             return False
@@ -200,7 +198,7 @@ class Data():
             new.append(table.strip())
         return Data(tables=new)
 
-    def drop_many(self, paths:list['Reference']):
+    def drop_many(self, paths:Sequence['Reference']):
         cur = self
         for path in paths:
             cur = cur.drop(path)
