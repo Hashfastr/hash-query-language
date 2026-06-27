@@ -170,21 +170,22 @@ I'll put these into issues at some point.
 Might be better to look at closed issues until I get to documentation.
 
 ## Running
-You need at minimum Python 3.9, but Python 3.14t is required for multi-threading and HaC engine support.
+The repo is pinned to Python 3.14t (free-threaded) via `.python-version` for multi-threading and HaC engine support.
 If you use Python 3.14t, prepare to build polars, requiring a good toolchain.
 There's also a container for convienence.
+
+[uv](https://docs.astral.sh/uv/) handles the interpreter and the venv:
 
 ```
 # copy and configure Hql
 cp -r conf.example conf
 
-python3 -m venv .venv
-source .venv/bin/activate
-pip3 install -e .
+# uv reads .python-version and creates .venv automatically
+uv sync
 
 ## OR pypi
 
-pip3 install pyhql
+uv pip install pyhql
 
 ## OR container (replaced podman with docker as needed)
 
@@ -194,15 +195,15 @@ podman pull hashfastr/hql:latest
 podman run -v .:/data:z -it hashfastr/hql:latest --help
 
 # make your first query
-python3 -m Hql -v -f ./examples/databases/json/json.hql
+uv run python -m Hql -v -f ./examples/databases/json/json.hql
 
 # run sigma, requires Sigma source definitions
-python3 -m Hql -v -f ./examples/sigma/rules-threat-hunting/windows/process_creation/proc_creation_win_attrib_system.yml
+uv run python -m Hql -v -f ./examples/sigma/rules-threat-hunting/windows/process_creation/proc_creation_win_attrib_system.yml
 
 # convert sigma
 git submodule init
-python3 -m Hql -v -dpar -f ./examples/sigma/rules-threat-hunting/windows/process_creation/proc_creation_win_attrib_system.yml
+uv run python -m Hql -v -dpar -f ./examples/sigma/rules-threat-hunting/windows/process_creation/proc_creation_win_attrib_system.yml
 
 # Start HaC engine
-python3 -m Hql -v -eng -d ./examples/interface
+uv run python -m Hql -v -eng -d ./examples/interface
 ```

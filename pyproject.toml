@@ -1,6 +1,6 @@
 [project]
 name = "pyhql"
-version = "0.0.9"
+version = "0.0.10"
 authors = [
     { name="Sylvain Jones", email="sylvainjones+hql@hashfastr.com" },
 ]
@@ -28,12 +28,12 @@ dependencies = [
     "requests",
     "ndjson",
     "oyaml",
-    "opensearch-py",
+    # "opensearch-py",
     "aiohttp",
     "boto3",
     "fastapi",
     "uvicorn",
-    "dfir_iris_client"
+    # "dfir_iris_client"
 ]
 
 [project.urls]
