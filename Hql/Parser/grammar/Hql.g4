@@ -1076,7 +1076,12 @@ dotCompositeFunctionCallOperation:
     '.' Call=functionCallExpression;
 
 functionCallExpression:
-    Name=simpleNameReference '(' (Arguments+=argumentExpression (',' Arguments+=argumentExpression)*)? ')';
+      Name=functionCallName '(' (Arguments+=argumentExpression (',' Arguments+=argumentExpression)*)? ')';
+
+functionCallName:
+      simpleNameReference
+    | extendedKeywordName
+    ;
 
 argumentExpression:
       namedExpression

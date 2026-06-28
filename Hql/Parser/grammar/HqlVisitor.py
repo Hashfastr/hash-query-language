@@ -1,5 +1,4 @@
-# Generated from ./Hql.g4 by ANTLR 4.13.2
-from __future__ import annotations
+# Generated from Hql.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .HqlParser import HqlParser
@@ -492,6 +491,11 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#joinOperator.
     def visitJoinOperator(self, ctx:HqlParser.JoinOperatorContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#joinOperatorTable.
+    def visitJoinOperatorTable(self, ctx:HqlParser.JoinOperatorTableContext):
         return self.visitChildren(ctx)
 
 
@@ -1152,6 +1156,11 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#functionCallExpression.
     def visitFunctionCallExpression(self, ctx:HqlParser.FunctionCallExpressionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by HqlParser#functionCallName.
+    def visitFunctionCallName(self, ctx:HqlParser.FunctionCallNameContext):
         return self.visitChildren(ctx)
 
 
