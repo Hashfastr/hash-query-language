@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
@@ -16,7 +17,7 @@ class service(Function):
                 raise hqle.QueryException(f"Invalid argument type passed to function service {type(i)}")
             self.names.append(i)
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         from Hql.Hac.Sources import Source
         from Hql.Expressions.Literals import StringLiteral
         

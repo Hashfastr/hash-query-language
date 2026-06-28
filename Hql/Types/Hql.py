@@ -16,7 +16,7 @@ SchemaDT = Mapping[str, Union['HqlTypes.HqlType', dict]]
 
 class HqlTypes():
     class HqlType(CompilerType):
-        def __init__(self, inner:Optional['HqlTypes.HqlType']=None):
+        def __init__(self, inner:Optional[HqlTypes.HqlType]=None):
             CompilerType.__init__(self, inner=inner)
             self.proto:Optional[pl.DataType] = None
                 
@@ -234,7 +234,7 @@ class HqlTypes():
 
             self.complex = True
 
-        def cast_single(self, ip:Union['StringLiteral', str]) -> int:
+        def cast_single(self, ip:Union[StringLiteral, str]) -> int:
             from Hql.Expressions.Literals import StringLiteral
 
             if isinstance(ip, StringLiteral):
@@ -264,7 +264,7 @@ class HqlTypes():
                 
             return pl.Series(ips, dtype=self.proto)
         
-        def human_single(self, ip:Union['Integer', int]) -> str:
+        def human_single(self, ip:Union[Integer, int]) -> str:
             from Hql.Expressions.Literals import Integer
 
             if isinstance(ip, Integer):
@@ -325,7 +325,7 @@ class HqlTypes():
     # Need to figure this out properly
     @register_type('hql_range')
     class range(HqlType, pl.Struct):
-        def __init__(self, inner:'HqlTypes.HqlType'):
+        def __init__(self, inner:HqlTypes.HqlType):
             HqlTypes.HqlType.__init__(self, inner=inner)
             self.proto = self.pl_schema()
 
@@ -336,7 +336,7 @@ class HqlTypes():
 
     @register_type('hql_matrix')
     class matrix(HqlType):
-        def __init__(self, inner:'HqlTypes.HqlType'):
+        def __init__(self, inner:HqlTypes.HqlType):
             HqlTypes.HqlType.__init__(self, inner=inner)
             raise hqle.CompilerException('Unimplemented hql type matrix')
 
@@ -394,10 +394,10 @@ class HqlTypes():
         def __len__(self):
             return len(self.schema)
 
-        def __getitem__(self, key:'Reference'):
+        def __getitem__(self, key:Reference):
             from Hql.Expressions.References import Path
 
-            def get(data:SchemaDT, key:'Reference'):
+            def get(data:SchemaDT, key:Reference):
                 base = key[0]
                 if base not in data:
                     raise IndexError
@@ -500,7 +500,7 @@ class HqlTypes():
         
     @register_type('hql_multivalue')
     class multivalue(HqlType):
-        def __init__(self, inner:'HqlTypes.HqlType'):
+        def __init__(self, inner:HqlTypes.HqlType):
             self.inner = inner
             assert inner.proto
             self.proto = pl.List(inner.proto)

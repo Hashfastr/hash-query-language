@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 from . import Function
 from Hql.Context import register_func
@@ -18,5 +19,5 @@ class ago(Function):
         assert isinstance(val, StringLiteral)
         self.delta = val
 
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: Context, receiver=None) -> object:
         return self.delta

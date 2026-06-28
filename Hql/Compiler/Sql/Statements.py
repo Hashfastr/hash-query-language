@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Exceptions import HqlExceptions as hqle
 import json
@@ -14,14 +15,14 @@ class SqlStatement():
     def to_dict(self):
         return {}
 
-    def compile(self, compiler:'SqlCompiler') -> str:
+    def compile(self, compiler:SqlCompiler) -> str:
         ...
 
     def random_label(self) -> str:
         import string, random
         return ''.join(random.choices(string.ascii_lowercase, k=8))
 
-    def compile_nested(self, compiler:'SqlCompiler', nested:'SqlStatement') -> str:
+    def compile_nested(self, compiler:SqlCompiler, nested:SqlStatement) -> str:
         res = nested.compile(compiler)
         indented = '\n'
         for line in res.split('\n'):
@@ -34,15 +35,15 @@ class SqlStatement():
 Assumes all ops have been precompiled by the SQL compiler
 '''
 class SELECT(SqlStatement):
-    def __init__(self, src:Union[SqlStatement, 'NamedReference'], project:Optional['Project']=None, where:Optional['Where']=None, take:Optional['Take']=None, join:Optional[list['Join']]=None, distinct:Optional[list[Union['Path', 'NamedReference']]]=None):
+    def __init__(self, src:Union[SqlStatement, NamedReference], project:Optional[Project]=None, where:Optional[Where]=None, take:Optional[Take]=None, join:Optional[list[Join]]=None, distinct:Optional[list[Union[Path, NamedReference]]]=None):
         SqlStatement.__init__(self)
-        self.project:Optional['Project'] = project
-        self.src:Union[SqlStatement, 'NamedReference'] = src
-        self.where:Optional['Where'] = where
-        self.limit:Optional['Take'] = take
+        self.project:Optional[Project] = project
+        self.src:Union[SqlStatement, NamedReference] = src
+        self.where:Optional[Where] = where
+        self.limit:Optional[Take] = take
         joins = join if join else []
         self.join:JOIN = JOIN(joins)
-        self.distinct:list[Union['Path', 'NamedReference']] = distinct if distinct else []
+        self.distinct:list[Union[Path, NamedReference]] = distinct if distinct else []
 
     def to_dict(self):
         return {
@@ -55,23 +56,23 @@ class SELECT(SqlStatement):
             'distinct': [x.to_dict() for x in self.distinct]
         }
 
-    def add_project(self, op:'Project') -> 'SELECT':
+    def add_project(self, op:Project) -> SELECT:
         if self.project:
             return SELECT(self, project=op)
         self.project = op
         return self
     
-    def add_where(self, op:'Where') -> 'SELECT':
+    def add_where(self, op:Where) -> SELECT:
         if self.where:
             self.where.integrate(op)
         self.where = op
         return self
 
-    def add_join(self, op:'Join') -> 'SELECT':
+    def add_join(self, op:Join) -> SELECT:
         self.join.add(op)
         return self
 
-    def add_distinct(self, expr:Union['Path', 'NamedReference']):
+    def add_distinct(self, expr:Union[Path, NamedReference]):
         self.distinct.append(expr)
 
     def is_plain(self):
@@ -84,7 +85,7 @@ class SELECT(SqlStatement):
             self.project or self.where or self.limit or self.distinct
         )
 
-    def collapse_join(self) -> tuple[Union['SqlStatement', 'NamedReference', None], list['Join']]:
+    def collapse_join(self) -> tuple[Union[SqlStatement, NamedReference, None], list[Join]]:
         from Hql.Operators.Join import Join
         from Hql.Compiler import InstructionSet
 
@@ -100,7 +101,7 @@ class SELECT(SqlStatement):
 
         return src, joins
 
-    def compile(self, compiler:'SqlCompiler') -> str:
+    def compile(self, compiler:SqlCompiler) -> str:
         from copy import deepcopy
         compiler = deepcopy(compiler)
         compiler.statement = self
@@ -158,12 +159,12 @@ class SELECT(SqlStatement):
         return out
 
 class JOIN(SqlStatement):
-    def __init__(self, joins:list['Join']) -> None:
+    def __init__(self, joins:list[Join]) -> None:
         from Hql.Expressions.References import NamedReference
         SqlStatement.__init__(self)
         self.lname = NamedReference(self.random_label())
-        self.joins:list['Join'] = joins
-        self.wheres:list['Where'] = []
+        self.joins:list[Join] = joins
+        self.wheres:list[Where] = []
 
     def __bool__(self):
         return bool(self.joins)
@@ -176,16 +177,16 @@ class JOIN(SqlStatement):
             'wheres': [x.to_dict() for x in self.wheres]
         }
 
-    def add(self, join:'Join'):
+    def add(self, join:Join):
         self.joins.append(join)
 
-    def collapse_joins(self) -> list['Join']:
+    def collapse_joins(self) -> list[Join]:
         new = []
         for i in self.joins:
             new += self.collapse_join(i)
         return new
 
-    def collapse_join(self, join:'Join') -> list['Join']:
+    def collapse_join(self, join:Join) -> list[Join]:
         from Hql.Compiler import InstructionSet, SqlCompiler
         from Hql.Operators.Join import Join
         from Hql.Database import SQLite, Database
@@ -207,12 +208,12 @@ class JOIN(SqlStatement):
         new = [new] + joins
         return new
 
-    def prepend(self, join:Union[list['Join'], 'Join']):
+    def prepend(self, join:Union[list[Join], Join]):
         if not isinstance(join, list):
             join = [join]
         self.joins = join + self.joins
 
-    def compile(self, compiler: 'SqlCompiler') -> str:
+    def compile(self, compiler: SqlCompiler) -> str:
         self.joins = self.collapse_joins()
 
         acc, _ = compiler.compile(self.lname, preprocess=False)
@@ -226,7 +227,7 @@ class JOIN(SqlStatement):
 
         return out
 
-    def compile_join(self, op:'Join', compiler:'SqlCompiler') -> str:
+    def compile_join(self, op:Join, compiler:SqlCompiler) -> str:
         from Hql.Compiler import InstructionSet, SqlCompiler
         from Hql.Operators.Where import Where
         from Hql.Expressions.Logic import BinaryLogic, Path, FuncExpr, NamedReference, Equality

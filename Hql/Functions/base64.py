@@ -27,10 +27,10 @@ class base64enc(Function):
         self.val:Union[StringLiteral, Reference] = args[0]
         self.enc = args[1] if len(args) == 2 else StringLiteral('ascii')
 
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: Context, receiver=None) -> object:
         from Hql.Expressions.Literals import StringLiteral
 
-        def static(val:str, enc:str) -> 'StringLiteral':
+        def static(val:str, enc:str) -> StringLiteral:
             from base64 import b64encode
             val = b64encode(bytes(val, enc)).decode()
             return StringLiteral(val)
@@ -46,7 +46,7 @@ class base64enc(Function):
 
         return static(val.str(), enc.str())
 
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         from Hql.Data import Series
         raise hqle.CompilerException('unimplemented dynamic eval')
 
@@ -76,7 +76,7 @@ class base64dec(Function):
         val = b64decode(bytes(val, 'ascii')).decode(enc)
         return StringLiteral(val)
        
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         from Hql.Data import Series
         raise hqle.CompilerException('unimplemented dynamic eval')
 
@@ -113,7 +113,7 @@ class base64off(Function):
 
         return parts
 
-    def preprocess(self, ctx: 'Context', receiver=None) -> 'Multivalue':
+    def preprocess(self, ctx: Context, receiver=None) -> Multivalue:
         val = self.val.str()
         enc = self.enc.str()
 
@@ -121,7 +121,7 @@ class base64off(Function):
         mv = Multivalue(offsets)
         return mv
        
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         from Hql.Data import Series
         raise hqle.CompilerException('unimplemented dynamic eval')
 

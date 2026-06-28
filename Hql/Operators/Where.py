@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Union, Optional
 from Hql.Operators.Operator import Operator
@@ -16,19 +17,19 @@ if TYPE_CHECKING:
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
 class Where(Operator):
     # Pass in the parser context here for helpful debugging
-    def __init__(self, expr:'Logic', params:Union[None, list['OpParameter']]=None):
+    def __init__(self, expr:Logic, params:Union[None, list[OpParameter]]=None):
         Operator.__init__(self)
         self.parameters = params if params else []
-        self._expr:'Logic' = expr
+        self._expr:Logic = expr
 
     @property
-    def expr(self) -> 'Logic':
+    def expr(self) -> Logic:
         expr = self._expr
         assert expr
         return expr
 
     @expr.setter
-    def expr(self, value:Optional['Expression']) -> None:
+    def expr(self, value:Optional[Expression]) -> None:
         from Hql.Expressions.Logic import Logic
 
         if value is None or not isinstance(value, Logic):
@@ -48,7 +49,7 @@ class Where(Operator):
         out += self.expr.deparse()
         return out
 
-    def split_by_length(self, max_length:int=80) -> list['Where']:
+    def split_by_length(self, max_length:int=80) -> list[Where]:
         from Hql.Expressions.Logic import BinaryLogic
 
         expr = self.expr
@@ -59,7 +60,7 @@ class Where(Operator):
 
         return [Where(x, self.parameters) for x in splits]
 
-    def integrate(self, op: 'Operator'):
+    def integrate(self, op: Operator):
         from Hql.Expressions.Logic import BinaryLogic
 
         if not isinstance(op, Where):
@@ -73,7 +74,7 @@ class Where(Operator):
     If there is a field reference error, the filter does not apply to that table
     so drop it
     '''
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data
 
         pl_filter = self.expr.eval(ctx, as_pl=True)

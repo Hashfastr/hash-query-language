@@ -50,7 +50,7 @@ class Schema():
     def __bool__(self) -> bool:
         return bool(self.schema)
 
-    def __contains__(self, item:'Reference') -> bool:
+    def __contains__(self, item:Reference) -> bool:
         cur = self.schema
         for i in item.list():
             if not isinstance(cur, dict) or i not in cur:
@@ -61,10 +61,10 @@ class Schema():
     def __iter__(self):
         return iter(self.blowup_schema())
 
-    def blowup_schema(self) -> list[tuple['Reference', CompilerType]]:
+    def blowup_schema(self) -> list[tuple[Reference, CompilerType]]:
         from Hql.Expressions.References import NamedReference, Path
         
-        def bs(schema:SchemaDT) -> list[tuple['Reference', CompilerType]]:
+        def bs(schema:SchemaDT) -> list[tuple[Reference, CompilerType]]:
             out = []
             for key in schema:
                 name = NamedReference(key)
@@ -89,7 +89,7 @@ class Schema():
         return self.schema.to_dict()
     
     @staticmethod
-    def merge(schemata:list['Schema']) -> 'Schema':
+    def merge(schemata:list[Schema]) -> Schema:
         from Hql.Types.Hql import HqlTypes as hqlt
 
         # generates key groups looking for conflicts
@@ -144,7 +144,7 @@ class Schema():
         from Hql.Data import Schema
         from Hql.Types.Hql import HqlTypes as hqlt
 
-        def n(node:Union[SchemaDT, 'Schema', hqlt.object]) -> dict:
+        def n(node:Union[SchemaDT, Schema, hqlt.object]) -> dict:
             if isinstance(node, Schema):
                 return n(node.schema)
             if isinstance(node, hqlt.object):
@@ -164,7 +164,7 @@ class Schema():
         return self
 
     # Isolate the schema at a given path
-    def select(self, path:'Reference') -> "Schema":
+    def select(self, path:Reference) -> Schema:
         meat = self.unnest(path)
         cur = meat.schema if isinstance(meat, Schema) else meat
         for part in path.list()[::-1]:
@@ -174,13 +174,13 @@ class Schema():
         assert isinstance(cur, dict)
         return Schema(schema=cur)
 
-    def select_many(self, paths:Sequence['Reference']):
+    def select_many(self, paths:Sequence[Reference]):
         schemas = []
         for path in paths:
             schemas.append(self.select(path))
         return Schema.merge(schemas)
     
-    def unnest(self, path:'Reference') -> Union[hqlt.HqlType, "Schema"]:
+    def unnest(self, path:Reference) -> Union[hqlt.HqlType, Schema]:
         cur = self.schema
         for part in path.list():
             if not isinstance(cur, dict) or part not in cur:
@@ -197,7 +197,7 @@ class Schema():
     '''
     Descriptive rename of unnest, might remove later
     '''
-    def get_type(self, path:'Reference') -> Union[hqlt.HqlType, "Schema"]:
+    def get_type(self, path:Reference) -> Union[hqlt.HqlType, Schema]:
         return self.unnest(path)
 
     '''
@@ -224,7 +224,7 @@ class Schema():
     Doesn't return a schema object as it might be a type or a dict
     Typically this is called with a named expression, so it's gonna build the schema anyways.
     '''
-    def strip(self) -> Union['Schema', 'hqlt.HqlType']:
+    def strip(self) -> Union[Schema, hqlt.HqlType]:
         cur = self.schema
         while isinstance(cur, dict) and len(cur) == 1:
             key = list(cur.keys())[0]
@@ -235,7 +235,7 @@ class Schema():
         else:
             return cur
     
-    def rename(self, src:'Reference', dest:'Reference'):
+    def rename(self, src:Reference, dest:Reference):
         if not self.assert_field(src):
             raise hqle.QueryException('Attempting to rename a non-existing field')
         
@@ -255,7 +255,7 @@ class Schema():
             else:
                 cur = cur[i]
                 
-    def pop(self, name:'Reference'):
+    def pop(self, name:Reference):
         if not self.assert_field(name):
             raise hqle.QueryException(f'Attempting to pop a non-existing field {name}')
         
@@ -273,8 +273,8 @@ class Schema():
                 
         return src_type
 
-    def drop(self, path:'Reference'):
-        def d(path:'Reference', schema:dict, idx:int=0) -> dict:
+    def drop(self, path:Reference):
+        def d(path:Reference, schema:dict, idx:int=0) -> dict:
             new = {}
             for key in schema:
                 if key == path[idx]:
@@ -295,7 +295,7 @@ class Schema():
         self.schema = d(path, self.schema)
         return self
     
-    def drop_many(self, paths:Sequence['Reference']):
+    def drop_many(self, paths:Sequence[Reference]):
         for path in paths:
             self.drop(path)
         return self
@@ -303,11 +303,11 @@ class Schema():
     '''
     Set a field to a specific type in the schema apply is then expected to be ran
     '''
-    def set(self, path:'Reference', htype:Union[CompilerType, "Schema", dict]):
+    def set(self, path:Reference, htype:Union[CompilerType, Schema, dict]):
         if isinstance(htype, Schema):
             htype = htype.normalize().schema
 
-        def s(path:'Reference', htype:Union[CompilerType, dict], schema:dict, idx:int=0):
+        def s(path:Reference, htype:Union[CompilerType, dict], schema:dict, idx:int=0):
             split = path[idx]
 
             if idx == len(path) - 1:
@@ -329,7 +329,7 @@ class Schema():
     Generates a schema converted to a given schema target.
     Default is HqlTypes
     '''
-    def convert_schema(self, target:str='hql') -> 'Schema':
+    def convert_schema(self, target:str='hql') -> Schema:
         from Hql.Types.Hql import HqlTypes as hqlt
 
         def ce(node:CompilerType, target:str):
@@ -376,7 +376,7 @@ class Schema():
     Uses python typing
     '''
     @staticmethod
-    def from_json(data:list[dict]) -> 'Schema':
+    def from_json(data:list[dict]) -> Schema:
         from Hql.Types.Python import PythonTypes as pyt
         from Hql.Types.Hql import HqlTypes as hqlt
 
@@ -476,7 +476,7 @@ class Schema():
     If a col is not defined in the schema, then it just skips over it
     Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:Union['pl.DataFrame', 'pl.Series'], schema:Union[None, dict, 'Schema', CompilerType]=None):
+    def apply(self, df:Union[pl.DataFrame, pl.Series], schema:Union[None, dict, Schema, CompilerType]=None):
         import polars as pl
 
         if isinstance(schema, Schema):
@@ -520,10 +520,10 @@ class Schema():
         return pl.DataFrame(new)
     
     # Asserts by attempting to retrieve the field's value
-    def assert_field(self, field:'Reference'):
+    def assert_field(self, field:Reference):
         return field in self
         
-    def present_complex(self, df:'pl.DataFrame', schema:Optional[dict]=None):
+    def present_complex(self, df:pl.DataFrame, schema:Optional[dict]=None):
         schema = schema if schema != None else self.schema
 
         newdf = {}
@@ -543,7 +543,7 @@ class Schema():
 
         return pl.DataFrame(newdf)
 
-    def join(self, right:"Schema", on:Sequence['Reference'], kind:str) -> Schema:
+    def join(self, right:Schema, on:Sequence[Reference], kind:str) -> Schema:
         # all of these are semantically the same schema wise
         if kind in ('inner', 'leftsemi', 'rightsemi', 'innerunique', 'leftouter', 'rightouter', 'fullouter'):
             new = self.copy()

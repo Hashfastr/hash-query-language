@@ -10,20 +10,13 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.PolarsTools import pltools
 from Hql.Types.Hql import HqlTypes as hqlt
 
+from Hql.Expressions.References import NamedReference, Path
+
 import logging
 
 if TYPE_CHECKING:
     from Hql.Expressions.References import Reference
     from .Schema import Schema
-
-def _reference_from_parts(parts:Sequence[str]) -> 'Reference':
-    from Hql.Expressions.References import NamedReference, Path
-
-    refs = [NamedReference(part) for part in parts]
-    if not refs:
-        raise hqle.CompilerException('Cannot create a Reference from an empty path')
-
-    return Path(refs)
 
 '''
 Table for a structure of data, includes schema definition.
@@ -35,7 +28,7 @@ class Table():
             df:Union[pl.DataFrame, None]=None,
             series:Union[Series, None]=None,
             init_data:Union[list[dict], None]=None,
-            schema:Union['Schema', dict, None]=None,
+            schema:Union[Schema, dict, None]=None,
             name:Union[str, None]=None
         ):
         from Hql.Data import Schema
@@ -51,7 +44,7 @@ class Table():
        
         # rely on self.agg being None for the existence of an aggregation
         self.agg:Optional[GroupBy] = None
-        self.agg_paths:list['Reference'] = []
+        self.agg_paths:list[Reference] = []
         self.agg_schema:Schema = Schema()
 
         if series:
@@ -98,12 +91,12 @@ class Table():
         self.df = schema.apply(self.df)
         self.schema = schema
 
-    def get_type(self, path:'Reference'):
+    def get_type(self, path:Reference):
         if self.schema:
             return self.schema.get_type(path)
         return None
 
-    def drop(self, path:'Reference', df:Union[pl.DataFrame, None]=None, idx:int=0) -> Union[pl.DataFrame, "Table"]:
+    def drop(self, path:Reference, df:Union[pl.DataFrame, None]=None, idx:int=0) -> Union[pl.DataFrame, Table]:
         if isinstance(df, type(None)) and idx != 0:
             raise hqle.CompilerException('Logic error? Would reinit df with a non-zero index.')
 
@@ -140,7 +133,7 @@ class Table():
             
         return pl.DataFrame(new)
     
-    def drop_many(self, paths:Sequence['Reference']):
+    def drop_many(self, paths:Sequence[Reference]):
         for path in paths:
             self.drop(path)
         return self
@@ -160,11 +153,11 @@ class Table():
         except pl.exceptions.ColumnNotFoundError as e:
             raise hqle.UnreferencedFieldException(e.args[0])
         
-    def get_value(self, path:'Reference'):
+    def get_value(self, path:Reference):
         return pltools.get_element_value(self.df, path.list())
 
     @staticmethod
-    def merge_rows(tables:list['Table']):
+    def merge_rows(tables:list[Table]):
         from Hql.Data import Schema
 
         if not tables:
@@ -229,7 +222,7 @@ class Table():
         return Table(df=df, schema=schema, name=name)
 
     @staticmethod
-    def merge(tables:list["Table"], merge_rows=True):
+    def merge(tables:list[Table], merge_rows=True):
         from Hql.Types.Compiler import CompilerType
         from Hql.Data import Schema
 
@@ -283,7 +276,7 @@ class Table():
     Returns a Table with just the data of that path
     If not found then it returns an empty table with the parent name.
     '''
-    def select(self, field:'Reference'):
+    def select(self, field:Reference):
         if not self.assert_field(field):
             return Table(name=self.name)
         
@@ -292,7 +285,7 @@ class Table():
 
         return Table(df=df, schema=schema, name=self.name)
 
-    def unnest(self, field:'Reference') -> Union[Series, 'Table']:
+    def unnest(self, field:Reference) -> Union[Series, Table]:
         from Hql.Data import Schema
 
         if not isinstance(self.schema, Schema):
@@ -343,11 +336,11 @@ class Table():
         while isinstance(cur, pl.DataFrame) and len(cur.columns) == 1:
             key = cur.columns[0]
             cur = pltools.get_element_value(cur, [key])
-            path.append(key)
+            path.append(NamedReference(key))
         
         # Using this instead of strip to ensure we're in sync
         if path:
-            schema = self.schema.unnest(_reference_from_parts(path))
+            schema = self.schema.unnest(Path(path))
             if isinstance(schema, hqlt.object):
                 schema = schema.schema
         else:
@@ -365,7 +358,7 @@ class Table():
 
         return Table(df=cur, schema=schema, name=self.name)
 
-    def rename(self, src:'Reference', dest:'Reference'):
+    def rename(self, src:Reference, dest:Reference):
         if not self.assert_field(src):
             raise hqle.QueryException('Attempting to rename a non-existing field')
         
@@ -389,7 +382,7 @@ class Table():
     # Inserts a piece of data at a given name
     def insert(
             self,
-            name:'Reference',
+            name:Reference,
             value:Union[pl.DataFrame, pl.Series],
             vtype:Union[hqlt.HqlType, dict],
             cur_df:Union[None, pl.DataFrame]=None,
@@ -449,7 +442,7 @@ class Table():
         
         return new
 
-    def remove(self, name:'Reference', cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
+    def remove(self, name:Reference, cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
         if isinstance(cur_df, type(None)):
             cur_df = self.df
             
@@ -475,7 +468,7 @@ class Table():
 
         return merged
             
-    def pop(self, name:'Reference'):
+    def pop(self, name:Reference):
         if not self.assert_field(name):
             raise hqle.QueryException('Attempting to pop a non-existing field')
         
@@ -488,7 +481,7 @@ class Table():
     
     # Asserts by checking against schema
     # Schema should always be sync'd with the table data
-    def assert_field(self, field:'Reference'):
+    def assert_field(self, field:Reference):
         return self.schema.assert_field(field)
     
     def cast_in_place(self, path:Reference, cast_type:hqlt.HqlType):
@@ -500,7 +493,7 @@ class Table():
 
         return self
     
-    def join(self, right:"Table", on:Sequence['Reference'], kind:str):
+    def join(self, right:Table, on:Sequence[Reference], kind:str):
         from Hql.Context import Context
         from Hql.Data import Data
 

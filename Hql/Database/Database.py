@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
@@ -24,7 +25,7 @@ class Database(Operator):
         self.compiler = Compiler()
         self.name = name
         self.index = ''
-        self.preamble:Optional['PipeExpression'] = None
+        self.preamble:Optional[PipeExpression] = None
 
     def __eq__(self, value: object, /) -> bool:
         if isinstance(value, Database):
@@ -34,10 +35,10 @@ class Database(Operator):
                 return False
         return super().__eq__(value)
 
-    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         return self.compiler.add_op(op)
 
-    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple['Database', Union[None, 'Operator']]:
+    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple[Database, Union[None, Operator]]:
         from Hql.Operators.Where import Where
         from Hql.Expressions.Logic import BetweenEquality, Datetime, NamedReference
 
@@ -68,10 +69,10 @@ class Database(Operator):
             'type': self.type,
         }
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         return NotImplemented
     
-    def get_variable(self, name:'NamedReference') -> object:
+    def get_variable(self, name:NamedReference) -> object:
         raise hqle.QueryException(f'{self.type} database has no variables')
 
     def get_macro(self, name:str) -> Union[None, dict]:

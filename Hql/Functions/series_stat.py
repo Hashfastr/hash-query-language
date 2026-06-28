@@ -42,7 +42,7 @@ class series_stats(Function):
         
         return (min, min_idx)
 
-    def cal_max(self, s:Union['pl.Series', list]):
+    def cal_max(self, s:Union[pl.Series, list]):
         import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
@@ -60,28 +60,28 @@ class series_stats(Function):
         
         return (max, max_idx)
     
-    def cal_avg(self, s:Union['pl.Series', list]):
+    def cal_avg(self, s:Union[pl.Series, list]):
         import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
 
         return s.mean()
     
-    def cal_stdev(self, s:Union['pl.Series', list]):
+    def cal_stdev(self, s:Union[pl.Series, list]):
         import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
 
         return s.std()
     
-    def cal_vari(self, s:Union['pl.Series', list]):
+    def cal_vari(self, s:Union[pl.Series, list]):
         import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
     
         return s.var()
     
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         import polars as pl
         from Hql.Data import Data, Table
         

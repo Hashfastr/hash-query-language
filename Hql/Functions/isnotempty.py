@@ -14,8 +14,8 @@ class isnotempty(Function):
         # allows 1 to infinity args
         Function.__init__(self, args, 1, -1)
 
-    def gen_filter(self, ctx:'Context') -> pl.Expr:
-        expr:'pl.Expr' = pl.lit(True)
+    def gen_filter(self, ctx:Context) -> pl.Expr:
+        expr:pl.Expr = pl.lit(True)
 
         for i in self.args:
             cur = i.polars().is_null().not_()
@@ -23,5 +23,5 @@ class isnotempty(Function):
 
         return expr
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         return self.gen_filter(ctx)

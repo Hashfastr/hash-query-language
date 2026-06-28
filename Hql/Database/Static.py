@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Database
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Data import Data

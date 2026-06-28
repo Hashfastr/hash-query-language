@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Union, Optional
 
 from Hql.Exceptions import HqlExceptions as hqle
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from Hql.Hac import Hac
 
 class SigmaParser():
-    def __init__(self, txt:str, config:'Config'):
+    def __init__(self, txt:str, config:Config):
         from Hql.Query import Query
         import yaml
 
@@ -27,7 +28,7 @@ class SigmaParser():
         if self.loaded.get('status', '') == 'deprecated':
             raise hqle.QueryException(f'Sigma rule is deprecated')
 
-    def gen_hac(self) -> 'Hac':
+    def gen_hac(self) -> Hac:
         from copy import deepcopy
         from Hql.Hac import Hac
         doc:dict = deepcopy(self.loaded)
@@ -53,7 +54,7 @@ class SigmaParser():
         src = self.loaded['logsource']
 
         prepipe = self.gen_src(src)
-        condition:'Condition' = self.parse_dac(dac)
+        condition:Condition = self.parse_dac(dac)
         expr = PipeExpression([Where(condition.assemble())], prepipe=prepipe)
 
         posthql_src = ''
@@ -79,7 +80,7 @@ class SigmaParser():
         stmts += [QueryStatement(expr)]
         self.assembly = Query(stmts)
 
-    def gen_src(self, src:dict) -> Union['DotCompositeFunction', 'Function']:
+    def gen_src(self, src:dict) -> Union[DotCompositeFunction, Function]:
         from Hql.Expressions.Functions import FuncExpr
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import NamedReference
@@ -102,7 +103,7 @@ class SigmaParser():
 
         return DotCompositeFunction(funcs)
 
-    def parse_dac(self, dac:dict) -> 'Condition':
+    def parse_dac(self, dac:dict) -> Condition:
         from Hql.Parser.Sigma.Condition import Condition
         from Hql.Parser.Sigma.Selection import Selection
 

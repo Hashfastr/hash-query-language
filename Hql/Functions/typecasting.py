@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
@@ -19,7 +20,7 @@ class Typecast(Function):
         self.cast_type = hqlt.string()
         self.expr = Expr.StringLiteral
         
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:Context, **kwargs):
         # represents a single value literal 
         if isinstance(self.src, pl.Series):
             new = self.cast_type.cast(self.src)

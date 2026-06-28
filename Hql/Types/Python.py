@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional
 from Hql.Context import register_type, get_type
 from Hql.Types.Compiler import CompilerType
@@ -6,7 +7,7 @@ class PythonTypes():
     from Hql.Types.Hql import HqlTypes as hqlt
 
     class PythonType(CompilerType):
-        def __init__(self, inner:Optional['PythonTypes.PythonType']=None):
+        def __init__(self, inner:Optional[PythonTypes.PythonType]=None):
             CompilerType.__init__(self, inner=inner)
 
             self.priority = 0
@@ -20,7 +21,7 @@ class PythonTypes():
         return get_type(f'python_{name}')
 
     @staticmethod
-    def from_value(value) -> 'PythonTypes.PythonType':
+    def from_value(value) -> PythonTypes.PythonType:
         if isinstance(value, dict):
             new = dict()
             for i in value:
@@ -134,7 +135,7 @@ class PythonTypes():
 
     @register_type('python_list')
     class list(PythonType):
-        def __init__(self, inner:'PythonTypes.PythonType'):
+        def __init__(self, inner:PythonTypes.PythonType):
             PythonTypes.PythonType.__init__(self, inner=inner)
             self.inner = inner
             self.HqlType = PythonTypes.hqlt.multivalue(inner.hql_schema())
@@ -160,7 +161,7 @@ class PythonTypes():
                 return False
             return PythonTypes.hqlt.object.eq(self.schema, value.schema)
 
-        def hql_schema(self) -> 'PythonTypes.hqlt.HqlType':
+        def hql_schema(self) -> PythonTypes.hqlt.HqlType:
             new = dict()
             for i in self.schema:
                 new[i] = self[i].hql_schema()

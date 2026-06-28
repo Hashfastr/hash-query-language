@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 from Hql.Exceptions import HacExceptions as hace
 from Hql.Exceptions import HqlExceptions as hqle
@@ -143,7 +144,7 @@ class Schedule():
         return out_set
 
 class Detection():
-    def __init__(self, txt:str, src:str, config:'Config', no_hac:bool=False) -> None:
+    def __init__(self, txt:str, src:str, config:Config, no_hac:bool=False) -> None:
         import uuid
         from Hql.Parser import Parser as HqlParser
         from Hql.Parser.Sigma import SigmaParser
@@ -185,7 +186,7 @@ class Detection():
 
         return res
 
-    def gen_hac(self) -> tuple[Optional['Hac'], Optional['SigmaParser']]:
+    def gen_hac(self) -> tuple[Optional[Hac], Optional[SigmaParser]]:
         from Hql.Hac.Parser import Parser as HaCParser
         from Hql.Parser.Sigma import SigmaParser
 
@@ -234,7 +235,7 @@ class Detection():
         else:
             self.parser = Parser(self.txt, self.src)
 
-    def compile(self, query_now:Optional[datetime.datetime]=None) -> 'HqlCompiler':
+    def compile(self, query_now:Optional[datetime.datetime]=None) -> HqlCompiler:
         from Hql.Query import Query
         from Hql.Compiler import HqlCompiler
         import copy
@@ -270,7 +271,7 @@ class Detection():
             self.run_history = self.run_history[diff:]
         self.run_history.append(run)
 
-    def run(self, query_time:Optional[datetime.datetime]=None) -> 'Data':
+    def run(self, query_time:Optional[datetime.datetime]=None) -> Data:
         compiler = self.compile(query_time)
 
         if not compiler:
@@ -290,14 +291,14 @@ class Detection():
         return ctx.data
 
 class HacEngine():
-    def __init__(self, path:'Path', directory:bool, conf_path:'Path', tz:Optional[datetime.tzinfo]=None) -> None:
+    def __init__(self, path:Path, directory:bool, conf_path:Path, tz:Optional[datetime.tzinfo]=None) -> None:
         from Hql.Threading import HacPool, HacThread
         from Hql.Apiserver import Apiserver
         from Hql.Helpers import can_thread
 
         self.path = path
         self.directory = directory
-        self.files:list['Path'] = self.scan_files()
+        self.files:list[Path] = self.scan_files()
         self.conf_path = conf_path
         self.config = self.load_conf()
         self.detections:dict[str, Detection] = self.load_files()
@@ -318,7 +319,7 @@ class HacEngine():
         from Hql.Config import Config
         return Config(self.conf_path)
 
-    def scan_files(self) -> list['Path']:
+    def scan_files(self) -> list[Path]:
         files = []
 
         if self.directory:

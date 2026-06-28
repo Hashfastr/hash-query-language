@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 
 from Hql import Config
@@ -24,7 +25,7 @@ class file(Function):
                 raise hqle.ArgumentException(f'Bad database file argument datatype {args[0].type}')
             self.names.append(i)
 
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: Context, receiver=None) -> object:
         from Hql.Expressions.Literals import StringLiteral
         
         new = []
@@ -37,7 +38,7 @@ class file(Function):
 
         return self
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         from Hql.Database import Database
 
         db = receiver

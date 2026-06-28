@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Sequence, Union, Iterator
 from fnmatch import fnmatch
 
@@ -111,14 +112,14 @@ class Data():
         return schemata
 
     # Given a path, select just the data at that path
-    def select(self, ref:'Reference'):
+    def select(self, ref:Reference):
         tables = []
         for table in self:
             tables.append(table.select(ref))
 
         return Data(tables=tables)
     
-    def unnest(self, ref:'Reference'):
+    def unnest(self, ref:Reference):
         tables = []
         for table in self:
             new = table.unnest(ref)
@@ -142,7 +143,7 @@ class Data():
         return dataset
    
     @staticmethod
-    def merge(data:list["Data"], merge_rows=True):
+    def merge(data:list[Data], merge_rows=True):
         if len(data) == 1:
             return data[0]
         
@@ -155,7 +156,7 @@ class Data():
 
     # Ensures that the field exists in at least one table
     # Returns the tables where it does exists
-    def assert_field(self, field:'Reference'):
+    def assert_field(self, field:Reference):
         exists = []
         
         if not self.tables:
@@ -171,7 +172,7 @@ class Data():
         
         return exists
     
-    def cast_in_place(self, field:'Reference', cast_type:'hqlt.HqlType'):
+    def cast_in_place(self, field:Reference, cast_type:hqlt.HqlType):
         tables = self.assert_field(field)
         if not tables:
             return False
@@ -181,7 +182,7 @@ class Data():
 
         return self
 
-    def join(self, right:"Data", on:Sequence['Reference'], kind:str='innerunique'):
+    def join(self, right:Data, on:Sequence[Reference], kind:str='innerunique'):
         tables = []
         for lt in self:
             new = []
@@ -198,13 +199,13 @@ class Data():
             new.append(table.strip())
         return Data(tables=new)
 
-    def drop_many(self, paths:Sequence['Reference']):
+    def drop_many(self, paths:Sequence[Reference]):
         cur = self
         for path in paths:
             cur = cur.drop(path)
         return cur
 
-    def drop(self, path:'Reference'):
+    def drop(self, path:Reference):
         new = []
         for table in self:
             new.append(table.drop(path))

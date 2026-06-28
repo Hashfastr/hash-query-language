@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Union
 from warnings import deprecated
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 # Each statement is denoted by a ; with the exception of the root statement.
 # The root statement is denoted by EOF, but can have a ; regardless
 class Query():
-    def __init__(self, statements:list['Statement']):
+    def __init__(self, statements:list[Statement]):
         from Hql.Context import Context
         from Hql.Data import Data
         
@@ -60,7 +61,7 @@ class Query():
         from Hql.Operators.Operator import Operator
         from Hql.Expressions import PipeExpression
         
-        def process_iset(iset:'InstructionSet') -> tuple[dict, list[Operator]]:
+        def process_iset(iset:InstructionSet) -> tuple[dict, list[Operator]]:
             symbol_table = dict()
             up_names = []
             for i in iset.upstream:
@@ -177,9 +178,9 @@ class Statement():
         return json.dumps(self.to_dict(), indent=2)
 
 class QueryStatement(Statement):
-    def __init__(self, root:'PipeExpression'):
+    def __init__(self, root:PipeExpression):
         Statement.__init__(self)
-        self.root:'PipeExpression' = root
+        self.root:PipeExpression = root
 
     def to_dict(self):
         out = super().to_dict()
@@ -195,7 +196,7 @@ class QueryStatement(Statement):
         return self.root.deparse()
 
 class LetStatement(Statement):
-    def __init__(self, name:'Reference', value:'PipeExpression', macro:bool=False):
+    def __init__(self, name:Reference, value:PipeExpression, macro:bool=False):
         Statement.__init__(self)
         self.root = value
         self.name = name
@@ -214,7 +215,7 @@ class LetStatement(Statement):
         value = self.root.deparse()
         return f'let {name} = {value}'
         
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         name = self.name.str()
         
         if self.macro:
@@ -225,7 +226,7 @@ class LetStatement(Statement):
         return ctx
 
 class LetLogicStatement(LetStatement):
-    def __init__(self, name:'Reference', value:Union['Logic', 'Bool']):
+    def __init__(self, name:Reference, value:Union[Logic, Bool]):
         Statement.__init__(self)
         self.root = value
         self.name = name
@@ -237,7 +238,7 @@ class LetLogicStatement(LetStatement):
             'value': self.root.to_dict()
         }
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         name = self.name.str()
         ctx.symbol_table[name] = self.root
         return ctx

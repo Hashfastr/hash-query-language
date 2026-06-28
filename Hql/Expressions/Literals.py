@@ -20,17 +20,17 @@ class Literal(Expression):
         self.hql_type = hql_type
         self.value = value
 
-    def series(self) -> 'Series':
+    def series(self) -> Series:
         from Hql.Data import Series
         import polars as pl
         series = Series(pl.Series([self.value]), self.hql_type)
         return series.cast()
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         import polars as pl
         return pl.lit(self.value).cast(self.hql_type.pl_schema())
 
-    def polars_value(self) -> 'pl.Expr':
+    def polars_value(self) -> pl.Expr:
         return self.polars()
 
     def str(self) -> str:
@@ -61,7 +61,7 @@ class TypeExpression(Literal):
     def __hash__(self):
         return hash(self.hql_type)
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         import polars as pl
         return pl.lit(self.hql_type.pl_schema())
 
@@ -128,7 +128,7 @@ class StringLiteral(Literal):
 
         return quote + cur + quote
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         import polars as pl
         return pl.lit(self.str())
 
@@ -174,7 +174,7 @@ class MultiString(StringLiteral):
             'value': [x.to_dict() for x in self.strlits]
         }
 
-    def preprocess(self, ctx:'Context') -> object:
+    def preprocess(self, ctx:Context) -> object:
         return StringLiteral(self.str())
 
 class Integer(Literal):

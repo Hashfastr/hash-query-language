@@ -45,11 +45,11 @@ class OrderedExpression(Expression):
         }
 
 class ByExpression(Expression):
-    def __init__(self, exprs:Sequence['Reference']):
+    def __init__(self, exprs:Sequence[Reference]):
         Expression.__init__(self)
         self.exprs = exprs
         
-    def build_table_agg(self, table:'Table') -> Optional['Table']:
+    def build_table_agg(self, table:Table) -> Optional[Table]:
         from Hql.Data import Schema
         from Hql.PolarsTools import pltools
 
@@ -91,7 +91,7 @@ class ByExpression(Expression):
         out += ', '.join(exprs)
         return out
     
-    def eval(self, ctx:'Context'):
+    def eval(self, ctx:Context):
         from Hql.Data import Data
         ctx = ctx.copy()
 

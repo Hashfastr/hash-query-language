@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 from Hql.Operators.Operator import Operator
 
@@ -11,5 +12,5 @@ class Template(Operator):
     def deparse(self) -> str:
         return ''
 
-    def eval(self, ctx:'Context'):
+    def eval(self, ctx:Context):
         return ctx

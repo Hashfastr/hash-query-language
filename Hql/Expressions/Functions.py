@@ -14,7 +14,7 @@ class FuncProto(Expression):
 
 class FuncExpr(FuncProto):
     # I know I'm getting rid of allowing protos for this stuff but 
-    def __init__(self, name:'NamedReference', args:Optional[Sequence[Expression]]=None):
+    def __init__(self, name:NamedReference, args:Optional[Sequence[Expression]]=None):
         FuncProto.__init__(self)
         self.name = name
         self.args:Sequence[Expression] = args if args else []
@@ -43,7 +43,7 @@ class FuncExpr(FuncProto):
         return out
 
     # Evals to function objects
-    def preprocess(self, ctx:'Context') -> 'Function':
+    def preprocess(self, ctx:Context) -> Function:
         name = self.name.str()
         func = ctx.get_func(name)
         return func(self.args, conf=ctx.config.get_function(name))
@@ -67,7 +67,7 @@ class ReceiverFuncExpr(FuncProto):
     def deparse(self) -> str:
         return f'{self.receiver.deparse()}.{self.call.deparse()}'
 
-    def preprocess(self, ctx:'Context') -> object:
+    def preprocess(self, ctx:Context) -> object:
         func = self.call.preprocess(ctx)
         receiver = self.receiver.preprocess(ctx)
         receiver = receiver.preprocess(ctx) if hasattr(receiver, 'preprocess') and receiver is not self.receiver else receiver
@@ -98,7 +98,7 @@ class DotFuncExpr(FuncProto):
             funcs.append(i.deparse())
         return '.'.join(funcs)
     
-    def preprocess(self, ctx:'Context') -> Union['DotCompositeFunction', 'Function']:
+    def preprocess(self, ctx:Context) -> Union[DotCompositeFunction, Function]:
         from Hql.Functions import DotCompositeFunction
 
         funcs = []

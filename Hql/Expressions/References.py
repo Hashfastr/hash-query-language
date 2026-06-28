@@ -32,19 +32,19 @@ class Reference(Expression):
     def __len__(self):
         return len(self.list())
 
-    def polars(self) -> 'plExpr':
+    def polars(self) -> plExpr:
         return NotImplemented
 
-    def polars_value(self) -> 'plExpr':
+    def polars_value(self) -> plExpr:
         return NotImplemented
 
-    def polars_reference(self) -> 'plExpr':
+    def polars_reference(self) -> plExpr:
         return NotImplemented
 
     def list(self) -> list[str]:
         return NotImplemented
     
-    def get_symbol(self, ctx:'Context'):
+    def get_symbol(self, ctx:Context):
         return ctx.symbol_table.get(self.name, None)
         from copy import deepcopy
         val = ctx.symbol_table.get(self.name, None)
@@ -58,7 +58,7 @@ class Reference(Expression):
             return self
         return rec
 
-    def eval(self, ctx: 'Context', unnest:bool=False) -> 'Context':
+    def eval(self, ctx: Context, unnest:bool=False) -> Context:
         if unnest:
             ctx.data = ctx.data.unnest(self)
         else:
@@ -95,11 +95,11 @@ class NamedReference(Reference):
     def list(self) -> list[str]:
         return [self.name]
 
-    def polars(self) -> 'plExpr':
+    def polars(self) -> plExpr:
         from polars import col
         return col(self.name)
 
-    def polars_value(self) -> 'plExpr':
+    def polars_value(self) -> plExpr:
         from polars import col
         return col(self.name)
 
@@ -170,14 +170,14 @@ class Path(Reference):
     def list(self) -> list[str]:
         return [x.str() for x in self.path]
 
-    def polars(self) -> 'plExpr':
+    def polars(self) -> plExpr:
         from polars import struct
         expr = self.polars_value()
         for i in self.path[::-1][1:]:
             expr = struct(expr).alias(i.str())
         return expr
 
-    def polars_value(self) -> 'plExpr':
+    def polars_value(self) -> plExpr:
         expr = self.path[0].polars_value()
         for i in self.path[1:]:
             expr = expr.struct.field(i.str())
@@ -204,7 +204,7 @@ class Path(Reference):
 
         return rec
 
-    def eval(self, ctx: 'Context', unnest:bool=False) -> 'Context':
+    def eval(self, ctx: Context, unnest:bool=False) -> Context:
         if unnest:
             ctx.data = ctx.data.unnest(self)
         else:
@@ -273,7 +273,7 @@ class NamedExpression(Expression):
         return True
 
     ## TODO
-    def polars(self) -> 'plExpr':
+    def polars(self) -> plExpr:
         return NotImplemented
 
         if not self.can_polars():
@@ -289,7 +289,7 @@ class NamedExpression(Expression):
         return 
 
     ## TODO
-    def polars_value(self) -> 'plExpr':
+    def polars_value(self) -> plExpr:
         return NotImplemented
 
         if isinstance(self.value, Function):
@@ -297,7 +297,7 @@ class NamedExpression(Expression):
             raise hqle.CompilerException(f'Attempting to polars non-polars expression')
         return self.value.polars()
 
-    def eval(self, ctx:'Context', insert:bool=True, unnest:bool=True) -> 'Context':
+    def eval(self, ctx:Context, insert:bool=True, unnest:bool=True) -> Context:
         from Hql.Expressions.Literals import Literal
         from Hql.Data import Data, Table
         from Hql.Context import Context

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
@@ -5,8 +6,8 @@ if TYPE_CHECKING:
     from . import Hac
 
 class HacDoc():
-    def __init__(self, hac:'Hac') -> None:
-        self.hac:'Hac' = hac
+    def __init__(self, hac:Hac) -> None:
+        self.hac:Hac = hac
         self.md_table_fields = [
             'status',
             'level',

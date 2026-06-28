@@ -1,17 +1,22 @@
+from __future__ import annotations
+from warnings import deprecated
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func
 from Hql.Data import Data, Table
 
-from dfir_iris_client.session import ClientSession
-from dfir_iris_client.alert import Alert
+# from dfir_iris_client.session import ClientSession
+class ClientSession: ...
+# from dfir_iris_client.alert import Alert
+class Alert: ...
 
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from Hql.Context import Context
 
-@register_func('dfir_iris')
+# skip over for now
+# @register_func('dfir_iris')
 class dfir_iris(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 0, 1, conf=conf)
@@ -39,7 +44,7 @@ class dfir_iris(Function):
         from Hql.Expressions.References import Wildcard
         return Union([Wildcard('*')]).eval(Context(data))
     
-    def alerts(self, ctx:'Context', session:ClientSession) -> Data:
+    def alerts(self, ctx:Context, session:ClientSession) -> Data:
         if not ctx.hac:
             return Data()
 
@@ -74,7 +79,7 @@ class dfir_iris(Function):
 
         return Data([Table(init_data=out, name='dfir_iris')])
 
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         if 'target' not in self.params:
             target = self.conf.get('default-target', 'alerts')
         else:

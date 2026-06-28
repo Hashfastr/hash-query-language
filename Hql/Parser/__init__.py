@@ -1,3 +1,4 @@
+from __future__ import annotations
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
 
@@ -35,7 +36,7 @@ class Parser():
         self.filename = filename
         self.text = text
         self.tree = None
-        self.assembly:Union[None, 'Query', 'Statement', 'Operator', 'Expression'] = None
+        self.assembly:Union[None, Query, Statement, Operator, Expression] = None
     
     def parse_text(self) -> HqlParser:
         if not self.text:

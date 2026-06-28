@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Union
 from Hql.Compiler.Sql.Statements import SELECT
 from Hql.Database import Database
@@ -39,7 +40,7 @@ class SQLite(Database):
         from Hql.Expressions.References import NamedReference
         self.get_variable(NamedReference(index))
 
-    def get_variable(self, name:'NamedReference') -> 'SQLite':
+    def get_variable(self, name:NamedReference) -> SQLite:
         from Hql.Compiler.Sql import SELECT
         if isinstance(self.compiler.statement, SELECT):
             self.compiler.statement.src = name
@@ -47,7 +48,7 @@ class SQLite(Database):
         else:
             raise hqle.QueryException(f'Attempting to set SQLite table {name.name} in an incompatible context')
 
-    def add_op(self, op:Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         from Hql.Compiler import BranchDescriptor
         from Hql.Operators.Project import Project
 
@@ -88,7 +89,7 @@ class SQLite(Database):
             'query': self.compile()
         }
 
-    def eval(self, ctx:'Context', **kwargs) -> 'Data':
+    def eval(self, ctx:Context, **kwargs) -> Data:
         from Hql.Data import Data, Table
         from Hql.Operators.Take import Take, Project
         from Hql.Expressions.Literals import Integer, NamedReference

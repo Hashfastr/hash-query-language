@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 class ip4subnet(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 1)
-        self.subnet:'StringLiteral' = args[0]
+        self.subnet:StringLiteral = args[0]
 
-    def eval(self, ctx: 'Context', receiver=None) -> BasicRange:
+    def eval(self, ctx: Context, receiver=None) -> BasicRange:
         from Hql.Expressions.Literals import Integer
         from Hql.Types.Hql import HqlTypes as hqlt
         import polars as pl

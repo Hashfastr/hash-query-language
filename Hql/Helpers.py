@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging, time
 from typing import TYPE_CHECKING, Union
 
@@ -11,7 +12,7 @@ def can_thread():
         return True
     return False
 
-def run_query(text:str, conf:'Config', name:str='', **kwargs) -> Union['Data', str]:
+def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     from Hql.Exceptions import HqlExceptions as hqle
     from Hql.Exceptions import HacExceptions as hace
     from Hql.Parser import Parser

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Context import register_func
 from Hql.Exceptions import HqlExceptions as hqle
@@ -23,7 +24,7 @@ class database(Function):
 
         self.dbname:Union[StringLiteral, Reference] = dbname
 
-    def parse_preamble(self, preamble:dict, src:str) -> 'PipeExpression':
+    def parse_preamble(self, preamble:dict, src:str) -> PipeExpression:
         from Hql.Parser import Parser
         from Hql.Expressions import PipeExpression
 
@@ -37,7 +38,7 @@ class database(Function):
 
         return parser.assembly
 
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: Context, receiver=None) -> object:
         from Hql.Database import Database
         from Hql.Expressions.Literals import StringLiteral
 

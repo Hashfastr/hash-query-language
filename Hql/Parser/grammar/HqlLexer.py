@@ -1,4 +1,5 @@
 # Generated from ./Hql.g4 by ANTLR 4.13.2
+from __future__ import annotations
 from antlr4 import *
 from io import StringIO
 import sys

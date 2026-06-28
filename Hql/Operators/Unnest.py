@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Sequence
 from Hql.Operators.Operator import Operator
 
@@ -6,7 +7,7 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Unnest(Operator):
-    def __init__(self, field:'Expression', tables:Sequence['Expression']):
+    def __init__(self, field:Expression, tables:Sequence[Expression]):
         Operator.__init__(self)
         self.field = field
         self.tables = tables
@@ -32,13 +33,13 @@ class Unnest(Operator):
 
         return out
 
-    def gets_all(self, ctx:'Context') -> bool:
+    def gets_all(self, ctx:Context) -> bool:
         for i in self.tables:
             if i.str() == '*':
                 return True
         return False
 
-    def eval(self, ctx: 'Context') -> 'Context':
+    def eval(self, ctx: Context) -> Context:
         self.ctx = ctx
 
         field = self.field.eval(ctx, as_list=True)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +28,7 @@ class HqlRequest(BaseModel):
     retro: bool = False
 
 class Apiserver():
-    def __init__(self, hacengine:'HacEngine', host='0.0.0.0', port=8080):
+    def __init__(self, hacengine:HacEngine, host='0.0.0.0', port=8080):
         if not can_thread():
             raise hqle.CompilerException('Cannot start the api server as free threading is not supported, use the container?')
 

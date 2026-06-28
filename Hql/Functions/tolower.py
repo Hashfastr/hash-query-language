@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Context import register_func
 
@@ -16,7 +17,7 @@ class tolower(Function):
         if self.src.literal:
             self.src = pl.Series([self.src.value]).str.to_lowercase()
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         import polars as pl
         from Hql.Data import Data, Table
         from Hql.Expressions.Literals import StringLiteral

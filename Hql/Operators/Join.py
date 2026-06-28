@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Sequence, Union, Optional, TYPE_CHECKING
 from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
@@ -11,11 +12,11 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Join(Operator):
-    def __init__(self, rh:Union['Expression', 'InstructionSet'], on:Sequence['Reference'], params:Optional[list['OpParameter']]=None, where:Optional['Logic']=None):
+    def __init__(self, rh:Union[Expression, InstructionSet], on:Sequence[Reference], params:Optional[list[OpParameter]]=None, where:Optional[Logic]=None):
         Operator.__init__(self)
         self.rh = rh
-        self.params:list['OpParameter'] = params if params else []
-        self.on:Sequence['Reference'] = on if on else []
+        self.params:list[OpParameter] = params if params else []
+        self.on:Sequence[Reference] = on if on else []
         self.where = where
 
         # default join type
@@ -41,7 +42,7 @@ class Join(Operator):
                 self.kind = i.value.str()
 
     # Gets the data resulting from a compiled right side
-    def get_right(self, ctx:'Context', where:'Logic') -> 'Data':
+    def get_right(self, ctx:Context, where:Logic) -> Data:
         from Hql.Operators.Where import Where
         from Hql.Compiler import InstructionSet
 
@@ -55,7 +56,7 @@ class Join(Operator):
 
         return self.rh.eval(ctx).data
 
-    def gen_optimization(self, data:'Data') -> 'Logic':
+    def gen_optimization(self, data:Data) -> Logic:
         from Hql.Operators.Summarize import Summarize
         from Hql.Operators.Union import Union
         from Hql.Expressions.References import Wildcard
@@ -86,7 +87,7 @@ class Join(Operator):
             exprs.append(BinaryLogic(ands, logic_and=True))
         return BinaryLogic(exprs, logic_and=False)
 
-    def name_from_dict(self, data:dict) -> 'Reference':
+    def name_from_dict(self, data:dict) -> Reference:
         from Hql.Expressions.References import Path, NamedReference
 
         path = []
@@ -155,7 +156,7 @@ class Join(Operator):
 
         return out
 
-    def eval(self, ctx:'Context'):
+    def eval(self, ctx:Context):
         self.process_params()
 
         left = ctx.data

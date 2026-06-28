@@ -1,9 +1,11 @@
+from __future__ import annotations
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import TYPE_CHECKING, Optional
 import logging
 
+from Hql.Config import Config
+
 if TYPE_CHECKING:
-    from Hql.Config import Config
     from Hql.Data import Data
     from Hql.Hac import Hac
 
@@ -77,9 +79,8 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
-    def __init__(self, data:'Data', hac:Optional['Hac']=None, symbol_table:Optional[dict]=None, macros:Optional[dict]=None, config:Optional['Config']=None) -> None:
+    def __init__(self, data:Data, hac:Optional[Hac]=None, symbol_table:Optional[dict]=None, macros:Optional[dict]=None, config:Optional[Config]=None) -> None:
         import copy
-        from Hql.Config import Config
 
         # contexts are copied a lot so want to make sure things don't linger
         self.dbs = copy.deepcopy(database_registry)
@@ -106,7 +107,7 @@ class Context():
         )
 
     @staticmethod
-    def merge(ctxs:list['Context'], merge_rows=True):
+    def merge(ctxs:list[Context], merge_rows=True):
         from Hql.Data import Data
         
         if len(ctxs) == 1:

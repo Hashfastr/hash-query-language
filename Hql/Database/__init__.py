@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .Database import Database
 from .Static import Static
 from .CSV import CSV

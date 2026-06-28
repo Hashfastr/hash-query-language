@@ -1,3 +1,4 @@
+from __future__ import annotations
 from Hql.Types.Compiler import CompilerType
 import logging
 from typing import Optional
@@ -8,7 +9,7 @@ class ESTypes():
     from Hql.Types.Hql import HqlTypes as hqlt
 
     class ESType(CompilerType):
-        def __init__(self, inner:Optional['ESTypes.ESType']=None):
+        def __init__(self, inner:Optional[ESTypes.ESType]=None):
             CompilerType.__init__(self, inner=inner)
             self.inner:Optional[ESTypes.ESType] = inner
     
@@ -103,7 +104,7 @@ class ESTypes():
 
     @register_type('elasticsearch_range')
     class range(ESType):
-        def __init__(self, inner:'ESTypes.ESType'):
+        def __init__(self, inner:ESTypes.ESType):
             ESTypes.ESType.__init__(self, inner=inner)
             assert self.inner
             self.HqlType = ESTypes.hqlt.range(self.inner.hql_schema())

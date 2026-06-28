@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 from antlr4 import CommonTokenStream, InputStream
 from .grammar.SigmaLexer import SigmaLexer
@@ -10,12 +11,12 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import NamedReference
 
 class Condition():
-    def __init__(self, text:str, selections:list['Selection']):
+    def __init__(self, text:str, selections:list[Selection]):
         self.text = text
         self.selections = selections
         self.tree = self.parse()
 
-    def get_sel(self, name:str) -> list['NamedReference']:
+    def get_sel(self, name:str) -> list[NamedReference]:
         from Hql.Expressions.References import NamedReference
 
         matches = []
@@ -93,7 +94,7 @@ class Visitor(SigmaVisitor):
         if ctx.All:
             return ctx.All.text
 
-    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list['NamedReference']:
+    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list[NamedReference]:
         # pattern or 'them'
         # 'them' means all selections
         if ctx.Pattern:

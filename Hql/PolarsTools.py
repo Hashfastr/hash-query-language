@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -5,7 +6,7 @@ if TYPE_CHECKING:
 
 class pltools():
     @staticmethod
-    def advance(columns:list['pl.DataFrame']) -> list['pl.DataFrame']:
+    def advance(columns:list[pl.DataFrame]) -> list[pl.DataFrame]:
         new = []
         name = columns[0].columns[0]
         for i in columns:
@@ -14,7 +15,7 @@ class pltools():
         return new
 
     @staticmethod
-    def merge(dfs:list['pl.DataFrame']):
+    def merge(dfs:list[pl.DataFrame]):
         from polars import DataFrame, concat
 
         # Get counts for each column, knowing where we have conflicts.
@@ -48,7 +49,7 @@ class pltools():
     # host.name -> ['host', 'name']
     # Returns a df representation of that field, maintains nested-ness
     @staticmethod
-    def get_element(df:'pl.DataFrame', path:list[str]):
+    def get_element(df:pl.DataFrame, path:list[str]):
         expr = pltools.path_to_expr(path)
         return df.select(expr)
 
@@ -56,7 +57,7 @@ class pltools():
     # Just returns the value
     # So for a base value, a series, and for a field that's a struct, a struct dataframe.
     @staticmethod
-    def get_element_value(df:'pl.DataFrame', path:list[str]):
+    def get_element_value(df:pl.DataFrame, path:list[str]):
         from polars import Struct
         
         expr = pltools.path_to_expr_value(path)

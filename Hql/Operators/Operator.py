@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Sequence
 from Hql.Parser.Object import ParseObject
 
@@ -29,9 +30,9 @@ class Operator(ParseObject):
         ParseObject.__init__(self)
 
         self._expr = None
-        self.exprs:Sequence['Expression'] = []
-        self.compatible:Sequence['Operator'] = []
-        self.non_conseq:Sequence['Operator'] = []
+        self.exprs:Sequence[Expression] = []
+        self.compatible:Sequence[Operator] = []
+        self.non_conseq:Sequence[Operator] = []
         self.methods:list[str] = []
         self.variables:dict = {}
         self.tabular = False
@@ -39,11 +40,11 @@ class Operator(ParseObject):
 
     # allows covariance
     @property
-    def expr(self) -> Optional['Expression']:
+    def expr(self) -> Optional[Expression]:
         return self._expr
 
     @expr.setter
-    def expr(self, value:Optional['Expression']) -> None:
+    def expr(self, value:Optional[Expression]) -> None:
         self._expr = value
 
     def to_dict(self) -> dict:
@@ -69,7 +70,7 @@ class Operator(ParseObject):
     def has_method(self, name:str):
         return name in self.methods
 
-    def get_variable(self, name:'Reference'):
+    def get_variable(self, name:Reference):
         return self.variables[name.str()]
 
     def can_integrate(self, t:str):
@@ -109,7 +110,7 @@ class Operator(ParseObject):
     Elasticsearch (has foo == 10 and zoo == 'wee' integrated)
     | where bar == toint('11')
     '''
-    def integrate(self, op:'Operator'):
+    def integrate(self, op:Operator):
         if self.can_integrate(op.type):
             # You would then integrate a consuming integration here
             return None

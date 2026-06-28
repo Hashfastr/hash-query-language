@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Database
 
 from Hql.Exceptions import HqlExceptions as hqle
@@ -94,7 +95,7 @@ class CSV(Database):
             # Ensure we don't override a smaller take
             self.limits[name] = limit if limit < cur else cur
 
-    def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op: Union[Operator, BranchDescriptor]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         from Hql.Compiler import BranchDescriptor
         from Hql.Operators.Take import Take, Operator
 
@@ -117,7 +118,7 @@ class CSV(Database):
 
         return None, op
                 
-    def eval(self, ctx:'Context', **kwargs) -> Data:
+    def eval(self, ctx:Context, **kwargs) -> Data:
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to CSV database')

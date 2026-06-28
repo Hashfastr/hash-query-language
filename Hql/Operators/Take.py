@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 from Hql.Operators.Operator import Operator
 
@@ -12,13 +13,13 @@ if TYPE_CHECKING:
 #
 # https://learn.microsoft.com/en-us/kusto/query/take-operator
 class Take(Operator):
-    def __init__(self, limit:'Integer', tables:list['NamedReference']):
+    def __init__(self, limit:Integer, tables:list[NamedReference]):
         Operator.__init__(self)
-        self._expr:'Integer' = limit
+        self._expr:Integer = limit
         self.tables = tables
 
     @property
-    def expr(self) -> 'Integer':
+    def expr(self) -> Integer:
         expr = self._expr
         assert expr
         return expr
@@ -63,7 +64,7 @@ class Take(Operator):
     the sum of all tables is less than or equal to the take amount.
     Unimplemented.
     '''
-    def eval(self, ctx:'Context'):
+    def eval(self, ctx:Context):
         limit = self.expr.value
 
         table_names = []

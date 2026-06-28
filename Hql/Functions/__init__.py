@@ -1,3 +1,4 @@
+from __future__ import annotations
 import importlib, pkgutil
 
 import json
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from Hql.Expressions import Expression
 
 class Function():
-    def __init__(self, args:Sequence['Expression'], min:int, max:int, conf:Optional[dict]=None):
+    def __init__(self, args:Sequence[Expression], min:int, max:int, conf:Optional[dict]=None):
         self.name = self.__class__.__name__
         self.type = 'Function'
         self.args = args
@@ -49,7 +50,7 @@ class Function():
     def str(self) -> str:
         return self.__str__()
 
-    def preprocess(self, ctx:'Context', receiver=None) -> object:
+    def preprocess(self, ctx:Context, receiver=None) -> object:
         args = []
         for i in self.args:
             args.append(i.preprocess(ctx))
@@ -57,11 +58,11 @@ class Function():
 
         return self
         
-    def eval(self, ctx:'Context', receiver=None) -> object:
+    def eval(self, ctx:Context, receiver=None) -> object:
         return NotImplemented
 
 class DotCompositeFunction():
-    def __init__(self, funcs:Sequence[Union[Function, 'DotCompositeFunction']]):
+    def __init__(self, funcs:Sequence[Union[Function, DotCompositeFunction]]):
         self.type = self.__class__.__name__
         self.funcs:list[Function] = []
         for i in funcs:
@@ -70,7 +71,7 @@ class DotCompositeFunction():
             else:
                 self.funcs.append(i)
 
-    def __new__(cls, funcs:Sequence[Union[Function, 'DotCompositeFunction']]):
+    def __new__(cls, funcs:Sequence[Union[Function, DotCompositeFunction]]):
         if len(funcs) == 1:
             return funcs[0]
         return super().__new__(cls)
@@ -90,7 +91,7 @@ class DotCompositeFunction():
             funcs.append(i.deparse())
         return '.'.join(funcs)
 
-    def preprocess(self, ctx:'Context') -> object:
+    def preprocess(self, ctx:Context) -> object:
         from Hql.Expressions.Functions import FuncExpr
         ctx = ctx.copy()
             
@@ -109,7 +110,7 @@ class DotCompositeFunction():
 
         return rec
 
-    def eval(self, ctx:'Context') -> object:
+    def eval(self, ctx:Context) -> object:
         ctx = ctx.copy()
 
         rec = None

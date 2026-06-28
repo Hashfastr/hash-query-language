@@ -1,3 +1,4 @@
+from __future__ import annotations
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context, register_database
 from Hql.Expressions.Logic import Equality

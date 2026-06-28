@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from Hql.Operators.Operator import Operator
 
@@ -8,22 +9,22 @@ if TYPE_CHECKING:
     from Hql.Data import Table
 
 class MvExpand(Operator):
-    def __init__(self, exprs:list['ToClause'], limit:Optional['Integer']=None):
+    def __init__(self, exprs:list[ToClause], limit:Optional[Integer]=None):
         Operator.__init__(self)
         self.exprs = exprs
         self.limit = limit
 
     @property
-    def to_clauses(self) -> list['ToClause']:
+    def to_clauses(self) -> list[ToClause]:
         from Hql.Expressions import ToClause
 
-        out:list['ToClause'] = []
+        out:list[ToClause] = []
         for e in self.exprs:
             assert isinstance(e, ToClause)
             out.append(e)
         return out
 
-    def explode_table(self, table:'Table', limit:int):
+    def explode_table(self, table:Table, limit:int):
         from Hql.Types.Hql import HqlTypes as hqlt
         from Hql.Data import Table
 
@@ -67,7 +68,7 @@ class MvExpand(Operator):
 
         return out
 
-    def eval(self, ctx:'Context'):
+    def eval(self, ctx:Context):
         from Hql.Data import Data
 
         ctx = ctx.copy()

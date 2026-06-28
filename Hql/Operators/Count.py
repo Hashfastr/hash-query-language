@@ -1,3 +1,4 @@
+from __future__ import annotations
 from Hql.Operators.Operator import Operator
 
 from typing import TYPE_CHECKING, Optional
@@ -10,9 +11,9 @@ if TYPE_CHECKING:
 #
 # https://learn.microsoft.com/en-us/kusto/query/count-operator
 class Count(Operator):
-    def __init__(self, name:Optional['NamedReference']=None):
+    def __init__(self, name:Optional[NamedReference]=None):
         Operator.__init__(self)
-        self.name:Optional['NamedReference'] = name
+        self.name:Optional[NamedReference] = name
 
     def deparse(self) -> str:
         return f'count as {self.name.deparse()}' if self.name else 'count'
@@ -23,7 +24,7 @@ class Count(Operator):
             d['name'] = self.name.str()
         return d
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data, Table
 
         counts = dict()

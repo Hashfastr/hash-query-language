@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .BranchDescriptor import BranchDescriptor
 from .InstructionSet import InstructionSet
 from .Compiler import Compiler

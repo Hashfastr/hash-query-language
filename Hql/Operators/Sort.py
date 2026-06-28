@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Sequence, TYPE_CHECKING
 from Hql.Operators.Operator import Operator
 
@@ -7,22 +8,22 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Sort(Operator):
-    _exprs: Sequence['OrderedExpression']
+    _exprs: Sequence[OrderedExpression]
 
-    def __init__(self, exprs:Sequence['OrderedExpression']):
+    def __init__(self, exprs:Sequence[OrderedExpression]):
         Operator.__init__(self)
         self.exprs = exprs
 
     @property
-    def exprs(self) -> Sequence['OrderedExpression']:
+    def exprs(self) -> Sequence[OrderedExpression]:
         return self._exprs
 
     @exprs.setter
-    def exprs(self, value:Sequence['Expression']) -> None:
+    def exprs(self, value:Sequence[Expression]) -> None:
         from Hql.Expressions.Aggregation import OrderedExpression
         from Hql.Exceptions import HqlExceptions as hqle
 
-        new:list['OrderedExpression'] = []
+        new:list[OrderedExpression] = []
         for v in value:
             if not isinstance(v, OrderedExpression):
                 raise hqle.CompilerException('Setting Sort exprs to non-OrderedExpression')
@@ -32,7 +33,7 @@ class Sort(Operator):
     def deparse(self) -> str:
         return 'sort by ' + ', '.join(x.deparse() for x in self.exprs)
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         exprs = []
         orders = []
         nulls = []

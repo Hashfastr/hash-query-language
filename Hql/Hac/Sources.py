@@ -1,3 +1,4 @@
+from __future__ import annotations
 from Hql.Parser import Parser
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Query import Query, QueryStatement
@@ -12,12 +13,12 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Source():
-    def __init__(self, ctx:'Context') -> None:
+    def __init__(self, ctx:Context) -> None:
         self.ctx = ctx
         self.products:list[Product] = []
         self.conf:dict = self.ctx.config.conf['products']
 
-    def preprocess(self, ctx:'Context') -> Union['InstructionSet', 'Reference', 'Function', 'DotCompositeFunction']:
+    def preprocess(self, ctx:Context) -> Union[InstructionSet, Reference, Function, DotCompositeFunction]:
         from Hql.Compiler import InstructionSet
         from Hql.Expressions.References import NamedReference
 
@@ -133,7 +134,7 @@ class HaCStatement():
             raise hqle.ConfigException('Attempting to add empty pipes to empty query with HaC')
 
 class Product():
-    def __init__(self, name:str, conf:dict, ctx:'Context') -> None:
+    def __init__(self, name:str, conf:dict, ctx:Context) -> None:
         self.name = name
         self.ctx = ctx
         self.conf = conf
@@ -191,7 +192,7 @@ class Product():
         else:
             self.splits.add_pipes(expr)
 
-    def preprocess(self, ctx:'Context') -> 'InstructionSet':
+    def preprocess(self, ctx:Context) -> InstructionSet:
         from Hql.Query import Query, QueryStatement
         from Hql.Compiler import InstructionSet, HqlCompiler
 
@@ -224,7 +225,7 @@ class Product():
 
         return InstructionSet(isets)
 
-    def service(self, pat:str) -> 'Product':
+    def service(self, pat:str) -> Product:
         from fnmatch import fnmatch
         self.set_services = True
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from Hql.Operators.Operator import Operator
 
@@ -11,11 +12,11 @@ if TYPE_CHECKING:
 Creates a simple datatable, essentially an inline dataframe/table
 '''
 class Datatable(Operator):
-    def __init__(self, schema:list[tuple['NamedReference', 'HqlTypes.HqlType']], values:list['Literal'], name:Optional['NamedReference']=None):
+    def __init__(self, schema:list[tuple[NamedReference, HqlTypes.HqlType]], values:list[Literal], name:Optional[NamedReference]=None):
         Operator.__init__(self)
-        self.values:list['Literal'] = values
-        self.schema:list[tuple['NamedReference', 'HqlTypes.HqlType']] = schema
-        self.name:Optional['NamedReference'] = name
+        self.values:list[Literal] = values
+        self.schema:list[tuple[NamedReference, HqlTypes.HqlType]] = schema
+        self.name:Optional[NamedReference] = name
         self.tabular:bool = True
 
     def to_dict(self):
@@ -23,7 +24,7 @@ class Datatable(Operator):
         out['schema'] = self.gen_schema().to_dict()
         return out
 
-    def gen_schema(self) -> 'HqlTypes.object':
+    def gen_schema(self) -> HqlTypes.object:
         from Hql.Types.Hql import HqlTypes
 
         d = dict()
@@ -59,7 +60,7 @@ class Datatable(Operator):
 
         return total
 
-    def eval(self, ctx:'Context'):
+    def eval(self, ctx:Context):
         from polars import DataFrame
         from Hql.Data import Data, Table, Schema
 

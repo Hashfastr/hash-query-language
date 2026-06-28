@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Sequence, Union
 from Hql.Operators.Operator import Operator
 
@@ -14,22 +15,22 @@ if TYPE_CHECKING:
 #
 # https://learn.microsoft.com/en-us/kusto/query/extend-operator
 class Extend(Operator):
-    _exprs: Sequence[Union['Reference', 'NamedExpression']]
+    _exprs: Sequence[Union[Reference, NamedExpression]]
 
-    def __init__(self, exprs:Sequence[Union['Reference', 'NamedExpression']]):
+    def __init__(self, exprs:Sequence[Union[Reference, NamedExpression]]):
         Operator.__init__(self)
         self.exprs = exprs
 
     @property
-    def exprs(self) -> Sequence[Union['Reference', 'NamedExpression']]:
+    def exprs(self) -> Sequence[Union[Reference, NamedExpression]]:
         return self._exprs
 
     @exprs.setter
-    def exprs(self, value:Sequence['Expression']) -> None:
+    def exprs(self, value:Sequence[Expression]) -> None:
         from Hql.Expressions.References import NamedExpression, Reference
         from Hql.Exceptions import HqlExceptions as hqle
 
-        new:list[Union['Reference', 'NamedExpression']] = []
+        new:list[Union[Reference, NamedExpression]] = []
         for v in value:
             if not isinstance(v, (Reference, NamedExpression)):
                 raise hqle.CompilerException('Setting Extend exprs to non-Reference/NamedExpression')
@@ -39,13 +40,13 @@ class Extend(Operator):
     def deparse(self) -> str:
         return 'extend ' + ', '.join(x.deparse() for x in self.exprs)
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data
         from Hql.Expressions.References import NamedExpression
 
         ctx = ctx.copy()
-        orig:'Data' = ctx.data
-        data:list['Data'] = []
+        orig:Data = ctx.data
+        data:list[Data] = []
 
         for i in self.exprs:
             # skip just references if they exist, base case

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Context import register_func
 from typing import TYPE_CHECKING, Optional
@@ -12,6 +13,6 @@ class hqlnot(Function):
         Function.__init__(self, args, 1, 1)
         self.expr:Expression = args[0]
         
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: Context, receiver=None) -> object:
         from Hql.Expressions.Logic import Not
         return Not(self.expr)

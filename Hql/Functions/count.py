@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Context import register_func, Context
 from Hql.Data import Data, Table
@@ -14,7 +15,7 @@ class count(Function):
         self.count_name = name
         self.count_type = hqlt.uint()
         
-    def get_count_name(self, agg) -> 'Reference':
+    def get_count_name(self, agg) -> Reference:
         from Hql.Expressions.References import NamedReference
         name = self.count_name
         
@@ -27,7 +28,7 @@ class count(Function):
             
         return NamedReference(name)
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         tables = []
         for table in ctx.data:
             if not table.agg:

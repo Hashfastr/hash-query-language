@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 from Hql.Operators.Operator import Operator
 
@@ -14,9 +15,9 @@ range x from 1 to 5 step 1
 https://learn.microsoft.com/en-us/kusto/query/range-operator
 '''
 class Range(Operator):
-    def __init__(self, name:'NamedReference', start:'Expression', end:'Expression', step:'Expression'):
+    def __init__(self, name:NamedReference, start:Expression, end:Expression, step:Expression):
         Operator.__init__(self)
-        self.name:'NamedReference' = name
+        self.name:NamedReference = name
         self.start = start
         self.end = end
         self.step = step
@@ -31,7 +32,7 @@ class Range(Operator):
             'step': self.step.to_dict(),
         }
 
-    def decompile(self, ctx: 'Context') -> str:
+    def decompile(self, ctx: Context) -> str:
         name = self.name.decompile(ctx)
         start = self.start.decompile(ctx)
         end = self.end.decompile(ctx)
@@ -39,7 +40,7 @@ class Range(Operator):
 
         return f'range {name} from {start} to {end} step {step}'
 
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:Context, **kwargs):
         from numpy import arange
         from polars import Series, concat
         from Hql.Data import Data, Table

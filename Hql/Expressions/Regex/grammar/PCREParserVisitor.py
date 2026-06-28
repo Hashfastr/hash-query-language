@@ -1,4 +1,5 @@
 # Generated from PCREParser.g4 by ANTLR 4.13.2
+from __future__ import annotations
 from antlr4 import *
 if "." in __name__:
     from .PCREParser import PCREParser

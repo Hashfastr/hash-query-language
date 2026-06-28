@@ -19,17 +19,17 @@ class Logic(Expression):
     def __init__(self):
         Expression.__init__(self)
 
-    def merge(self, expr:'Logic') -> Optional['Logic']:
+    def merge(self, expr:Logic) -> Optional[Logic]:
         return expr
 
     def reduce(self):
         return self
 
 class Comparator(Logic):
-    def __init__(self, lh:'Reference', rh:Union[Sequence[Expression], Expression], cs:bool=True, neq:bool=False, term:bool=False, logic_and:bool=False) -> None:
+    def __init__(self, lh:Reference, rh:Union[Sequence[Expression], Expression], cs:bool=True, neq:bool=False, term:bool=False, logic_and:bool=False) -> None:
         Logic.__init__(self)
 
-        self.lh:'Reference' = lh
+        self.lh:Reference = lh
         self.rh:list[Expression] = self._coerce_rh(rh)
         
         for i in self.rh:
@@ -96,7 +96,7 @@ class Comparator(Logic):
     def build_op(self) -> str:
         return NotImplemented
 
-    def preprocess(self, ctx: 'Context') -> object:
+    def preprocess(self, ctx: Context) -> object:
         from Hql.Expressions.Literals import Literal, StringLiteral, Bool
         from Hql.Expressions.References import Reference
 
@@ -147,7 +147,7 @@ Handles the following direct comparators:
 Not substring comparators
 '''
 class Equality(Comparator):
-    def __init__(self, lh:'Reference', rh:Union[Sequence[Expression], Expression], cs:bool=True, neq:bool=False):
+    def __init__(self, lh:Reference, rh:Union[Sequence[Expression], Expression], cs:bool=True, neq:bool=False):
         Comparator.__init__(self, lh, rh, cs=cs, neq=neq)
         self.cs = cs
         self.neq = neq
@@ -180,7 +180,7 @@ class Equality(Comparator):
     '''
     Returns None if successful, the passed expr if not possible
     '''
-    def merge(self, expr: 'Logic') -> Optional['Logic']:
+    def merge(self, expr: Logic) -> Optional[Logic]:
         if not (isinstance(expr, type(self)) and self.lh == expr.lh):
             return expr
 
@@ -208,7 +208,7 @@ class Equality(Comparator):
             op += '=' if self.cs else '~'
         return op
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         import polars as pl
 
         reduced = self.reduce()
@@ -281,10 +281,10 @@ Non-term operators:
     - non-term suffix/endswith
 '''
 class Substring(Comparator):
-    def __init__(self, lh:'Reference', rh:list[StringLiteral], term:bool=False, logic_and:bool=False, neq:bool=False, cs:bool=False, startswith:bool=False, endswith:bool=False):
+    def __init__(self, lh:Reference, rh:list[StringLiteral], term:bool=False, logic_and:bool=False, neq:bool=False, cs:bool=False, startswith:bool=False, endswith:bool=False):
         Comparator.__init__(self, lh, rh)
         # narrow type defs
-        self.lh:'Reference' = lh
+        self.lh:Reference = lh
         self.rh = rh
 
         self.term = term
@@ -295,7 +295,7 @@ class Substring(Comparator):
         self.endswith = endswith
         self.can_list = True
 
-    def preprocess(self, ctx: 'Context') -> object:
+    def preprocess(self, ctx: Context) -> object:
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference
 
@@ -349,7 +349,7 @@ class Substring(Comparator):
     '''
     contains and has operators
     '''
-    def has(self, lh:'pl.Expr', rh:Expression):
+    def has(self, lh:pl.Expr, rh:Expression):
         import polars as pl
 
         rh_str = pl.escape_regex(rh.str())
@@ -362,7 +362,7 @@ class Substring(Comparator):
     '''
     prefix and suffix operators
     '''
-    def prefix(self, lh:'pl.Expr', rh:Expression):
+    def prefix(self, lh:pl.Expr, rh:Expression):
         import polars as pl
 
         rh_str = pl.escape_regex(rh.str())
@@ -391,7 +391,7 @@ class Substring(Comparator):
 
         return out
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         if self.term:
             logging.warning('Term matching not supported in Hql-land, do not expect increased performance')
 
@@ -406,7 +406,7 @@ class Substring(Comparator):
 
         return ~expr if self.neq else expr
 
-    def merge(self, expr: 'Logic') -> Optional['Logic']:
+    def merge(self, expr: Logic) -> Optional[Logic]:
         if not isinstance(expr, type(self)) or self.lh != expr.lh:
             return expr
 
@@ -426,13 +426,13 @@ class Substring(Comparator):
 # As per the grammar
 # Takes after the equality expression
 class Relational(Comparator):
-    def __init__(self, lh:'Reference', rh:Expression, gt:bool, eq:bool) -> None:
+    def __init__(self, lh:Reference, rh:Expression, gt:bool, eq:bool) -> None:
         Comparator.__init__(self, lh, rh, logic_and=True)
         self.gt = gt
         self.eq = eq
         self.can_list = False
 
-    def preprocess(self, ctx: 'Context') -> object:
+    def preprocess(self, ctx: Context) -> object:
         from Hql.Expressions.Literals import Literal, Bool
         from Hql.Expressions.References import Reference
 
@@ -497,7 +497,7 @@ class Relational(Comparator):
         op += '=' if self.eq else ''
         return op
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         lh = self.lh.polars()
         rh = self.rh[0].polars()
 
@@ -521,7 +521,7 @@ class Relational(Comparator):
 # Here lh is the '@timestamp' escaped string literal, and the right hand has
 # the start and end values for the time range.
 class BetweenEquality(Comparator):
-    def __init__(self, lh:'Reference', start:'Literal', end:'Literal', neq:bool=False):
+    def __init__(self, lh:Reference, start:Literal, end:Literal, neq:bool=False):
         Logic.__init__(self)
 
         self.lh = lh
@@ -529,7 +529,7 @@ class BetweenEquality(Comparator):
         self.end = end
         self.neq = neq
 
-    def preprocess(self, ctx: 'Context') -> object:
+    def preprocess(self, ctx: Context) -> object:
         from Hql.Expressions.Literals import Literal, Bool
         from Hql.Expressions.References import Reference
 
@@ -580,7 +580,7 @@ class BetweenEquality(Comparator):
         op = '!between' if self.neq else 'between'
         return f'{lh} {op} ({start} .. {end})'
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         lh = self.lh.polars()
         start = self.start.polars()
         end = self.end.polars()
@@ -614,7 +614,7 @@ class BinaryLogic(Logic):
         self.logic_and = logic_and
         self.exprs = list(new)
 
-    def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Union[Logic, 'Bool']:
+    def __new__(cls, exprs:Sequence[Logic], logic_and:bool=True) -> Union[Logic, Bool]:
         from Hql.Expressions.Literals import Bool
 
         if len(exprs) == 0:
@@ -765,7 +765,7 @@ class BasicRange(Logic):
         return f'({start} .. {end})'
 
 class Regex(Logic):
-    def __init__(self, lh:'Reference', rh:'StringLiteral', i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:
+    def __init__(self, lh:Reference, rh:StringLiteral, i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:
         Logic.__init__(self)
         self.lh = lh
         self.rh = rh
@@ -798,7 +798,7 @@ class Regex(Logic):
         rh = self.rh.deparse()
         return f'{lh} matches regex {rh}'
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         import polars as pl
 
         lh = self.lh.polars()
@@ -849,5 +849,5 @@ class Not(Logic):
         expr = self.expr.deparse()
         return f'not({expr})'
 
-    def polars(self) -> 'pl.Expr':
+    def polars(self) -> pl.Expr:
         return self.expr.polars().not_()

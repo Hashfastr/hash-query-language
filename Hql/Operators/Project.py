@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Sequence, Union, TYPE_CHECKING
 from Hql.Operators.Operator import Operator
 
@@ -18,23 +19,23 @@ if TYPE_CHECKING:
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 class Project(Operator):
-    _exprs: Sequence['Expression']
+    _exprs: Sequence[Expression]
 
-    def __init__(self, exprs:Sequence['Expression']):
+    def __init__(self, exprs:Sequence[Expression]):
         Operator.__init__(self)
         self.exprs = exprs
         self.optok = 'project'
 
     @property
-    def exprs(self) -> Sequence['Expression']:
+    def exprs(self) -> Sequence[Expression]:
         return self._exprs
 
     @exprs.setter
-    def exprs(self, value:Sequence['Expression']) -> None:
+    def exprs(self, value:Sequence[Expression]) -> None:
         from Hql.Expressions import Expression
         from Hql.Exceptions import HqlExceptions as hqle
 
-        new:list['Expression'] = []
+        new:list[Expression] = []
         for v in value:
             if not isinstance(v, Expression):
                 raise hqle.CompilerException('Setting Project exprs to non-Expression')
@@ -49,7 +50,7 @@ class Project(Operator):
 
         return out
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data
         from Hql.Expressions.References import NamedExpression
 
@@ -67,16 +68,16 @@ class Project(Operator):
 
 # Identical to Project, keeping now for compat
 class ProjectKeep(Project):
-    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+    def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-keep'
 
 class ProjectAway(Project):
-    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+    def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-away'
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         ctx = ctx.copy()
 
         paths = [i.list() for i in self.exprs]
@@ -84,14 +85,14 @@ class ProjectAway(Project):
         return ctx
 
 class ProjectReorder(Project):
-    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+    def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-reorder'
 
     '''
     Gonna take out the specific bits and move them to the front
     '''
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data
         from Hql.Expressions.References import NamedExpression
 
@@ -114,11 +115,11 @@ class ProjectReorder(Project):
         return ctx
 
 class ProjectRename(Project):
-    def __init__(self, exprs: Sequence[Union['Reference', 'NamedExpression']]):
+    def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-rename'
 
-    def rename(self, ctx:'Context', table:'Table'):
+    def rename(self, ctx:Context, table:Table):
         for i in self.exprs:
             vpath = i.value.eval(ctx, as_list=True)
             value = table.get_value(vpath)
@@ -132,7 +133,7 @@ class ProjectRename(Project):
 
         return table
 
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         for table in ctx.data:
             self.rename(ctx, table)
 

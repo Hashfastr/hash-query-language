@@ -36,15 +36,15 @@ if TYPE_CHECKING:
 PrepipeType = Union['Function', 'DotCompositeFunction', 'Database', 'HqlUnion', Expression]
 
 class PipeExpression(Expression):
-    def __init__(self, pipes:list['Operator'], prepipe:Optional[PrepipeType]=None):
+    def __init__(self, pipes:list[Operator], prepipe:Optional[PrepipeType]=None):
         Expression.__init__(self)
         self.prepipe                    = prepipe
-        self.pipes:list['Operator'] = pipes
+        self.pipes:list[Operator] = pipes
 
     def __bool__(self):
         return bool(self.prepipe) or bool(self.pipes)
 
-    def preprocess(self, ctx: Context) -> Union['PipeExpression', 'InstructionSet']:
+    def preprocess(self, ctx: Context) -> Union[PipeExpression, InstructionSet]:
         from Hql.Compiler.InstructionSet import InstructionSet
         from Hql.Functions import Function, DotCompositeFunction
         from Hql.Database import Database
@@ -90,7 +90,7 @@ class PipeExpression(Expression):
         # print(self.prepipe.exprs)
         prepipe = self.prepipe.deparse() if self.prepipe else ''
 
-        def dp(ops:Sequence['Operator']) -> list[str]:
+        def dp(ops:Sequence[Operator]) -> list[str]:
             out:list[str] = []
             for i in ops:
                 if isinstance(i, Where):
@@ -116,7 +116,7 @@ class PipeExpression(Expression):
         return out
 
 class OpParameter(Expression):
-    def __init__(self, name:'Reference', value:Expression):
+    def __init__(self, name:Reference, value:Expression):
         Expression.__init__(self)
         self.name = name
         self.value = value
@@ -133,7 +133,7 @@ class OpParameter(Expression):
         }
 
 class ToClause(Expression):
-    def __init__(self, expr:'Reference', to:Union['TypeExpression', 'hqlt.HqlType']):
+    def __init__(self, expr:Reference, to:Union[TypeExpression, hqlt.HqlType]):
         from Hql.Expressions.Literals import TypeExpression 
 
         Expression.__init__(self)
@@ -154,7 +154,7 @@ class ToClause(Expression):
         expr += ' to ' + self.to.deparse()
         return expr
         
-    def eval(self, ctx:'Context') -> 'Context':
+    def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data
         ctx = ctx.copy()
 

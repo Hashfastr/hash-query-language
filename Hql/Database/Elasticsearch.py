@@ -1,3 +1,4 @@
+from __future__ import annotations
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context, register_database
 from Hql.Database import Database
@@ -90,7 +91,7 @@ class Elasticsearch(Database):
             'ops': [x.to_dict() for x in ops]
         }
 
-    def compile(self) -> tuple[dict, list['Operator']]:
+    def compile(self) -> tuple[dict, list[Operator]]:
         from Hql.Compiler import HqlCompiler
         from Hql.Config import Config
         from Hql.Operators.Where import Where
@@ -142,7 +143,7 @@ class Elasticsearch(Database):
     def add_index(self, index:str):
         self.pattern = index
 
-    def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op: Union[Operator, BranchDescriptor]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         from Hql.Compiler import BranchDescriptor
         from Hql.Operators.Take import Take, Operator
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
@@ -71,7 +72,7 @@ class Selection():
 
         return expr
 
-    def substring(self, lh:'NamedReference', modifiers:list, rh:list):
+    def substring(self, lh:NamedReference, modifiers:list, rh:list):
         from Hql.Expressions.Logic import Substring
         if not isinstance(rh, list):
             rh = [rh]
@@ -89,7 +90,7 @@ class Selection():
 
         return Substring(lh, exprs, logic_and=logic_and, startswith=startswith, endswith=endswith, cs=cs)
 
-    def cidr(self, name:'NamedReference', field:list):
+    def cidr(self, name:NamedReference, field:list):
         from Hql.Expressions.Logic import Equality
         from Hql.Expressions.Functions import FuncExpr
         from Hql.Expressions.References import NamedReference as NR
@@ -109,7 +110,7 @@ class Selection():
 
         return Equality(name, exprs)
 
-    def relational(self, name:'NamedReference', modifiers:list[str], field:list):
+    def relational(self, name:NamedReference, modifiers:list[str], field:list):
         from Hql.Expressions.Logic import Relational, BinaryLogic
 
         gt = False
@@ -129,7 +130,7 @@ class Selection():
 
         return BinaryLogic(exprs)
 
-    def fieldref(self, name:'NamedReference', field:list):
+    def fieldref(self, name:NamedReference, field:list):
         from Hql.Expressions.References import NamedReference
         from Hql.Expressions.Logic import Equality
 
@@ -139,7 +140,7 @@ class Selection():
 
         return Equality(name, exprs)
 
-    def regex(self, name:'NamedReference', modifiers:list[str], field:list):
+    def regex(self, name:NamedReference, modifiers:list[str], field:list):
         from Hql.Expressions.Logic import Regex
         from Hql.Expressions.Logic import BinaryLogic
 
@@ -161,7 +162,7 @@ class Selection():
 
         return BinaryLogic(exprs, logic_and=False)
 
-    def equality(self, name:'NamedReference', field:list):
+    def equality(self, name:NamedReference, field:list):
         from Hql.Expressions.Logic import Equality, BinaryLogic
         from Hql.Expressions.References import NamedReference as NR
         from Hql.Expressions.Functions import FuncExpr

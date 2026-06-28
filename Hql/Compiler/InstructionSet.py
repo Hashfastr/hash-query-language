@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from Hql.Config import Config
 
 class InstructionSet():
-    def __init__(self, upstream:Union['Database', 'InstructionSet', Sequence[Union['Database', 'InstructionSet']]], operators:Optional[list['Operator']]=None) -> None:
+    def __init__(self, upstream:Union[Database, InstructionSet, Sequence[Union[Database, InstructionSet]]], operators:Optional[list[Operator]]=None) -> None:
         import random
         from Hql.Compiler import InstructionSet
         
@@ -28,7 +28,7 @@ class InstructionSet():
 
         self.upstream = upstream
 
-        self.ops:list['Operator'] = operators if operators else []
+        self.ops:list[Operator] = operators if operators else []
         self.id = '%08x' % random.getrandbits(32)
         self.attrs = dict()
 
@@ -36,7 +36,7 @@ class InstructionSet():
             self.ops = self.upstream[0].ops + self.ops
             self.upstream = self.upstream[0].upstream
 
-    def preprocess(self, ctx:'Context') -> Union['Database', 'InstructionSet']:
+    def preprocess(self, ctx:Context) -> Union[Database, InstructionSet]:
         new = self.recompile(ctx.config)
         if len(new.upstream) == 1 and not new.ops:
             return new.upstream[0]
@@ -75,7 +75,7 @@ class InstructionSet():
             'ops': ops,
         }
 
-    def add_op(self, op:Union['BranchDescriptor', 'Operator']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op:Union[BranchDescriptor, Operator]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         from Hql.Compiler import BranchDescriptor
 
         if isinstance(op, BranchDescriptor):
@@ -84,7 +84,7 @@ class InstructionSet():
 
         return None, None
 
-    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple['InstructionSet', None]:
+    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple[InstructionSet, None]:
         bounded = []
         for i in self.upstream:
             acc, rej = i.add_timebound(start, end)
@@ -130,11 +130,11 @@ class InstructionSet():
     #
     #     return self
 
-    def recompile(self, config:'Config') -> 'InstructionSet':
+    def recompile(self, config:Config) -> InstructionSet:
         from Hql.Compiler import HqlCompiler
         return HqlCompiler(config).InstructionSet(self)
 
-    def exec(self, inst:Union['Database', 'Operator'], ctx:Context) -> Context:
+    def exec(self, inst:Union[Database, Operator], ctx:Context) -> Context:
         logging.debug(f'Executing {inst.type} - {inst.id}')
         start = time.perf_counter()
 

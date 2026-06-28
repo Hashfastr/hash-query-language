@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
@@ -8,6 +9,6 @@ class SqlExpression():
     ...
 
 class Like(SqlExpression):
-    def __init__(self, lh:'NamedReference', rh:'StringLiteral') -> None:
+    def __init__(self, lh:NamedReference, rh:StringLiteral) -> None:
         self.lh = lh
         self.rh = rh

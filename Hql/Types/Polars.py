@@ -11,7 +11,7 @@ class PolarsTypes():
     import polars as pl
     
     class PolarsType(CompilerType):
-        def __init__(self, inner:Optional['PolarsTypes.PolarsType']=None):
+        def __init__(self, inner:Optional[PolarsTypes.PolarsType]=None):
             CompilerType.__init__(self, inner=inner)
             self.inner:Optional[PolarsTypes.PolarsType] = inner
             self.pltype:Optional[PolarsTypes.pl.DataType] = None
@@ -147,14 +147,14 @@ class PolarsTypes():
     
     @register_type('polars_Array') 
     class Array(PolarsType):
-        def __init__(self, inner:'PolarsTypes.PolarsType'):
+        def __init__(self, inner:PolarsTypes.PolarsType):
             PolarsTypes.PolarsType.__init__(self, inner=inner)
             self.HqlType = PolarsTypes.hqlt.matrix(inner.hql_schema())
             self.pltype = PolarsTypes.pl.Array(inner.pl_schema())
     
     @register_type('polars_List') 
     class List(PolarsType):
-        def __init__(self, inner:'PolarsTypes.PolarsType'):
+        def __init__(self, inner:PolarsTypes.PolarsType):
             PolarsTypes.PolarsType.__init__(self, inner=inner)
             self.HqlType = PolarsTypes.hqlt.multivalue(inner.hql_schema())
             self.pltype = PolarsTypes.pl.List(inner.pl_schema())

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .grammar.HqlVisitor import HqlVisitor
 from .grammar.HqlParser import HqlParser
 

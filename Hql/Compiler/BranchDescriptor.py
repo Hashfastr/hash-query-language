@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Union, TYPE_CHECKING, Optional
 from Hql.Exceptions import HqlExceptions as hqle
 import logging
@@ -19,11 +20,11 @@ class BranchDescriptor():
         # contains a timeseries element
         self.attrs:dict = dict()
 
-        self.expr:Union[None, 'Expression', 'Function'] = None
-        self.op:Optional['Operator'] = None
-        self.statement:Optional['Statement'] = None
-        self.query:Optional['Query'] = None
-        self.db:Optional['Database'] = None
+        self.expr:Union[None, Expression, Function] = None
+        self.op:Optional[Operator] = None
+        self.statement:Optional[Statement] = None
+        self.query:Optional[Query] = None
+        self.db:Optional[Database] = None
         self.str:str = ''
         self.join_attrs:dict = dict()
         self.list_attrs:list[str] = [
@@ -35,13 +36,13 @@ class BranchDescriptor():
         self.references:list = []
         self.removes:list = []
         self.full_schema = False
-        self.mapping:dict['Reference', 'Reference'] = dict()
+        self.mapping:dict[Reference, Reference] = dict()
         self.symmetric:list = []
 
     def set_attr(self, name:str, value:object=True):
         self.attrs[name] = value
 
-    def add_mapping(self, dest:'Reference', src:'Reference'):
+    def add_mapping(self, dest:Reference, src:Reference):
         self.mapping[dest] = src
 
     def get_attr(self, name:str):
@@ -76,7 +77,7 @@ class BranchDescriptor():
             else:
                 self.attrs[i] = attrs[i]
 
-    def merge(self, desc:'BranchDescriptor'):
+    def merge(self, desc:BranchDescriptor):
         self.merge_attrs(desc.attrs)
         self.provides += desc.provides
         self.references += desc.references
@@ -92,17 +93,17 @@ class BranchDescriptor():
                 return False
         return True
 
-    def get_expr(self) -> Union['Expression', 'Function']:
+    def get_expr(self) -> Union[Expression, Function]:
         if isinstance(self.expr, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Expr')
         return self.expr
 
-    def get_op(self) -> 'Operator':
+    def get_op(self) -> Operator:
         if isinstance(self.op, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Op')
         return self.op
 
-    def get_statement(self) -> 'Statement':
+    def get_statement(self) -> Statement:
         if isinstance(self.statement, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Statement')
         return self.statement

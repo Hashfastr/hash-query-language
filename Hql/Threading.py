@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Union, Optional
 import logging
 import random
@@ -19,7 +20,7 @@ class QueryPool():
         self.pool:list[QueryThread] = []
         self.semaphore = Semaphore()
 
-    def add_query(self, text:str, config:'Config', name:str='', **kwargs) -> None:
+    def add_query(self, text:str, config:Config, name:str='', **kwargs) -> None:
         t = QueryThread(text, config, name=name, **kwargs)
         if self.auto_run:
             t.start()
@@ -34,7 +35,7 @@ class QueryPool():
                 t.start()
 
     # Gets completed threads and frees them from the pool
-    def get_completed(self) -> list['QueryThread']:
+    def get_completed(self) -> list[QueryThread]:
         completed = []
         for t in self.pool:
             if not t.is_alive():
@@ -44,7 +45,7 @@ class QueryPool():
         return completed
 
 class QueryThread():
-    def __init__(self, text:str, config:'Config', name:str='', **kwargs) -> None:
+    def __init__(self, text:str, config:Config, name:str='', **kwargs) -> None:
         from copy import deepcopy
         from Hql.Helpers import can_thread
 
@@ -86,7 +87,7 @@ class QueryThread():
             return False
         return self.thread.is_alive()
 
-    def join(self) -> Union['Data', str, None]:
+    def join(self) -> Union[Data, str, None]:
         if self.threaded and self.thread:
             self.thread.join()
         return self.output
@@ -98,7 +99,7 @@ class InstructionPool():
         self.pool:list[InstructionThread] = []
         self.semaphore = Semaphore()
 
-    def add_instruction(self, inst:Union['InstructionSet', 'Database'], ctx:'Context') -> None:
+    def add_instruction(self, inst:Union[InstructionSet, Database], ctx:Context) -> None:
         t = InstructionThread(inst, ctx)
         if self.auto_run:
             t.start()
@@ -120,7 +121,7 @@ class InstructionPool():
                 t.start()
 
     # Gets completed threads and frees them from the pool
-    def get_completed(self) -> list['InstructionThread']:
+    def get_completed(self) -> list[InstructionThread]:
         completed = []
         for t in self.pool:
             if not t.is_alive():
@@ -130,7 +131,7 @@ class InstructionPool():
         return completed
 
 class InstructionThread():
-    def __init__(self, inst:Union['InstructionSet', 'Database'], ctx:'Context') -> None:
+    def __init__(self, inst:Union[InstructionSet, Database], ctx:Context) -> None:
         from copy import deepcopy
         from Hql.Helpers import can_thread
 
@@ -140,7 +141,7 @@ class InstructionThread():
         self.ctx = ctx
         self.started = False
         self.thread = None
-        self.output:Optional['Context'] = None
+        self.output:Optional[Context] = None
         self.id = self.inst.id
 
     # Starts the thread and sets values in the class
@@ -162,7 +163,7 @@ class InstructionThread():
             return False
         return self.thread.is_alive()
 
-    def join(self) -> Optional['Context']:
+    def join(self) -> Optional[Context]:
         if self.threaded and self.thread:
             self.thread.join()
         return self.output
@@ -197,7 +198,7 @@ class HacPool():
             })
         return runs
 
-    def add_detection(self, detection:'Detection', query_now:Optional[datetime.datetime]=None) -> str:
+    def add_detection(self, detection:Detection, query_now:Optional[datetime.datetime]=None) -> str:
         t = HacThread(detection, query_now=query_now)
         if self.auto_run and self.semaphore.acquire(blocking=False):
             logging.debug(f'{t.id} started execution')
@@ -246,13 +247,13 @@ class HacPool():
                     self.completed = self.completed[1:]
                 self.completed.append(t)
 
-    def get_completed(self) -> list['HacThread']:
+    def get_completed(self) -> list[HacThread]:
         completed = self.completed
         self.completed = []
         return completed
 
 class HacThread():
-    def __init__(self, detection:'Detection', query_now:Optional[datetime.datetime]=None) -> None:
+    def __init__(self, detection:Detection, query_now:Optional[datetime.datetime]=None) -> None:
         from Hql.Helpers import can_thread
         self.threaded = can_thread()
 
@@ -328,7 +329,7 @@ class HacThread():
             return False
         return self.thread.is_alive()
 
-    def join(self) -> Union['Data', str, None]:
+    def join(self) -> Union[Data, str, None]:
         if self.threaded and self.thread:
             self.thread.join()
         return self.output

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_database
 from Hql.Database import Database
@@ -70,7 +71,7 @@ class Opensearch(Database):
         else:
             return None
 
-    def add_op(self, op: Union['Operator', 'BranchDescriptor']) -> tuple[Union['Operator', None], Union['Operator', None]]:
+    def add_op(self, op: Union[Operator, BranchDescriptor]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         from Hql.Compiler import BranchDescriptor
         from Hql.Operators.Take import Take, Operator
 
@@ -149,7 +150,7 @@ class Opensearch(Database):
         return []
     
 
-    def eval(self, ctx: 'Context', **kwargs) -> 'Data':
+    def eval(self, ctx: Context, **kwargs) -> Data:
         from Hql.Data import Data
         import asyncio
         self.query = self.compile()

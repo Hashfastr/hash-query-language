@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from Hql.Operators.Operator import Operator
 
@@ -24,19 +25,19 @@ Preserves the other fields as well
 https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
 class Top(Operator):
-    def __init__(self, expr:'Integer', by:'ByExpression'):
+    def __init__(self, expr:Integer, by:ByExpression):
         Operator.__init__(self)
-        self._expr:'Integer' = expr
+        self._expr:Integer = expr
         self.by = by
 
     @property
-    def expr(self) -> 'Integer':
+    def expr(self) -> Integer:
         expr = self._expr
         assert expr
         return expr
 
     @expr.setter
-    def expr(self, value:Optional['Expression']) -> None:
+    def expr(self, value:Optional[Expression]) -> None:
         from Hql.Expressions.Literals import Integer
         from Hql.Exceptions import HqlExceptions as hqle
 
@@ -54,7 +55,7 @@ class Top(Operator):
     def deparse(self) -> str:
         return f'top {self.expr.deparse()} by {self.by.deparse()}'
 
-    def eval(self, ctx:'Context'):
+    def eval(self, ctx:Context):
         limit = self.expr.value
 
         ctx = self.by.eval(ctx)

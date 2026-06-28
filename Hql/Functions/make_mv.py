@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Expressions import Expression
 from Hql.Context import register_func, Context
@@ -38,7 +39,7 @@ class make_mv(Function):
     Each type is then set to a hqlt.multivalue type
     Output schema only contains the multivalue types of those paths.
     '''
-    def gen_schema(self, schema:Schema, paths:Sequence['Reference']):
+    def gen_schema(self, schema:Schema, paths:Sequence[Reference]):
         schema = schema.select_many(paths)
         
         new = Schema()
@@ -59,7 +60,7 @@ class make_mv(Function):
     '''
     Need to rebuild, shouldn't be hard.
     '''
-    def aggregate(self, ctx:'Context', table:Table):
+    def aggregate(self, ctx:Context, table:Table):
         cols = []
         paths = []
         for arg in self.args:
@@ -83,7 +84,7 @@ class make_mv(Function):
     Recursively create a list of series for each value referenced in a schema
 
     '''
-    def get_series(self, df:'pl.DataFrame', schema:dict):
+    def get_series(self, df:pl.DataFrame, schema:dict):
         cur = []
                 
         for key in schema:
@@ -104,7 +105,7 @@ class make_mv(Function):
 
     Returns a Series with a multivalue type
     '''
-    def normal(self, ctx:'Context', table:Table):
+    def normal(self, ctx:Context, table:Table):
         import polars as pl
         from Hql.Operators.Project import Project
 
@@ -125,7 +126,7 @@ class make_mv(Function):
         
         return Series(series, mv_type)
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         import polars as pl
         import polars.dataframe.group_by as group_by
 

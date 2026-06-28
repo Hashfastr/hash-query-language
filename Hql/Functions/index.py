@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func
@@ -20,7 +21,7 @@ class index(Function):
             raise hqle.ArgumentException(f'Bad database index argument datatype {args[0].type}')
         self.name:Union[StringLiteral, Reference] = name
     
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: Context, receiver=None) -> object:
         from Hql.Expressions.Literals import StringLiteral
         
         name = self.name.preprocess(ctx)
@@ -31,7 +32,7 @@ class index(Function):
 
         return self
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         from Hql.Database import Database
 
         db = receiver

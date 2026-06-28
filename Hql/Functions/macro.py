@@ -1,3 +1,4 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func
@@ -18,13 +19,13 @@ class macro(Function):
 
         Function.__init__(self, args, 1, -1)
 
-        self.names:Sequence[Union['StringLiteral', 'Reference']] = []
+        self.names:Sequence[Union[StringLiteral, Reference]] = []
         for i in args:
             if not isinstance(i, (StringLiteral, Reference)):
                 raise hqle.QueryException(f'Invalid argument type passed to macro function: {type(i)}')
             self.names.append(i)
 
-    def parse_macro(self, macro:dict, src:str) -> 'Expression':
+    def parse_macro(self, macro:dict, src:str) -> Expression:
         from Hql.Parser import Parser
         from Hql.Expressions import Expression
 
@@ -37,7 +38,7 @@ class macro(Function):
 
         return parser.assembly
 
-    def preprocess(self, ctx: 'Context', receiver=None) -> object:
+    def preprocess(self, ctx: Context, receiver=None) -> object:
         from Hql.Expressions.Literals import StringLiteral
         
         new = []
@@ -51,7 +52,7 @@ class macro(Function):
 
         return self
         
-    def eval(self, ctx: 'Context', receiver=None) -> object:
+    def eval(self, ctx: Context, receiver=None) -> object:
         from Hql.Compiler import InstructionSet, HqlCompiler
         from Hql.Expressions import PipeExpression
 
