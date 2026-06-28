@@ -62,12 +62,18 @@ class Config():
                     self.load_general(src, i[j])
 
                 elif j == 'product':
-                    for k in i[j]:
-                        self.load_product(k, i[j][k], src)
+                    if not isinstance(i[j], dict):
+                        logging.error(f'product is not a dict')
+                        logging.error(f'got: {i[j]}')
+                        raise hqle.ConfigException(f'product is not a dict')
+                    self.load_product(i[j], src)
 
                 elif j == 'category':
-                    for k in i[j]:
-                        self.load_category(k, i[j][k], src)
+                    if not isinstance(i[j], dict):
+                        logging.error(f'category is not a dict')
+                        logging.error(f'got: {i[j]}')
+                        raise hqle.ConfigException(f'category is not a dict')
+                    self.load_product(i[j], src)
 
                 elif j == 'function':
                     self.load_function(src, i[j])
@@ -115,9 +121,11 @@ class Config():
         name = self.conf['general']['default_db']
         return self.get_database(name)
 
-    def load_product(self, name:str, config:dict, src:str):
+    def load_product(self, config:dict, src:str):
         if not config.get('configured', True):
             return
+
+        name = config['name']
 
         if 'hql' not in config and 'upstream' not in config:
             raise hqle.ConfigException(f'Product config {name} missing required key hql or upstream')
@@ -130,9 +138,11 @@ class Config():
 
         self.conf['products'][name] = config
 
-    def load_category(self, name:str, config:dict, src:str):
+    def load_category(self, config:dict, src:str):
         if not config.get('configured', True):
             return
+
+        name = config['name']
 
         if 'hql' not in config:
             raise hqle.ConfigException(f'Category config {name} missing required key hql in {src}')

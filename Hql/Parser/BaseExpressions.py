@@ -38,6 +38,13 @@ class BaseExpressions(HqlVisitor):
         if ctx.Token == None:
             raise hqle.ParseException('Keyword has no string token', ctx)
         return NamedReference(ctx.Token.text)
+
+    def visitExtendedKeywordName(self, ctx: HqlParser.ExtendedKeywordNameContext):
+        from Hql.Expressions.References import NamedReference
+
+        if ctx.Token == None:
+            raise hqle.ParseException('Keyword has no string token', ctx)
+        return NamedReference(ctx.Token.text)
     
     def visitIdentifierName(self, ctx: HqlParser.IdentifierNameContext):
         from Hql.Expressions.References import NamedReference

@@ -64,6 +64,9 @@ class Functions(HqlVisitor):
             expr.args.append(self.visit(i))
         
         return expr
+
+    # def visitFunctionCallName(self, ctx: HqlParser.FunctionCallNameContext):
+    #     return self.visit(ctx.)
     
     '''
     Pure path of functions
