@@ -23,6 +23,7 @@ class database(Function):
             raise hqle.ArgumentException(f'Bad database argument datatype {dbname.type}')
 
         self.dbname:Union[StringLiteral, Reference] = dbname
+        self.can_preprocess = True
 
     def parse_preamble(self, preamble:dict, src:str) -> PipeExpression:
         from Hql.Parser import Parser

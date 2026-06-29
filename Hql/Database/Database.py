@@ -26,6 +26,7 @@ class Database(Operator):
         self.name = name
         self.index = ''
         self.preamble:Optional[PipeExpression] = None
+        self.methods = []
 
     def __eq__(self, value: object, /) -> bool:
         if isinstance(value, Database):

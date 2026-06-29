@@ -5,7 +5,7 @@ from typing import Optional, Union, TYPE_CHECKING
 from Hql.Exceptions import HqlExceptions as hqle
 import logging
 
-from . import Compiler
+from . import Compiler, register_target
 
 if TYPE_CHECKING:
     from Hql.Compiler import BranchDescriptor, InstructionSet
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from Hql.Query import Statement
     import Hql.Operators as Ops
 
+@register_target('kusto')
 class KustoCompiler(Compiler):
     def __init__(self):
         from Hql.Context import Context

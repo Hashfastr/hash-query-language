@@ -50,6 +50,7 @@ def main():
     parser.add_argument('-hac', '--render-hac', help="Renders HaC to a given format (md, json, decompile)")
     parser.add_argument('--init-hac', help="Adds a hac comment and deparses", action='store_true')
     parser.add_argument('-eng', '--hac-engine', help="Runs as the hac engine", action='store_true')
+    parser.add_argument('--compile', help='Compile to a given target', action='store_true')
     
     args = parser.parse_args()
     

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from Hql.Operators.Operator import Operator
     from Hql.Database import Database
     from Hql.Query import Query, Statement
-    from Hql.Functions import Function
+    from Hql.Functions import Function, DotCompositeFunction
     from Hql.Expressions.References import Reference
 
 '''
@@ -20,7 +20,7 @@ class BranchDescriptor():
         # contains a timeseries element
         self.attrs:dict = dict()
 
-        self.expr:Union[None, Expression, Function] = None
+        self.expr:Union[None, Expression, Function, DotCompositeFunction] = None
         self.op:Optional[Operator] = None
         self.statement:Optional[Statement] = None
         self.query:Optional[Query] = None

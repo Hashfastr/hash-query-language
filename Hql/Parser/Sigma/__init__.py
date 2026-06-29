@@ -109,7 +109,7 @@ class SigmaParser():
 
         selections = []
         for i in dac:
-            if i == 'condition':
+            if i in ('condition', 'posthql'):
                 continue
 
             selections.append(Selection(dac[i], name=i))

@@ -841,7 +841,7 @@ class Regex(Logic):
         raise hqle.QueryException(f'Invalid preprocessed expression')
 
 class Not(Logic):
-    def __init__(self, expr:Expression) -> None:
+    def __init__(self, expr:Logic) -> None:
         Logic.__init__(self)
         self.expr = expr
 

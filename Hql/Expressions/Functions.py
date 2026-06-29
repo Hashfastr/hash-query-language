@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional, Sequence, Union
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Functions import Function, DotCompositeFunction
-    from Hql.Expressions.References import NamedReference
+    from Hql.Expressions.References import NamedReference, Reference
 
 class FuncProto(Expression):
     ...
@@ -49,7 +49,7 @@ class FuncExpr(FuncProto):
         return func(self.args, conf=ctx.config.get_function(name))
 
 class ReceiverFuncExpr(FuncProto):
-    def __init__(self, receiver:Expression, call:FuncExpr):
+    def __init__(self, receiver:Reference, call:FuncExpr):
         FuncProto.__init__(self)
         self.receiver = receiver
         self.call = call
