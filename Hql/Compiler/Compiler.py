@@ -66,7 +66,7 @@ class Compiler():
     You'll want to replace this with something like a string that you'll query your database with.
     Default returns optimized operators for running in Hql-land
     '''
-    def compile(self, prep:bool=True) -> tuple[Optional[object], Optional[object]]:
+    def compile(self, src:Union[Expression, Operator, Statement, None], prep:bool=True) -> tuple[Optional[object], Optional[object]]:
         return None, None
 
     def compile_op(self, src:Operator, prep:bool=True) -> tuple[Optional[object], Optional[Operator]]:

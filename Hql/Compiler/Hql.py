@@ -7,7 +7,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Expressions.References import NamedReference
 from Hql.Types.Hql import HqlTypes as hqlt
 
-from Hql.Expressions import References
+from Hql.Expressions import PrepipeType, References
 from Hql.Expressions import Literals
 from Hql.Expressions import Logic
 from Hql.Expressions import Expression, ToClause, OpParameter, PipeExpression
@@ -18,6 +18,8 @@ import Hql.Expressions.Functions as FuncExprs
 
 from Hql.Database import Database
 import Hql.Operators as Operators
+
+from Hql.Query import LetLogicStatement, LetStatement, Statement, QueryStatement
 
 from Hql.Types.Hql import HqlTypes as hqlt
 
@@ -42,7 +44,7 @@ class HqlCompiler(Compiler):
         if query:
             self.Query(query)
 
-    def compile(self, src:Union[Hql.Operators.Operator, Hql.Expressions.Expression, Hql.Query.Statement, None], prep:bool=True) -> tuple[BranchDescriptor, None]:
+    def compile(self, src:Union[Operators.Operator, Expression, Statement, None], prep:bool=True) -> tuple[BranchDescriptor, None]:
         if not src:
             logging.error('Access Hql root via HqlCompiler.root not default compiler')
             raise hqle.CompilerException('Hql compiler with default parameter')
@@ -62,13 +64,13 @@ class HqlCompiler(Compiler):
                 break
         return res
 
-    def Statement(self, statement: Hql.Query.Statement, prep:bool=True) -> Optional[InstructionSet]:
+    def Statement(self, statement: Statement, prep:bool=True) -> Optional[InstructionSet]:
         logging.error("This shouldn't trigger? Compiling Statement directly")
         acc, _ = self.compile(statement.root)
         assert isinstance(acc, InstructionSet)
         return acc
 
-    def QueryStatement(self, statement: Hql.Query.QueryStatement, prep:bool=True) -> InstructionSet:
+    def QueryStatement(self, statement: QueryStatement, prep:bool=True) -> InstructionSet:
         from Hql.Hac.Sources import Source
         from Hql.Database import Database
         acc, _ = self.compile(statement.root)
@@ -84,7 +86,7 @@ class HqlCompiler(Compiler):
         
         return self.root
 
-    def LetStatement(self, statement: Hql.Query.LetStatement, prep:bool=True) -> None:
+    def LetStatement(self, statement:LetStatement, prep:bool=True) -> None:
         acc, _ = self.compile(statement.root)
 
         if not isinstance(acc, InstructionSet):
@@ -93,7 +95,7 @@ class HqlCompiler(Compiler):
         self.ctx.symbol_table[statement.name] = acc
         return None
 
-    def LetLogicStatement(self, statement: Hql.Query.LetLogicStatement, prep:bool=True) -> None:
+    def LetLogicStatement(self, statement:LetLogicStatement, prep:bool=True) -> None:
         acc, _ = self.compile(statement.root)
 
         if not isinstance(acc, InstructionSet):
@@ -102,7 +104,7 @@ class HqlCompiler(Compiler):
         self.ctx.symbol_table[statement.name] = acc
         return None
 
-    def Tabular(self, expr:Union[Hql.Operators.Range, Hql.Expressions.Expression, InstructionSet]) -> tuple[Optional[InstructionSet], Optional[Hql.Expressions.Expression]]:
+    def Tabular(self, expr:PrepipeType) -> tuple[Optional[InstructionSet], Optional[Expression]]:
         from Hql.Database import Database, Static
         from Hql.Hac.Sources import Source
 
@@ -110,7 +112,7 @@ class HqlCompiler(Compiler):
             return expr, None
 
         elif isinstance(expr, Source):
-            acc = expr.assemble()
+            acc = expr.preprocess(self.ctx)
         
         elif isinstance(expr, Functions.DotCompositeFunction):
             acc, _ = self.DotCompositeFunction(expr)
@@ -125,19 +127,21 @@ class HqlCompiler(Compiler):
         elif isinstance(expr, Operators.Range):
             acc, _ = self.Range(expr)
             op = acc.get_op()
-            acc = Static(op.eval(self.ctx))
+            acc = Static(op.eval(self.ctx).data)
 
         elif isinstance(expr, Operators.Datatable):
             acc, _ = self.Datatable(expr)
             op = acc.get_op()
-            acc = Static(op.eval(self.ctx))
+            acc = Static(op.eval(self.ctx).data)
 
-        elif isinstance(expr, Union):
+        elif isinstance(expr, Operators.Union):
             upstream = []
             for i in expr.exprs:
                 acc, rej = self.Tabular(i)
                 if rej:
-                    return None, expr
+                    logging.error(f'   {rej.str()}')
+                    logging.error(f'in {expr.str()}')
+                    raise hqle.CompilerException('Could not compile Union expression')
                 assert acc
                 
                 if not acc.ops:
@@ -151,17 +155,18 @@ class HqlCompiler(Compiler):
             acc = expr
 
         else:
-            return None, expr
+            logging.error(expr.str())
+            raise hqle.CompilerException('Could not compile Tabular expression')
 
         if isinstance(acc, Source):
-            acc = acc.assemble()
+            acc = acc.preprocess(self.ctx)
 
         if isinstance(acc, Database):
             acc = InstructionSet(acc)
 
         if not isinstance(acc, InstructionSet):
-            assert not isinstance(expr, Range)
-            return None, expr
+            logging.error(acc)
+            raise hqle.CompilerException('Could not compile Tabular expression')
 
         # Add hac timebound
         if self.hac:
@@ -254,6 +259,9 @@ class HqlCompiler(Compiler):
 
         return comp
 
+    '''
+    Good god this needs to be improved
+    '''
     def optimize(self, ops: Sequence[Union[Operators.Operator, BranchDescriptor]]) -> list[BranchDescriptor]:
         new = []
         for i in ops:
