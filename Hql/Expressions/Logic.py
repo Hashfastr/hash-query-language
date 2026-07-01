@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, override
 
 from .__proto__ import Expression
 from Hql.Exceptions import HqlExceptions as hqle
@@ -30,7 +30,7 @@ class Comparator(Logic):
         Logic.__init__(self)
 
         self.lh:Reference = lh
-        self.rh:list[Expression] = self._coerce_rh(rh)
+        self.rh:Sequence[Expression] = self._coerce_rh(rh)
         
         for i in self.rh:
             if not isinstance(i, Expression):
@@ -285,7 +285,7 @@ class Substring(Comparator):
         Comparator.__init__(self, lh, rh)
         # narrow type defs
         self.lh:Reference = lh
-        self.rh = rh
+        self._rh:list[StringLiteral] = rh
 
         self.term = term
         self.logic_and = logic_and
@@ -294,6 +294,15 @@ class Substring(Comparator):
         self.startswith = startswith
         self.endswith = endswith
         self.can_list = True
+
+    @property
+    def rh(self) -> list[StringLiteral]:
+        """The rh property."""
+        return self._rh
+
+    @rh.setter
+    def rh(self, value:list[StringLiteral]):
+        self._rh = value
 
     def preprocess(self, ctx: Context) -> object:
         from Hql.Expressions.Literals import StringLiteral

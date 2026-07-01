@@ -14,7 +14,7 @@ class Function():
     def __init__(self, args:Sequence[Expression], min:int, max:int, conf:Optional[dict]=None):
         self.name = self.__class__.__name__
         self.type = 'Function'
-        self.args = args
+        self.args:Sequence[Expression] = args
         self.min = min
         # Can disable by passing -1
         self.can_preprocess = False

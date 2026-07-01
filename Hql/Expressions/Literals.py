@@ -90,6 +90,9 @@ class StringLiteral(Literal):
     def __hash__(self):
         return hash(self.value)
 
+    def __bool__(self) -> bool:
+        return bool(self.value)
+
     def cmp(self, value:Expression, cs:bool=True):
         if cs or not isinstance(value, StringLiteral):
             return self == value
