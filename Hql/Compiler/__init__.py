@@ -2,10 +2,10 @@ from __future__ import annotations
 from .BranchDescriptor import BranchDescriptor
 from .InstructionSet import InstructionSet
 from .Compiler import Compiler
-from .Hql import HqlCompiler
 from .Lucene import LuceneCompiler
-from .Splunk import SPLCompiler
 from .QueryDSL import QueryDSLCompiler
+from .Splunk import SPLCompiler
+from .Hql import HqlCompiler
 from .Sql import SqlCompiler
 
 from Hql.Exceptions import HqlExceptions as hqle

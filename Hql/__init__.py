@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from . import Functions
 from . import Query
 from . import Operators

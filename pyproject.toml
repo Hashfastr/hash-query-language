@@ -40,6 +40,9 @@ dependencies = [
 Homepage = "https://github.com/Hashfastr/Hql"
 Issues = "https://github.com/Hashfastr/Hql/issues"
 
+[dependency-groups]
+notebooks = ["marimo"]
+
 [build-system]
 requires = ["hatchling >= 1.26"]
 build-backend = "hatchling.build"
