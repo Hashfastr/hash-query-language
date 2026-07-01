@@ -4,13 +4,18 @@ from typing import Union, Optional, TYPE_CHECKING
 
 from . import Compiler
 import logging
+import datetime
+
+from Hql.Expressions import Literals
+from Hql.Expressions import Logic
+from Hql.Expressions import References
+import Hql.Operators as Operators
+from Hql.Compiler import BranchDescriptor
 
 if TYPE_CHECKING:
-    import Hql
     from Hql.Operators.Operator import Operator
     from Hql.Expressions import Expression
     from Hql.Query import Statement
-    from Hql.Compiler import BranchDescriptor
 
 class LuceneCompiler(Compiler):
     def __init__(self) -> None:
@@ -27,74 +32,54 @@ class LuceneCompiler(Compiler):
             'regex_dotall': False,
             'regex_global': False
         }
-        self.expr:Union[Expression, None] = None
+        self.expr:Union[Logic.Logic, None] = None
 
-    def compile(self, src: Union[Expression, Operator, Statement, None], preprocess: bool = True) -> tuple[Union[object, None], Union[object, None]]:
-        from Hql.Expressions.Literals import Bool
+    def compile(self, src: Union[Expression, Operator, Statement, None], prep:bool=True) -> tuple[Union[object, None], Union[object, None]]:
+        if src == None or self.expr:
+            return self.Bool(Literals.Bool(True), prep=False)
 
-        if src == None:
-            src = self.expr
-            preprocess = False
-
-        # still missing a root
-        if src == None:
-            acc, _ = self.compile(Bool(True), preprocess=False)
-            return acc, None
-
-        out = super().compile(src, prep=prep)
-        return out
+        return super().compile(src, prep=prep)
 
     def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Optional[Operator], Optional[Operator]]:
-        from Hql.Operators.Where import Where
-        from Hql.Compiler import BranchDescriptor
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
 
         acc = None
         rej = op
         
-        if isinstance(op, Where):
-            acc, rej = self.Where(op, preprocess=True)
+        if isinstance(op, Operators.Where):
+            acc, rej = self.Where(op, prep=True)
 
         assert not (isinstance(acc, str) or isinstance(rej, str))
         return acc, rej
 
-    def Where(self, op:Hql.Operators.Where, prep:bool=True) -> tuple[Union[None, Hql.Operators.Where, str], Union[None, Hql.Operators.Where, str]]:
-        from Hql.Operators.Where import Where
-        from Hql.Expressions.Logic import BinaryLogic, Expression
-
+    def Where(self, op:Operators.Where, prep:bool=True) -> tuple[Union[None, Operators.Where, str], Union[None, Operators.Where, str]]:
         acc, rej = self.compile(op.expr, prep=prep)
 
-        if preprocess:
+        if prep:
             if acc != None:
-                assert isinstance(acc, Expression)
+                assert isinstance(acc, Logic.Logic)
+
+                # Add the logic to the running expression for this compiler
                 if self.expr == None:
                     self.expr = acc
-                
-                elif isinstance(self.expr, BinaryLogic) and self.expr.bitype == 'and':
-                    if isinstance(acc, BinaryLogic) and acc.bitype == 'and':
-                        self.expr.rh += [acc.lh] + acc.rh
-                    else:
-                        self.expr.rh.append(acc)
-
                 else:
-                    self.expr = BinaryLogic(acc, [self.expr], 'and')
+                    self.expr = Logic.BinaryLogic([acc, self.expr])
+                
                 acc = None
 
             if rej != None:
-                assert isinstance(rej, Expression)
-                rej = Where(rej, op.parameters)
+                assert isinstance(rej, Logic.Logic)
+                rej = Operators.Where(rej, op.parameters)
         
-        assert isinstance(acc, (type(None), Where, str)) and isinstance(rej, (type(None), Where, str))
+        assert isinstance(acc, (type(None), Operators.Where, str)) and isinstance(rej, (type(None), Operators.Where, str))
         return acc, rej
         
-    def BinaryLogic(self, expr: Hql.Expressions.BinaryLogic, preprocess: bool = True) -> tuple[Union[None, Hql.Expressions.BinaryLogic, str], Union[None, Hql.Expressions.BinaryLogic, str]]:
-        from Hql.Expressions.Logic import BinaryLogic
-
-        if preprocess:
+    def BinaryLogic(self, expr: Logic.BinaryLogic, prep:bool=True) -> tuple[Union[None, Logic.Logic, str], Union[None, Logic.Logic, str]]:
+        if prep:
             rejs = []
             accs = []
-            for i in [expr.lh] + expr.rh:
+            for i in expr.exprs:
                 acc, rej = self.compile(i)
                 if acc:
                     accs.append(acc)
@@ -102,51 +87,44 @@ class LuceneCompiler(Compiler):
                     rejs.append(rej)
 
             # Cannot salvage
-            if rejs and expr.bitype == 'or':
+            if rejs and not expr.logic_and:
                 return None, expr
 
             acc = None
             if accs:
-                acc = BinaryLogic(accs[0], accs[1:], bitype=expr.bitype)
+                acc = Logic.BinaryLogic(accs, expr.logic_and)
 
             rej = None
             if rejs:
-                rej = BinaryLogic(rejs[0], rejs[1:], bitype=expr.bitype)
+                rej = Logic.BinaryLogic(rejs, expr.logic_and)
 
+            assert isinstance(acc, (type(None), Logic.Logic)) and isinstance(rej, (type(None), Logic.Logic))
             return acc, rej
 
         exprs = []
-        for i in [expr.lh] + expr.rh:
-            acc, rej = self.compile(i, preprocess=False)
+        for i in expr.exprs:
+            acc, rej = self.compile(i, prep=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             exprs.append(acc)
 
-        if expr.bitype == 'and':
-            bitok = ' AND '
-        else:
-            bitok = ' OR '
-
+        bitok = ' AND' if expr.logic_and else ' OR '
         ret = bitok.join(exprs)
         return f'({ret})', None
 
-    def Not(self, expr: Hql.Expressions.Not, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Not, Expression
-
-        if preprocess:
+    def Not(self, expr: Logic.Not, prep:bool=True) -> tuple[object, object]:
+        if prep:
             acc, rej = self.compile(expr.expr)
             if rej:
                 return None, expr
-            assert isinstance(acc, Expression)
-            return Not(acc), None
+            assert isinstance(acc, Logic.Logic)
+            return Logic.Not(acc), None
 
-        inner, rej = self.compile(expr.expr, preprocess=False)
+        inner, rej = self.compile(expr.expr, prep=False)
         return f'(NOT {inner})', None
 
-    def Equality(self, expr: Hql.Expressions.Equality, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Equality, Expression
-
-        if preprocess:
+    def Equality(self, expr: Logic.Equality, prep:bool=True) -> tuple[object, object]:
+        if prep:
             if expr.cs:
                 logging.warning('Case sensitive comparison in Lucene has inconsistent results')
                 logging.warning('For compatibility, assuming agnostic')
@@ -154,7 +132,7 @@ class LuceneCompiler(Compiler):
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
-            assert isinstance(acc, Expression)
+            assert isinstance(acc, References.Reference)
             lh = acc
 
             rh = []
@@ -162,23 +140,25 @@ class LuceneCompiler(Compiler):
                 acc, rej = self.compile(i)
                 if rej:
                     return None, expr
-                rh.append(acc)
 
-            return Equality(lh, expr.op, rh), None
+                # handles multivalues
+                if isinstance(acc, list):
+                    rh += acc
+                else:
+                    rh.append(acc)
 
-        lh, rej = self.compile(expr.lh, preprocess=False)
+            return Logic.Equality(lh, rh, expr.cs, expr.neq), None
+
+        lh, rej = self.compile(expr.lh, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
 
         rh = []
         for i in expr.rh:
-            acc, rej = self.compile(i, preprocess=False)
+            acc, rej = self.compile(i, prep=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-            if isinstance(acc, list):
-                rh += acc
-            else:
-                rh.append(acc)
+            rh.append(acc)
         
         eqs = [f'{lh}:{x}' for x in rh]
         ret = ' OR '.join(eqs)
@@ -201,52 +181,47 @@ class LuceneCompiler(Compiler):
 
         res = expr.eval(self.ctx)
         assert isinstance(res, Expression)
-        acc, rej = self.compile(res, preprocess=True)
+        acc, rej = self.compile(res, prep=True)
 
         if rej:
             return None, expr
 
         return acc, None
 
-    def StringLiteral(self, expr: Hql.Expressions.StringLiteral, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def StringLiteral(self, expr: Literals.StringLiteral, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.quote('"'), None
 
-    def MultiString(self, expr: Hql.Expressions.MultiString, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def MultiString(self, expr: Literals.MultiString, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
-        value = expr.eval(self.ctx)
-        assert isinstance(value, str)
-        value = value.encode('unicode_escape').decode('utf-8')
+        value = expr.quote('"')
         return f'{value}', None
 
-    def Integer(self, expr: Hql.Expressions.Integer, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def Integer(self, expr: Literals.Integer, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return f'{expr.value}', None
 
-    def Float(self, expr: Hql.Expressions.Float, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def Float(self, expr: Literals.Float, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return f'{expr.value}', None
 
-    def Bool(self, expr: Hql.Expressions.Bool, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def Bool(self, expr: Literals.Bool, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
         val = 'True' if expr.value else 'False'
         return val, None
 
-    def Datetime(self, expr: Hql.Expressions.Datetime, preprocess: bool = True) -> tuple[object, object]:
-        import datetime
-
-        if preprocess:
+    def Datetime(self, expr: Literals.Datetime, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
-
         dt = expr.value.astimezone(datetime.timezone.utc)
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ"), None
 
-    def Multivalue(self, expr: Hql.Expressions.Multivalue, preprocess: bool = True) -> tuple[object, object]:
+    def Multivalue(self, expr: Literals.Multivalue, prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions.Literals import Multivalue
 
         exprs = []
@@ -256,39 +231,29 @@ class LuceneCompiler(Compiler):
                 return None, expr
             exprs.append(acc)
 
-        if preprocess:
+        if prep:
             return Multivalue(exprs), None
 
         return exprs, None
 
-    def NamedReference(self, expr: Hql.Expressions.NamedReference, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
-            if expr.name == None:
-                return None, expr
+    def NamedReference(self, expr: References.NamedReference, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.name, None
 
-    def EscapedNamedReference(self, expr: Hql.Expressions.EscapedNamedReference, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
-            if expr.name == None:
-                return None, expr
+    def EscapedNamedReference(self, expr: References.EscapedNamedReference, prep:bool=True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return f'{expr.name}', None
 
-    def Path(self, expr: Hql.Expressions.Path, preprocess: bool = True) -> tuple[object, object]:
+    def Path(self, expr: References.Path, prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions.References import Path
-        if preprocess:
-            parts = []
-            for i in expr.path:
-                acc, rej = self.compile(i)
-                if rej:
-                    return None, expr
-                parts.append(acc)
-            return Path(parts), None
+        if prep:
+            return expr, None
 
         parts = []
         for i in expr.path:
-            acc, rej = self.compile(i, preprocess=False)
+            acc, rej = self.compile(i, prep=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             assert isinstance(acc, str)
@@ -296,44 +261,35 @@ class LuceneCompiler(Compiler):
 
         return '.'.join(parts), None
 
-    def Relational(self, expr: Hql.Expressions.Relational, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Relational, Expression, StringLiteral
-        if preprocess:
-            if expr.op not in ('<', '>', '<=', '>='):
-                return None, expr
-
-            acc, rej = self.compile(expr.lh)
-            if rej:
-                return None, expr
-            lh = acc
-            assert isinstance(lh, Expression)
-
+    def Relational(self, expr: Logic.Relational, prep:bool=True) -> tuple[object, object]:
+        if prep:
             acc, rej = self.compile(expr.rh[0])
             if rej:
                 return None, expr
             rh = acc
             assert isinstance(rh, Expression)
 
-            return Relational(lh, expr.op, [rh]), None
+            return Logic.Relational(expr.lh, rh, expr.gt, expr.eq), None
 
-        acc, rej = self.compile(expr.lh, preprocess=False)
+        acc, rej = self.compile(expr.lh, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         lh = acc
         assert isinstance(lh, str)
 
-        acc, rej = self.compile(expr.rh[0], preprocess=False)
+        acc, rej = self.compile(expr.rh[0], prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         rh = acc
         assert isinstance(rh, str)
 
-        return f'{lh}:{expr.op}{rh}', None
+        op =  '>' if expr.gt else '<'
+        op += '=' if expr.eq else ''
 
-    def BetweenEquality(self, expr: Hql.Expressions.BetweenEquality, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import BetweenEquality, Expression
+        return f'{lh}:{op}{rh}', None
 
-        if preprocess:
+    def BetweenEquality(self, expr: Logic.BetweenEquality, prep:bool=True) -> tuple[object, object]:
+        if prep:
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
@@ -352,21 +308,21 @@ class LuceneCompiler(Compiler):
             end = acc
             assert isinstance(end, Expression)
 
-            return BetweenEquality(lh, start, end, op=expr.op), None
+            return Logic.BetweenEquality(lh, start, end, op=expr.op), None
 
-        acc, rej = self.compile(expr.lh, preprocess=False)
+        acc, rej = self.compile(expr.lh, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         lh = acc
         assert isinstance(lh, str)
 
-        acc, rej = self.compile(expr.start, preprocess=False)
+        acc, rej = self.compile(expr.start, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         start = acc
         assert isinstance(start, str)
 
-        acc, rej = self.compile(expr.end, preprocess=False)
+        acc, rej = self.compile(expr.end, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         end = acc
@@ -378,9 +334,9 @@ class LuceneCompiler(Compiler):
 
         return ret, None
 
-    def BasicRange(self, expr: Hql.Expressions.BasicRange, preprocess: bool = True) -> tuple[object, object]:
+    def BasicRange(self, expr: Hql.Expressions.BasicRange, prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions.Logic import BasicRange, Expression
-        if preprocess:
+        if prep:
             acc, rej = self.compile(expr.start)
             if rej:
                 return None, expr
@@ -395,13 +351,13 @@ class LuceneCompiler(Compiler):
 
             return BasicRange(start, end), None
 
-        acc, rej = self.compile(expr.start, preprocess=False)
+        acc, rej = self.compile(expr.start, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         start = acc
         assert isinstance(start, str)
 
-        acc, rej = self.compile(expr.end, preprocess=False)
+        acc, rej = self.compile(expr.end, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         end = acc
@@ -409,10 +365,10 @@ class LuceneCompiler(Compiler):
 
         return f'[{start} TO {end}]', None
 
-    def Regex(self, expr: Hql.Expressions.Regex, preprocess: bool = True) -> tuple[object, object]:
+    def Regex(self, expr: Hql.Expressions.Regex, prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions.Logic import Regex, Expression, StringLiteral
 
-        if preprocess:
+        if prep:
             # No flags supported
             if expr.i or expr.m or expr.s or expr.g:
                 return None, expr
@@ -431,7 +387,7 @@ class LuceneCompiler(Compiler):
 
             return Regex(lh, rh), None
 
-        acc, rej = self.compile(expr.lh, preprocess=False)
+        acc, rej = self.compile(expr.lh, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         lh = acc
@@ -440,7 +396,7 @@ class LuceneCompiler(Compiler):
         if isinstance(expr.rh, StringLiteral):
             rh = expr.rh.eval(self.ctx, as_str=True)
         else:
-            acc, rej = self.compile(expr.rh, preprocess=False)
+            acc, rej = self.compile(expr.rh, prep=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             rh = acc
@@ -449,12 +405,12 @@ class LuceneCompiler(Compiler):
 
         return f'{lh}:/{rh}/', None
 
-    def Substring(self, expr: Hql.Expressions.Substring, preprocess: bool = True) -> tuple[object, object]:
+    def Substring(self, expr: Hql.Expressions.Substring, prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions.Logic import Substring, Expression, StringLiteral, Regex
         from Hql.Expressions.References import Path, NamedReference
         import re
 
-        if preprocess:
+        if prep:
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
@@ -471,7 +427,7 @@ class LuceneCompiler(Compiler):
 
             return Substring(lh, expr.op, rhs), None
 
-        # acc, rej = self.compile(expr.lh, preprocess=False)
+        # acc, rej = self.compile(expr.lh, prep=False)
         # if rej:
         #     raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         # lh = acc
@@ -482,7 +438,7 @@ class LuceneCompiler(Compiler):
             if isinstance(i, StringLiteral):
                 rh = i.eval(self.ctx, as_str=True)
             else:
-                acc, rej = self.compile(i, preprocess=False)
+                acc, rej = self.compile(i, prep=False)
                 if rej:
                     raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
                 rh = acc
@@ -496,7 +452,7 @@ class LuceneCompiler(Compiler):
                 rh = f'.*{rh}.*'
             rh = StringLiteral(rh, verbatim=True)
             
-            acc, rej = self.Regex(Regex(expr.lh, rh), preprocess=False)
+            acc, rej = self.Regex(Regex(expr.lh, rh), prep=False)
             exprs.append(acc)
 
         if 'all' in expr.op:
