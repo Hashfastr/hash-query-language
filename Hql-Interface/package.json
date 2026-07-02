@@ -6,14 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "gen:parser": "antlr-ng -D language=TypeScript --generate-listener false --generate-visitor false --lib ../Hql/Parser/grammar -o src/hql/generated ../Hql/Parser/grammar/Hql.g4 && node -e \"for (const f of ['HqlLexer.ts','HqlParser.ts']) { const p='src/hql/generated/'+f, fs=require('fs'), s=fs.readFileSync(p,'utf8'); if (!s.startsWith('// @ts-nocheck')) fs.writeFileSync(p,'// @ts-nocheck\\n'+s); }\"",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.10.4",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.7.0",
+    "@codemirror/view": "^6.43.4",
+    "antlr4-c3": "^3.4.4",
+    "antlr4ng": "^3.0.16",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@tanstack/react-table": "^8.20.5",
-    "@monaco-editor/react": "^4.6.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
@@ -21,6 +28,7 @@
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "antlr-ng": "^1.0.10",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.15.0",
     "eslint-plugin-react-hooks": "^5.0.0",

@@ -29,6 +29,21 @@ We use the Visitor not the Listener so it's ignored and removed from this repo.
 Additionally, the setup will put a copy of antlr4 in the antlr4 directory.
 It is ignored as we should not be the ones distributing that jar file.
 
+## TypeScript target (web interface)
+The web interface in `Hql-Interface` uses a TypeScript lexer/parser generated
+from these same grammar files for in-browser syntax checking and autocomplete.
+The generated files are committed at `Hql-Interface/src/hql/generated/`.
+
+Regeneration uses [antlr-ng](https://www.antlr-ng.org) (pure TypeScript ANTLR
+tool, based on ANTLR 4.13.2) — no Java needed:
+
+```
+cd Hql-Interface
+npm run gen:parser
+```
+
+Rerun this whenever Hql.g4 or HqlTokens.g4 change.
+
 ## Changing antlr4 versions
 Edit the setup file to reflect it.
 

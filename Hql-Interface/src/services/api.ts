@@ -1,143 +1,98 @@
-import type {
-  HqlRequest,
-  HqlRunResponse,
-  HqlRun,
-  Detection,
-  SchemaField,
-  HacInitResponse,
-  SigmaConvertResponse,
-  RetroHuntResponse,
-} from '../types';
+import type { DetectionDetail, DetectionMeta, HqlRun } from '../types'
 
-const API_BASE = '/api';
+const BASE = '/api'
 
-class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-    this.name = 'ApiError';
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+  ) {
+    super(message)
+    this.name = 'ApiError'
   }
 }
 
-async function fetchApi<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new ApiError(response.status, error || response.statusText);
-  }
-
-  return response.json();
-}
-
-export const api = {
-  // Execute HQL query
-  executeQuery: async (hql: string, save = false): Promise<HqlRunResponse> => {
-    const request: HqlRequest = {
-      hql,
-      run: true,
-      save,
-      plan: false,
-    };
-    return fetchApi<HqlRunResponse>('/hql/runs', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  },
-
-  // Get query run by ID
-  getRun: async (runId: string): Promise<HqlRun> => {
-    return fetchApi<HqlRun>(`/hql/runs/${runId}`);
-  },
-
-  // Get all runs
-  getRuns: async (): Promise<HqlRun[]> => {
-    return fetchApi<HqlRun[]>('/hql/runs');
-  },
-
-  // Get all detections
-  getDetections: async (): Promise<Detection[]> => {
-    return fetchApi<Detection[]>('/detections');
-  },
-
-  // Get detection history
-  getDetectionHistory: async (detectionId: string): Promise<any[]> => {
-    return fetchApi<any[]>(`/detections/${detectionId}/history`);
-  },
-
-  // Get schema/fields
-  getSchema: async (): Promise<SchemaField[]> => {
-    return fetchApi<SchemaField[]>('/schema');
-  },
-
-  // Poll for run completion
-  pollRunUntilComplete: async (
-    runId: string,
-    maxAttempts = 60,
-    intervalMs = 1000
-  ): Promise<HqlRun> => {
-    for (let i = 0; i < maxAttempts; i++) {
-      const run = await api.getRun(runId);
-      if (run.completed || run.failed) {
-        return run;
-      }
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, init)
+  if (!res.ok) {
+    let detail = res.statusText
+    try {
+      const body = (await res.json()) as { detail?: string }
+      if (body.detail) detail = body.detail
+    } catch {
+      // non-JSON error body, keep statusText
     }
-    throw new Error('Query execution timeout');
-  },
+    throw new ApiError(detail, res.status)
+  }
+  return (await res.json()) as T
+}
 
-  // Initialize HAC for HQL query
-  initHac: async (hql: string): Promise<HacInitResponse> => {
-    const request: HqlRequest = {
-      hql,
-      run: false,
-      save: false,
-      plan: false,
-    };
-    return fetchApi<HacInitResponse>('/hql/init_hac', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  },
+function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return request<T>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  })
+}
 
-  // Convert Sigma rule to HQL
-  convertSigma: async (hql: string): Promise<SigmaConvertResponse> => {
-    const request: HqlRequest = {
-      hql,
-      run: false,
-      save: false,
-      plan: false,
-    };
-    return fetchApi<SigmaConvertResponse>('/sigma/convert', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  },
+export function startRun(hql: string, signal?: AbortSignal): Promise<{ id: string }> {
+  return postJson('/hql/runs', { hql, run: true, save: false, plan: false }, signal)
+}
 
-  // Retro hunt with date range
-  retroHunt: async (hql: string, start: Date, end: Date): Promise<RetroHuntResponse> => {
-    const request: HqlRequest = {
-      hql,
-      run: false,
-      save: false,
-      plan: false,
-      start: start.toISOString(),
-      end: end.toISOString(),
-      retro: true,
-    };
-    return fetchApi<RetroHuntResponse>('/detections/retro', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  },
-};
+export function getRun(id: string, signal?: AbortSignal): Promise<HqlRun> {
+  return request(`/hql/runs/${encodeURIComponent(id)}`, { signal })
+}
 
-export { ApiError };
+const POLL_INTERVAL_MS = 1000
+const POLL_CEILING_MS = 10 * 60 * 1000
+
+/** Poll a run until completed/failed. Aborting the signal stops waiting. */
+export async function pollRun(id: string, signal: AbortSignal): Promise<HqlRun> {
+  const deadline = Date.now() + POLL_CEILING_MS
+  for (;;) {
+    const run = await getRun(id, signal)
+    if (run.completed || run.failed) return run
+    if (Date.now() > deadline) throw new ApiError('Timed out waiting for run after 10 minutes')
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(resolve, POLL_INTERVAL_MS)
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(t)
+          reject(new DOMException('Aborted', 'AbortError'))
+        },
+        { once: true },
+      )
+    })
+  }
+}
+
+export function getDetections(): Promise<DetectionMeta[]> {
+  return request('/detections')
+}
+
+export function getDetection(id: string): Promise<DetectionDetail> {
+  return request(`/detections/${encodeURIComponent(id)}`)
+}
+
+// The backend reads the raw body, so this is not JSON
+export function saveDetection(text: string): Promise<{ id: string }> {
+  return request('/detections', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: text,
+  })
+}
+
+export function initHac(hql: string): Promise<{ hql: string }> {
+  return postJson('/hql/init_hac', { hql, run: false })
+}
+
+export function convertSigma(hql: string): Promise<{ hql: string }> {
+  return postJson('/sigma/convert', { hql, run: false })
+}
+
+export function retroHunt(hql: string, start: string, end: string): Promise<{ ids: string[] }> {
+  return postJson('/detections/retro', { hql, run: true, retro: true, start, end })
+}

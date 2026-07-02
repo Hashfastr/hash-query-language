@@ -1,3 +1,7 @@
+See @README.md for context.
+Always use uv for package management, venv is at @.venv
+Instructions for the grammar is at @Hql/Parser/grammar/README.md
+
 I need to replace the existing web interface in @Hql-Interface with something new and better.
 
 The web interface should mimic a SIEM with multiline input, similar to Azure Data Explorer. It should have syntax checking and auto complete using the grammar files @Hql/Parser/grammar/Hql.g4 and @Hql/Parser/grammar/HqlTokens.g4

@@ -1,198 +1,120 @@
-import { useMemo, useState } from 'react';
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
-  flexRender,
-  type ColumnDef,
-  type SortingState,
-} from '@tanstack/react-table';
-import type { QueryResult } from '../types';
+import { useMemo, useState } from 'react'
+import { cellValue, deriveColumns, type Column } from '../lib/columns'
+import { useAppDispatch } from '../state/store'
+import type { Row } from '../types'
+import { ContextMenu, type MenuItem } from './ContextMenu'
 
-interface ResultsTableProps {
-  results: QueryResult | null;
+const PAGE = 500
+const TRUNCATE = 120
+
+function formatCell(v: unknown): { text: string; kind: 'null' | 'json' | 'plain' } {
+  if (v === null || v === undefined) return { text: 'null', kind: 'null' }
+  if (typeof v === 'object') {
+    let s = JSON.stringify(v)
+    if (s.length > TRUNCATE) s = s.slice(0, TRUNCATE) + '…'
+    return { text: s, kind: 'json' }
+  }
+  return { text: String(v), kind: 'plain' }
 }
 
-export function ResultsTable({ results }: ResultsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
+function copyText(v: unknown) {
+  const text =
+    v !== null && typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v ?? 'null')
+  void navigator.clipboard.writeText(text)
+}
 
-  const columns = useMemo<ColumnDef<Record<string, any>>[]>(() => {
-    if (!results || results.columns.length === 0) return [];
+export function ResultsTable({
+  tabId,
+  table,
+  rows,
+  schema,
+}: {
+  tabId: string
+  table: string
+  rows: Row[]
+  schema?: Record<string, string>
+}) {
+  const dispatch = useAppDispatch()
+  const [limit, setLimit] = useState(PAGE)
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null)
 
-    return results.columns.map((col) => ({
-      // Use accessor function instead of accessorKey to handle dot notation
-      id: col,
-      accessorFn: (row) => row[col],
-      header: col,
-      cell: (info) => {
-        const value = info.getValue();
-        if (value === null || value === undefined) {
-          return <span className="text-gruvbox-light-gray dark:text-gruvbox-dark-gray">null</span>;
-        }
-        if (typeof value === 'object') {
-          return <span className="text-gruvbox-light-purple dark:text-gruvbox-dark-purple">{JSON.stringify(value)}</span>;
-        }
-        return String(value);
-      },
-    }));
-  }, [results]);
+  const columns = useMemo(() => deriveColumns(rows, schema), [rows, schema])
 
-  const table = useReactTable({
-    data: results?.data || [],
-    columns,
-    state: {
-      sorting,
-      globalFilter,
-    },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
-  });
-
-  if (!results) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gruvbox-light-gray dark:text-gruvbox-dark-gray">
-        Execute a query to see results
-      </div>
-    );
-  }
-
-  if (results.data.length === 0) {
-    return (
-      <div className="p-4">
-        <div className="card">
-          <p className="text-gruvbox-light-gray dark:text-gruvbox-dark-gray">
-            Query executed successfully but returned no results.
-          </p>
-          {results.duration && (
-            <p className="text-sm mt-2">Execution time: {results.duration.toFixed(3)}s</p>
-          )}
-        </div>
-      </div>
-    );
+  const openMenu = (e: React.MouseEvent, row: Row, col: Column) => {
+    e.preventDefault()
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: 'Copy value', action: () => copyText(cellValue(row, col)) },
+        { label: 'Copy row as JSON', action: () => copyText(row) },
+      ],
+    })
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2">
-        <div className="flex items-center gap-4">
-          <h3 className="font-bold">Results ({results.rowCount} rows)</h3>
-          {results.duration && (
-            <span className="text-sm text-gruvbox-light-gray dark:text-gruvbox-dark-gray">
-              {results.duration.toFixed(3)}s
-            </span>
-          )}
-        </div>
-        <input
-          type="text"
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          placeholder="Filter results..."
-          className="input w-64"
-        />
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <table className="w-full">
-          <thead className="sticky top-0">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="table-header cursor-pointer select-none"
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    <div className="flex items-center gap-1">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                      {{
-                        asc: ' ↑',
-                        desc: ' ↓',
-                      }[header.column.getIsSorted() as string] ?? null}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="hover:bg-gruvbox-light-bg1 dark:hover:bg-gruvbox-dark-bg1"
+    <div className="h-full overflow-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead className="sticky top-0 z-10 bg-gruvbox-light-bg1 dark:bg-gruvbox-dark-bg1">
+          <tr>
+            <th className="w-8 border-b border-gruvbox-light-bg3 dark:border-gruvbox-dark-bg3" />
+            {columns.map((col) => (
+              <th
+                key={col.header}
+                className="border-b border-gruvbox-light-bg3 dark:border-gruvbox-dark-bg3 px-2 py-1 text-left font-semibold whitespace-nowrap"
               >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="table-cell">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
+                {col.header}
+              </th>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex items-center justify-between p-4 border-t border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-            className="btn"
-          >
-            {'<<'}
-          </button>
-          <button
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="btn"
-          >
-            {'<'}
-          </button>
-          <button
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="btn"
-          >
-            {'>'}
-          </button>
-          <button
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-            className="btn"
-          >
-            {'>>'}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(0, limit).map((row, i) => (
+            <tr
+              key={i}
+              className="hover:bg-gruvbox-light-bg1 dark:hover:bg-gruvbox-dark-bg1 align-top"
+            >
+              <td className="px-1 text-center">
+                <button
+                  className="text-gruvbox-light-gray dark:text-gruvbox-dark-gray hover:text-gruvbox-light-orange dark:hover:text-gruvbox-dark-orange"
+                  title="Inspect row"
+                  onClick={() => dispatch({ type: 'expandRow', tabId, table, rowIndex: i })}
+                >
+                  ›
+                </button>
+              </td>
+              {columns.map((col) => {
+                const v = cellValue(row, col)
+                const { text, kind } = formatCell(v)
+                return (
+                  <td
+                    key={col.header}
+                    className={`border-b border-gruvbox-light-bg1 dark:border-gruvbox-dark-bg1 px-2 py-1 whitespace-nowrap max-w-md overflow-hidden text-ellipsis ${
+                      kind === 'null'
+                        ? 'text-gruvbox-light-gray dark:text-gruvbox-dark-gray italic'
+                        : kind === 'json'
+                          ? 'font-mono text-xs text-gruvbox-light-fg3 dark:text-gruvbox-dark-fg3'
+                          : ''
+                    }`}
+                    onContextMenu={(e) => openMenu(e, row, col)}
+                  >
+                    {text}
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length > limit && (
+        <div className="p-2 text-center text-sm">
+          Showing {limit} of {rows.length} rows{' '}
+          <button className="btn ml-2" onClick={() => setLimit(limit + PAGE)}>
+            Load more
           </button>
         </div>
-        <span className="text-sm">
-          Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {table.getPageCount()}
-        </span>
-        <select
-          value={table.getState().pagination.pageSize}
-          onChange={(e) => table.setPageSize(Number(e.target.value))}
-          className="input"
-        >
-          {[10, 25, 50, 100].map((pageSize) => (
-            <option key={pageSize} value={pageSize}>
-              Show {pageSize}
-            </option>
-          ))}
-        </select>
-      </div>
+      )}
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
     </div>
-  );
+  )
 }

@@ -1,77 +1,75 @@
-// API Types
-export interface HqlRequest {
-  hql: string;
-  run: boolean;
-  save: boolean;
-  plan: boolean;
-  start?: string; // ISO 8601 datetime string
-  end?: string; // ISO 8601 datetime string
-  retro?: boolean;
+export type Row = Record<string, unknown>
+
+export interface HqlResults {
+  data: Record<string, Row[]>
+  schema: Record<string, Record<string, string>>
 }
 
-export interface HqlRunResponse {
-  id: string;
-}
-
+// GET /api/hql/runs/{id} — note the backend key is run_id, not id
 export interface HqlRun {
-  run_id: string;
-  run_date: string;
-  started: boolean;
-  failed: boolean;
-  completed: boolean;
-  num_results: number;
-  duration: number;
-  results?: {
-    // Data can be either a direct array or keyed by table name
-    data?: Record<string, any>[] | Record<string, Record<string, any>[]>;
-    schema?: Record<string, string> | Record<string, Record<string, string>>;
-  };
-  str_out?: string;
-  hac?: any;
+  run_id: string
+  run_date?: string
+  started: boolean
+  failed: boolean
+  completed: boolean
+  num_results?: number
+  duration?: number
+  results?: Partial<HqlResults>
+  str_out?: string
+  hac?: unknown
 }
 
-export interface Detection {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  status: string;
-  schedule: string;
-  hql?: string;
-  src?: string;
+// GET /api/detections returns HAC asm dicts; every field is author-supplied
+export interface DetectionMeta {
+  id?: string
+  title?: string
+  author?: string
+  status?: string
+  level?: string
+  schedule?: string
+  description?: string
+  tags?: string[]
 }
 
-export interface SchemaField {
-  name: string;
-  type: string;
-  children?: SchemaField[];
+export interface DetectionDetail {
+  id: string
+  hql: string
+  history: unknown[]
+  schedule?: string
 }
 
-export interface QueryResult {
-  columns: string[];
-  data: Record<string, any>[];
-  duration?: number;
-  rowCount: number;
+export interface RunState {
+  status: 'idle' | 'running' | 'done' | 'failed'
+  runId?: string
+  results?: HqlResults
+  strOut?: string
+  duration?: number
+  numResults?: number
 }
 
-export interface HacInitResponse {
-  hql: string;
+export interface QueryTab {
+  id: string
+  title: string
+  query: string
+  run: RunState
+  activeResultTable?: string
 }
 
-export interface SigmaConvertResponse {
-  hql: string;
+export type RightPanelState =
+  | { mode: 'detections' }
+  | { mode: 'row'; tabId: string; table: string; rowIndex: number }
+
+export interface DetectionsState {
+  status: 'loading' | 'ready' | 'error'
+  items: DetectionMeta[]
+  error?: string
 }
 
-export interface RetroHuntResponse {
-  ids: string[];
-}
-
-// UI State Types
-export type Theme = 'light' | 'dark';
-
-export interface QueryEditorState {
-  query: string;
-  isExecuting: boolean;
-  results: QueryResult | null;
-  error: string | null;
+export interface AppState {
+  tabs: QueryTab[]
+  activeTabId: string
+  theme: 'dark' | 'light'
+  sidebarCollapsed: boolean
+  rightPanel: RightPanelState
+  detections: DetectionsState
 }
