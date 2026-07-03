@@ -180,7 +180,6 @@ class InstructionSet():
         ctx = Context.merge(sets, merge_rows=False)
 
         for i in self.ops:
-            print(type(i))
             ctx = self.exec(i, ctx)
 
         end = time.perf_counter()

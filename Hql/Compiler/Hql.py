@@ -57,7 +57,6 @@ class HqlCompiler(Compiler):
         if not self.root:
             raise hqle.CompilerException('Attempting to run compiler with None-root')
         ctx.hac = self.hac
-        print(self.root.to_dict())
         return self.root.eval(ctx)
 
     def Query(self, query: Hql.Query.Query, prep:bool=True):

@@ -255,6 +255,9 @@ class HacPool():
 class HacThread():
     def __init__(self, detection:Detection, query_now:Optional[datetime.datetime]=None) -> None:
         from Hql.Helpers import can_thread
+        from Hql.Context import Context
+        from Hql.Data import Data
+
         self.threaded = can_thread()
 
         self.query_now = query_now if query_now else datetime.datetime.now()
@@ -263,7 +266,7 @@ class HacThread():
         self.started = False
         self.completed = False
         self.thread = None
-        self.output = None
+        self.output:Context = Context(Data())
         self.failed = False
         self.num_results = 0
 
@@ -286,7 +289,7 @@ class HacThread():
         if self.detection.hac:
             d['hac'] = self.detection.hac.asm
 
-        d['results'] = self.output.to_dict() if isinstance(self.output, Data) else {}
+        d['results'] = self.output.data.to_dict()
         d['str_out'] = self.output if isinstance(self.output, str) else ''
 
         return d
@@ -316,7 +319,7 @@ class HacThread():
             self.completed = True
             self.num_results = len(self.output) if isinstance(self.output, Data) else 0
 
-            logging.info(f'{self.detection.id} - {len(self.output)} results')
+            logging.info(f'{self.detection.id} - {len(self.output.data)} results')
         except Exception as e:
             import traceback
             self.failed = True
@@ -332,4 +335,4 @@ class HacThread():
     def join(self) -> Union[Data, str, None]:
         if self.threaded and self.thread:
             self.thread.join()
-        return self.output
+        return self.output.data

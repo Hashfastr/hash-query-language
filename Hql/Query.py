@@ -114,7 +114,6 @@ class Query():
             merge_symbols(symbols)
 
             union = pipes[0]
-            print(union)
             if isinstance(union, Operator) and not isinstance(union, HqlUnion):
                 raise hqle.CompilerException(f'Expanding instruction sets in query resulted in no-prepipe root')
             elif not isinstance(union, HqlUnion):
