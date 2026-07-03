@@ -175,6 +175,7 @@ class Operators(HqlVisitor):
 
     def visitSummarizeOperator(self, ctx: HqlParser.SummarizeOperatorContext):
         from Hql.Operators.Summarize import Summarize
+        from Hql.Expressions.Aggregation import ByExpression
 
         by = None
         exprs = []
@@ -183,6 +184,7 @@ class Operators(HqlVisitor):
                 
         if ctx.ByClause:
             by = self.visit(ctx.ByClause)
+            assert isinstance(by, ByExpression)
         
         return Summarize(exprs, by)
     

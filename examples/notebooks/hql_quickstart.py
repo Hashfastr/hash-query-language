@@ -11,11 +11,8 @@ def _():
     from importlib import reload
 
     import Hql
-    Hql = reload(Hql)
-    from Hql.Config import Config
-    from Hql.Helpers import run_query
 
-    return Config, Path, mo, run_query
+    return Hql, Path, mo
 
 
 @app.cell
@@ -81,25 +78,16 @@ def _(mo):
 
 
 @app.cell
-def _(Config, conf_dir, query_box, run_query):
-    conf = Config(conf_dir)
+def _(Hql, conf_dir, query_box):
+    conf = Hql.Config.Config(conf_dir)
 
-    error = None
-    data = None
-    try:
-        data = run_query(query_box.value, conf, name="notebook")
-    except Exception as e:
-        print(e)
-        error = e
-    return data, error
+    data = Hql.Helpers.run_query(query_box.value, conf, name="notebook")
+    return (data,)
 
 
 @app.cell
-def _(data, error):
-    if error:
-        print('Failed to run query')
-    else:
-        print(data.to_dict())
+def _(data):
+    print(data.to_dict())
     return
 
 

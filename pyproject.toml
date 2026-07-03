@@ -49,3 +49,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["Hql"]
+
+[tool.marimo.runtime]
+auto_reload = "modules"
+watcher_on_save = "autorun" 

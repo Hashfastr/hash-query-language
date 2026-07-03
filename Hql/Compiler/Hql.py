@@ -7,7 +7,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Expressions.References import NamedReference
 from Hql.Types.Hql import HqlTypes as hqlt
 
-from Hql.Expressions import PrepipeType, References
+from Hql.Expressions import References
 from Hql.Expressions import Literals
 from Hql.Expressions import Logic
 from Hql.Expressions import Expression, ToClause, OpParameter, PipeExpression
@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from Hql.Config import Config
     from Hql.Context import Context
     from Hql.Hac import Hac
+
+_PREPIPE_TYPES = (Functions.Function, Functions.DotCompositeFunction, Database, Operators.Union, References.Reference, InstructionSet)
 
 '''
 Hql preprocessor
@@ -54,7 +56,9 @@ class HqlCompiler(Compiler):
         ctx = ctx if ctx else self.ctx
         if not self.root:
             raise hqle.CompilerException('Attempting to run compiler with None-root')
-        return self.root.eval(ctx, hac=self.hac)
+        ctx.hac = self.hac
+        print(self.root.to_dict())
+        return self.root.eval(ctx)
 
     def Query(self, query: Hql.Query.Query, prep:bool=True):
         res = None
@@ -116,7 +120,7 @@ class HqlCompiler(Compiler):
 
         elif isinstance(expr, FuncExprs.FuncProto):
             acc, _ = self.compile_expr(expr)
-            if not isinstance(acc, PrepipeType):
+            if not isinstance(acc, _PREPIPE_TYPES):
                 raise hqle.CompilerException(f'Tabular function call returned non-prepipe type {type(acc)}')
             return self.Tabular(acc)
         

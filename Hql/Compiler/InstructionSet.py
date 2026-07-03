@@ -7,12 +7,13 @@ import json
 import datetime
 from Hql.Exceptions import HqlExceptions as hqle
 import polars.exceptions as ple
+    
+from Hql.Context import Context
 
 if TYPE_CHECKING:
     from Hql.Operators.Operator import Operator
     from Hql.Database import Database
     from Hql.Compiler import BranchDescriptor
-    from Hql.Context import Context
     from Hql.Config import Config
 
 class InstructionSet():
@@ -179,6 +180,7 @@ class InstructionSet():
         ctx = Context.merge(sets, merge_rows=False)
 
         for i in self.ops:
+            print(type(i))
             ctx = self.exec(i, ctx)
 
         end = time.perf_counter()

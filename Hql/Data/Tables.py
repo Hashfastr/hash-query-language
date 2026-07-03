@@ -51,7 +51,7 @@ class Table():
             self.series = series
 
         elif init_data and not schema:
-            self.schema = Schema(data=init_data, sample_size=100)
+            self.schema = Schema(data=init_data, sample_size=-1)
             init_data = self.schema.adjust_mv(init_data)
             pl_schema = self.schema.gen_pl_schema()
             self.df = pl.from_dicts(init_data, schema=pl_schema)
@@ -331,6 +331,8 @@ class Table():
     The idea here is if you want to extract the value of a function, this does it.
     '''
     def strip(self):
+        from Hql.Data import Schema
+        
         cur = self.df
         path = []
         while isinstance(cur, pl.DataFrame) and len(cur.columns) == 1:
@@ -353,10 +355,10 @@ class Table():
             series = Series(cur, stype=schema)
             return Table(series=series, name=self.name)
             
-        if not isinstance(schema, dict):
+        if not isinstance(schema, hqlt.object):
             raise hqle.CompilerException('Schema generated for a dataframe is a non-dict!')
 
-        return Table(df=cur, schema=schema, name=self.name)
+        return Table(df=cur, schema=Schema(schema), name=self.name)
 
     def rename(self, src:Reference, dest:Reference):
         if not self.assert_field(src):

@@ -55,10 +55,6 @@ class PythonTypes():
         # set to default basecase
         l = PythonTypes.NoneType()
         for r in types:
-            # Check to see if we need to instanciate
-            if isinstance(r, type):
-                r = r()
-            
             if l.priority > r.priority:
                 continue
 
@@ -95,12 +91,6 @@ class PythonTypes():
             
             self.priority = 3
             self.super = (PythonTypes.str, PythonTypes.list)
-
-    @register_type('python_complex') 
-    class complex(PythonType):
-        def __init__(self):
-            PythonTypes.PythonType.__init__(self)
-            self.HqlType = PythonTypes.hqlt.string()
         
     @register_type('python_str')
     class str(PythonType):
@@ -110,6 +100,12 @@ class PythonTypes():
  
             self.priority = 4
             self.super = [PythonTypes.list]
+
+    @register_type('python_complex') 
+    class complex(str):
+        def __init__(self):
+            PythonTypes.PythonType.__init__(self)
+            self.HqlType = PythonTypes.hqlt.string()
 
     @register_type('python_bytes')
     class bytes(PythonType, hqlt.binary):
@@ -131,7 +127,7 @@ class PythonTypes():
             self.HqlType = PythonTypes.hqlt.null()
                         
             self.priority = 0
-            self.super = (PythonTypes.bool, PythonTypes.int, PythonTypes.float, PythonTypes.str, PythonTypes.list)
+            self.super = (PythonTypes.bool, PythonTypes.int, PythonTypes.float, PythonTypes.str, PythonTypes.list, PythonTypes.dict)
 
     @register_type('python_list')
     class list(PythonType):
@@ -149,6 +145,8 @@ class PythonTypes():
             PythonTypes.PythonType.__init__(self)
             self.schema = schema
             self.HqlType = PythonTypes.hqlt.object(schema)
+            self.super = [PythonTypes.str]
+            self.priority = 3
 
         def __getitem__(self, key:str):
             if isinstance(self.schema[key], dict):

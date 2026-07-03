@@ -21,6 +21,9 @@ class CompilerType():
     def __len__(self) -> int:
         return 1
 
+    def __hash__(self):
+        return hash((self.name + self.type.__name__))
+
     def hql_schema(self) -> hqlt.HqlType:
         if self.HqlType == None:
             raise hqle.CompilerException(f"{self.type}.{self.name} defined without an Hql proto")

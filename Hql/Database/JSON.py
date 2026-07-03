@@ -113,7 +113,7 @@ class JSON(Database):
             # Ensure we don't override a smaller take
             self.limits[name] = limit if limit < cur else cur
     
-    def eval(self, ctx:Context, **kwargs) -> Data:
+    def eval(self, ctx:Context) -> Context:
         # just check file, base_path is check upon instanciation
         if not self.files and not self.urls:
             logging.critical('No file or http provided to JSON database')
@@ -138,4 +138,5 @@ class JSON(Database):
             table = Table(init_data=data, name=url)
             tables.append(table)
                 
-        return Data(tables=tables)
+        ctx.data = Data(tables=tables)
+        return ctx

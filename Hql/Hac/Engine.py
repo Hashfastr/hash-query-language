@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from Hql.Config import Config
     from Hql.Hac import Hac
     from Hql.Parser.Sigma import SigmaParser
-    from Hql.Data import Data
+    from Hql.Context import Context
     from Hql.Compiler import HqlCompiler
     from pathlib import Path
 
@@ -271,7 +271,7 @@ class Detection():
             self.run_history = self.run_history[diff:]
         self.run_history.append(run)
 
-    def run(self, query_time:Optional[datetime.datetime]=None) -> Data:
+    def run(self, query_time:Optional[datetime.datetime]=None) -> Context:
         compiler = self.compile(query_time)
 
         if not compiler:
@@ -288,7 +288,7 @@ class Detection():
         }
         self.add_run(run)
 
-        return ctx.data
+        return ctx
 
 class HacEngine():
     def __init__(self, path:Path, directory:bool, conf_path:Path, tz:Optional[datetime.tzinfo]=None) -> None:

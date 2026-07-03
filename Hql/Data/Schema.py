@@ -40,6 +40,8 @@ class Schema():
         # Otherwise immediately convert to HqlTypes
         if len(self.schema):
             self.convert_schema()
+
+        assert isinstance(self.schema, hqlt.object)
     
     def __len__(self) -> int:
         if hasattr(self.schema, '__len__'):
@@ -51,7 +53,7 @@ class Schema():
         return bool(self.schema)
 
     def __contains__(self, item:Reference) -> bool:
-        cur = self.schema
+        cur = self.schema.schema
         for i in item.list():
             if not isinstance(cur, dict) or i not in cur:
                 return False
@@ -152,15 +154,16 @@ class Schema():
 
             new = dict()
             for key in node:
-                if isinstance(node[key], (dict, Schema)):
-                    new[key] = n(node[key])
-                elif isinstance(node[key], hqlt.object) and node[key].schema:
-                    new[key] = n(node[key].schema)
+                cur = node[key]
+                if isinstance(cur, (dict, Schema)):
+                    new[key] = n(cur)
+                elif isinstance(cur, hqlt.object) and cur.schema:
+                    new[key] = n(cur.schema)
                 else:
                     new[key] = node[key]
             return new
 
-        self.schema = n(self.schema)
+        self.schema = hqlt.object(n(self.schema))
         return self
 
     # Isolate the schema at a given path
@@ -359,7 +362,10 @@ class Schema():
         
             return out
 
-        self.schema = cs(self.schema, target)
+        schema = self.schema.schema
+        assert isinstance(schema, dict)
+
+        self.schema = hqlt.object(cs(schema, target))
         return self
         
     '''
@@ -367,7 +373,7 @@ class Schema():
     Uses structs for nested objects instead of json objects
     '''
     def gen_pl_schema(self):
-        schema = hqlt.object(self.schema).pl_schema()
+        schema = self.schema.pl_schema()
         assert isinstance(schema, pl.Struct)
         return schema.to_schema()
 
@@ -406,12 +412,14 @@ class Schema():
             if all(isinstance(ptype, pyt.dict) for ptype in types):
                 keys = set()
                 for ptype in types:
+                    assert isinstance(ptype, pyt.dict)
                     keys.update(ptype.schema)
 
                 merged = dict()
                 for key in keys:
                     values = []
                     for ptype in types:
+                        assert isinstance(ptype, pyt.dict)
                         values.append(ptype.schema.get(key, pyt.NoneType()))
                     merged[key] = merge_python_types(values)
 

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, Optional
 from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Summarize(Operator):
-    def __init__(self, aggregate_exprs:Sequence[Expression], by_expr:ByExpression):
+    def __init__(self, aggregate_exprs:Sequence[Expression], by_expr:Optional[ByExpression]):
         Operator.__init__(self)
         self.aggregate_exprs = aggregate_exprs
         self.by_expr = by_expr
@@ -27,11 +27,13 @@ class Summarize(Operator):
     def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data, Table
 
-        ctx = self.by_expr.eval(ctx)
+        if self.by_expr is not None:
+            ctx = self.by_expr.eval(ctx)
 
         agg_data = []
         for expr in self.aggregate_exprs:
-            agg_data.append(expr.eval(ctx, insert=False))
+            print(expr.to_dict())
+            agg_data.append(expr.eval(ctx))
 
         new = []
         for table in ctx.data:
