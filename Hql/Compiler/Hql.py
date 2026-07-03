@@ -113,6 +113,12 @@ class HqlCompiler(Compiler):
 
         elif isinstance(expr, Source):
             acc = expr.preprocess(self.ctx)
+
+        elif isinstance(expr, FuncExprs.FuncProto):
+            acc, _ = self.compile_expr(expr)
+            if not isinstance(acc, PrepipeType):
+                raise hqle.CompilerException(f'Tabular function call returned non-prepipe type {type(acc)}')
+            return self.Tabular(acc)
         
         elif isinstance(expr, Functions.DotCompositeFunction):
             acc, _ = self.DotCompositeFunction(expr)
@@ -156,6 +162,7 @@ class HqlCompiler(Compiler):
 
         else:
             logging.error(expr.str())
+            logging.error(type(expr))
             raise hqle.CompilerException('Could not compile Tabular expression')
 
         if isinstance(acc, Source):
@@ -791,9 +798,17 @@ class HqlCompiler(Compiler):
 
         return desc, None
 
-    def FuncExpr(self, expr:FuncExprs.FuncExpr, prep:bool=True, dotcomp:bool=False) -> tuple[BranchDescriptor, None]:
+    def FuncExpr(self, expr:FuncExprs.FuncExpr, prep:bool=True) -> tuple[BranchDescriptor, None]:
         func_expr = expr.preprocess(self.ctx)
         return self.Function(func_expr)
+
+    def DotFuncExpr(self, expr:FuncExprs.DotFuncExpr, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        func_expr = expr.preprocess(self.ctx)
+        
+        if isinstance(func_expr, Functions.Function):
+            return self.Function(func_expr)
+        else:
+            return self.DotCompositeFunction(func_expr)
 
     def ReceiverFuncExpr(self, expr:FuncExprs.ReceiverFuncExpr, prep:bool=True) -> tuple[object, None]:
         from Hql.Database import Database
@@ -846,7 +861,7 @@ class HqlCompiler(Compiler):
         desc.expr = res
         return desc, None
 
-    def DotCompositeFunction(self, expr:Functions.DotCompositeFunction, prep:bool=True) -> tuple[object, None]:
+    def DotCompositeFunction(self, expr:Functions.DotCompositeFunction, prep:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Database import Database
         desc = BranchDescriptor()
 

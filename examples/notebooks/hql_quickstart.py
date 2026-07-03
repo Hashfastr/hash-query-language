@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.9.14"
+__generated_with = "0.23.13"
 app = marimo.App(width="medium")
 
 
@@ -8,27 +8,29 @@ app = marimo.App(width="medium")
 def _():
     import marimo as mo
     from pathlib import Path
+    from importlib import reload
 
+    import Hql
+    Hql = reload(Hql)
     from Hql.Config import Config
     from Hql.Helpers import run_query
+
     return Config, Path, mo, run_query
 
 
 @app.cell
 def _(mo):
-    mo.md(
-        """
-        # Hql quickstart
+    mo.md("""
+    # Hql quickstart
 
-        This notebook runs an [Hql](https://github.com/Hashfastr/Hql) query from
-        Python and shows the result as a table. It uses the repo's local `json`
-        example database (`local-data/tf11-so-network.json`), so it works fully
-        offline — no Elasticsearch/Splunk/etc. required.
+    This notebook runs an [Hql](https://github.com/Hashfastr/Hql) query from
+    Python and shows the result as a table. It uses the repo's local `json`
+    example database (`local-data/tf11-so-network.json`), so it works fully
+    offline — no Elasticsearch/Splunk/etc. required.
 
-        Edit the query below and the results further down will re-run automatically.
-        See `examples/notebooks/README.md` for setup instructions.
-        """
-    )
+    Edit the query below and the results further down will re-run automatically.
+    See `examples/notebooks/README.md` for setup instructions.
+    """)
     return
 
 
@@ -87,24 +89,17 @@ def _(Config, conf_dir, query_box, run_query):
     try:
         data = run_query(query_box.value, conf, name="notebook")
     except Exception as e:
+        print(e)
         error = e
     return data, error
 
 
 @app.cell
-def _(data, error, mo):
-    if error is not None:
-        result = mo.md(f"**Query failed:** `{error}`").callout(kind="danger")
-    elif data is None or len(data) == 0:
-        result = mo.md("Query ran but returned no rows.")
+def _(data, error):
+    if error:
+        print('Failed to run query')
     else:
-        blocks = []
-        for table in data:
-            blocks.append(mo.md(f"**{table.name or 'Table'}** — {len(table)} rows"))
-            blocks.append(mo.ui.table(table.df))
-        result = mo.vstack(blocks)
-
-    result
+        print(data.to_dict())
     return
 
 

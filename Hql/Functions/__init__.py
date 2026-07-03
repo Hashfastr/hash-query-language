@@ -2,6 +2,7 @@ from __future__ import annotations
 import importlib, pkgutil
 
 import json
+import logging
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
@@ -38,7 +39,7 @@ class Function():
         return {
             'type': 'function',
             'name': self.name,
-            'args': self.args
+            'args': [x.to_dict() for x in self.args]
         }
     
     def __str__(self) -> str:
@@ -116,6 +117,11 @@ class DotCompositeFunction():
         rec = None
         for func in self.funcs:
             rec = func.eval(ctx, receiver=rec)
+
+            if rec == NotImplemented:
+                logging.error(type(func))
+                logging.error(func.to_dict())
+                raise hqle.CompilerException(f'Function {func.name} provided "NotImplemented" when eval\'d')
         
         return rec
 

@@ -9,7 +9,8 @@ if TYPE_CHECKING:
     from Hql.Data import Data
     from Hql.Context import Context
     from Hql.Compiler import BranchDescriptor
-    from Hql.Expressions.References import NamedReference, PipeExpression
+    from Hql.Expressions.References import NamedReference
+    from Hql.Query import PipeExpression
 
 class Database(Operator):
     def __init__(self, config:dict, name:str='unnamed-database'):
@@ -36,12 +37,17 @@ class Database(Operator):
                 return False
         return super().__eq__(value)
 
+    def __bool__(self) -> bool:
+        return True
+
     def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         return self.compiler.add_op(op)
 
     def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple[Database, Union[None, Operator]]:
         from Hql.Operators.Where import Where
-        from Hql.Expressions.Logic import BetweenEquality, Datetime, NamedReference
+        from Hql.Expressions.Logic import BetweenEquality
+        from Hql.Expressions.Literals import Datetime
+        from Hql.Expressions.References import NamedReference
 
         if not self.config.get('timeseries', True):
             # Fake consume it if we don't use it

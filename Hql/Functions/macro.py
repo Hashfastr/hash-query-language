@@ -4,6 +4,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func
 # from Hql.Expressions import PipeExpression, StringLiteral, Expression, DotCompositeFunction
 from typing import TYPE_CHECKING, Optional, Sequence, Union
+import logging
 
 if TYPE_CHECKING:
     from Hql.Context import Context

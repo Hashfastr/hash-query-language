@@ -39,6 +39,9 @@ class database(Function):
 
         return parser.assembly
 
+    def eval(self, ctx: Context, receiver=None) -> object:
+        return self.preprocess(ctx, receiver=receiver)
+
     def preprocess(self, ctx: Context, receiver=None) -> object:
         from Hql.Database import Database
         from Hql.Expressions.Literals import StringLiteral

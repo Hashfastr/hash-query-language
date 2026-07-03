@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 # This is a meta function resolved while parsing
-@register_func('file')
-class file(Function):
+@register_func('http')
+class http(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.References import Reference
         from Hql.Expressions.Literals import StringLiteral
