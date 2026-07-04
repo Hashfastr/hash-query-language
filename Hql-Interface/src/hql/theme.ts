@@ -1,6 +1,11 @@
 import { EditorView } from '@codemirror/view'
 import type { Extension } from '@codemirror/state'
 
+// This is the ONLY file in src/hql/ that may be imported eagerly: everything
+// else in this directory pulls in the ~1 MB generated parser and must stay
+// behind Editor.tsx's dynamic import('../hql') so it lands in a lazy chunk.
+// Keep this file free of imports from ./parse, ./generated, antlr4ng, etc.
+
 // Gruvbox, mirroring tailwind.config.js
 const dark = {
   bg: '#282828',

@@ -1,3 +1,9 @@
+// Client for Hql/Apiserver (FastAPI, :8080). Contract quirks worth knowing
+// (all verified against the backend source, Hql/Apiserver/__init__.py):
+// - run dicts key their id as `run_id`, not `id`
+// - POST /api/detections takes a RAW TEXT body, not JSON
+// - failed runs put the Python traceback in `str_out`
+// - num_results is 0 for plain (non-detection) runs even when rows exist
 import type { DetectionDetail, DetectionMeta, HqlRun } from '../types'
 
 const BASE = '/api'
@@ -45,6 +51,8 @@ export function getRun(id: string, signal?: AbortSignal): Promise<HqlRun> {
 }
 
 const POLL_INTERVAL_MS = 1000
+// Soft ceiling, not a UX timeout: the Stop button (AbortSignal) is the
+// user-facing exit. The old UI's 60s cap broke legitimate long retro hunts.
 const POLL_CEILING_MS = 10 * 60 * 1000
 
 /** Poll a run until completed/failed. Aborting the signal stops waiting. */

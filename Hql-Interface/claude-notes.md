@@ -91,6 +91,11 @@ One context + `useReducer`. Key invariants:
   `row` inspector. Expanding a row replaces the detections list (per spec) and
   force-uncollapses the panel; Esc/×/re-run/tab-close restores detections
   (`resetInspectorFor` in the reducer).
+- **The right panel is drag-resizable** (`ResizablePanel` in `RightPanel.tsx`):
+  pointer-capture drag on the left edge, clamped to [220px, 70vw], width
+  remembered per mode in localStorage (`hql-interface:inspector-width` /
+  `hql-interface:detections-width`), outside the versioned persist blob on
+  purpose — losing a width on schema bump would be silly.
 - **Persistence** (`lib/persist.ts`): debounced localStorage under
   `hql-interface:v1` — theme, collapse, active tab, tab titles+queries.
   Results are deliberately never persisted. Bump the key version if the shape
@@ -154,5 +159,7 @@ One context + `useReducer`. Key invariants:
 - SchemaExplorer from the old UI was dropped (not in spec); `GET /api/schema`
   is unused.
 - Wide tables rely on horizontal scroll; no column resize/pin.
-- `num_results` header shows the run's total while per-tab counts are row
-  counts — they differ on multi-table results by design.
+- The live backend returns `num_results: 0` for plain (non-detection) runs
+  even when rows come back, so the status line falls back to summing row
+  counts across tables (`ResultsPane.tsx`). Per-tab badges are always raw row
+  counts.

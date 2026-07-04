@@ -2,6 +2,8 @@ import type { Diagnostic } from '@codemirror/lint'
 import type { EditorView } from '@codemirror/view'
 import { parseWithErrors } from './parse.ts'
 
+// Full lexer+parser pass per lint; the linter()'s delay option (index.ts) is
+// the only debounce and has proven sufficient — don't add more machinery.
 export function hqlLintSource(view: EditorView): Diagnostic[] {
   const doc = view.state.doc
   const text = doc.toString()

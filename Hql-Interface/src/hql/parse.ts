@@ -1,3 +1,7 @@
+// Single entry point to the generated ANTLR parser. The files in ./generated
+// are produced by `npm run gen:parser` (antlr-ng, pure TS, no Java) from
+// ../../Hql/Parser/grammar/Hql.g4 + HqlTokens.g4 — regenerate on grammar
+// change, never hand-edit (the // @ts-nocheck header is added by the script).
 import {
   BaseErrorListener,
   CharStream,

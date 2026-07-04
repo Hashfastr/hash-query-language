@@ -14,15 +14,23 @@ import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirro
 import { lintKeymap } from '@codemirror/lint'
 import { gruvboxTheme } from '../hql/theme'
 
-// Module-level so cached EditorStates from previous mounts stay reconfigurable
+// Everything below is module-level on the assumption that EXACTLY ONE Editor
+// is mounted at a time (one editor, keyed by tab id, remounted on tab switch).
+// If two editors ever render simultaneously, all three of these need to move
+// to per-instance ownership.
+
+// Compartments must be the same instances across remounts, or cached
+// EditorStates from a previous mount can't be reconfigured.
 const themeConf = new Compartment()
 const hqlConf = new Compartment()
 
-// Undo history survives tab switches
+// EditorStates cached per tab id so undo history survives tab switches.
+// Deliberately unbounded: states are cheap and tabs are few.
 const stateCache = new Map<string, EditorState>()
 
-// Cached EditorStates keep their original extension closures, so callbacks
-// must live at module level. Exactly one Editor is mounted at a time.
+// Cached EditorStates keep the extension closures they were created with, so
+// a restored state's updateListener/keymap would call a stale render's props.
+// Routing through this module-level object keeps callbacks always-current.
 const live = {
   onChange: (_v: string) => {},
   onRun: () => {},

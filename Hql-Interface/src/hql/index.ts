@@ -5,7 +5,12 @@ import { hqlCompletionSource } from './complete.ts'
 import { hqlHighlighter } from './highlight.ts'
 import { hqlLintSource } from './lint.ts'
 
-/** Grammar-driven editor features; loaded lazily since the parser is ~1 MB. */
+/**
+ * Grammar-driven editor features. This module (and everything it imports)
+ * must only ever be loaded via dynamic import('../hql') — see Editor.tsx —
+ * so Vite splits the ~1 MB generated parser into a lazy chunk and the app
+ * shell paints without it. The editor starts plain and upgrades in place.
+ */
 export function hqlExtensions(): Extension {
   return [
     hqlHighlighter,

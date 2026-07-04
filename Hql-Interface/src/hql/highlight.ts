@@ -18,7 +18,14 @@ const TYPE_WORDS = new Set([
 
 type Category = 'keyword' | 'type' | 'string' | 'literal' | 'comment' | 'operator'
 
-// Derive token categories from the generated vocabulary once
+// Highlighting runs the real HqlLexer over the whole document and marks each
+// token with a CSS class (colors live in theme.ts). Chosen over a Lezer port
+// (1600-line grammar, would drift) and StreamLanguage (line-oriented; breaks
+// on multi-line strings/comments). getAllTokens() includes the hidden channel,
+// which is what makes comments highlight.
+
+// Derive token categories from the generated vocabulary once, so keywords
+// added to the grammar are picked up automatically on regeneration.
 const categories: Map<number, Category> = (() => {
   const map = new Map<number, Category>()
   const vocab = createLexer('').vocabulary

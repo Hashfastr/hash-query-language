@@ -6,6 +6,8 @@ import { useTheme } from '../hooks/useTheme'
 import * as api from '../services/api'
 import { QueryTabs } from './QueryTabs'
 import { RetroHuntModal } from './RetroHuntModal'
+// Must be a bundler import: the backend statically serves ONLY /assets and
+// index.html, so any asset referenced by absolute URL 404s in production.
 import lainGif from '../../lain.gif'
 
 export function TopBar() {
@@ -57,7 +59,13 @@ export function TopBar() {
         >
           ■ Stop
         </button>
-        {isRunning && <img src={lainGif} alt="running..." className="h-8 w-8 rounded" />}
+        {/* Always mounted, toggled via visibility: reserves the slot so the
+            toolbar doesn't shift when a run starts, and pre-loads the gif */}
+        <img
+          src={lainGif}
+          alt="running..."
+          className={`h-8 w-8 rounded ${isRunning ? '' : 'invisible'}`}
+        />
 
         <div className="mx-2 h-5 w-px bg-gruvbox-light-bg3 dark:bg-gruvbox-dark-bg3" />
 

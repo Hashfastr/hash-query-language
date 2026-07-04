@@ -1,3 +1,10 @@
+// Single context + useReducer store — the whole state layer, on purpose.
+// Key invariants the UI depends on:
+// - "Is anything running?" is DERIVED (useIsRunning scans tabs), never stored;
+//   the spec's one-query-at-a-time rule hangs off it, so keep it derived.
+// - The right panel is modal (detections XOR row inspector); anything that
+//   invalidates the inspected row must route through resetInspectorFor.
+// - Results live only in memory; persist.ts saves tab titles/queries only.
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from 'react'
 import type { AppState, DetectionMeta, HqlResults, QueryTab } from '../types'
 import { loadPersisted } from '../lib/persist'
@@ -170,6 +177,8 @@ export function useActiveTab(): QueryTab {
   return state.tabs.find((t) => t.id === state.activeTabId) ?? state.tabs[0]
 }
 
+// Global run lock: the spec forbids starting a query while one runs, in ANY
+// tab. Every Run button and Mod-Enter binding must gate on this.
 export function useIsRunning(): boolean {
   return useAppState().tabs.some((t) => t.run.status === 'running')
 }

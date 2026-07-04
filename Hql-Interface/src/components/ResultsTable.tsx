@@ -4,6 +4,12 @@ import { useAppDispatch } from '../state/store'
 import type { Row } from '../types'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 
+// Hand-rolled <table> instead of a table library: the features needed here
+// (sticky header, custom cells, context menu, expansion that renders OUTSIDE
+// the table into the right panel) are trivial without one, and tanstack's
+// in-table expansion model actively fights the replace-the-sidebar design.
+// Render cap + "Load more" instead of virtualization for the same
+// minimal-complexity reason; bump PAGE before reaching for react-window.
 const PAGE = 500
 const TRUNCATE = 120
 

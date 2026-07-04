@@ -67,7 +67,9 @@ export function ResultsPane() {
         ))}
         <div className="flex-1" />
         <span className="text-xs text-gruvbox-light-gray dark:text-gruvbox-dark-gray pb-1">
-          {run.numResults ?? rows.length} results
+          {/* num_results is 0 for plain (non-detection) runs; fall back to counting rows */}
+          {run.numResults || tables.reduce((n, t) => n + (run.results!.data[t]?.length ?? 0), 0)}{' '}
+          results
           {run.duration !== undefined && ` · ${run.duration.toFixed(2)}s`}
         </span>
       </div>

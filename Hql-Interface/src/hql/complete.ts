@@ -30,6 +30,10 @@ function caretTokenIndex(tokens: Token[], caret: number): number {
   return eofIndex
 }
 
+// Keyword completion via antlr4-c3: parse to the caret, ask the ATN what
+// tokens may follow. Column/table-name completion is the intended next step —
+// set core.preferredRules to the grammar's name-reference rules and feed
+// candidates.rules from schemas of prior runs; nothing else needs to change.
 export function hqlCompletionSource(context: CompletionContext): CompletionResult | null {
   const word = context.matchBefore(/[\w-]+/)
   if (!word && !context.explicit) return null
@@ -56,6 +60,8 @@ export function hqlCompletionSource(context: CompletionContext): CompletionResul
   return {
     from: word ? word.from : context.pos,
     options,
+    // validFor lets CM filter the ~280-keyword list client-side as the user
+    // types instead of re-running this (parse + c3) source per keystroke.
     validFor: /^[\w-]*$/,
   }
 }
