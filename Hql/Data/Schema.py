@@ -137,7 +137,6 @@ class Schema():
             return new
 
         schemata = [x.normalize() for x in schemata]
-        print([type(x) for x in schemata])
         keygroups = gkg([x.schema for x in schemata])
         new = rename(keygroups)
 
@@ -302,18 +301,25 @@ class Schema():
                     if idx == len(path) - 1:
                         # Silent drop
                         continue
-                    
-                    if isinstance(schema[key], dict):
-                        rec = d(path, schema[key], idx+1)
+
+                    cur = schema[key]
+                    if isinstance(cur, hqlt.object):
+                        cur = cur.schema
+                    if isinstance(cur, dict):
+                        rec = d(path, cur, idx+1)
                         if rec:
                             new[key] = rec
-                
+
                 # Don't have to do anything
                 else:
                     new[key] = schema[key]
             return new
-                    
-        self.schema = d(path, self.schema)
+
+        # Iterate the raw dict, not the hqlt.object: iterating hqlt.object
+        # yields NamedReference keys, which would poison the rebuilt schema
+        # (and never match path[idx], silently skipping the drop).
+        raw = self.schema.schema if isinstance(self.schema, hqlt.object) else self.schema
+        self.schema = hqlt.object(d(path, raw))
         return self
     
     def drop_many(self, paths:Sequence[Reference]):

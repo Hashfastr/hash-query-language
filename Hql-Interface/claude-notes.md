@@ -91,11 +91,14 @@ One context + `useReducer`. Key invariants:
   `row` inspector. Expanding a row replaces the detections list (per spec) and
   force-uncollapses the panel; Esc/×/re-run/tab-close restores detections
   (`resetInspectorFor` in the reducer).
-- **The right panel is drag-resizable** (`ResizablePanel` in `RightPanel.tsx`):
-  pointer-capture drag on the left edge, clamped to [220px, 70vw], width
-  remembered per mode in localStorage (`hql-interface:inspector-width` /
-  `hql-interface:detections-width`), outside the versioned persist blob on
-  purpose — losing a width on schema bump would be silly.
+- **Resizable regions share one hook** (`hooks/useDragResize.ts`): the right
+  panel (drag its left edge; width per mode under
+  `hql-interface:inspector-width` / `hql-interface:detections-width`) and the
+  editor/results splitter in `App.tsx` (drag the divider; editor height under
+  `hql-interface:editor-height`). Pointer-capture drag, clamped to
+  [min, fraction-of-window], sizes stored under their own localStorage keys —
+  outside the versioned persist blob on purpose, so a schema bump doesn't
+  reset panel layout. Add any future resizable region through this hook.
 - **Persistence** (`lib/persist.ts`): debounced localStorage under
   `hql-interface:v1` — theme, collapse, active tab, tab titles+queries.
   Results are deliberately never persisted. Bump the key version if the shape

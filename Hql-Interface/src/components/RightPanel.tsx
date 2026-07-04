@@ -1,18 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
+import { useDragResize } from '../hooks/useDragResize'
 import { useAppDispatch, useAppState } from '../state/store'
 import { DetectionsSidebar } from './DetectionsSidebar'
 import { RowInspector } from './RowInspector'
 
-const MIN_WIDTH = 220
-
-// Panel widths are stored under their own localStorage keys, per mode
-// (inspector vs detections), NOT inside the versioned persist.ts blob:
-// a persistence schema bump shouldn't reset someone's panel layout.
-function loadWidth(key: string, fallback: number): number {
-  const v = Number(localStorage.getItem(key))
-  return Number.isFinite(v) && v >= MIN_WIDTH ? v : fallback
-}
-
+// Width is remembered per mode (inspector vs detections) so a wide breakout
+// doesn't force a wide detections list.
 function ResizablePanel({
   storageKey,
   defaultWidth,
@@ -22,37 +15,18 @@ function ResizablePanel({
   defaultWidth: number
   children: ReactNode
 }) {
-  const [width, setWidth] = useState(() => loadWidth(storageKey, defaultWidth))
-  const widthRef = useRef(width)
-  widthRef.current = width
-
-  // Re-read when switching between panel modes (different storageKey)
-  useEffect(() => {
-    setWidth(loadWidth(storageKey, defaultWidth))
-  }, [storageKey, defaultWidth])
-
-  const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    const handle = e.currentTarget
-    const startX = e.clientX
-    const startW = widthRef.current
-    handle.setPointerCapture(e.pointerId)
-
-    const clamp = (w: number) =>
-      Math.min(Math.max(w, MIN_WIDTH), Math.round(window.innerWidth * 0.7))
-
-    const move = (ev: PointerEvent) => setWidth(clamp(startW + startX - ev.clientX))
-    const up = () => {
-      handle.removeEventListener('pointermove', move)
-      localStorage.setItem(storageKey, String(widthRef.current))
-    }
-    handle.addEventListener('pointermove', move)
-    handle.addEventListener('pointerup', up, { once: true })
-  }
+  const { size, startDrag } = useDragResize({
+    storageKey,
+    defaultSize: defaultWidth,
+    min: 220,
+    max: () => Math.round(window.innerWidth * 0.7),
+    axis: 'x',
+    direction: -1, // panel sits on the right; dragging left grows it
+  })
 
   return (
     <aside
-      style={{ width }}
+      style={{ width: size }}
       className="relative flex shrink-0 border-l border-gruvbox-light-bg2 dark:border-gruvbox-dark-bg2"
     >
       <div

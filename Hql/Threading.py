@@ -299,7 +299,8 @@ class HacThread():
         if self.detection.hac:
             d['hac'] = self.detection.hac.asm
 
-        d['results'] = self.output.data.to_dict()
+        # On failure self.output is the traceback string, not a Context
+        d['results'] = {} if isinstance(self.output, str) else self.output.data.to_dict()
         d['str_out'] = self.output if isinstance(self.output, str) else ''
 
         return d
