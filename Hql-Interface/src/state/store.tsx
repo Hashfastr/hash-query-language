@@ -15,6 +15,7 @@ export type Action =
   | { type: 'renameTab'; tabId: string; title: string }
   | { type: 'setActiveTab'; tabId: string }
   | { type: 'setQuery'; tabId: string; query: string }
+  | { type: 'replaceQuery'; tabId: string; query: string }
   | { type: 'runStarted'; tabId: string; runId: string }
   | { type: 'runDone'; tabId: string; results: HqlResults; duration?: number; numResults?: number }
   | { type: 'runFailed'; tabId: string; strOut: string }
@@ -35,6 +36,7 @@ export function newTab(query = '', title?: string): QueryTab {
     id: `tab-${Date.now()}-${tabCounter}`,
     title: title ?? `Query ${tabCounter}`,
     query,
+    editRev: 0,
     run: { status: 'idle' },
   }
 }
@@ -77,7 +79,20 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'setActiveTab':
       return { ...state, activeTabId: action.tabId }
     case 'setQuery':
+      // Editor -> state echo of user typing; must NOT touch editRev (the
+      // editor document is the source of truth while the user types)
       return updateTab(state, action.tabId, { query: action.query })
+    case 'replaceQuery':
+      // External write (Init HaC, Sigma convert): bump editRev so the
+      // mounted editor replaces its document
+      return {
+        ...state,
+        tabs: state.tabs.map((t) =>
+          t.id === action.tabId
+            ? { ...t, query: action.query, editRev: t.editRev + 1 }
+            : t,
+        ),
+      }
     case 'runStarted':
       return resetInspectorFor(
         updateTab(state, action.tabId, { run: { status: 'running', runId: action.runId } }),

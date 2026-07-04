@@ -39,6 +39,7 @@ export default function App() {
             <Editor
               tabId={tab.id}
               value={tab.query}
+              editRev={tab.editRev}
               isDark={state.theme === 'dark'}
               onChange={(query) => dispatch({ type: 'setQuery', tabId: tab.id, query })}
               onRun={() => {

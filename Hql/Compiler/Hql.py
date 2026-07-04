@@ -366,6 +366,10 @@ class HqlCompiler(Compiler):
 
         acc, _ = self.compile(op.expr)
         expr = acc.get_expr()
+
+        if isinstance(expr, Functions.Function) and expr.logic:
+            expr = expr.preprocess(self.ctx)
+        print(type(expr))
         assert isinstance(expr, Logic.Logic)
         op = Operators.Where(expr, op.parameters)
 

@@ -10,6 +10,7 @@ from Hql.Exceptions import HqlExceptions as hqle
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Expressions import Expression
+    from polars import Expr as plExpr
 
 class Function():
     def __init__(self, args:Sequence[Expression], min:int, max:int, conf:Optional[dict]=None):
@@ -22,6 +23,7 @@ class Function():
         self.max = max
         # self.static = False
         self.conf = conf if conf else dict()
+        self.logic = False
         
         if len(args) < min:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
@@ -60,6 +62,9 @@ class Function():
         return self
         
     def eval(self, ctx:Context, receiver=None) -> object:
+        return NotImplemented
+
+    def polars(self) -> plExpr:
         return NotImplemented
 
 class DotCompositeFunction():

@@ -35,6 +35,15 @@ function caretTokenIndex(tokens: Token[], caret: number): number {
 // set core.preferredRules to the grammar's name-reference rules and feed
 // candidates.rules from schemas of prior runs; nothing else needs to change.
 export function hqlCompletionSource(context: CompletionContext): CompletionResult | null {
+  try {
+    return complete(context)
+  } catch {
+    // A parser exception must degrade to "no completions", never a broken editor
+    return null
+  }
+}
+
+function complete(context: CompletionContext): CompletionResult | null {
   const word = context.matchBefore(/[\w-]+/)
   if (!word && !context.explicit) return null
 

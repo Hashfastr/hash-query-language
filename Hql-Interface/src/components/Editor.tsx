@@ -10,7 +10,12 @@ import {
 } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { bracketMatching } from '@codemirror/language'
-import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete'
+import {
+  acceptCompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+  completionKeymap,
+} from '@codemirror/autocomplete'
 import { lintKeymap } from '@codemirror/lint'
 import { gruvboxTheme } from '../hql/theme'
 
@@ -48,12 +53,14 @@ const hqlLoaded = import('../hql')
 export function Editor({
   tabId,
   value,
+  editRev,
   isDark,
   onChange,
   onRun,
 }: {
   tabId: string
   value: string
+  editRev: number
   isDark: boolean
   onChange: (value: string) => void
   onRun: () => void
@@ -82,6 +89,9 @@ export function Editor({
             return true
           },
         },
+        // Tab accepts the selected completion when the popup is open;
+        // acceptCompletion returns false otherwise, falling through to indent
+        { key: 'Tab', run: acceptCompletion },
         ...closeBracketsKeymap,
         ...defaultKeymap,
         ...historyKeymap,
@@ -103,6 +113,8 @@ export function Editor({
         : EditorState.create({ doc: value, extensions })
     const view = new EditorView({ state, parent: container.current })
     viewRef.current = view
+    // Debug/test handle; also documents that exactly one view exists at a time
+    ;(window as unknown as Record<string, unknown>).__hqlEditorView = view
 
     if (!hqlExtensions) {
       void hqlLoaded.then((ext) => {
@@ -121,7 +133,12 @@ export function Editor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabId])
 
-  // External query replacement (Init HaC, Sigma convert, detection load)
+  // External query replacement (Init HaC, Sigma convert). Keyed by editRev,
+  // NEVER by value: useEffect runs after paint, so a value-keyed sync races
+  // user input — a stale value from a lagging render would silently rewrite
+  // text the user just typed/deleted (and then fight every correction).
+  // While the user types, the editor document is the source of truth and
+  // `value` is only the state echo of it.
   useEffect(() => {
     const view = viewRef.current
     if (!view) return
@@ -129,7 +146,8 @@ export function Editor({
     if (current !== value) {
       view.dispatch({ changes: { from: 0, to: current.length, insert: value } })
     }
-  }, [value])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editRev])
 
   useEffect(() => {
     viewRef.current?.dispatch({ effects: themeConf.reconfigure(gruvboxTheme(isDark)) })

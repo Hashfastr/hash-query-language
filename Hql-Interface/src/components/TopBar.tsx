@@ -90,7 +90,7 @@ export function TopBar() {
           onClick={() =>
             void withBusy(async () => {
               const { hql } = await api.initHac(tab.query)
-              dispatch({ type: 'setQuery', tabId: tab.id, query: hql })
+              dispatch({ type: 'replaceQuery', tabId: tab.id, query: hql })
             })
           }
         >
@@ -103,7 +103,7 @@ export function TopBar() {
           onClick={() =>
             void withBusy(async () => {
               const { hql } = await api.convertSigma(tab.query)
-              dispatch({ type: 'setQuery', tabId: tab.id, query: hql })
+              dispatch({ type: 'replaceQuery', tabId: tab.id, query: hql })
             })
           }
         >

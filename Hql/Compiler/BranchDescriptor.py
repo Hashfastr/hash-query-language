@@ -40,6 +40,8 @@ class BranchDescriptor():
         self.symmetric:list = []
 
     def set_attr(self, name:str, value:object=True):
+        if name in self.list_attrs and not isinstance(value, list):
+            value = [value]
         self.attrs[name] = value
 
     def add_mapping(self, dest:Reference, src:Reference):

@@ -77,7 +77,7 @@ class Where(Operator):
     def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data
 
-        pl_filter = self.expr.eval(ctx, as_pl=True)
+        pl_filter = self.expr.polars()
 
         new = []
         for table in ctx.data:

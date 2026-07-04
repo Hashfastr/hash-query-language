@@ -5,12 +5,14 @@ import random
 import datetime, time
 from pathlib import Path
 
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Context import Context
+
 if TYPE_CHECKING:
     from Hql.Config import Config
     from Hql.Data import Data
     from Hql.Database import Database
     from Hql.Compiler import InstructionSet
-    from Hql.Context import Context
     from Hql.Hac.Engine import Detection
 
 class QueryPool():
@@ -80,7 +82,10 @@ class QueryThread():
         except Exception as e:
             import traceback
             self.failed = True
-            self.output = traceback.format_exc()
+            self.output = {
+                'traceback': traceback.format_exc(),
+                'exception': str(e)
+            }
 
     def is_alive(self) -> bool:
         if not self.thread or not self.threaded:
@@ -276,13 +281,23 @@ class HacThread():
         self.started = False
         self.completed = False
         self.thread = None
-        self.output:Context = Context(Data())
+        self._output:Context = Context(Data())
         self.failed = False
         self.num_results = 0
 
         self.id = '%08x' % random.getrandbits(32)
         self.run_date = datetime.datetime.now()
         self.duration = 0
+
+    @property
+    def output(self) -> Context:
+        return self._output
+
+    @output.setter
+    def output(self, val:Context):
+        if not isinstance(val, Context):
+            raise hqle.CompilerException(f'HacThread got an invalid input of type {type(val)} expecting Context')
+        self._output = val
 
     def to_dict(self):
         from Hql.Data import Data
@@ -333,10 +348,8 @@ class HacThread():
             logging.info(f'{self.detection.id} - {len(self.output.data)} results')
         except Exception as e:
             import traceback
-            self.failed = True
-            self.output = traceback.format_exc()
             logging.critical(e)
-            logging.critical(self.output)
+            logging.critical(traceback.format_exc())
 
     def is_alive(self) -> bool:
         if not self.thread or not self.threaded:
@@ -346,4 +359,8 @@ class HacThread():
     def join(self) -> Union[Data, str, None]:
         if self.threaded and self.thread:
             self.thread.join()
-        return self.output.data
+
+        if isinstance(self.output, Data):
+            return self.output.data
+        else:
+            return self.output

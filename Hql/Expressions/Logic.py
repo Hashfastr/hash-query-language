@@ -8,6 +8,8 @@ from Hql.Exceptions import HqlExceptions as hqle
 
 import logging
 
+from Hql.Functions import Function
+
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Expressions.Literals import StringLiteral, Literal, Bool
@@ -850,7 +852,7 @@ class Regex(Logic):
         raise hqle.QueryException(f'Invalid preprocessed expression')
 
 class Not(Logic):
-    def __init__(self, expr:Logic) -> None:
+    def __init__(self, expr:Union[Logic, Reference, Function]) -> None:
         Logic.__init__(self)
         self.expr = expr
 

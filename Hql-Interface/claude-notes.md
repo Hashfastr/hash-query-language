@@ -77,6 +77,16 @@ upgrades in place. Don't import anything from `src/hql/index.ts`,
   mounts at a time. The theme and hql Compartments are module-level for the
   same reason. If you ever render two editors simultaneously, this needs
   rework.
+- **NEVER sync the editor document from the `value` prop.** While the user
+  types, the CM document is the source of truth and `tab.query` is only its
+  state echo. `useEffect` runs post-paint, so a value-keyed sync effect races
+  real input (held backspace + lint-parse jank) and silently rewrites text the
+  user just edited — this shipped once as a serious bug. External writes
+  (Init HaC, Sigma convert) must go through the `replaceQuery` action, which
+  bumps `tab.editRev`; the editor syncs only on `editRev` changes. Parser
+  exceptions in lint/completion sources are caught and degrade to
+  no-diagnostics/no-completions for the same "never break the editor" reason.
+  `window.__hqlEditorView` exposes the mounted view for browser-driven tests.
 
 ## State model (`src/state/store.tsx`)
 

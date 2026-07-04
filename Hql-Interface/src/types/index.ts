@@ -51,6 +51,12 @@ export interface QueryTab {
   id: string
   title: string
   query: string
+  /**
+   * Bumped ONLY by external query replacement (Init HaC, Sigma convert).
+   * The editor syncs its document on this — never on `query` itself, which
+   * lags the document during typing and would overwrite user input.
+   */
+  editRev: number
   run: RunState
   activeResultTable?: string
 }

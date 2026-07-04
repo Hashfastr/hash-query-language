@@ -1,10 +1,8 @@
 from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Expressions import Expression
+from Hql.Context import register_func
 
-import logging
 import polars as pl
 from typing import Optional
 
@@ -19,6 +17,8 @@ class isnull(Function):
             hqle.ArgumentException(f'Invalid argument type to isnull: {type(expr)}')
         self.expr:Reference = expr
 
-    def eval(self, ctx: Context, receiver=None) -> object:
+        self.logic = True
+
+    def polars(self) -> pl.Expr:
         expr = self.expr.polars()
         return expr.is_null()
