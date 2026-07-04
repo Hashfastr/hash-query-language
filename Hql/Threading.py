@@ -237,7 +237,7 @@ class HacPool():
             logging.debug(f'Moved {count} detections from queue to running')
 
     def gather_threads(self):
-        for t in self.pool:
+        def join_thread(t):
             if not t.is_alive():
                 t.join()
                 self.pool.remove(t)
@@ -246,6 +246,16 @@ class HacPool():
                 if len(self.completed) >= self.max_retained:
                     self.completed = self.completed[1:]
                 self.completed.append(t)
+        
+        for t in self.pool:
+            try:
+                join_thread(t)
+            except Exception as e:
+                logging.error('Could not join thread')
+                logging.error(e)
+
+                self.pool.remove(t)
+                self.semaphore.release()
 
     def get_completed(self) -> list[HacThread]:
         completed = self.completed

@@ -35,6 +35,7 @@ class HqlTypes():
 
         def cast(self, series:pl.Series):
             if self.proto == None:
+                logging.error(f'No prototype for HqlType {self.name}')
                 raise hqle.CompilerException('Attempting to cast data to type without a prototype')
 
             return series.cast(self.pl_schema())

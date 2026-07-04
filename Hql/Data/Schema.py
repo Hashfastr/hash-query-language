@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
+from numpy import isin
 import polars as pl
 
 from Hql.Exceptions import HqlExceptions as hqle
@@ -101,9 +102,9 @@ class Schema():
             for schema in schemata:
                 for key in schema.schema:
                     if key not in keygroups:
-                        keygroups[key] = [schema[key]]
-                    elif schema[key] not in keygroups[key]:
-                        keygroups[key].append(schema[key])
+                        keygroups[key] = [schema.schema[key]]
+                    elif schema.schema[key] not in keygroups[key]:
+                        keygroups[key].append(schema.schema[key])
             return keygroups
 
         # Create renames based on dupes
@@ -118,6 +119,8 @@ class Schema():
 
                 for i in keygroups[key]:
                     if isinstance(i, dict):
+                        objs.append(hqlt.object(i))
+                    elif isinstance(i, hqlt.object):
                         objs.append(i)
                     else:
                         types.append(i)
@@ -133,6 +136,8 @@ class Schema():
 
             return new
 
+        schemata = [x.normalize() for x in schemata]
+        print([type(x) for x in schemata])
         keygroups = gkg([x.schema for x in schemata])
         new = rename(keygroups)
 
@@ -164,6 +169,7 @@ class Schema():
             return new
 
         self.schema = hqlt.object(n(self.schema))
+        assert isinstance(self.schema, hqlt.object)
         return self
 
     # Isolate the schema at a given path
@@ -184,14 +190,26 @@ class Schema():
         return Schema.merge(schemas)
     
     def unnest(self, path:Reference) -> Union[hqlt.HqlType, Schema]:
-        cur = self.schema
-        for part in path.list():
-            if not isinstance(cur, dict) or part not in cur:
-                return Schema()
-            else:
-                cur = cur[part]
-        
-        return hqlt.object(cur) if isinstance(cur, dict) else cur
+        def un(schema, path:list[str]):
+            if path[0] not in schema:
+                raise hqle.CompilerException(f'Failed to unnest value {path} in {schema}')
+
+            val = schema[path[0]]
+
+            if len(path) > 1 and not isinstance(val, (dict, hqlt.object)):
+                raise hqle.CompilerException(f'Failed to unnest deeper path than schema: {path} in {schema}')
+
+            if isinstance(val, hqlt.object):
+                val = val.schema
+
+            if isinstance(val, dict) and len(path) != 1:
+                val = un(val, path[1:])
+
+            return {path[0]: val}
+
+        new = un(self.schema.schema, path.list())
+        return Schema(schema=hqlt.object(new)).normalize()
+
     
     def copy(self):
         from copy import deepcopy
@@ -484,48 +502,44 @@ class Schema():
     If a col is not defined in the schema, then it just skips over it
     Errors if a col defined in the schema is not in the df
     '''
-    def apply(self, df:Union[pl.DataFrame, pl.Series], schema:Union[None, dict, Schema, CompilerType]=None):
+    def apply(self, df:pl.DataFrame):
         import polars as pl
 
-        if isinstance(schema, Schema):
-            schema = schema.schema
-        
-        if schema == None:
-            schema = self.schema
-        
-        # Single value schema
-        if isinstance(schema, CompilerType):
-            if not isinstance(df, pl.Series):
-                raise hqle.CompilerException('Attempting singular type cast on a dataframe ')
-            return schema.cast(df)
-        
-        new = {}
-        
-        # Had this here to handle cases where the schema defines non-existing cols
-        # This is fine, would likely help the receiving program.
-        # We don't operate from the schema anyways, but from the dataframe
-        # Keeping as we *might* want to do something?
-        for key in schema:
-            if key not in df:
-                # logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}, manually adding")
-                # new[key] = pl.Series(name=key, values=[None] * df.height)
-                pass
-        
-        for col in df:
-            key = col.name
+        def rec_apply(df:pl.DataFrame, schema:SchemaDT) -> pl.DataFrame:
+            new = {}
             
-            # Handle undefined types, don't have to worry about them, carry on.
-            if key not in schema:
-                new[key] = col
-                continue
+            # Had this here to handle cases where the schema defines non-existing cols
+            # This is fine, would likely help the receiving program.
+            # We don't operate from the schema anyways, but from the dataframe
+            # Keeping as we *might* want to do something?
+            for key in schema:
+                if key not in df:
+                    # logging.warning(f"{key} not found in dataframe {', '.join(df.columns)}, manually adding")
+                    # new[key] = pl.Series(name=key, values=[None] * df.height)
+                    pass
             
-            if isinstance(schema[key], dict):
-                new[key] = self.apply(pl.DataFrame(col).unnest(key), schema[key]).to_struct()
-                continue
-            
-            new[key] = schema[key].cast(col)
-            
-        return pl.DataFrame(new)
+            for col in df:
+                key = col.name
+                
+                # Handle undefined types, don't have to worry about them, carry on.
+                if key not in schema:
+                    new[key] = col
+                    continue
+
+                cur = schema[key]
+
+                if isinstance(cur, (dict, hqlt.object)):
+                    if isinstance(cur, hqlt.object):
+                        cur = cur.schema
+
+                    new[key] = rec_apply(pl.DataFrame(col).unnest(key), cur).to_struct()
+                    continue
+                
+                new[key] = cur.cast(col)
+
+            return pl.DataFrame(new)
+
+        return rec_apply(df, self.schema.schema)
     
     # Asserts by attempting to retrieve the field's value
     def assert_field(self, field:Reference):
