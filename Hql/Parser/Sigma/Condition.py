@@ -13,16 +13,14 @@ if TYPE_CHECKING:
 class Condition():
     def __init__(self, text:str, selections:list[Selection]):
         self.text = text
-        self.selections = selections
+        self.selections:list[Selection] = selections
         self.tree = self.parse()
 
-    def get_sel(self, name:str) -> list[NamedReference]:
-        from Hql.Expressions.References import NamedReference
-
+    def get_sel(self, name:str) -> list[Selection]:
         matches = []
         for i in self.selections:
             if fnmatch(i.name, name):
-                matches.append(NamedReference(i.name))
+                matches.append(i)
 
         return matches
 
@@ -94,7 +92,7 @@ class Visitor(SigmaVisitor):
         if ctx.All:
             return ctx.All.text
 
-    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list[NamedReference]:
+    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list[Selection]:
         # pattern or 'them'
         # 'them' means all selections
         if ctx.Pattern:

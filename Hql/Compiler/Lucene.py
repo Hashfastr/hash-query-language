@@ -39,6 +39,8 @@ class LuceneCompiler(Compiler):
         if src == None or self.expr:
             return self.Bool(Literals.Bool(True), prep=False)
 
+        print(type(src))
+
         return super().compile(src, prep=prep)
 
     def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Optional[Operator], Optional[Operator]]:

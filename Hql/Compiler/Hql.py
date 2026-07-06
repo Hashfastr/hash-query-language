@@ -878,7 +878,7 @@ class HqlCompiler(Compiler):
                 funcs.append(i)
                 continue
 
-            acc, _ = self.FuncExpr(i, dotcomp=True)
+            acc, _ = self.FuncExpr(i)
             desc.merge(acc)
             acc = acc.get_expr()
             assert isinstance(acc, Functions.Function)

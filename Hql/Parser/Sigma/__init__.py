@@ -115,8 +115,3 @@ class SigmaParser():
             selections.append(Selection(dac[i], name=i))
 
         return Condition(dac['condition'], selections)
-
-    def gen_hql(self, src:dict, dac:dict):
-        selections = []
-        for i in dac:
-            ...
