@@ -35,7 +35,11 @@ class Config():
                 files.append(file)
 
         for i in files:
-            self.load_file(i)
+            try:
+                self.load_file(i)
+            except Exception as e:
+                logging.error(f'{type(e)} {e}')
+                logging.error(f'Failure to load conf in {i}')
 
     def load_file(self, path:Path):
         with path.open(mode='r') as f:
