@@ -32,6 +32,9 @@ class Reference(Expression):
     def __len__(self):
         return len(self.list())
 
+    def __hash__(self):
+        return hash((self.name))
+
     def polars(self) -> plExpr:
         return NotImplemented
 
@@ -104,9 +107,13 @@ class NamedReference(Reference):
         return col(self.name)
 
 class Wildcard(NamedReference):
-    ...
+    def __hash__(self):
+        return hash((self.name))
         
 class EscapedNamedReference(NamedReference):
+    def __hash__(self):
+        return hash((self.name))
+
     def deparse(self) -> str:
         from Hql.Expressions.Literals import StringLiteral
         return "[" + StringLiteral(self.name).quote("'") + "]"

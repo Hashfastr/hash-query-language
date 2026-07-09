@@ -93,14 +93,14 @@ class PipeExpression(Expression):
         def dp(ops:Sequence[Operator]) -> list[str]:
             out:list[str] = []
             for i in ops:
-                if isinstance(i, Where):
-                    if isinstance(i.expr, BinaryLogic) and not i.expr.logic_and:
-                        print('morgan')
-                        i.expr = i.expr.demorgan()
-                    split = i.split_by_length()
-                    out += [x.deparse() for x in split]
-                else:
-                    out.append(i.deparse())
+                # if isinstance(i, Where):
+                #     if isinstance(i.expr, BinaryLogic) and len(i.expr) > 1 and not i.expr.logic_and:
+                #         print('morgan')
+                #         i.expr = i.expr.demorgan()
+                #     split = i.split_by_length()
+                #     out += [x.deparse() for x in split]
+                # else:
+                out.append(i.deparse())
             # print([type(x) for x in out])
             return out
 

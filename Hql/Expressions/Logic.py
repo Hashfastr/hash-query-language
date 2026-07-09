@@ -53,7 +53,7 @@ class Comparator(Logic):
         self.can_list:bool  = True
 
     @staticmethod
-    def _coerce_rh(rh:Union[Sequence[Expression], Expression]) -> list[Expression]:
+    def _coerce_rh(rh:Union[Sequence[Expression], Expression]) -> Sequence[Expression]:
         if isinstance(rh, Expression):
             return [rh]
         return list(rh)
@@ -296,6 +296,36 @@ class Substring(Comparator):
         self.startswith = startswith
         self.endswith = endswith
         self.can_list = True
+
+    def __hash__(self):
+        hashes = []
+
+        attrs = ['lh', 'term', 'logic_and', 'neq', 'cs', 'startswith', 'endswith', 'can_list']
+        for i in attrs:
+            hashes.append(self.__getattribute__(i).__hash__())
+
+        for i in self.rh:
+            hashes.append(hash(i))
+
+        return hash(frozenset(hashes))
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Substring):
+            return False
+
+        attrs = ['lh', 'term', 'logic_and', 'neq', 'cs', 'startswith', 'endswith', 'can_list']
+        for i in attrs:
+            if value.__getattribute__(i) != self.__getattribute__(i):
+                return False
+
+        if len(self.rh) != len(value.rh):
+            return False
+
+        for idx, i in enumerate(self.rh):
+            if self.rh[idx] != value.rh[idx]:
+                return False
+
+        return True
 
     @property
     def rh(self) -> list[StringLiteral]:
@@ -644,6 +674,9 @@ class BinaryLogic(Logic):
     
     def __iter__(self):
         return iter(self.exprs)
+
+    def __len__(self):
+        return len(self.exprs)
 
     def preprocess(self, ctx: Context) -> object:
         exprs = []

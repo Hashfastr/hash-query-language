@@ -8,7 +8,6 @@ from fnmatch import fnmatch
 
 if TYPE_CHECKING:
     from Hql.Parser.Sigma.Selection import Selection
-    from Hql.Expressions.References import NamedReference
 
 class Condition():
     def __init__(self, text:str, selections:list[Selection]):
@@ -110,7 +109,7 @@ class Visitor(SigmaVisitor):
     def visitSelectionIdentifier(self, ctx: SigmaParser.SelectionIdentifierContext):
         if ctx.Basic:
             identifier = self.visit(ctx.Basic)
-            return self.condition.get_sel(identifier)[0]
+            return self.condition.get_sel(identifier)[0].build_selection()
         else:
             return None
 

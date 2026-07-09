@@ -26,6 +26,18 @@ class Selection():
             self.build_selection()
         )
 
+    def __hash__(self) -> int:
+        return self.build_selection().__hash__()
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Selection):
+            return False
+
+        return self.build_selection() == value.build_selection()
+
+    def deparse(self) -> str:
+        return self.build_selection().deparse()
+
     def build_selection(self):
         from Hql.Expressions.Logic import BinaryLogic
         
