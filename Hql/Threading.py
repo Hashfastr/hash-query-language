@@ -49,6 +49,7 @@ class QueryPool():
 class QueryThread():
     def __init__(self, text:str, config:Config, name:str='', **kwargs) -> None:
         from copy import deepcopy
+        from Hql.Data import Data
         from Hql.Helpers import can_thread
 
         self.text = text
@@ -59,8 +60,20 @@ class QueryThread():
 
         self.started = False
         self.thread = None
-        self.output = None
+        self._output = Data()
+        self.compiled:str = ''
         self.failed = False
+
+    @property
+    def output(self) -> Data:
+        return self._output
+
+    @output.setter
+    def output(self, val:Data):
+        from Hql.Data import Data
+        if not isinstance(val, Data):
+            raise hqle.CompilerException(f'QueryThread got an invalid output of type {type(val)} expecting Data')
+        self._output = val
 
     # Starts the thread and sets values in the class
     def start(self) -> None:
@@ -78,11 +91,16 @@ class QueryThread():
     def run(self) -> None:
         from Hql.Helpers import run_query
         try:
-            self.output = run_query(self.text, self.config, name=self.name, **self.kwargs)
+            output = run_query(self.text, self.config, name=self.name, **self.kwargs)
+
+            if isinstance(output, str):
+                self.compiled = output
+            else:
+                self.output = output
+
         except Exception as e:
             import traceback
-            self.failed = True
-            self.output = {
+            self.traceback = {
                 'traceback': traceback.format_exc(),
                 'exception': str(e)
             }
@@ -137,7 +155,6 @@ class InstructionPool():
 
 class InstructionThread():
     def __init__(self, inst:Union[InstructionSet, Database], ctx:Context) -> None:
-        from copy import deepcopy
         from Hql.Helpers import can_thread
 
         self.threaded = can_thread()
@@ -146,8 +163,19 @@ class InstructionThread():
         self.ctx = ctx
         self.started = False
         self.thread = None
-        self.output:Optional[Context] = None
+        self._output:Optional[Context] = None
         self.id = self.inst.id
+
+    @property
+    def output(self) -> Optional[Context]:
+        return self._output
+
+    @output.setter
+    def output(self, val:Optional[Context]):
+        from Hql.Context import Context
+        if not isinstance(val, (type(None), Context)):
+            raise hqle.CompilerException(f'InstructionThread got an invalid output of type {type(val)} expecting Optional[Context]')
+        self._output = val
 
     # Starts the thread and sets values in the class
     def start(self) -> None:
@@ -270,7 +298,6 @@ class HacPool():
 class HacThread():
     def __init__(self, detection:Detection, query_now:Optional[datetime.datetime]=None) -> None:
         from Hql.Helpers import can_thread
-        from Hql.Context import Context
         from Hql.Data import Data
 
         self.threaded = can_thread()
@@ -281,7 +308,7 @@ class HacThread():
         self.started = False
         self.completed = False
         self.thread = None
-        self._output:Context = Context(Data())
+        self._output:Data = Data()
         self.failed = False
         self.num_results = 0
 
@@ -290,17 +317,16 @@ class HacThread():
         self.duration = 0
 
     @property
-    def output(self) -> Context:
+    def output(self) -> Data:
         return self._output
 
     @output.setter
-    def output(self, val:Context):
-        if not isinstance(val, Context):
+    def output(self, val:Data):
+        if not isinstance(val, Data):
             raise hqle.CompilerException(f'HacThread got an invalid input of type {type(val)} expecting Context')
         self._output = val
 
     def to_dict(self):
-        from Hql.Data import Data
         d = {
             'run_id': self.id,
             'run_date': self.run_date.isoformat(),
@@ -315,9 +341,8 @@ class HacThread():
             d['hac'] = self.detection.hac.asm
 
         # On failure self.output is the traceback string, not a Context
-        d['results'] = {} if isinstance(self.output, str) else self.output.data.to_dict()
-        d['str_out'] = self.output if isinstance(self.output, str) else ''
-
+        d['results'] = self.output.to_dict()
+        # d['str_out'] = self.compiled
         return d
 
     # Starts the thread and sets values in the class
@@ -338,14 +363,14 @@ class HacThread():
         from Hql.Data import Data
         try:
             start = time.perf_counter()
-            self.output = self.detection.run(self.query_now)
+            self.output = self.detection.run(self.query_now).data
             end = time.perf_counter()
             
             self.duration = end - start
             self.completed = True
             self.num_results = len(self.output) if isinstance(self.output, Data) else 0
 
-            logging.info(f'{self.detection.id} - {len(self.output.data)} results')
+            logging.info(f'{self.detection.id} - {len(self.output)} results')
         except Exception as e:
             import traceback
             logging.critical(e)
@@ -356,11 +381,7 @@ class HacThread():
             return False
         return self.thread.is_alive()
 
-    def join(self) -> Union[Data, str, None]:
+    def join(self) -> Data:
         if self.threaded and self.thread:
             self.thread.join()
-
-        if isinstance(self.output, Data):
-            return self.output.data
-        else:
-            return self.output
+        return self.output
