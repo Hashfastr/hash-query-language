@@ -74,8 +74,8 @@ class SigmaParser():
             expr.pipes += asm.pipes
 
         stmts = []
-        for i in condition.selections:
-            stmts.append(i.gen_let())
+        # for i in condition.selections:
+        #     stmts.append(i.gen_let())
 
         stmts += [QueryStatement(expr)]
         self.assembly = Query(stmts)

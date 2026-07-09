@@ -7,10 +7,10 @@ from pathlib import Path
 
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import Context
+from Hql.Data import Data
 
 if TYPE_CHECKING:
     from Hql.Config import Config
-    from Hql.Data import Data
     from Hql.Database import Database
     from Hql.Compiler import InstructionSet
     from Hql.Hac.Engine import Detection
