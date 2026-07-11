@@ -23,10 +23,8 @@ from Hql.Types.Hql import HqlTypes as hqlt
 
 class TestTypeExpression:
     def test_from_string_name_stores_class_not_instance(self):
-        # NOTE: hqlt.from_name returns the class object, not an instance.
-        # Documenting current behavior; deparse() breaks as a result (see xfail below).
         te = TypeExpression("int")
-        assert te.hql_type is hqlt.int
+        assert te.hql_type == hqlt.int()
 
     def test_from_hql_type_instance(self):
         te = TypeExpression(hqlt.int())
@@ -39,9 +37,6 @@ class TestTypeExpression:
     def test_deparse_returns_type_name(self):
         assert TypeExpression(hqlt.int()).deparse() == "int"
 
-    @pytest.mark.xfail(
-        reason="hqlt.from_name returns the class not an instance, so deparse crashes"
-    )
     def test_deparse_from_string_name(self):
         assert TypeExpression("int").deparse() == "int"
 

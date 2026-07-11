@@ -45,7 +45,7 @@ class HqlTypes():
     
     @staticmethod
     def from_name(name:str) -> HqlTypes.HqlType:
-        return get_type(f'hql_{name}')
+        return get_type(f'hql_{name}')()
     
     @staticmethod
     def resolve_conflict(types:list[HqlType]) -> HqlType:
