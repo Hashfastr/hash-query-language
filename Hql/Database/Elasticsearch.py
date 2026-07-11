@@ -135,6 +135,14 @@ class Elasticsearch(Database):
             }
 
         return query, ops
+
+    def simple_compile(self) -> dict:
+        query = self.compiler.simple_compile()
+        return {
+            'index': self.pattern,
+            'query': query,
+            'limit': self.limit
+        }
             
     def get_variable(self, name:NamedReference):
         self.pattern = name.name

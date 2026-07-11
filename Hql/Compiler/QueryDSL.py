@@ -60,6 +60,11 @@ class QueryDSLCompiler(Compiler):
         assert isinstance(acc, (type(None), Operator))
         return acc, rej
 
+    def simple_compile(self) -> dict:
+        acc, _ = self.compile(None, prep=False)
+        assert isinstance(acc, dict)
+        return acc
+
     def Where(self, op:Hql.Operators.Where, prep:bool=True) -> tuple[Optional[Hql.Operators.Where], Optional[Hql.Operators.Where]]:
         from Hql.Operators.Where import Where
         from Hql.Expressions.Logic import BinaryLogic, Logic

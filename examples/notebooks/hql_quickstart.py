@@ -119,7 +119,7 @@ def _(conf, json, parser):
     hqlcomp = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
     # print(json.dumps(hqlcomp.root.recompile(conf).to_dict(), indent=2))
 
-    print(json.dumps(hqlcomp.root.to_dict(), indent=2))
+    print(json.dumps(hqlcomp.root.upstream[0].simple_compile(), indent=2))
 
     # print(hqlcomp.root.upstream[0].compiler.compile(None, prep=False))
     return
