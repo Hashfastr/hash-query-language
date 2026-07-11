@@ -201,3 +201,185 @@ class TestUnnest:
         ctx = Context(data=Data())
         assert Unnest(NamedReference("f"), [Wildcard("*")]).gets_all(ctx) is True
         assert Unnest(NamedReference("f"), [NamedReference("t1")]).gets_all(ctx) is False
+
+
+# ---------------------------------------------------------------------------
+# Deepcopy regression — covers every operator in Hql/Operators/
+# ---------------------------------------------------------------------------
+
+from copy import deepcopy
+
+from Hql.Expressions.Aggregation import ByExpression
+from Hql.Expressions import ToClause
+from Hql.Operators.As import As
+from Hql.Operators.Datatable import Datatable
+from Hql.Operators.Extend import Extend
+from Hql.Operators.Join import Join
+from Hql.Operators.MvExpand import MvExpand
+from Hql.Operators.Range import Range
+from Hql.Operators.Rename import Rename
+from Hql.Operators.Summarize import Summarize
+from Hql.Operators.Template import Template
+from Hql.Operators.Top import Top
+from Hql.Operators.Union import Union
+from Hql.Types.Hql import HqlTypes as hqlt
+
+
+class TestDeepcopy:
+    def test_operator_base(self):
+        op = Operator()
+        c = deepcopy(op)
+        assert c is not op
+        assert c.id == op.id
+        assert c.tabular == op.tabular
+
+    def test_where(self):
+        w = Where(Equality(NamedReference("f"), Integer(5)))
+        c = deepcopy(w)
+        assert c is not w
+        assert c.deparse() == w.deparse()
+
+    def test_where_with_parameters(self):
+        w = Where(
+            Equality(NamedReference("f"), Integer(5)),
+            params=[OpParameter(NamedReference("kind"), StringLiteral("a"))],
+        )
+        c = deepcopy(w)
+        assert c is not w
+        assert c.deparse() == w.deparse()
+
+    def test_sort(self):
+        s = Sort([OrderedExpression(NamedReference("x"), order="desc")])
+        c = deepcopy(s)
+        assert c is not s
+        assert c.deparse() == s.deparse()
+
+    def test_project(self):
+        p = Project([NamedReference("a"), NamedReference("b")])
+        c = deepcopy(p)
+        assert c is not p
+        assert c.deparse() == p.deparse()
+
+    def test_project_keep(self):
+        p = ProjectKeep([NamedReference("a")])
+        c = deepcopy(p)
+        assert c is not p
+        assert c.deparse() == p.deparse()
+
+    def test_project_away(self):
+        p = ProjectAway([NamedReference("a")])
+        c = deepcopy(p)
+        assert c is not p
+        assert c.deparse() == p.deparse()
+
+    def test_project_reorder(self):
+        p = ProjectReorder([NamedReference("a")])
+        c = deepcopy(p)
+        assert c is not p
+        assert c.deparse() == p.deparse()
+
+    def test_project_rename(self):
+        p = ProjectRename([NamedReference("a")])
+        c = deepcopy(p)
+        assert c is not p
+        assert c.deparse() == p.deparse()
+
+    def test_count(self):
+        cnt = Count(NamedReference("total"))
+        c = deepcopy(cnt)
+        assert c is not cnt
+        assert c.deparse() == cnt.deparse()
+
+    def test_take(self):
+        t = Take(Integer(5), [NamedReference("a")])
+        c = deepcopy(t)
+        assert c is not t
+        assert c.deparse() == t.deparse()
+
+    def test_unnest(self):
+        u = Unnest(NamedReference("field"), [NamedReference("t1")])
+        c = deepcopy(u)
+        assert c is not u
+        assert c.deparse() == u.deparse()
+
+    def test_as(self):
+        a = As(NamedReference("alias"))
+        c = deepcopy(a)
+        assert c is not a
+        assert c.expr == a.expr
+
+    def test_datatable(self):
+        dt = Datatable(
+            schema=[(NamedReference("a"), hqlt.int())],
+            values=[Integer(1), Integer(2)],
+        )
+        c = deepcopy(dt)
+        assert c is not dt
+        assert len(c.values) == 2
+        assert c.tabular is True
+
+    def test_extend(self):
+        e = Extend([NamedReference("a")])
+        c = deepcopy(e)
+        assert c is not e
+        assert list(c.exprs) == list(e.exprs)
+
+    def test_join(self):
+        j = Join(
+            rh=NamedReference("other_table"),
+            on=[NamedReference("id")],
+        )
+        c = deepcopy(j)
+        assert c is not j
+        assert c.kind == j.kind
+
+    def test_mv_expand(self):
+        mv = MvExpand([ToClause(NamedReference("x"), hqlt.int())])
+        c = deepcopy(mv)
+        assert c is not mv
+        assert len(c.exprs) == 1
+
+    def test_range(self):
+        r = Range(
+            NamedReference("x"),
+            Integer(1),
+            Integer(10),
+            Integer(2),
+        )
+        c = deepcopy(r)
+        assert c is not r
+        assert c.name == r.name
+        assert c.tabular is True
+
+    def test_rename(self):
+        r = Rename([ToClause(NamedReference("x"), hqlt.int())])
+        c = deepcopy(r)
+        assert c is not r
+        assert len(c.exprs) == 1
+
+    def test_summarize(self):
+        s = Summarize(
+            aggregate_exprs=[NamedReference("count_")],
+            by_expr=ByExpression([NamedReference("g")]),
+        )
+        c = deepcopy(s)
+        assert c is not s
+        assert c.deparse() == s.deparse()
+
+    def test_template(self):
+        t = Template()
+        c = deepcopy(t)
+        assert c is not t
+        assert c.deparse() == ""
+
+    def test_top(self):
+        t = Top(Integer(5), ByExpression([NamedReference("x")]))
+        c = deepcopy(t)
+        assert c is not t
+        assert c.expr.value == 5
+
+    def test_union(self):
+        u = Union([NamedReference("a"), NamedReference("b")])
+        c = deepcopy(u)
+        assert c is not u
+        assert c.deparse() == u.deparse()

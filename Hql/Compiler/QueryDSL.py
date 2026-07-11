@@ -1,10 +1,10 @@
 from __future__ import annotations
+
+from numpy import isin
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import Union, Optional, TYPE_CHECKING
 
 from . import Compiler
-import logging
-import json
 
 if TYPE_CHECKING:
     import Hql
@@ -12,6 +12,10 @@ if TYPE_CHECKING:
     from Hql.Expressions import Expression
     from Hql.Query import Statement
     from Hql.Compiler import BranchDescriptor
+    import Hql.Expressions.Logic as Logic
+    import Hql.Expressions.References as References
+    from Hql.Expressions import Literals
+    from Hql.Functions import Function
 
 class QueryDSLCompiler(Compiler):
     def __init__(self) -> None:
@@ -28,130 +32,114 @@ class QueryDSLCompiler(Compiler):
             'regex_dotall': False,
             'regex_global': False
         }
-        self.expr:Union[Expression, None] = None
+        self.expr:Optional[Logic.Logic] = None
 
-    def compile(self, src: Union[Expression, Operator, Statement, None], preprocess: bool = True) -> tuple[Union[object, None], Union[object, None]]:
+    def compile(self, src: Union[Expression, Operator, Statement, Function, None], prep: bool = True) -> tuple[Optional[object], Optional[object]]:
+        from Hql.Functions import Function
+
         if src == None:
             src = self.expr
-            preprocess = False
 
         # still missing a root
         if src == None:
-            out = {
-                'bool': {}
-            }
-            return out, None
+            return {'bool': {}}, None
+
+        if isinstance(src, Function):
+            return self.Function(src, prep=prep)
 
         out = super().compile(src, prep=prep)
         return out
 
     def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Optional[Operator], Optional[Operator]]:
-        from Hql.Operators.Where import Where
         from Hql.Compiler import BranchDescriptor
+        from Hql.Operators.Operator import Operator
+
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
-
-        acc = None
-        rej = op
+        acc, rej = super().compile_op(op)
         
-        if isinstance(op, Where):
-            acc, rej = self.Where(op, preprocess=True)
-
-        assert not (isinstance(acc, dict) or isinstance(rej, dict))
+        assert isinstance(acc, (type(None), Operator))
         return acc, rej
 
-    def Where(self, op:Hql.Operators.Where, prep:bool=True) -> tuple[Union[None, Hql.Operators.Where, dict], Union[None, Hql.Operators.Where, dict]]:
+    def Where(self, op:Hql.Operators.Where, prep:bool=True) -> tuple[Optional[Hql.Operators.Where], Optional[Hql.Operators.Where]]:
         from Hql.Operators.Where import Where
-        from Hql.Expressions.Logic import BinaryLogic, Expression
+        from Hql.Expressions.Logic import BinaryLogic, Logic
 
-        acc, rej = self.compile(op.expr, prep=prep)
+        acc, rej = self.compile(op.expr)
 
-        if preprocess:
-            if acc != None:
-                assert isinstance(acc, Expression)
-                if self.expr == None:
-                    self.expr = acc
-                
-                elif isinstance(self.expr, BinaryLogic) and self.expr.bitype == 'and':
-                    if isinstance(acc, BinaryLogic) and acc.bitype == 'and':
-                        self.expr.rh += [acc.lh] + acc.rh
-                    else:
-                        self.expr.rh.append(acc)
+        if acc != None:
+            assert isinstance(acc, Logic)
+            self.expr = acc if self.expr is None else BinaryLogic([self.expr, acc])
+            acc = None
 
-                else:
-                    self.expr = BinaryLogic(acc, [self.expr], 'and')
-                acc = None
-
-            if rej != None:
-                assert isinstance(rej, Expression)
-                rej = Where(rej, op.parameters)
+        if rej != None:
+            assert isinstance(rej, Logic)
+            rej = Where(rej, op.parameters)
         
-        assert isinstance(acc, (type(None), Where, dict)) and isinstance(rej, (type(None), Where, dict))
         return acc, rej
         
-    def BinaryLogic(self, expr: Hql.Expressions.BinaryLogic, preprocess: bool = True) -> tuple[Union[None, Hql.Expressions.BinaryLogic, dict], Union[None, Hql.Expressions.BinaryLogic]]:
+    def BinaryLogic(self, expr: Logic.BinaryLogic, prep: bool = True) -> tuple[Union[None, Logic.Logic, dict], Union[None, Logic.Logic]]:
         from Hql.Expressions.Logic import BinaryLogic
 
-        if preprocess:
+        if prep:
             rejs = []
             accs = []
-            for i in [expr.lh] + expr.rh:
+            for i in expr:
                 acc, rej = self.compile(i)
+
+                if isinstance(i, BinaryLogic) and rej:
+                    rejs.append(i)
+                    continue
+
                 if acc:
                     accs.append(acc)
                 if rej:
                     rejs.append(rej)
 
             # Cannot salvage
-            if rejs and expr.bitype == 'or':
+            if rejs and not expr.logic_and:
                 return None, expr
 
             acc = None
             if accs:
-                acc = BinaryLogic(accs[0], accs[1:], bitype=expr.bitype)
+                acc = BinaryLogic(accs, logic_and=expr.logic_and)
 
             rej = None
             if rejs:
-                rej = BinaryLogic(rejs[0], rejs[1:], bitype=expr.bitype)
+                rej = BinaryLogic(rejs, logic_and=expr.logic_and)
 
             return acc, rej
 
         exprs = []
-        for i in [expr.lh] + expr.rh:
-            acc, rej = self.compile(i, preprocess=False)
-            if rej:
-                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        for i in expr:
+            acc, _ = self.compile(i, prep=prep)
             exprs.append(acc)
 
         if len(exprs) == 1:
-            ret = exprs[0]
+            return exprs[0], None
+
+        if expr.logic_and:
+            ret = {'must': exprs}
         else:
-            if expr.bitype == 'and':
-                ret = {
-                    'must': exprs
-                }
-            else:
-                ret = {
-                    'should': exprs
-                }
-                
-            ret = {
-                'bool': ret
-            }
+            ret = {'should': exprs}
+            
+        return {'bool': ret}, None
 
-        return ret, None
+    def Not(self, expr: Logic.Not, prep: bool = True) -> tuple[object, object]:
+        from Hql.Expressions.Logic import Not
+        from Hql.Expressions import Function
 
-    def Not(self, expr: Hql.Expressions.Not, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Not, Expression
+        if prep:
+            if isinstance(expr.expr, Function):
+                return None, expr
 
-        if preprocess:
             acc, rej = self.compile(expr.expr)
             if rej:
                 return None, expr
-            assert isinstance(acc, Expression)
+            assert isinstance(acc, (Logic.Logic, References.Reference))
             return Not(acc), None
 
-        inner, rej = self.compile(expr.expr, preprocess=False)
+        inner, _ = self.compile(expr.expr, prep=prep)
 
         if isinstance(inner, dict):
             if 'must' in inner and len(inner) == 1:
@@ -165,20 +153,10 @@ class QueryDSLCompiler(Compiler):
 
         return out, None
 
-    def Equality(self, expr: Hql.Expressions.Equality, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Equality, Expression, Not
+    def Equality(self, expr: Logic.Equality, prep: bool = True) -> tuple[object, object]:
+        from Hql.Expressions.Logic import Equality, Not
 
-        if preprocess:
-            # if expr.cs:
-            #     logging.warning('Case sensitive comparison in Lucene has inconsistent results')
-            #     logging.warning('For compatibility, assuming agnostic')
-
-            acc, rej = self.compile(expr.lh)
-            if rej:
-                return None, expr
-            assert isinstance(acc, Expression)
-            lh = acc
-
+        if prep:
             rh = []
             for i in expr.rh:
                 acc, rej = self.compile(i)
@@ -186,21 +164,20 @@ class QueryDSLCompiler(Compiler):
                     return None, expr
                 rh.append(acc)
 
-            return Equality(lh, expr.op, rh), None
+            return Equality(expr.lh, rh, expr.cs, expr.neq), None
 
         # wrap in a not statement
         if expr.neq:
             expr.neq = False
-            acc, rej = self.Not(Not(expr), preprocess=False)
-            return acc, None
+            return self.Not(Not(expr), prep=False)
 
-        lh, rej = self.compile(expr.lh, preprocess=False)
+        lh, rej = self.compile(expr.lh, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
 
         rh = []
         for i in expr.rh:
-            acc, rej = self.compile(i, preprocess=False)
+            acc, rej = self.compile(i, prep=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             if isinstance(acc, list):
@@ -208,81 +185,59 @@ class QueryDSLCompiler(Compiler):
             else:
                 rh.append(acc)        
 
-        if len(rh) == 1:
-            ret = {
-                'term': {
-                    lh: rh[0]
-                }
-            }
-            return ret, None
-
-        else:
-            ret = {
-                'terms': {
-                    lh: rh
-                }
-            }
-            return ret, None
+        term = 'term' if len(rh) == 1 else 'terms'
+        return {term: {lh: rh[0]}}, None
 
     # only executes static functions on preprocess and sees if we can handle the result
     def Function(self, expr:Hql.Functions.Function, prep:bool=True) -> tuple[object, object]:
-        from Hql.Expressions import Expression, Regex, StringLiteral, Not
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.Logic import Regex, Not
+        from Hql.Expressions.References import Reference
 
         if expr.name == 'isnull':
-            rexpr = Regex(expr.args[0], StringLiteral('.*'))
+            lh = expr.args[0]
+            assert isinstance(lh, Reference)
+            rexpr = Regex(lh, StringLiteral('.*'))
             rexpr = Not(rexpr)
-            return self.compile(rexpr)
+            return self.compile(rexpr, prep=prep)
 
-        if not expr.static:
-            return None, expr
+        return None, expr
 
-        res = expr.eval(self.ctx)
-        assert isinstance(res, Expression)
-        acc, rej = self.compile(res, preprocess=True)
-
-        if rej:
-            return None, expr
-
-        return acc, None
-
-    def StringLiteral(self, expr: Hql.Expressions.StringLiteral, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def StringLiteral(self, expr: Literals.StringLiteral, prep:bool = True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.quote(''), None
 
-    def MultiString(self, expr: Hql.Expressions.MultiString, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def MultiString(self, expr: Literals.MultiString, prep:bool = True) -> tuple[object, object]:
+        if prep:
             return expr, None
-        value = expr.eval(self.ctx)
-        assert isinstance(value, str)
-        value = value.encode('unicode_escape').decode('utf-8')
-        return value, None
+        return expr.quote(''), None
 
-    def Integer(self, expr: Hql.Expressions.Integer, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def Integer(self, expr: Literals.Integer, prep:bool = True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.value, None
 
-    def Float(self, expr: Hql.Expressions.Float, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def Float(self, expr: Literals.Float, prep:bool = True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.value, None
 
-    def Bool(self, expr: Hql.Expressions.Bool, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
+    def Bool(self, expr: Literals.Bool, prep:bool = True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.value, None
 
-    def Datetime(self, expr: Hql.Expressions.Datetime, preprocess: bool = True) -> tuple[object, object]:
+    def Datetime(self, expr: Literals.Datetime, prep:bool = True) -> tuple[object, object]:
         import datetime
 
-        if preprocess:
+        if prep:
             return expr, None
 
         dt = expr.value.astimezone(datetime.timezone.utc)
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ"), None
 
-    def Multivalue(self, expr: Hql.Expressions.Multivalue, preprocess: bool = True) -> tuple[object, object]:
+    def Multivalue(self, expr: Literals.Multivalue, prep:bool = True) -> tuple[object, object]:
         from Hql.Expressions.Literals import Multivalue
 
         exprs = []
@@ -292,39 +247,28 @@ class QueryDSLCompiler(Compiler):
                 return None, expr
             exprs.append(acc)
 
-        if preprocess:
+        if prep:
             return Multivalue(exprs), None
 
         return exprs, None
 
-    def NamedReference(self, expr: Hql.Expressions.NamedReference, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
-            if expr.name == None:
-                return None, expr
+    def NamedReference(self, expr: References.NamedReference, prep:bool = True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.name, None
 
-    def EscapedNamedReference(self, expr: Hql.Expressions.EscapedNamedReference, preprocess: bool = True) -> tuple[object, object]:
-        if preprocess:
-            if expr.name == None:
-                return None, expr
+    def EscapedNamedReference(self, expr: References.EscapedNamedReference, prep:bool = True) -> tuple[object, object]:
+        if prep:
             return expr, None
         return expr.name, None
 
-    def Path(self, expr: Hql.Expressions.Path, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.References import Path
-        if preprocess:
-            parts = []
-            for i in expr.path:
-                acc, rej = self.compile(i)
-                if rej:
-                    return None, expr
-                parts.append(acc)
-            return Path(parts), None
+    def Path(self, expr: References.Path, prep:bool = True) -> tuple[object, object]:
+        if prep:
+            return expr, None
 
         parts = []
         for i in expr.path:
-            acc, rej = self.compile(i, preprocess=False)
+            acc, rej = self.compile(i, prep=prep)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             assert isinstance(acc, str)
@@ -332,63 +276,29 @@ class QueryDSLCompiler(Compiler):
 
         return '.'.join(parts), None
 
-    def Relational(self, expr: Hql.Expressions.Relational, preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Relational, Expression, StringLiteral
-        if preprocess:
-            if expr.op not in ('<', '>', '<=', '>='):
-                return None, expr
+    def Relational(self, expr: Logic.Relational, prep:bool = True) -> tuple[object, object]:
+        from Hql.Expressions.Logic import Relational, Expression
 
-            acc, rej = self.compile(expr.lh)
-            if rej:
-                return None, expr
-            lh = acc
-            assert isinstance(lh, Expression)
-
+        if prep:
             acc, rej = self.compile(expr.rh[0])
             if rej:
                 return None, expr
             rh = acc
             assert isinstance(rh, Expression)
 
-            return Relational(lh, expr.op, [rh]), None
+            return Relational(expr.lh, rh, expr.gt, expr.eq), None
 
-        acc, rej = self.compile(expr.lh, preprocess=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        lh = acc
-        assert isinstance(lh, str)
+        lh, _ = self.compile(expr.lh, prep=prep)
+        rh, _ = self.compile(expr.rh[0], prep=prep)
+        op = 'g' if expr.gt else 'l'
+        op += 'te' if expr.eq else 't'
 
-        acc, rej = self.compile(expr.rh[0], preprocess=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        rh = acc
-        assert isinstance(rh, (str, int))
+        return {'range': {lh: {op: rh}}}, None
 
-        if expr.op == '<':
-            op = 'lt'
-        elif expr.op == '>':
-            op = 'gt'
-        elif expr.op == '<=':
-            op = 'lte'
-        elif expr.op == '>=':
-            op = 'gte'
-        else:
-            raise hqle.CompilerException(f'Precompile did not remove invalid relational expression {expr.op}')
-
-        ret = {
-            'range': {
-                lh: {
-                    op: rh
-                }
-            }
-        }
-
-        return ret, None
-
-    def BetweenEquality(self, expr: Hql.Expressions.BetweenEquality, preprocess: bool = True) -> tuple[object, object]:
+    def BetweenEquality(self, expr: Hql.Expressions.BetweenEquality, prep:bool = True) -> tuple[object, object]:
         from Hql.Expressions.Logic import BetweenEquality, Expression, BasicRange
 
-        if preprocess:
+        if prep:
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
@@ -409,13 +319,13 @@ class QueryDSLCompiler(Compiler):
 
             return BetweenEquality(lh, start, end, op=expr.op), None
 
-        acc, rej = self.compile(expr.lh, preprocess=False)
+        acc, rej = self.compile(expr.lh, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         lh = acc
         assert isinstance(lh, str)
 
-        acc, rej = self.compile(BasicRange(expr.start, expr.end), preprocess=False)
+        acc, rej = self.compile(BasicRange(expr.start, expr.end), prep=False)
         assert isinstance(acc, dict)
 
         ret = {
@@ -428,9 +338,9 @@ class QueryDSLCompiler(Compiler):
 
         return ret, None
 
-    def BasicRange(self, expr: Hql.Expressions.BasicRange, preprocess: bool = True) -> tuple[object, object]:
+    def BasicRange(self, expr: Hql.Expressions.BasicRange, prep:bool = True) -> tuple[object, object]:
         from Hql.Expressions.Logic import BasicRange, Expression
-        if preprocess:
+        if prep:
             acc, rej = self.compile(expr.start)
             if rej:
                 return None, expr
@@ -445,13 +355,13 @@ class QueryDSLCompiler(Compiler):
 
             return BasicRange(start, end), None
 
-        acc, rej = self.compile(expr.start, preprocess=False)
+        acc, rej = self.compile(expr.start, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         start = acc
         assert isinstance(start, str)
 
-        acc, rej = self.compile(expr.end, preprocess=False)
+        acc, rej = self.compile(expr.end, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         end = acc
@@ -459,10 +369,10 @@ class QueryDSLCompiler(Compiler):
 
         return {'gte': start, 'lte': end}, None
 
-    def Regex(self, expr: Hql.Expressions.Regex, preprocess: bool = True) -> tuple[object, object]:
+    def Regex(self, expr: Hql.Expressions.Regex, prep:bool = True) -> tuple[object, object]:
         from Hql.Expressions.Logic import Regex, Expression, StringLiteral
 
-        if preprocess:
+        if prep:
             # No flags supported
             if expr.m or expr.s or expr.g:
                 return None, expr
@@ -481,7 +391,7 @@ class QueryDSLCompiler(Compiler):
 
             return Regex(lh, rh, i=expr.i), None
 
-        acc, rej = self.compile(expr.lh, preprocess=False)
+        acc, rej = self.compile(expr.lh, prep=False)
         if rej:
             raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
         lh = acc
@@ -490,7 +400,7 @@ class QueryDSLCompiler(Compiler):
         if isinstance(expr.rh, StringLiteral):
             rh = expr.rh.eval(self.ctx, as_str=True)
         else:
-            acc, rej = self.compile(expr.rh, preprocess=False)
+            acc, rej = self.compile(expr.rh, prep=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
             rh = acc
@@ -508,12 +418,12 @@ class QueryDSLCompiler(Compiler):
 
         return ret, None
 
-    def Substring(self, expr: Hql.Expressions.Substring, preprocess: bool = True) -> tuple[object, object]:
+    def Substring(self, expr: Hql.Expressions.Substring, prep:bool = True) -> tuple[object, object]:
         from Hql.Expressions.Logic import Substring, Expression, StringLiteral, Regex
         from Hql.Expressions.References import NamedReference, Path
         import re
 
-        if preprocess:
+        if prep:
             acc, rej = self.compile(expr.lh)
             if rej:
                 return None, expr
@@ -535,7 +445,7 @@ class QueryDSLCompiler(Compiler):
             if isinstance(i, StringLiteral):
                 rh = i.eval(self.ctx, as_str=True)
             else:
-                acc, rej = self.compile(i, preprocess=False)
+                acc, rej = self.compile(i, prep=False)
                 if rej:
                     raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
                 rh = acc
@@ -549,7 +459,7 @@ class QueryDSLCompiler(Compiler):
                 rh = f'.*{rh}.*'
             rh = StringLiteral(rh, verbatim=True)
             
-            acc, rej = self.Regex(Regex(expr.lh, rh), preprocess=False)
+            acc, rej = self.Regex(Regex(expr.lh, rh), prep=False)
             exprs.append(acc)
 
         if 'all' in expr.op:

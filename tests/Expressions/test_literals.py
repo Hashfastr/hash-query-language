@@ -220,3 +220,74 @@ class TestMultivalue:
     )
     def test_construction(self):
         pass
+
+
+# ---------------------------------------------------------------------------
+# Deepcopy regression
+# ---------------------------------------------------------------------------
+
+class TestDeepcopy:
+    def test_type_expression(self):
+        from copy import deepcopy
+        te = TypeExpression(hqlt.int())
+        c = deepcopy(te)
+        assert c is not te
+        assert c == te
+
+    def test_string_literal(self):
+        from copy import deepcopy
+        s = StringLiteral("hello", verbatim=True, obfuscated=True)
+        c = deepcopy(s)
+        assert c is not s
+        assert c == s
+        assert c.verbatim is True
+        assert c.obfuscated is True
+
+    def test_multistring(self):
+        from copy import deepcopy
+        ms = MultiString([StringLiteral("foo"), StringLiteral("bar")])
+        c = deepcopy(ms)
+        assert c is not ms
+        assert c.str() == "foobar"
+
+    def test_integer(self):
+        from copy import deepcopy
+        i = Integer(42)
+        c = deepcopy(i)
+        assert c is not i
+        assert c == i
+
+    def test_float(self):
+        from copy import deepcopy
+        f = Float(3.14)
+        c = deepcopy(f)
+        assert c is not f
+        assert c == f
+
+    def test_bool(self):
+        from copy import deepcopy
+        b = Bool(True)
+        c = deepcopy(b)
+        assert c is not b
+        assert c == b
+
+    def test_ip4(self):
+        from copy import deepcopy
+        ip = IP4(StringLiteral("192.168.1.1"))
+        c = deepcopy(ip)
+        assert c is not ip
+        assert c == ip
+
+    def test_datetime(self):
+        from copy import deepcopy
+        dt = Datetime(datetime.datetime(2024, 1, 2, 3, 4, 5))
+        c = deepcopy(dt)
+        assert c is not dt
+        assert c.value == dt.value
+
+    def test_null(self):
+        from copy import deepcopy
+        n = Null()
+        c = deepcopy(n)
+        assert c is not n
+        assert c.value is None

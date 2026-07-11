@@ -102,3 +102,12 @@ class TestDotCompositeFunction:
         d = DotCompositeFunction([f1, f2]).to_dict()
         assert d["type"] == "DotCompositeFunction"
         assert len(d["funcs"]) == 2
+
+    def test_deepcopy(self):
+        from copy import deepcopy
+        f1 = _NoArgs()
+        f2 = _NoArgs()
+        dcf = DotCompositeFunction([f1, f2])
+        c = deepcopy(dcf)
+        assert c is not dcf
+        assert len(c.funcs) == 2

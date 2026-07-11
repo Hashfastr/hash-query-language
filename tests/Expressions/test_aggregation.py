@@ -47,3 +47,23 @@ class TestByExpression:
         refs = [NamedReference("a"), NamedReference("b")]
         be = ByExpression(refs)
         assert be.exprs is refs
+
+
+# ---------------------------------------------------------------------------
+# Deepcopy regression
+# ---------------------------------------------------------------------------
+
+class TestDeepcopy:
+    def test_ordered_expression(self):
+        from copy import deepcopy
+        oe = OrderedExpression(NamedReference("x"), order="asc", nulls="last")
+        c = deepcopy(oe)
+        assert c is not oe
+        assert c.deparse() == oe.deparse()
+
+    def test_by_expression(self):
+        from copy import deepcopy
+        be = ByExpression([NamedReference("a"), NamedReference("b")])
+        c = deepcopy(be)
+        assert c is not be
+        assert c.deparse() == be.deparse()

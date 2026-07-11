@@ -20,9 +20,6 @@ class Source():
 
     def preprocess(self, ctx:Context) -> Union[InstructionSet, Reference, Function, DotCompositeFunction]:
         from Hql.Compiler import InstructionSet
-        from Hql.Expressions.References import NamedReference
-
-        return NamedReference('Test')
 
         isets = []
         for i in self.products:

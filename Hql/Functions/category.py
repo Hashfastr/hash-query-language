@@ -19,12 +19,9 @@ class category(Function):
             assert isinstance(i, (Reference, StringLiteral))
             self.names.append(i)
 
-    def preprocess(self, ctx: Context, receiver=None) -> Source:
+    def eval(self, ctx: Context, receiver=None) -> Source:
         from Hql.Hac.Sources import Source
         from Hql.Expressions.Literals import StringLiteral
-        from Hql.Expressions.References import NamedReference
-
-        return NamedReference('Test')
 
         src = receiver
         if not src:

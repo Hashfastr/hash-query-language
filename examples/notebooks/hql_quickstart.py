@@ -60,7 +60,7 @@ def _(Hql, Path, mo):
 
 @app.cell
 def _():
-    sigma = '''
+    sigma = r'''
     title: Kalambur Backdoor Curl TOR SOCKS Proxy Execution
     id: e99375eb-3ee0-407a-9f90-79569cc6a01c
     status: experimental
@@ -111,10 +111,30 @@ def _(conf, sigma):
 
 
 @app.cell
+def _():
+    from Hql.Expressions.Functions import DotFuncExpr, FuncExpr
+    from Hql.Expressions.References import NamedReference
+    from copy import deepcopy
+
+    name = NamedReference('test')
+
+    dfe = DotFuncExpr([FuncExpr(name), FuncExpr(name)])
+    print(dfe)
+
+    f2 = deepcopy(FuncExpr(name))
+    print(f2)
+
+    dfe2 = deepcopy(dfe)
+    print(dfe2)
+    return
+
+
+@app.cell
 def _(conf, parser):
     from Hql.Compiler.Hql import HqlCompiler
 
     hqlcomp = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
+    print(hqlcomp.root.upstream)
     return
 
 

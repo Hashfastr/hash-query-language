@@ -82,6 +82,9 @@ class DotCompositeFunction():
             return funcs[0]
         return super().__new__(cls)
 
+    def __reduce__(self):
+        return (self.__class__, (self.funcs,))
+
     def __bool__(self):
         return bool(self.funcs)
     

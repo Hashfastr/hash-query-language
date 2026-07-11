@@ -18,8 +18,8 @@ class product(Function):
         for i in args:
             assert isinstance(i, (Reference, StringLiteral))
             self.names.append(i)
-        
-    def preprocess(self, ctx: Context, receiver=None) -> Source:
+
+    def eval(self, ctx: Context, receiver=None) -> Source:
         from Hql.Hac.Sources import Source
         from Hql.Expressions.Literals import StringLiteral
 

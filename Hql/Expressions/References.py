@@ -135,7 +135,7 @@ class Path(Reference):
 
     # for copying/pickling
     def __reduce__(self):
-        return (self.__class__, (self.path))
+        return (self.__class__, (self.path,))
 
     def __eq__(self, value: object, /) -> bool:
         if not isinstance(value, Path):

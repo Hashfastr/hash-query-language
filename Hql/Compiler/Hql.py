@@ -176,12 +176,11 @@ class HqlCompiler(Compiler):
 
         if not isinstance(acc, InstructionSet):
             logging.error(acc)
-            raise hqle.CompilerException('Could not compile Tabular expression')
+            raise hqle.CompilerException(f'Tabular compilation resulted in {type(acc)} not InstructionSet')
 
         # Add hac timebound
         if self.hac:
             start, end = self.hac.get_timerange()
-            print('enter')
             acc, _ = acc.add_timebound(start, end)
 
         return acc, None
@@ -369,7 +368,6 @@ class HqlCompiler(Compiler):
 
         if isinstance(expr, Functions.Function) and expr.logic:
             expr = expr.preprocess(self.ctx)
-        print(type(expr))
         assert isinstance(expr, Logic.Logic)
         op = Operators.Where(expr, op.parameters)
 

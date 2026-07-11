@@ -241,3 +241,69 @@ class TestLogic:
     def test_reduce_returns_self_by_default(self):
         base = Logic()
         assert base.reduce() is base
+
+
+# ---------------------------------------------------------------------------
+# Deepcopy regression
+# ---------------------------------------------------------------------------
+
+class TestDeepcopy:
+    def test_equality(self):
+        from copy import deepcopy
+        eq = Equality(NamedReference("f"), Integer(5))
+        c = deepcopy(eq)
+        assert c is not eq
+        assert c.deparse() == eq.deparse()
+
+    def test_substring(self):
+        from copy import deepcopy
+        s = Substring(NamedReference("f"), [StringLiteral("x")])
+        c = deepcopy(s)
+        assert c is not s
+        assert c.deparse() == s.deparse()
+
+    def test_relational(self):
+        from copy import deepcopy
+        r = Relational(NamedReference("f"), Integer(5), gt=True, eq=False)
+        c = deepcopy(r)
+        assert c is not r
+        assert c.deparse() == r.deparse()
+
+    def test_between_equality(self):
+        from copy import deepcopy
+        b = BetweenEquality(NamedReference("f"), Integer(1), Integer(10))
+        c = deepcopy(b)
+        assert c is not b
+        assert c.deparse() == b.deparse()
+
+    def test_basic_range(self):
+        from copy import deepcopy
+        r = BasicRange(Integer(1), Integer(5))
+        c = deepcopy(r)
+        assert c is not r
+        assert c.deparse() == r.deparse()
+
+    def test_regex(self):
+        from copy import deepcopy
+        r = Regex(NamedReference("f"), StringLiteral("^foo$"))
+        c = deepcopy(r)
+        assert c is not r
+        assert c.deparse() == r.deparse()
+
+    def test_not(self):
+        from copy import deepcopy
+        n = Not(NamedReference("x"))
+        c = deepcopy(n)
+        assert c is not n
+        assert c.deparse() == n.deparse()
+
+    def test_binary_logic(self):
+        from copy import deepcopy
+        left = Equality(NamedReference("a"), Integer(1))
+        right = Equality(NamedReference("b"), Integer(2))
+        bl = BinaryLogic([left, right], logic_and=True)
+        c = deepcopy(bl)
+        assert c is not bl
+        # deparse order may differ (set-based storage) — just check it's a valid BinaryLogic
+        assert isinstance(c, BinaryLogic)
+        assert len(c) == 2

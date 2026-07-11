@@ -112,6 +112,13 @@ class TestPath:
         p = Path([NamedReference("foo"), NamedReference("bar")])
         assert p.preprocess(empty_ctx) == "baz"
 
+    def test_deepcopy(self):
+        from copy import deepcopy
+        p = Path([NamedReference("a"), NamedReference("b"), NamedReference("c")])
+        c = deepcopy(p)
+        assert c is not p
+        assert c.list() == ["a", "b", "c"]
+
 
 # ---------------------------------------------------------------------------
 # NamedExpression
@@ -174,3 +181,40 @@ class TestNamedExpression:
     @pytest.mark.skip(reason="TODO: needs Data/Table fixture")
     def test_eval_inserts_value(self):
         pass
+
+
+# ---------------------------------------------------------------------------
+# Deepcopy regression
+# ---------------------------------------------------------------------------
+
+class TestDeepcopy:
+    def test_named_reference(self):
+        from copy import deepcopy
+        nr = NamedReference("foo")
+        c = deepcopy(nr)
+        assert c is not nr
+        assert c == nr
+
+    def test_wildcard(self):
+        from copy import deepcopy
+        w = Wildcard("*")
+        c = deepcopy(w)
+        assert c is not w
+        assert c.name == "*"
+
+    def test_escaped_named_reference(self):
+        from copy import deepcopy
+        e = EscapedNamedReference("weird name")
+        c = deepcopy(e)
+        assert c is not e
+        assert c.deparse() == e.deparse()
+
+    def test_named_expression(self):
+        from copy import deepcopy
+        ne = NamedExpression(
+            [NamedReference("a"), NamedReference("b")],
+            NamedReference("src"),
+        )
+        c = deepcopy(ne)
+        assert c is not ne
+        assert c.deparse() == ne.deparse()

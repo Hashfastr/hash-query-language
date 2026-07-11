@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from Hql.Expressions.Functions import DotFuncExpr, FuncExpr, ReceiverFuncExpr
 from Hql.Expressions.Literals import Integer
 from Hql.Expressions.References import NamedReference
@@ -56,3 +58,31 @@ class TestDotFuncExpr:
         f2 = FuncExpr(NamedReference("b"), [Integer(1)])
         dfe = DotFuncExpr([f1, f2])
         assert dfe.deparse() == "a().b(1)"
+
+
+# ---------------------------------------------------------------------------
+# Deepcopy regression
+# ---------------------------------------------------------------------------
+
+class TestDeepcopy:
+    def test_funcexpr_deepcopy(self):
+        f = FuncExpr(NamedReference("count"), [NamedReference("x")])
+        c = deepcopy(f)
+        assert c is not f
+        assert c.deparse() == f.deparse()
+
+    def test_dotfuncexpr_deepcopy(self):
+        name = NamedReference("test")
+        dfe = DotFuncExpr([FuncExpr(name), FuncExpr(name)])
+        c = deepcopy(dfe)
+        assert c is not dfe
+        assert c.deparse() == dfe.deparse()
+
+    def test_receiverfuncexpr_deepcopy(self):
+        rfe = ReceiverFuncExpr(
+            NamedReference("obj"),
+            FuncExpr(NamedReference("m"), [NamedReference("x")]),
+        )
+        c = deepcopy(rfe)
+        assert c is not rfe
+        assert c.deparse() == rfe.deparse()
