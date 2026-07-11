@@ -9,10 +9,11 @@ def _():
     import marimo as mo
     from pathlib import Path
     from importlib import reload
+    import json
 
     import Hql
 
-    return Hql, Path, mo
+    return Hql, Path, json, mo
 
 
 @app.cell(hide_code=True)
@@ -99,7 +100,7 @@ def _():
 
 
 @app.cell
-def _(conf, sigma):
+def _(conf, json, sigma):
     from Hql.Parser.Sigma import SigmaParser
 
     # conf defined above in a collapsed cell
@@ -107,34 +108,20 @@ def _(conf, sigma):
     parser.assemble()
     if parser.assembly:
         print('Valid sigma parsed!')
+    print(json.dumps(parser.assembly.to_dict()))
     return (parser,)
 
 
 @app.cell
-def _():
-    from Hql.Expressions.Functions import DotFuncExpr, FuncExpr
-    from Hql.Expressions.References import NamedReference
-    from copy import deepcopy
-
-    name = NamedReference('test')
-
-    dfe = DotFuncExpr([FuncExpr(name), FuncExpr(name)])
-    print(dfe)
-
-    f2 = deepcopy(FuncExpr(name))
-    print(f2)
-
-    dfe2 = deepcopy(dfe)
-    print(dfe2)
-    return
-
-
-@app.cell
-def _(conf, parser):
+def _(conf, json, parser):
     from Hql.Compiler.Hql import HqlCompiler
 
     hqlcomp = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
-    print(hqlcomp.root.upstream)
+    # print(json.dumps(hqlcomp.root.recompile(conf).to_dict(), indent=2))
+
+    print(json.dumps(hqlcomp.root.to_dict(), indent=2))
+
+    # print(hqlcomp.root.upstream[0].compiler.compile(None, prep=False))
     return
 
 

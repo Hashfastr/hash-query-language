@@ -47,8 +47,7 @@ class QueryDSLCompiler(Compiler):
         if isinstance(src, Function):
             return self.Function(src, prep=prep)
 
-        out = super().compile(src, prep=prep)
-        return out
+        return super().compile(src, prep=prep)
 
     def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Optional[Operator], Optional[Operator]]:
         from Hql.Compiler import BranchDescriptor
@@ -155,6 +154,8 @@ class QueryDSLCompiler(Compiler):
 
     def Equality(self, expr: Logic.Equality, prep: bool = True) -> tuple[object, object]:
         from Hql.Expressions.Logic import Equality, Not
+
+        # raise Exception('debug')
 
         if prep:
             rh = []
@@ -295,116 +296,39 @@ class QueryDSLCompiler(Compiler):
 
         return {'range': {lh: {op: rh}}}, None
 
-    def BetweenEquality(self, expr: Hql.Expressions.BetweenEquality, prep:bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import BetweenEquality, Expression, BasicRange
+    def BetweenEquality(self, expr: Logic.BetweenEquality, prep:bool = True) -> tuple[object, object]:
+        from Hql.Expressions.Logic import BasicRange
 
         if prep:
-            acc, rej = self.compile(expr.lh)
-            if rej:
-                return None, expr
-            lh = acc
-            assert isinstance(lh, Expression)
+            return expr, None
 
-            acc, rej = self.compile(expr.start)
-            if rej:
-                return None, expr
-            start = acc
-            assert isinstance(start, Expression)
+        lh, _ = self.compile(expr.lh, prep=False)
+        rh, _ = self.compile(BasicRange(expr.start, expr.end), prep=False)
 
-            acc, rej = self.compile(expr.end)
-            if rej:
-                return None, expr
-            end = acc
-            assert isinstance(end, Expression)
-
-            return BetweenEquality(lh, start, end, op=expr.op), None
-
-        acc, rej = self.compile(expr.lh, prep=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        lh = acc
-        assert isinstance(lh, str)
-
-        acc, rej = self.compile(BasicRange(expr.start, expr.end), prep=False)
-        assert isinstance(acc, dict)
-
-        ret = {
-            'range': {
-                lh: acc
-            }
-        }
-        if expr.negate:
+        ret = {'range': {lh: rh}}
+        if expr.neq:
             ret = {'bool': {'must_not': ret}}
 
         return ret, None
 
-    def BasicRange(self, expr: Hql.Expressions.BasicRange, prep:bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import BasicRange, Expression
+    def BasicRange(self, expr: Logic.BasicRange, prep:bool = True) -> tuple[object, object]:
         if prep:
-            acc, rej = self.compile(expr.start)
-            if rej:
-                return None, expr
-            start = acc
-            assert isinstance(start, Expression)
+            return expr, None
 
-            acc, rej = self.compile(expr.end)
-            if rej:
-                return None, expr
-            end = acc
-            assert isinstance(end, Expression)
-
-            return BasicRange(start, end), None
-
-        acc, rej = self.compile(expr.start, prep=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        start = acc
-        assert isinstance(start, str)
-
-        acc, rej = self.compile(expr.end, prep=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        end = acc
-        assert isinstance(end, str)
+        start, _ = self.compile(expr.start, prep=False)
+        end, _ = self.compile(expr.end, prep=False)
 
         return {'gte': start, 'lte': end}, None
 
-    def Regex(self, expr: Hql.Expressions.Regex, prep:bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Regex, Expression, StringLiteral
-
+    def Regex(self, expr: Logic.Regex, prep:bool = True) -> tuple[object, object]:
         if prep:
             # No flags supported
             if expr.m or expr.s or expr.g:
                 return None, expr
+            return expr, None
 
-            acc, rej = self.compile(expr.lh)
-            if rej:
-                return None, expr
-            lh = acc
-            assert isinstance(lh, Expression)
-
-            acc, rej = self.compile(expr.rh)
-            if rej:
-                return None, expr
-            rh = acc
-            assert isinstance(rh, Expression)
-
-            return Regex(lh, rh, i=expr.i), None
-
-        acc, rej = self.compile(expr.lh, prep=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-        lh = acc
-        assert isinstance(lh, str)
-
-        if isinstance(expr.rh, StringLiteral):
-            rh = expr.rh.eval(self.ctx, as_str=True)
-        else:
-            acc, rej = self.compile(expr.rh, prep=False)
-            if rej:
-                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-            rh = acc
-        assert isinstance(rh, str)
+        lh, _ = self.compile(expr.lh, prep=False)
+        rh, _ = self.compile(expr.rh, prep=False)
 
         ret = {
             'regexp': {
@@ -418,74 +342,37 @@ class QueryDSLCompiler(Compiler):
 
         return ret, None
 
-    def Substring(self, expr: Hql.Expressions.Substring, prep:bool = True) -> tuple[object, object]:
-        from Hql.Expressions.Logic import Substring, Expression, StringLiteral, Regex
-        from Hql.Expressions.References import NamedReference, Path
-        import re
+    def Substring(self, expr: Logic.Substring, prep:bool = True) -> tuple[object, object]:
+        from Hql.Expressions.Logic import Regex
+        from Hql.Expressions.Literals import StringLiteral
 
         if prep:
-            acc, rej = self.compile(expr.lh)
-            if rej:
-                return None, expr
-            lh = acc
-            assert isinstance(lh, (NamedReference, Path))
-
-            rhs = []
-            for i in expr.rh:
-                acc, rej = self.compile(i)
-                if rej:
-                    return None, expr
-                rh = acc
-                rhs.append(rh)
-
-            return Substring(lh, expr.op, rhs), None
+            return expr, None
 
         exprs = []
         for i in expr.rh:
-            if isinstance(i, StringLiteral):
-                rh = i.eval(self.ctx, as_str=True)
-            else:
-                acc, rej = self.compile(i, prep=False)
-                if rej:
-                    raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-                rh = acc
-            assert isinstance(rh, str)
-            
-            if 'startswith' in expr.op or 'prefix' in expr.op:
+            rh = i.quote('')
+            if expr.startswith:
                 rh = f'{rh}.*'
-            elif 'endswith' in expr.op or 'suffix' in expr.op:
+            elif expr.endswith:
                 rh = f'.*{rh}'
             else:
                 rh = f'.*{rh}.*'
             rh = StringLiteral(rh, verbatim=True)
             
-            acc, rej = self.Regex(Regex(expr.lh, rh), prep=False)
+            acc, _ = self.Regex(Regex(expr.lh, rh), prep=False)
             exprs.append(acc)
 
-        if 'all' in expr.op:
-            op = 'must'
-        else:
-            op = 'should'
-
-        if len(exprs) == 1:
-            ret = exprs[0]
-        
-        else:
-            ret = {
-                op: exprs
-            }
+        op = 'must' if expr.logic_and else 'should'
+        ret = exprs[0] if len(exprs) == 1 else {op: exprs}
 
         if expr.neq:
             if 'must' in ret:
                 ret['must_not'] = ret.pop('must')
             else:
-                ret = {
-                    'must_not': ret
-                }
+                ret = {'must_not': ret}
 
         if len(exprs) > 1:
-            ret = {
-                'bool': ret
-            }
+            ret = {'bool': ret}
 
         return ret, None

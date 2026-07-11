@@ -183,7 +183,7 @@ class QueryStatement(Statement):
 
     def to_dict(self):
         out = super().to_dict()
-        out['query'] = self.deparse()
+        out['query'] = self.root.to_dict()
         return out
 
     def deparse(self):

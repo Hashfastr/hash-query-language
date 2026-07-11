@@ -308,6 +308,12 @@ class Datetime(Literal):
         inner = StringLiteral(self.value.isoformat())
         return 'datetime(' + inner.str() + ')'
 
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'value': self.value.isoformat()
+        }
+
 class Null(Literal):
     def __init__(self) -> None:
         Literal.__init__(self, hqlt.null(), None)

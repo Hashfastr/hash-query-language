@@ -118,7 +118,7 @@ class Elasticsearch(Database):
             if ops == None:
                 ops = []
 
-        query, _ = compiler.compile(None)
+        query, _ = compiler.compile(None, prep=False)
         assert isinstance(query, (dict, str))
 
         if isinstance(query, str):

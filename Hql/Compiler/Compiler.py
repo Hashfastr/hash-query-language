@@ -67,7 +67,9 @@ class Compiler():
     Default returns optimized operators for running in Hql-land
     '''
     def compile(self, src:Union[Expression, Operator, Statement, None], prep:bool=True) -> tuple[Optional[object], Optional[object]]:
-        return None, None
+        if src is None:
+            return None, None
+        return self.from_name(src.type)(src, prep=prep)
 
     def compile_op(self, src:Operator, prep:bool=True) -> tuple[Optional[object], Optional[Operator]]:
         return self.from_name(src.type)(src, prep=prep)
