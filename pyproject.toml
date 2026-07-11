@@ -42,6 +42,7 @@ Issues = "https://github.com/Hashfastr/Hql/issues"
 
 [dependency-groups]
 notebooks = ["marimo"]
+dev = ["pytest"]
 
 [build-system]
 requires = ["hatchling >= 1.26"]
@@ -49,6 +50,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["Hql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.marimo.runtime]
 auto_reload = "modules"
