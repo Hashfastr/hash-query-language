@@ -72,7 +72,7 @@ class TypeExpression(Literal):
         return self.hql_type
 
 class StringLiteral(Literal):
-    def __init__(self, value:Union[str, bytes], verbatim:bool=False, obfuscated:bool=False):
+    def __init__(self, value:Union[str, bytes], verbatim:bool=True, obfuscated:bool=False):
         if isinstance(value, str):
             value = value.encode('utf-8')
 
@@ -121,7 +121,7 @@ class StringLiteral(Literal):
         import re
 
         if quote:
-            new = ''.join([fr'\{x}' for x in quote])
+            new = ''.join([f'\\{x}' for x in quote])
             cur = re.sub(quote, new, self.value.decode('utf-8'))
         else:
             cur = self.value.decode('utf-8')

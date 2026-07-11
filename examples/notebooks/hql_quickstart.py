@@ -102,6 +102,7 @@ def _():
 @app.cell
 def _(conf, json, sigma):
     from Hql.Parser.Sigma import SigmaParser
+    from Hql.Expressions.Literals import StringLiteral
 
     # conf defined above in a collapsed cell
     parser = SigmaParser(sigma, conf)
@@ -113,13 +114,14 @@ def _(conf, json, sigma):
 
 
 @app.cell
-def _(conf, json, parser):
+def _(conf, parser):
     from Hql.Compiler.Hql import HqlCompiler
 
     hqlcomp = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
     # print(json.dumps(hqlcomp.root.recompile(conf).to_dict(), indent=2))
 
-    print(json.dumps(hqlcomp.root.upstream[0].simple_compile(), indent=2))
+    compiled = hqlcomp.root.upstream[0].simple_compile()
+    print(compiled['query'])
 
     # print(hqlcomp.root.upstream[0].compiler.compile(None, prep=False))
     return

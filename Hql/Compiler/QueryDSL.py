@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from numpy import isin
 from Hql.Exceptions import HqlExceptions as hqle
 from typing import Union, Optional, TYPE_CHECKING
 
 from . import Compiler
 
 if TYPE_CHECKING:
-    import Hql
-    from Hql.Operators.Operator import Operator
+    import Hql.Operators as Operators
     from Hql.Expressions import Expression
     from Hql.Query import Statement
     from Hql.Compiler import BranchDescriptor
@@ -34,15 +32,16 @@ class QueryDSLCompiler(Compiler):
         }
         self.expr:Optional[Logic.Logic] = None
 
-    def compile(self, src: Union[Expression, Operator, Statement, Function, None], prep: bool = True) -> tuple[Optional[object], Optional[object]]:
+    def compile(self, src: Union[Expression, Operators.Operator, Statement, Function, None], prep: bool = True) -> tuple[Optional[object], Optional[object]]:
         from Hql.Functions import Function
+        from Hql.Expressions.Literals import Bool
 
         if src == None:
             src = self.expr
 
         # still missing a root
         if src == None:
-            return {'bool': {}}, None
+            return self.compile(Bool(True), prep=prep), None
 
         if isinstance(src, Function):
             return self.Function(src, prep=prep)
@@ -65,7 +64,7 @@ class QueryDSLCompiler(Compiler):
         assert isinstance(acc, dict)
         return acc
 
-    def Where(self, op:Hql.Operators.Where, prep:bool=True) -> tuple[Optional[Hql.Operators.Where], Optional[Hql.Operators.Where]]:
+    def Where(self, op:Operators.Where, prep:bool=True) -> tuple[Optional[Operators.Where], Optional[Operators.Where]]:
         from Hql.Operators.Where import Where
         from Hql.Expressions.Logic import BinaryLogic, Logic
 
@@ -119,9 +118,6 @@ class QueryDSLCompiler(Compiler):
             acc, _ = self.compile(i, prep=prep)
             exprs.append(acc)
 
-        if len(exprs) == 1:
-            return exprs[0], None
-
         if expr.logic_and:
             ret = {'must': exprs}
         else:
@@ -160,42 +156,39 @@ class QueryDSLCompiler(Compiler):
     def Equality(self, expr: Logic.Equality, prep: bool = True) -> tuple[object, object]:
         from Hql.Expressions.Logic import Equality, Not
 
-        # raise Exception('debug')
-
         if prep:
             rh = []
             for i in expr.rh:
                 acc, rej = self.compile(i)
                 if rej:
                     return None, expr
-                rh.append(acc)
+
+                if isinstance(acc, list):
+                    rh += acc
+                else:
+                    rh.append(acc)
 
             return Equality(expr.lh, rh, expr.cs, expr.neq), None
 
         # wrap in a not statement
         if expr.neq:
             expr.neq = False
-            return self.Not(Not(expr), prep=False)
+            return self.Not(Not(expr), prep=prep)
 
-        lh, rej = self.compile(expr.lh, prep=False)
-        if rej:
-            raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
+        lh, _ = self.compile(expr.lh, prep=prep)
 
         rh = []
         for i in expr.rh:
             acc, rej = self.compile(i, prep=False)
             if rej:
                 raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-            if isinstance(acc, list):
-                rh += acc
-            else:
-                rh.append(acc)        
+            rh.append(acc)        
 
         term = 'term' if len(rh) == 1 else 'terms'
         return {term: {lh: rh[0]}}, None
 
     # only executes static functions on preprocess and sees if we can handle the result
-    def Function(self, expr:Hql.Functions.Function, prep:bool=True) -> tuple[object, object]:
+    def Function(self, expr:Function, prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.Logic import Regex, Not
         from Hql.Expressions.References import Reference
@@ -214,10 +207,8 @@ class QueryDSLCompiler(Compiler):
             return expr, None
         return expr.quote(''), None
 
-    def MultiString(self, expr: Literals.MultiString, prep:bool = True) -> tuple[object, object]:
-        if prep:
-            return expr, None
-        return expr.quote(''), None
+    def MultiString(self, expr: Literals.MultiString, prep:bool=True) -> tuple[object, object]:
+        return self.StringLiteral(expr, prep=prep)
 
     def Integer(self, expr: Literals.Integer, prep:bool = True) -> tuple[object, object]:
         if prep:
@@ -239,7 +230,6 @@ class QueryDSLCompiler(Compiler):
 
         if prep:
             return expr, None
-
         dt = expr.value.astimezone(datetime.timezone.utc)
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ"), None
 
@@ -274,10 +264,7 @@ class QueryDSLCompiler(Compiler):
 
         parts = []
         for i in expr.path:
-            acc, rej = self.compile(i, prep=prep)
-            if rej:
-                raise hqle.CompilerException('Compiling invalid expression, forgot to preprocess?')
-            assert isinstance(acc, str)
+            acc, _ = self.compile(i, prep=prep)
             parts.append(acc)
 
         return '.'.join(parts), None
@@ -296,7 +283,7 @@ class QueryDSLCompiler(Compiler):
 
         lh, _ = self.compile(expr.lh, prep=prep)
         rh, _ = self.compile(expr.rh[0], prep=prep)
-        op = 'g' if expr.gt else 'l'
+        op =  'g'  if expr.gt else 'l'
         op += 'te' if expr.eq else 't'
 
         return {'range': {lh: {op: rh}}}, None
