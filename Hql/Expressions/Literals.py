@@ -72,7 +72,7 @@ class TypeExpression(Literal):
         return self.hql_type
 
 class StringLiteral(Literal):
-    def __init__(self, value:Union[str, bytes], verbatim:bool=True, obfuscated:bool=False):
+    def __init__(self, value:Union[str, bytes], verbatim:bool=False, obfuscated:bool=False):
         if isinstance(value, str):
             value = value.encode('utf-8')
 

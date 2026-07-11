@@ -102,7 +102,6 @@ def _():
 @app.cell
 def _(conf, json, sigma):
     from Hql.Parser.Sigma import SigmaParser
-    from Hql.Expressions.Literals import StringLiteral
 
     # conf defined above in a collapsed cell
     parser = SigmaParser(sigma, conf)

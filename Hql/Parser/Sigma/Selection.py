@@ -65,7 +65,7 @@ class Selection():
         from Hql.Expressions.References import NamedReference as NR
         
         if isinstance(value, str):
-            expr = StringLiteral(value)
+            expr = StringLiteral(value, verbatim=True)
 
         elif isinstance(value, int):
             expr = Integer(value)
