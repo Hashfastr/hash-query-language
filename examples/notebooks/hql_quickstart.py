@@ -114,6 +114,7 @@ def _(Hql, conf_dir, sigma):
             print('Valid sigma parsed!')
         else:
             return {'index': '', 'query': ''}
+        #print(json.dumps(parser.assembly.to_dict(), indent=2))
     
         elastic_conf = conf.get_database('tf11-elastic')
         elastic_conf['conf']['compiler'] = target

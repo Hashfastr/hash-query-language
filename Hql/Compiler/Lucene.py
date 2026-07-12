@@ -117,11 +117,13 @@ class LuceneCompiler(Compiler):
         exprs = []
         for i in expr.exprs:
             acc, _ = self.compile(i, prep=prep)
+            if isinstance(i, BinaryLogic) and i.logic_and != expr.logic_and:
+                acc = f'({acc})'
             exprs.append(acc)
 
         bitok = ' AND ' if expr.logic_and else ' OR '
         ret = bitok.join(exprs)
-        return f'({ret})', None
+        return ret, None
 
     def Not(self, expr: Logic.Not, prep:bool=True) -> tuple[object, object]:
         from Hql.Expressions.Logic import Not
