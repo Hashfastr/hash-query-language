@@ -102,6 +102,9 @@ class Config():
     def is_database(self, name:str) -> bool:
         return name in self.conf['databases']
     
+    def set_database(self, dbname:str, conf:dict):
+        self.conf['databases'][dbname] = conf
+
     def get_database(self, dbname:str) -> dict:
         if dbname not in self.conf['databases']:
             logging.critical(f'Config file for {dbname} is missing databases definition')

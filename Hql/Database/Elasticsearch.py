@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Union
 import json
 import logging
 
-import requests
 from elasticsearch import Elasticsearch as ES
 from elasticsearch import AuthenticationException as ESAuthExcept
 

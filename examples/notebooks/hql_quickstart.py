@@ -33,7 +33,7 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(Hql, Path, mo):
+def _(Path, mo):
     # conf/ lives at the repo root; this notebook lives two levels below it
     # (examples/notebooks/), so resolve it relative to this file rather than cwd.
     conf_dir = Path(__file__).resolve().parents[2] / "conf"
@@ -54,9 +54,7 @@ def _(Hql, Path, mo):
             """
         ).callout(kind="danger"),
     )
-
-    conf = Hql.Config.Config(conf_dir)
-    return (conf,)
+    return (conf_dir,)
 
 
 @app.cell
@@ -100,38 +98,93 @@ def _():
 
 
 @app.cell
-def _(conf, json, sigma):
+def _(Hql, conf_dir, sigma):
     from Hql.Parser.Sigma import SigmaParser
 
-    # conf defined above in a collapsed cell
-    parser = SigmaParser(sigma, conf)
-    parser.assemble()
-    if parser.assembly:
-        print('Valid sigma parsed!')
-    print(json.dumps(parser.assembly.to_dict()))
-    return (parser,)
+    # sets the target in the config for a given database then compiles it with that target
+    def compile_with_target(target:str) -> dict:
+        from Hql.Compiler.Hql import HqlCompiler
+    
+        conf = Hql.Config.Config(conf_dir)
+    
+        # conf defined above in a collapsed cell
+        parser = SigmaParser(sigma, conf)
+        parser.assemble()
+        if parser.assembly:
+            print('Valid sigma parsed!')
+        else:
+            return {'index': '', 'query': ''}
+    
+        elastic_conf = conf.get_database('tf11-elastic')
+        elastic_conf['conf']['compiler'] = target
+        conf.set_database('tf11-elastic', elastic_conf)
+
+        # precompilation
+        compiler = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
+
+        # compilation
+        return compiler.root.upstream[0].simple_compile()
+
+    return (compile_with_target,)
 
 
-@app.cell
-def _(conf, parser):
-    from Hql.Compiler.Hql import HqlCompiler
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Precompilation
+    The HqlCompiler precompiles the target.
+    This handles mapping by filtering operators through project and extend operators.
+    Depending on your database, or how you wish to compile, the filtering project and extend operators will not be shown in the final database query.
+    Should your database not handle such operators, elastic cough, then operators will run post query using the database results.
 
-    hqlcomp = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
-    # print(json.dumps(hqlcomp.root.recompile(conf).to_dict(), indent=2))
+    Taken from the above function:
+    ```python
+    compiler = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
+    ```
+    """)
+    return
 
-    compiled = hqlcomp.root.upstream[0].simple_compile()
-    print(compiled['query'])
 
-    # print(hqlcomp.root.upstream[0].compiler.compile(None, prep=False))
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Simple compilation
+    This allows one to just get the compilation for a database without running the engine.
+    If the backend supports multiple language targets then the configured target is used.
+
+    Below is using QueryDSL, the default configured in this case.
+    Note that the fields defined in the above sigma are now replaced by their mapped fields.
+    """)
     return
 
 
 @app.cell
-def _(parser):
-    from Hql.Compiler.Lucene import LuceneCompiler
+def _(compile_with_target, json):
+    dsl_compiled = compile_with_target('dsl')
+    print('index: ' + dsl_compiled['index'])
+    print('query: ' + json.dumps(dsl_compiled['query'], indent=2))
+    return
 
-    lucenecomp = LuceneCompiler()
-    lucenecomp.compile(parser.assembly.statements[0], prep=True)
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Below is using Lucene, to allow for this we will override DSL in the config to Lucene.
+    Since we are swapping languages we will need to re-preprocess although Lucene is not much different than DSL in feature set.
+    Once of these you will see is that case sensitive compare in lucene is dubious to my understanding, so a warning will flair.
+
+    Compilation is now as simple as DSL.
+    It may be easier to see here but time bounding is automatic in perspective of the HaC definition.
+    Sigma inherits a 1hr time window for a query, and can be changed.
+    """)
+    return
+
+
+@app.cell
+def _(compile_with_target):
+    lucene_compiled = compile_with_target('lucene')
+    print('index: ' + lucene_compiled['index'])
+    print('query: ' + lucene_compiled['query'])
     return
 
 

@@ -73,7 +73,7 @@ class QueryDSLCompiler(Compiler):
         if acc != None:
             assert isinstance(acc, Logic)
             self.expr = acc if self.expr is None else BinaryLogic([self.expr, acc])
-            acc = None
+            acc = Where(acc, op.parameters)
 
         if rej != None:
             assert isinstance(rej, Logic)
