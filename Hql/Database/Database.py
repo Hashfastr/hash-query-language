@@ -29,6 +29,15 @@ class Database(Operator):
         self._preamble:Optional[PipeExpression] = None
         self.methods = []
 
+    @property
+    def preamble(self) -> PipeExpression:
+        return self._preamble if self._preamble is not None else PipeExpression([])
+
+    @preamble.setter
+    def preamble(self, val):
+        assert isinstance(val, PipeExpression)
+        self._preamble = val
+
     def __eq__(self, value: object, /) -> bool:
         if isinstance(value, Database):
             if self.name == value.name and self.config == value.config:

@@ -79,7 +79,7 @@ class Elasticsearch(Database):
         )
 
     def to_dict(self):
-        self.query, ops = self.compile()
+        self.query, _ = self.compile()
         
         return {
             'id': self.id,
@@ -87,35 +87,13 @@ class Elasticsearch(Database):
             'index': self.pattern,
             'limit': self.limit,
             'query': self.query,
-            'ops': [x.to_dict() for x in ops]
+            'ops': [x.to_dict() for x in self.preamble.pipes]
         }
 
-    def compile(self) -> tuple[dict, list[Operator]]:
-        from Hql.Compiler import HqlCompiler
-        from Hql.Config import Config
-        from Hql.Operators.Where import Where
+    def compile(self) -> tuple[dict, None]:
         import copy
 
         compiler = copy.deepcopy(self.compiler)
-
-        # Add preamble and recompile
-        ops = []
-        if self.preamble:
-            new_ops = self.preamble.pipes
-            if compiler.expr:
-                new_ops.append(Where(compiler.expr))
-
-            vestigial = HqlCompiler(Config())
-            desc = vestigial.optimize(new_ops)
-
-            ops = []
-            for i in desc:
-                ops.append(i.get_op())
-
-            compiler.expr = None
-            ops = compiler.add_ops(ops)
-            if ops == None:
-                ops = []
 
         query, _ = compiler.compile(None, prep=False)
         assert isinstance(query, (dict, str))
@@ -133,7 +111,7 @@ class Elasticsearch(Database):
                 "query": query
             }
 
-        return query, ops
+        return query, None
 
     def simple_compile(self) -> dict:
         query = self.compiler.simple_compile()

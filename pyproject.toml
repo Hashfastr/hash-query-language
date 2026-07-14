@@ -9,7 +9,7 @@ maintainers = [
 ]
 description = "Hash query language, a universal Query Language"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",

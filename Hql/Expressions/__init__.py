@@ -38,7 +38,7 @@ PrepipeType = Union['Function', 'DotCompositeFunction', 'Database', 'HqlUnion', 
 class PipeExpression(Expression):
     def __init__(self, pipes:list[Operator], prepipe:Optional[PrepipeType]=None):
         Expression.__init__(self)
-        self.prepipe                    = prepipe
+        self.prepipe              = prepipe
         self.pipes:list[Operator] = pipes
 
     def __bool__(self):

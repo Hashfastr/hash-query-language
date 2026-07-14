@@ -173,7 +173,7 @@ class HqlCompiler(Compiler):
             acc = acc.preprocess(self.ctx)
 
         if isinstance(acc, Database):
-            acc = InstructionSet(acc, operators=acc.preamble.pipes)
+            acc = InstructionSet(acc, acc.preamble.pipes)
 
         if not isinstance(acc, InstructionSet):
             logging.error(acc)
