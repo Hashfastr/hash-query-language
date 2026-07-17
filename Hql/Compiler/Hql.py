@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from Hql.Config import Config
     from Hql.Context import Context
     from Hql.Hac import Hac
+    from Hql.Operators import Operator
 
 _PREPIPE_TYPES = (Functions.Function, Functions.DotCompositeFunction, Database, Operators.Union, References.Reference, InstructionSet)
 
@@ -172,7 +173,7 @@ class HqlCompiler(Compiler):
             acc = acc.preprocess(self.ctx)
 
         if isinstance(acc, Database):
-            acc = InstructionSet(acc)
+            acc = InstructionSet(acc, operators=acc.preamble.pipes)
 
         if not isinstance(acc, InstructionSet):
             logging.error(acc)
@@ -186,42 +187,41 @@ class HqlCompiler(Compiler):
         return acc, None
 
     def PipeExpression(self, expr: PipeExpression, prep:bool=True) -> tuple[Union[InstructionSet, BranchDescriptor], None]:
+        prepipe:Optional[InstructionSet] = None
+
         if expr.prepipe:
             acc, rej = self.Tabular(expr.prepipe)
             if rej:
                 return self.compile(rej)
-            elif not acc:
-                prepipe = []
             else:
                 prepipe = acc
-        else:
-            prepipe = []
-            
-        if not isinstance(prepipe, list):
-            prepipe = [prepipe]
+
+        if prepipe is None:
+            logging.warning('Preprocessing with empty prepipe')
+            return InstructionSet([], expr.pipes), None
 
         new:list[InstructionSet] = []
-        for i in prepipe:
-            if isinstance(i, PipeExpression):
-                acc, _ = self.PipeExpression(i)
-                assert not isinstance(acc, BranchDescriptor)
-                new.append(acc)
-            else:
-                new.append(i)
-        prepipe = new
+        for i in prepipe.upstream:
+            if isinstance(i, Database):
+                i, _ = self.Tabular(i)
+            assert i is not None
+            new.append(i)
         
-        if len(prepipe) == 0:
-            logging.warning('Preprocessing with empty prepipe')
-
         instr = InstructionSet(prepipe, expr.pipes)
+            
         return self.InstructionSet(instr), None
 
     def InstructionSet(self, instr: InstructionSet, prep:bool=True) -> InstructionSet:
+        # import json
+
         # Preprocess all pipes
-        pipes = []
+        pipes:list[BranchDescriptor] = []
         for i in instr.ops:
             acc, _ = self.compile(i)
             pipes.append(acc)
+
+        # for i in pipes:
+        #     print(json.dumps(i.get_op().to_dict()))
 
         # Do basic optimization
         if pipes:

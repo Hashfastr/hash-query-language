@@ -181,7 +181,7 @@ class Elasticsearch(Database):
             schema[i] = ESTypes.from_name(props[i]['type'])()
         return schema
 
-    def eval(self, ctx:Context, **kwargs):
+    def eval(self, ctx: Context) -> Context:
         try:
             self.query, ops = self.compile()
             data = self.make_query()

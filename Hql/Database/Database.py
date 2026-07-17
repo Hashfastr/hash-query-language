@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Compiler import BranchDescriptor
     from Hql.Expressions.References import NamedReference
-    from Hql.Query import PipeExpression
+    from Hql.Expressions import PipeExpression
 
 class Database(Operator):
     def __init__(self, config:dict, name:str='unnamed-database'):
@@ -26,7 +26,7 @@ class Database(Operator):
         self.compiler = Compiler()
         self.name = name
         self.index = ''
-        self.preamble:Optional[PipeExpression] = None
+        self._preamble:Optional[PipeExpression] = None
         self.methods = []
 
     def __eq__(self, value: object, /) -> bool:
@@ -39,6 +39,22 @@ class Database(Operator):
 
     def __bool__(self) -> bool:
         return True
+
+    @property
+    def preamble(self) -> PipeExpression:
+        from Hql.Expressions import PipeExpression
+
+        if self._preamble is None:
+            return PipeExpression([])
+        else:
+            return self._preamble
+
+    @preamble.setter
+    def preamble(self, val:PipeExpression):
+        from Hql.Expressions import PipeExpression
+        assert isinstance(val, PipeExpression)
+        assert val.prepipe is None
+        self._preamble = val
 
     def add_op(self, op:Union[Operator, BranchDescriptor]) -> tuple[Union[Operator, None], Union[Operator, None]]:
         return self.compiler.add_op(op)
@@ -85,6 +101,3 @@ class Database(Operator):
     def get_macro(self, name:str) -> Union[None, dict]:
         macros = self.config.get('macro', dict())
         return macros.get(name, None)
-
-    def get_preamble(self) -> dict:
-        return self.config.get('preamble', dict())

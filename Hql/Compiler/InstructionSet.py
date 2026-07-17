@@ -89,19 +89,13 @@ class InstructionSet():
         bounded = []
         for i in self.upstream:
             acc, rej = i.add_timebound(start, end)
-            bounded.append(
-                InstructionSet(
-                    acc,
-                    operators=[rej] if rej else []
-                )
-            )
+            if rej:
+                acc = InstructionSet(acc, operators=[rej])
+            bounded.append(acc)
 
-        new = InstructionSet(
-            bounded,
-            operators=self.ops
-        )
+        print(self.ops)
 
-        return new, None
+        return InstructionSet(bounded, operators=self.ops), None
 
     # def flatten(self) -> InstructionSet:
     #     new = []

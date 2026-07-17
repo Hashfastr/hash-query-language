@@ -59,8 +59,10 @@ class database(Function):
 
         db = ctx.get_db(dbconf['type'])(dbconf, name=dbname.str())
         assert isinstance(db, Database)
-        if db.get_preamble():
-            preamble = self.parse_preamble(db.get_preamble(), f'{db.name}/preamble')
+
+        preamble = dbconf.get('preamble', None)
+        if preamble:
+            preamble = self.parse_preamble(preamble, f'{db.name}/preamble')
             db.preamble = preamble
 
         return db

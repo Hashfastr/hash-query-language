@@ -13,6 +13,8 @@ def _():
 
     import Hql
 
+    import logging
+    logging.getLogger().setLevel(logging.DEBUG)
     return Hql, Path, json, mo
 
 
@@ -104,9 +106,9 @@ def _(Hql, conf_dir, sigma):
     # sets the target in the config for a given database then compiles it with that target
     def compile_with_target(target:str) -> dict:
         from Hql.Compiler.Hql import HqlCompiler
-    
+
         conf = Hql.Config.Config(conf_dir)
-    
+
         # conf defined above in a collapsed cell
         parser = SigmaParser(sigma, conf)
         parser.assemble()
@@ -115,13 +117,15 @@ def _(Hql, conf_dir, sigma):
         else:
             return {'index': '', 'query': ''}
         #print(json.dumps(parser.assembly.to_dict(), indent=2))
-    
+
         elastic_conf = conf.get_database('tf11-elastic')
         elastic_conf['conf']['compiler'] = target
         conf.set_database('tf11-elastic', elastic_conf)
 
         # precompilation
         compiler = HqlCompiler(conf, query=parser.assembly, hac=parser.gen_hac())
+
+        # print(json.dumps(compiler.root.to_dict()))
 
         # compilation
         return compiler.root.upstream[0].simple_compile()
