@@ -68,7 +68,7 @@ jobs:
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "0"
         working-directory: ${{ runner.temp }}/src/polars_runtime_32-${{ steps.version.outputs.value }}
         run: |
-          maturin build --release \
+          "$RUNNER_TEMP/venv/bin/maturin" build --release \
               --interpreter "$RUNNER_TEMP/venv/bin/python" \
               --out "$GITHUB_WORKSPACE/dist"
 
