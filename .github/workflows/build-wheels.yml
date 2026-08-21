@@ -1,0 +1,80 @@
+name: Build macOS wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      polars_runtime_version:
+        description: "polars-runtime-32 version to build (leave empty to read from uv.lock)"
+        required: false
+        type: string
+
+jobs:
+  polars-runtime-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-13
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python 3.14t
+        run: uv python install 3.14t
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve polars-runtime-32 version
+        id: version
+        run: |
+          if [ -n "${{ inputs.polars_runtime_version }}" ]; then
+            echo "value=${{ inputs.polars_runtime_version }}" >> "$GITHUB_OUTPUT"
+          else
+            v=$(sed -n 's/.*"polars==\([0-9][0-9.]*\)".*/\1/p' pyproject.toml | head -1)
+            if [ -z "$v" ]; then
+              echo "ERROR: no 'polars==<version>' pin in pyproject.toml" >&2
+              exit 1
+            fi
+            echo "value=$v" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create build venv
+        run: |
+          uv venv --python 3.14t "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" pip maturin
+
+      - name: Download polars-runtime-32 sdist
+        env:
+          POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/src"
+          "$RUNNER_TEMP/venv/bin/python" -m pip download \
+              --no-binary=:all: --no-deps \
+              "polars-runtime-32==${POLARS_RUNTIME_VERSION}" \
+              -d "$RUNNER_TEMP/src"
+          tar -xzf "$RUNNER_TEMP/src/polars_runtime_32-${POLARS_RUNTIME_VERSION}.tar.gz" \
+              -C "$RUNNER_TEMP/src"
+
+      - name: Build wheel
+        env:
+          POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "0"
+        working-directory: ${{ runner.temp }}/src/polars_runtime_32-${{ steps.version.outputs.value }}
+        run: |
+          maturin build --release \
+              --interpreter "$RUNNER_TEMP/venv/bin/python" \
+              --out "$GITHUB_WORKSPACE/dist"
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: polars-runtime-32-macos-${{ matrix.arch }}-py314t
+          path: dist/*.whl
+          if-no-files-found: error
