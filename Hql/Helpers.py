@@ -1,8 +1,10 @@
-from pathlib import Path
-from Hql.Config import Config
-from Hql.Data import Data
+from __future__ import annotations
 import logging, time
-from typing import Union
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from Hql.Data import Data
+    from Hql.Config import Config
 
 def can_thread():
     import sys
@@ -13,11 +15,10 @@ def can_thread():
 def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
     from Hql.Exceptions import HqlExceptions as hqle
     from Hql.Exceptions import HacExceptions as hace
-    from Hql.Context import Context
-    from Hql.Data import Data
-    from Hql.Parser import Parser, SigmaParser
+    from Hql.Parser import Parser
+    from Hql.Parser.Sigma import SigmaParser
     from Hql.Compiler import HqlCompiler
-    from Hql.Hac import Parser as HaCParser
+    from Hql.Hac.Parser import Parser as HaCParser
     from Hql.Query import Query
     from Hql.Hac import Hac
 
@@ -82,7 +83,7 @@ def run_query(text:str, conf:Config, name:str='', **kwargs) -> Union[Data, str]:
         if not isinstance(parser.assembly, Query):
             raise hqle.CompilerException(f'Attempting to compile non-Query assembly {type(parser.assembly)}')
 
-        deparse += parser.assembly.decompile(Context(Data()))
+        deparse += parser.assembly.deparse()
         return deparse
         
     ######################

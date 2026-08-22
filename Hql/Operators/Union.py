@@ -1,9 +1,11 @@
-from typing import Optional
-from Hql.Operators import Operator
-from Hql.Expressions import Expression
-from Hql.Context import register_op, Context
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
+from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
-import json
+
+if TYPE_CHECKING:
+    from Hql.Expressions import Expression
+    from Hql.Context import Context
 
 class Union(Operator):
     def __init__(self, exprs:list[Expression], name:Optional[Expression]=None):
@@ -11,18 +13,30 @@ class Union(Operator):
         self.exprs = exprs
         self.name = name
 
-    def decompile(self, ctx: 'Context', split: bool = False) -> str:
+        if not self.exprs:
+            raise hqle.CompilerException('Union without expressions')
+
+    def deparse(self) -> str:
         exprs = []
         for i in self.exprs:
-            exprs.append(i.decompile(ctx))
+            exprs.append(i.deparse())
         out = 'union ' + ', '.join(exprs)
         if self.name:
             out += ' as '
-            out += self.name.decompile(ctx)
+            out += self.name.deparse()
         return out
 
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Data import Data, Table, Schema
+    def to_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'type': self.type,
+            'exprs': [x.to_dict() for x in self.exprs],
+            'name': self.name.to_dict() if self.name else None
+        }
+
+    def eval(self, ctx:Context, **kwargs):
+        from Hql.Data import Data, Table
+
         patterns = []
         for i in self.exprs:
             pattern = i.eval(ctx, as_str=True)

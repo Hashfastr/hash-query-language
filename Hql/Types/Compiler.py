@@ -1,24 +1,37 @@
-from typing import Union
+from __future__ import annotations
+from typing import Union, Optional, TYPE_CHECKING
 import polars as pl
 from Hql.Exceptions import HqlExceptions as hqle
 
+if TYPE_CHECKING:
+    from Hql.Types.Hql import HqlTypes as hqlt
+
 class CompilerType():
-    def __init__(self, base:type, inner:Union[None, type]=None):
+    def __init__(self, inner:Optional[CompilerType]=None):
         bases = type(self).__bases__
 
         self.type = bases[0]
-        self.HqlType = base
+        self.HqlType:Optional[hqlt.HqlType] = None
         self.inner = inner
         self.name = self.__class__.__name__
-    
-    def hql_schema(self):
+
+    def __eq__(self, value: object, /) -> bool:
+        return type(value) == type(self)
+
+    def __len__(self) -> int:
+        return 1
+
+    def __hash__(self):
+        return hash((self.name + self.type.__name__))
+
+    def hql_schema(self) -> hqlt.HqlType:
         if self.HqlType == None:
             raise hqle.CompilerException(f"{self.type}.{self.name} defined without an Hql proto")
 
         if self.inner:
-            return self.HqlType(self.inner)
+            self.HqlType.inner = self.inner.hql_schema()
 
-        return self.HqlType()
+        return self.HqlType
 
     def pl_schema(self):
         return self.hql_schema().pl_schema()
@@ -35,6 +48,8 @@ class CompilerType():
             'name': self.name
         }
 
-    def __len__(self):
-        return 1
+    def deparse(self):
+        return self.name
 
+    def str(self):
+        return self.name

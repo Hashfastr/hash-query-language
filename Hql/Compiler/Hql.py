@@ -1,10 +1,26 @@
+from __future__ import annotations
 from typing import Optional, Sequence, Union, TYPE_CHECKING
 import logging
-import json
 
 from Hql.Compiler import Compiler, BranchDescriptor, InstructionSet
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Expressions.References import NamedReference
+from Hql.Types.Hql import HqlTypes as hqlt
+
+from Hql.Expressions import References
+from Hql.Expressions import Literals
+from Hql.Expressions import Logic
+from Hql.Expressions import Expression, ToClause, OpParameter, PipeExpression
+from Hql.Expressions import PipeExpression
+from Hql.Expressions import Aggregation
+import Hql.Functions as Functions
+import Hql.Expressions.Functions as FuncExprs
+
+from Hql.Database import Database
+import Hql.Operators as Operators
+
+from Hql.Query import LetLogicStatement, LetStatement, Statement, QueryStatement
+
 from Hql.Types.Hql import HqlTypes as hqlt
 
 if TYPE_CHECKING:
@@ -12,7 +28,9 @@ if TYPE_CHECKING:
     from Hql.Config import Config
     from Hql.Context import Context
     from Hql.Hac import Hac
-    import Hql
+    from Hql.Operators import Operator
+
+_PREPIPE_TYPES = (Functions.Function, Functions.DotCompositeFunction, Database, Operators.Union, References.Reference, InstructionSet)
 
 '''
 Hql preprocessor
@@ -20,28 +38,29 @@ Hql preprocessor
 Works out preprocessor functions
 '''
 class HqlCompiler(Compiler):
-    def __init__(self, config:'Config', query:Optional['Query']=None, hac:Optional['Hac']=None):
+    def __init__(self, config:Config, query:Optional[Query]=None, hac:Optional[Hac]=None):
         Compiler.__init__(self)
         self.ctx.config = config
         self.root:Optional[InstructionSet] = None
-        self.hac:Optional['Hac'] = hac
+        self.hac:Optional[Hac] = hac
 
         if query:
             self.Query(query)
 
-    def compile(self, src:Union['Hql.Operators.Operator', 'Hql.Expressions.Expression', 'Hql.Query.Statement', None], preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+    def compile(self, src:Union[Operators.Operator, Expression, Statement, None], prep:bool=True) -> tuple[BranchDescriptor, None]:
         if not src:
             logging.error('Access Hql root via HqlCompiler.root not default compiler')
             raise hqle.CompilerException('Hql compiler with default parameter')
         return self.from_name(src.type)(src)
 
-    def run(self, ctx: Optional['Context'] = None) -> 'Context':
+    def run(self, ctx: Optional[Context] = None) -> Context:
         ctx = ctx if ctx else self.ctx
         if not self.root:
             raise hqle.CompilerException('Attempting to run compiler with None-root')
-        return self.root.eval(ctx, hac=self.hac)
+        ctx.hac = self.hac
+        return self.root.eval(ctx)
 
-    def Query(self, query: 'Hql.Query.Query', preprocess:bool=True):
+    def Query(self, query: Hql.Query.Query, prep:bool=True):
         res = None
         for i in query.statements:
             res = self.compile(i)
@@ -49,15 +68,15 @@ class HqlCompiler(Compiler):
                 break
         return res
 
-    def Statement(self, statement: 'Hql.Query.Statement', preprocess:bool=True) -> Optional[InstructionSet]:
+    def Statement(self, statement: Statement, prep:bool=True) -> Optional[InstructionSet]:
         logging.error("This shouldn't trigger? Compiling Statement directly")
         acc, _ = self.compile(statement.root)
         assert isinstance(acc, InstructionSet)
         return acc
 
-    def QueryStatement(self, statement: 'Hql.Query.QueryStatement', preprocess:bool=True) -> InstructionSet:
-        from Hql.Hac import Source
-        from Hql.Operators import Database
+    def QueryStatement(self, statement: QueryStatement, prep:bool=True) -> InstructionSet:
+        from Hql.Hac.Sources import Source
+        from Hql.Database import Database
         acc, _ = self.compile(statement.root)
 
         if isinstance(acc, InstructionSet):
@@ -71,7 +90,7 @@ class HqlCompiler(Compiler):
         
         return self.root
 
-    def LetStatement(self, statement: 'Hql.Query.LetStatement', preprocess:bool=True) -> None:
+    def LetStatement(self, statement:LetStatement, prep:bool=True) -> None:
         acc, _ = self.compile(statement.root)
 
         if not isinstance(acc, InstructionSet):
@@ -80,19 +99,32 @@ class HqlCompiler(Compiler):
         self.ctx.symbol_table[statement.name] = acc
         return None
 
-    def Tabular(self, expr:Union['Hql.Operators.Range', 'Hql.Expressions.Expression', InstructionSet]) -> tuple[Optional[InstructionSet], Optional['Hql.Expressions.Expression']]:
-        from Hql.Operators.Database import Database, Static
-        from Hql.Expressions import DotCompositeFunction, NamedReference
-        from Hql.Operators import Range, Datatable, Union
-        from Hql.Hac import Source
+    def LetLogicStatement(self, statement:LetLogicStatement, prep:bool=True) -> None:
+        acc, _ = self.compile(statement.root)
+
+        if not isinstance(acc, InstructionSet):
+            acc = acc.get_expr()
+
+        self.ctx.symbol_table[statement.name] = acc
+        return None
+
+    def Tabular(self, expr:PrepipeType) -> tuple[Optional[InstructionSet], Optional[Expression]]:
+        from Hql.Database import Database, Static
+        from Hql.Hac.Sources import Source
 
         if isinstance(expr, InstructionSet):
             return expr, None
 
         elif isinstance(expr, Source):
-            acc = expr.assemble()
+            acc = expr.preprocess(self.ctx)
+
+        elif isinstance(expr, FuncExprs.FuncProto):
+            acc, _ = self.compile_expr(expr)
+            if not isinstance(acc, _PREPIPE_TYPES):
+                raise hqle.CompilerException(f'Tabular function call returned non-prepipe type {type(acc)}')
+            return self.Tabular(acc)
         
-        elif isinstance(expr, DotCompositeFunction):
+        elif isinstance(expr, Functions.DotCompositeFunction):
             acc, _ = self.DotCompositeFunction(expr)
 
         elif isinstance(expr, NamedReference):
@@ -102,22 +134,24 @@ class HqlCompiler(Compiler):
                 acc = self.ctx.get_func('database')([]).eval(self.ctx)
                 acc = acc.get_variable(expr)
 
-        elif isinstance(expr, Range):
+        elif isinstance(expr, Operators.Range):
             acc, _ = self.Range(expr)
             op = acc.get_op()
-            acc = Static(op.eval(self.ctx))
+            acc = Static(op.eval(self.ctx).data)
 
-        elif isinstance(expr, Datatable):
+        elif isinstance(expr, Operators.Datatable):
             acc, _ = self.Datatable(expr)
             op = acc.get_op()
-            acc = Static(op.eval(self.ctx))
+            acc = Static(op.eval(self.ctx).data)
 
-        elif isinstance(expr, Union):
+        elif isinstance(expr, Operators.Union):
             upstream = []
             for i in expr.exprs:
                 acc, rej = self.Tabular(i)
                 if rej:
-                    return None, expr
+                    logging.error(f'   {rej.str()}')
+                    logging.error(f'in {expr.str()}')
+                    raise hqle.CompilerException('Could not compile Union expression')
                 assert acc
                 
                 if not acc.ops:
@@ -131,64 +165,63 @@ class HqlCompiler(Compiler):
             acc = expr
 
         else:
-            return None, expr
+            logging.error(expr.str())
+            logging.error(type(expr))
+            raise hqle.CompilerException('Could not compile Tabular expression')
 
         if isinstance(acc, Source):
-            acc = acc.assemble()
+            acc = acc.preprocess(self.ctx)
 
         if isinstance(acc, Database):
-            acc = InstructionSet(acc)
+            acc = InstructionSet(acc, acc.preamble.pipes)
 
         if not isinstance(acc, InstructionSet):
-            assert not isinstance(expr, Range)
-            return None, expr
+            logging.error(acc)
+            raise hqle.CompilerException(f'Tabular compilation resulted in {type(acc)} not InstructionSet')
 
         # Add hac timebound
         if self.hac:
             start, end = self.hac.get_timerange()
-            print('enter')
             acc, _ = acc.add_timebound(start, end)
 
         return acc, None
 
-    def PipeExpression(self, expr: 'Hql.Expressions.PipeExpression', preprocess:bool=True) -> tuple[Union[InstructionSet, BranchDescriptor], None]:
-        from Hql.Expressions import PipeExpression
+    def PipeExpression(self, expr: PipeExpression, prep:bool=True) -> tuple[Union[InstructionSet, BranchDescriptor], None]:
+        prepipe:Optional[InstructionSet] = None
+
         if expr.prepipe:
             acc, rej = self.Tabular(expr.prepipe)
             if rej:
                 return self.compile(rej)
-            elif not acc:
-                prepipe = []
             else:
                 prepipe = acc
-        else:
-            prepipe = []
-            
-        if not isinstance(prepipe, list):
-            prepipe = [prepipe]
+
+        if prepipe is None:
+            logging.warning('Preprocessing with empty prepipe')
+            return InstructionSet([], expr.pipes), None
 
         new:list[InstructionSet] = []
-        for i in prepipe:
-            if isinstance(i, PipeExpression):
-                acc, _ = self.PipeExpression(i)
-                assert not isinstance(acc, BranchDescriptor)
-                new.append(acc)
-            else:
-                new.append(i)
-        prepipe = new
+        for i in prepipe.upstream:
+            if isinstance(i, Database):
+                i, _ = self.Tabular(i)
+            assert i is not None
+            new.append(i)
         
-        if len(prepipe) == 0:
-            logging.warning('Preprocessing with empty prepipe')
-
         instr = InstructionSet(prepipe, expr.pipes)
+            
         return self.InstructionSet(instr), None
 
-    def InstructionSet(self, instr: InstructionSet, preprocess:bool=True) -> InstructionSet:
+    def InstructionSet(self, instr: InstructionSet, prep:bool=True) -> InstructionSet:
+        # import json
+
         # Preprocess all pipes
-        pipes = []
+        pipes:list[BranchDescriptor] = []
         for i in instr.ops:
             acc, _ = self.compile(i)
             pipes.append(acc)
+
+        # for i in pipes:
+        #     print(json.dumps(i.get_op().to_dict()))
 
         # Do basic optimization
         if pipes:
@@ -235,12 +268,13 @@ class HqlCompiler(Compiler):
 
         return comp
 
-    def optimize(self, ops: Sequence[Union['Hql.Operators.Operator', BranchDescriptor]]) -> list[BranchDescriptor]:
-        from Hql.Operators import Take, Unnest, Operator
-
+    '''
+    Good god this needs to be improved
+    '''
+    def optimize(self, ops: Sequence[Union[Operators.Operator, BranchDescriptor]]) -> list[BranchDescriptor]:
         new = []
         for i in ops:
-            if isinstance(i, Operator):
+            if isinstance(i, Operators.Operator):
                 acc, _ = self.compile(i)
                 assert isinstance(acc, BranchDescriptor)
                 new.append(acc)
@@ -257,14 +291,14 @@ class HqlCompiler(Compiler):
             i = -1
             while i >= -len(optimized):
                 if not (optimized[i].get_attr('row_dependent') or optimized[i].get_attr('row_mutable')) and op.get_attr('row_reducing'):
-                    if isinstance(optimized[i].get_op(), Take) or isinstance(op.get_op(), Take):
+                    if isinstance(optimized[i].get_op(), Operators.Take) or isinstance(op.get_op(), Operators.Take):
                         logging.debug("Holding take's location")
                         break
 
                     if type(optimized[i].get_op()) == type(op.get_op()):
                         break
 
-                    if optimized[i].get_attr('requires_sync') and isinstance(op.get_op(), Take):
+                    if optimized[i].get_attr('requires_sync') and isinstance(op.get_op(), Operators.Take):
                         break
 
                     if optimized[i].get_attr('type_casting'):
@@ -301,19 +335,18 @@ class HqlCompiler(Compiler):
         return optimized
 
     def apply_map(self, upstream:BranchDescriptor, integrating:BranchDescriptor) -> tuple[int, BranchDescriptor]:
-        from Hql.Operators import Project, ProjectRename, Extend
         from copy import deepcopy
 
         if not upstream.mapping:
             return 0, integrating
 
         # Should use this to do allow for more more error checking here
-        if type(upstream.op) == Project:
+        if isinstance(upstream.op, Operators.Project):
             for i in integrating.references:
                 if i not in upstream.mapping and i not in upstream.symmetric and i not in self.ctx.symbol_table:
                     return 2, integrating
 
-        elif type(upstream.op) in (Extend, ProjectRename):
+        elif type(upstream.op) in (Operators.Extend, Operators.ProjectRename):
             ...
             
         else:
@@ -326,20 +359,24 @@ class HqlCompiler(Compiler):
         acc, _ = new.compile(integrating.get_op())
         return 1, acc
 
-    def Where(self, op: 'Hql.Operators.Where', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Where
+    def Where(self, op: Operators.Where, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('row_reducing')
 
         acc, _ = self.compile(op.expr)
-        op = Where(acc.get_expr(), op.parameters)
+        expr = acc.get_expr()
+
+        if isinstance(expr, Functions.Function) and expr.logic:
+            expr = expr.preprocess(self.ctx)
+        assert isinstance(expr, Logic.Logic)
+        op = Operators.Where(expr, op.parameters)
 
         desc.op = op
         desc.merge(acc)
         return desc, None
 
-    def Project(self, op: 'Hql.Operators.Project', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Project
+    def Project(self, op: Operators.Project, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Operators.Project import Project
         desc = BranchDescriptor()
 
         exprs = []
@@ -351,72 +388,64 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             exprs.append(acc.get_expr())
 
-        op = Project(op.optok, exprs)
+        op = Project(exprs)
         desc.op = op
         return desc, None
 
-    def ProjectAway(self, op: 'Hql.Operators.ProjectAway', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import ProjectAway
-        
+    def ProjectAway(self, op: Operators.ProjectAway, prep:bool=True) -> tuple[BranchDescriptor, None]:
         acc, _ = self.Project(op)
-        new = ProjectAway('project-away', acc.get_op().exprs)
+    
+        exprs = []
+        for i in acc.get_op().exprs:
+            assert isinstance(i, (References.Reference, References.NamedExpression))
+            exprs.append(i)
+
+        new = Operators.ProjectAway(exprs)
         acc.op = new
 
         return acc, _
 
-    def ProjectKeep(self, op: 'Hql.Operators.Project', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import ProjectKeep
-        
+    def ProjectKeep(self, op: Operators.Project, prep:bool=True) -> tuple[BranchDescriptor, None]:
         acc, _ = self.Project(op)
-        new = ProjectKeep('project-keep', acc.get_op().exprs)
+    
+        exprs = []
+        for i in acc.get_op().exprs:
+            assert isinstance(i, (References.Reference, References.NamedExpression))
+            exprs.append(i)
+
+        new = Operators.ProjectKeep(exprs)
         acc.op = new
 
         return acc, _
 
-    def ProjectReorder(self, op: 'Hql.Operators.Project', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import ProjectReorder
-        
+    def ProjectReorder(self, op: Operators.Project, prep:bool=True) -> tuple[BranchDescriptor, None]:
         acc, _ = self.Project(op)
-        new = ProjectReorder('project-reorder', acc.get_op().exprs)
+    
+        exprs = []
+        for i in acc.get_op().exprs:
+            assert isinstance(i, (References.Reference, References.NamedExpression))
+            exprs.append(i)
+
+        new = Operators.ProjectReorder(exprs)
         acc.op = new
 
         return acc, _
 
-    def ProjectRename(self, op: 'Hql.Operators.ProjectRename', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import ProjectRename
-        
+    def ProjectRename(self, op: Operators.ProjectRename, prep:bool=True) -> tuple[BranchDescriptor, None]:
         acc, _ = self.Project(op)
-        new = ProjectRename('project-rename', acc.get_op().exprs)
+    
+        exprs = []
+        for i in acc.get_op().exprs:
+            assert isinstance(i, (References.Reference, References.NamedExpression))
+            exprs.append(i)
+
+        new = Operators.ProjectRename(exprs)
         acc.op = new
 
         return acc, _
 
-    def Push(self, op: 'Hql.Operators.Push', preprocess: bool = True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Push, Database
-
-        desc = BranchDescriptor()
-
-        dbs = []
-        for i in op.exprs:
-            acc, rej = self.Tabular(i)
-            
-            if not isinstance(acc, InstructionSet) or \
-                    acc.ops or \
-                    len(acc.upstream) > 1 or \
-                    not isinstance(acc.upstream[0], Database) or \
-                    rej != None:
-                raise hqle.CompilerException(f'Push operator given expression that does not resolve to a singular database: {i.decompile(self.ctx)}')
-
-            dbs.append(acc.upstream[0])
-
-        op.dbs = dbs
-        desc.op = op
-        desc.set_attr('push')
-
-        return desc, None
-
-    def Take(self, op: 'Hql.Operators.Take', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Take
+    def Take(self, op: Operators.Take, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Operators.Take import Take
         desc = BranchDescriptor()
         desc.set_attr('row_dependent') # take a subset of the above rows
         desc.set_attr('row_reducing')
@@ -424,6 +453,7 @@ class HqlCompiler(Compiler):
         acc, _ = self.compile(op.expr)
         desc.merge(acc)
         expr = acc.get_expr()
+        assert isinstance(expr, Literals.Integer)
 
         tables = []
         for i in op.tables:
@@ -434,24 +464,22 @@ class HqlCompiler(Compiler):
         desc.op = Take(expr, tables)
         return desc, None
 
-    def Count(self, op: 'Hql.Operators.Count', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Count
+    def Count(self, op: Operators.Count, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('row_dependent')
         desc.set_attr('row_mutable')
 
+        expr = None
         if op.name:
             acc, _ = self.compile(op.name)
             desc.merge(acc)
             expr = acc.get_expr()
-        else:
-            expr = None
+            assert isinstance(expr, References.NamedReference)
 
-        desc.op = Count(expr)
+        desc.op = Operators.Count(expr)
         return desc, None
 
-    def Extend(self, op: 'Hql.Operators.Extend', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Extend
+    def Extend(self, op: Operators.Extend, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
         exprs = []
@@ -460,40 +488,44 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             exprs.append(acc.get_expr())
 
-        desc.op = Extend(exprs)
+        desc.op = Operators.Extend(exprs)
         return desc, None
 
-    def Range(self, op: 'Hql.Operators.Range', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Range
+    def Range(self, op: Operators.Range, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
         acc, _ = self.compile(op.name)
         desc.merge(acc)
         name = acc.get_expr()
+        assert isinstance(name, References.NamedReference)
         
         acc, _ = self.compile(op.start)
         desc.merge(acc)
         start = acc.get_expr()
+        assert isinstance(start, Expression)
         
         acc, _ = self.compile(op.end)
         desc.merge(acc)
         end = acc.get_expr()
+        assert isinstance(end, Expression)
 
         acc, _ = self.compile(op.step)
         desc.merge(acc)
         step = acc.get_expr()
+        assert isinstance(step, Expression)
         
-        desc.op = Range(name, start, end, step)
+        desc.op = Operators.Range(name, start, end, step)
         return desc, None
 
-    def Top(self, op: 'Hql.Operators.Top', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Top
-        from Hql.Expressions import ByExpression
+    def Top(self, op: Operators.Top, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Operators.Top import Top
+        from Hql.Expressions.Aggregation import ByExpression
         desc = BranchDescriptor()
 
         acc, _ = self.compile(op.expr)
         desc.merge(acc)
         expr = acc.get_expr()
+        assert isinstance(expr, Literals.Integer)
 
         acc, _ = self.compile(op.by)
         desc.merge(acc)
@@ -503,14 +535,15 @@ class HqlCompiler(Compiler):
         desc.op = Top(expr, by)
         return desc, None
 
-    def Unnest(self, op: 'Hql.Operators.Unnest', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Unnest
+    def Unnest(self, op: Operators.Unnest, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Operators.Unnest import Unnest
         desc = BranchDescriptor()
         desc.set_attr('row_mutable')
 
         acc, _ = self.compile(op.field)
         desc.merge(acc)
         field = acc.get_expr()
+        assert isinstance(field, Expression)
 
         tables = []
         for i in op.tables:
@@ -521,8 +554,8 @@ class HqlCompiler(Compiler):
         desc.op = Unnest(field, tables)
         return desc, None
 
-    def Union(self, op: 'Hql.Operators.Union', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Operators import Union
+    def Union(self, op: Operators.Union, prep:bool=True) -> tuple[object, object]:
+        from Hql.Operators.Union import Union
         desc = BranchDescriptor()
         desc.set_attr('requires_sync')
 
@@ -539,13 +572,12 @@ class HqlCompiler(Compiler):
             acc.references = []
             desc.merge(acc)
             name = acc.get_expr()
+            assert isinstance(name, Expression)
         
         desc.op = Union(exprs, name=name)
         return desc, None
 
-    def Summarize(self, op: 'Hql.Operators.Summarize', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Summarize
-        from Hql.Expressions import ByExpression
+    def Summarize(self, op: Operators.Summarize, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('row_dependent')
         desc.set_attr('requires_sync')
@@ -561,14 +593,13 @@ class HqlCompiler(Compiler):
         by_expr = acc.get_expr()
 
         # Mostly done to shut my linter up
-        if not isinstance(by_expr, ByExpression):
+        if not isinstance(by_expr, Aggregation.ByExpression):
             raise hqle.CompilerException(f'ByExpression returned non-ByExpression expr type {type(by_expr)}')
 
-        desc.op = Summarize(exprs, by_expr)
+        desc.op = Operators.Summarize(exprs, by_expr)
         return desc, None
 
-    def Datatable(self, op: 'Hql.Operators.Datatable', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Datatable
+    def Datatable(self, op: Operators.Datatable, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
         schema = []
@@ -594,12 +625,12 @@ class HqlCompiler(Compiler):
             acc, _ = self.compile(op.name)
             desc.merge(acc)
             name = acc.get_expr()
+            assert isinstance(name, References.NamedReference)
 
-        desc.op = Datatable(schema, values, name=name)
+        desc.op = Operators.Datatable(schema, values, name=name)
         return desc, None
 
-    def Join(self, op: 'Hql.Operators.Join', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Join
+    def Join(self, op: Operators.Join, prep:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Expressions import PipeExpression
         desc = BranchDescriptor()
 
@@ -637,13 +668,13 @@ class HqlCompiler(Compiler):
             acc, _ = self.compile(op.where)
             desc.merge(acc)
             where = acc.get_expr()
+        assert isinstance(where, Logic.Logic)
 
-        desc.op = Join(rh, params=params, on=on, where=where)
+        desc.op = Operators.Join(rh, params=params, on=on, where=where)
         return desc, None
 
-    def MvExpand(self, op: 'Hql.Operators.MvExpand', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import MvExpand
-        from Hql.Expressions import Integer
+    def MvExpand(self, op: Operators.MvExpand, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Expressions.Literals import Integer
         desc = BranchDescriptor()
         desc.set_attr('row_mutable')
 
@@ -660,11 +691,11 @@ class HqlCompiler(Compiler):
             limit = acc.get_expr()
             assert isinstance(limit, Integer)
 
-        desc.op = MvExpand(exprs, limit)
+        desc.op = Operators.MvExpand(exprs, limit)
         return desc, None
 
-    def Sort(self, op: 'Hql.Operators.Sort', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Operators import Sort
+    def Sort(self, op: Operators.Sort, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Operators.Sort import Sort
         desc = BranchDescriptor()
         desc.set_attr('row_dependent')
 
@@ -677,8 +708,7 @@ class HqlCompiler(Compiler):
         desc.op = Sort(exprs)
         return desc, None
 
-    def Rename(self, op: 'Hql.Operators.Rename', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Operators import Rename
+    def Rename(self, op: Operators.Rename, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('table_mutable')
 
@@ -688,21 +718,21 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             exprs.append(acc.get_expr())
 
-        desc.op = Rename(exprs)
+        desc.op = Operators.Rename(exprs)
         return desc, None
     
-    def OpParameter(self, expr: 'Hql.Expressions.OpParameter', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import OpParameter
+    def OpParameter(self, expr: OpParameter, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
         acc, _ = self.compile(expr.value)
         desc.merge(acc)
+        value = acc.get_expr()
+        assert isinstance(value, Expression)
 
-        desc.expr = OpParameter(expr.name, acc.get_expr())
+        desc.expr = OpParameter(expr.name, value)
         return desc, None
 
-    def ToClause(self, expr: 'Hql.Expressions.ToClause', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import ToClause
+    def ToClause(self, expr:ToClause, prep:bool=True) -> tuple[BranchDescriptor, None]:
         from Hql.Types.Hql import HqlTypes as hqlt
         desc = BranchDescriptor()
 
@@ -711,37 +741,36 @@ class HqlCompiler(Compiler):
             desc.set_attr('types', expr.to)
             to = expr.to
         
-        elif expr.to:
+        else:
             acc, _ = self.compile(expr.to)
             desc.merge(acc)
             to = acc.get_expr()
 
-        else:
-            to = None
+        assert isinstance(to, hqlt.HqlType)
 
         acc, _ = self.compile(expr.expr)
         desc.merge(acc)
+        name = acc.get_expr()
+        assert isinstance(name, NamedReference)
     
-        desc.expr = ToClause(acc.get_expr(), to=to)
+        desc.expr = ToClause(name, to)
         return desc, None
 
-    def OrderedExpression(self, expr:'Hql.Expressions.OrderedExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import OrderedExpression
+    def OrderedExpression(self, expr:Aggregation.OrderedExpression, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Expressions.Aggregation import OrderedExpression
         desc = BranchDescriptor()
         desc.set_attr('null_ordering')
         desc.set_attr('ordering')
 
-        ordered_expr = None
-        if expr.expr:
-            acc, _ = self.compile(expr.expr)
-            desc.merge(acc)
-            ordered_expr = acc.get_expr()
+        acc, _ = self.compile(expr.expr)
+        desc.merge(acc)
+        ordered_expr = acc.get_expr()
+        assert isinstance(ordered_expr, Expression)
 
-        desc.expr = OrderedExpression(expr=ordered_expr, order=expr.order, nulls=expr.nulls)
+        desc.expr = OrderedExpression(ordered_expr, order=expr.order, nulls=expr.nulls)
         return desc, None
 
-    def ByExpression(self, expr:'Hql.Expressions.ByExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import ByExpression
+    def ByExpression(self, expr:Aggregation.ByExpression, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('aggregation')
 
@@ -751,31 +780,14 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             by_exprs.append(acc.get_expr())
 
-        desc.expr = ByExpression(by_exprs)
+        desc.expr = Aggregation.ByExpression(by_exprs)
         return desc, None
 
-    def Function(self, expr: 'Hql.Functions.Function', preprocess: bool = True) -> tuple[object, object]:
+    def Function(self, expr: Functions.Function, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Functions import typecasting
+
         desc = BranchDescriptor()
-        desc.expr = expr
         desc.set_attr('functions', expr.name)
-
-        for i in expr.args:
-            acc, _ = self.compile(i)
-            desc.merge(acc)
-
-        return desc, None
-
-    def FuncExpr(self, expr:'Hql.Expressions.FuncExpr', preprocess:bool=True, dotcomp:bool=False) -> tuple[object, None]:
-        from Hql.Expressions import FuncExpr, NamedReference, Expression
-        from Hql.Functions import Function, typecasting
-        from Hql.Operators import Operator, Database
-        desc = BranchDescriptor()
-
-        acc, _ = self.compile(expr.name)
-        desc.merge(acc)
-        desc.references = []
-        name = acc.get_expr()
-        assert isinstance(name, NamedReference)
 
         args = []
         for i in expr.args:
@@ -783,63 +795,109 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             args.append(acc.get_expr())
 
-        desc.set_attr('functions', name.value)
-        desc.expr = FuncExpr(name, args).eval(self.ctx)
-        assert isinstance(desc.expr, Function)
-
-        if isinstance(desc.expr, typecasting.Typecast):
+        if isinstance(expr, typecasting.Typecast):
             desc.set_attr('type_casting')
 
-        if desc.expr.preprocess and preprocess and not dotcomp:
-            res = desc.expr.eval(self.ctx, preprocess=True)
-            if isinstance(res, (Expression, Operator)) and not isinstance(res, Database):
-                return self.compile(res)
-            return res, None
+        expr.args = args
+        desc.expr = expr
 
         return desc, None
 
-    def DotCompositeFunction(self, expr:'Hql.Expressions.DotCompositeFunction', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import DotCompositeFunction, Expression, FuncExpr
-        from Hql.Functions import Function
-        from Hql.Operators import Operator, Database
-        desc = BranchDescriptor()
-        func_preprocess = True
+    def FuncExpr(self, expr:FuncExprs.FuncExpr, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        func_expr = expr.preprocess(self.ctx)
+        return self.Function(func_expr)
 
-        funcs:list[Function] = []
+    def DotFuncExpr(self, expr:FuncExprs.DotFuncExpr, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        func_expr = expr.preprocess(self.ctx)
+        
+        if isinstance(func_expr, Functions.Function):
+            return self.Function(func_expr)
+        else:
+            return self.DotCompositeFunction(func_expr)
+
+    def ReceiverFuncExpr(self, expr:FuncExprs.ReceiverFuncExpr, prep:bool=True) -> tuple[object, None]:
+        from Hql.Database import Database
+        from Hql.Expressions.__proto__ import Expression
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference
+        from Hql.Operators.Operator import Operator
+
+        desc = BranchDescriptor()
+
+        acc, _ = self.compile(expr.call)
+        desc.merge(acc)
+        call = acc.get_expr()
+        assert isinstance(call, Functions.Function)
+
+        acc, _ = self.compile(expr.receiver)
+        desc.merge(acc)
+        receiver = acc.get_expr()
+
+        if isinstance(receiver, Functions.Function):
+            dotfunc = Functions.DotCompositeFunction([receiver, call])
+            assert isinstance(dotfunc, Functions.DotCompositeFunction)
+            return self.DotCompositeFunction(dotfunc)
+
+        acc, _ = self.compile(expr.call.name)
+        desc.merge(acc)
+        name = acc.get_expr()
+        assert isinstance(name, NamedReference)
+
+        ############################################
+
+        args = []
+        for i in expr.call.args:
+            acc, _ = self.compile(i)
+            desc.merge(acc)
+            args.append(acc.get_expr())
+
+        desc.set_attr('functions', name.str())
+        func = FuncExpr(name, args).preprocess(self.ctx)
+        assert isinstance(func, Function)
+        func.preprocess(self.ctx, receiver=receiver)
+        res = func.eval(self.ctx, receiver=receiver)
+
+        if isinstance(res, (InstructionSet, Database)):
+            return res, None
+
+        if isinstance(res, (Expression, Operator)):
+            return self.compile(res)
+
+        desc.expr = res
+        return desc, None
+
+    def DotCompositeFunction(self, expr:Functions.DotCompositeFunction, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Database import Database
+        desc = BranchDescriptor()
+
+        funcs:list[Functions.Function] = []
         for i in expr.funcs:
-            if isinstance(i, Function):
+            if isinstance(i, Functions.Function):
                 funcs.append(i)
                 continue
 
-            assert isinstance(i, FuncExpr)
-            acc, _ = self.FuncExpr(i, dotcomp=True)
-            assert isinstance(acc, BranchDescriptor)
+            acc, _ = self.FuncExpr(i)
             desc.merge(acc)
             acc = acc.get_expr()
-            assert isinstance(acc, Function)
+            assert isinstance(acc, Functions.Function)
             funcs.append(acc)
 
-        for i in funcs:
-            if not i.preprocess:
-                func_preprocess = False
-
-        if func_preprocess:
-            res = DotCompositeFunction(funcs).eval(self.ctx, preprocess=True)
-            if isinstance(res, (Expression, Operator)) and not isinstance(res, Database):
+        if prep:
+            res = Functions.DotCompositeFunction(funcs).eval(self.ctx)
+            if isinstance(res, (Expression, Operators.Operator)) and not isinstance(res, Database):
                 return self.compile(res)
             return res, None
 
         if len(funcs) > 1:
             desc.set_attr('dot_functions')
-            desc.expr = DotCompositeFunction(funcs)
+            desc.expr = Functions.DotCompositeFunction(funcs)
         else:
             # Breakdown a dot function to a normal function
             desc.expr = funcs[0]
 
         return desc, None
 
-    def Equality(self, expr:'Hql.Expressions.Equality', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import Equality
+    def Equality(self, expr:Logic.Equality, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('case_insensitive_compare', not expr.cs)
         desc.set_attr('case_sensitive_compare', expr.cs)
@@ -847,6 +905,7 @@ class HqlCompiler(Compiler):
         acc, _ = self.compile(expr.lh)
         desc.merge(acc)
         lh = acc.get_expr()
+        assert isinstance(lh, References.Reference)
 
         rh = []
         for i in expr.rh:
@@ -854,11 +913,11 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             rh.append(acc.get_expr())
 
-        desc.expr = Equality(lh, expr.op, rh)
+        desc.expr = Logic.Equality(lh, rh, cs=expr.cs, neq=expr.neq)
         return desc, None
 
-    def Substring(self, expr:'Hql.Expressions.Substring', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import Substring
+    def Substring(self, expr:Logic.Substring, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Expressions.Logic import Substring
         desc = BranchDescriptor()
         desc.set_attr('case_insensitive_compare', not expr.cs)
         desc.set_attr('case_sensitive_compare', expr.cs)
@@ -868,6 +927,7 @@ class HqlCompiler(Compiler):
         acc, _ = self.compile(expr.lh)
         desc.merge(acc)
         lh = acc.get_expr()
+        assert isinstance(lh, References.Reference)
 
         rh = []
         for i in expr.rh:
@@ -875,92 +935,90 @@ class HqlCompiler(Compiler):
             desc.merge(acc)
             rh.append(acc.get_expr())
 
-        desc.expr = Substring(lh, expr.op, rh)
+        expr.lh = lh
+        expr.rh = rh
+        desc.expr = expr
         return desc, None
 
-    def Relational(self, expr:'Hql.Expressions.Relational', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import Relational
+    def Relational(self, expr:Logic.Relational, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
         acc, _ = self.compile(expr.lh)
         desc.merge(acc)
         lh = acc.get_expr()
+        assert isinstance(lh, References.Reference)
 
-        rh = []
-        for i in expr.rh:
-            acc, _ = self.compile(i)
-            desc.merge(acc)
-            rh.append(acc.get_expr())
+        acc, _ = self.compile(expr.rh)
+        desc.merge(acc)
+        rh = acc.get_expr()
+        assert isinstance(rh, Expression)
 
-        desc.expr = Relational(lh, expr.op, rh)
+        desc.expr = Logic.Relational(lh, rh, expr.gt, expr.eq)
         return desc, None
 
-    def BetweenEquality(self, expr:'Hql.Expressions.BetweenEquality', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import BetweenEquality
+    def BetweenEquality(self, expr:Logic.BetweenEquality, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('range_compare')
 
         acc, _ = self.compile(expr.lh)
         desc.merge(acc)
         lh = acc.get_expr()
+        assert isinstance(lh, References.Reference)
 
         acc, _ = self.compile(expr.start)
         desc.merge(acc)
         start = acc.get_expr()
+        assert isinstance(start, Literals.Literal)
         
         acc, _ = self.compile(expr.end)
         desc.merge(acc)
         end = acc.get_expr()
+        assert isinstance(end, Literals.Literal)
 
-        desc.expr = BetweenEquality(lh, start, end, expr.op)
+        desc.expr = Logic.BetweenEquality(lh, start, end, expr.neq)
         return desc, None
 
-    def BinaryLogic(self, expr:'Hql.Expressions.BinaryLogic', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import BinaryLogic
+    def BinaryLogic(self, expr:Logic.BinaryLogic, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
-        acc, _ = self.compile(expr.lh)
-        desc.merge(acc)
-        lh = acc.get_expr()
-
-        rh = []
-        for i in expr.rh:
+        exprs = []
+        for i in expr.exprs:
             acc, _ = self.compile(i)
+            exprs.append(acc.get_expr())
             desc.merge(acc)
-            rh.append(acc.get_expr())
 
-        desc.expr = BinaryLogic(lh, rh, expr.bitype)
+        desc.expr = Logic.BinaryLogic(exprs, expr.logic_and)
         return desc, None
 
-    def Not(self, expr: 'Hql.Expressions.Not', preprocess: bool = True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import Not
+    def Not(self, expr: Logic.Not, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
         acc, _ = self.compile(expr.expr)
         desc.merge(acc)
         inner = acc.get_expr()
+        assert isinstance(inner, Logic.Logic)
         
-        desc.expr = Not(inner)
+        desc.expr = Logic.Not(inner)
         return desc, None
 
-    def BasicRange(self, expr:'Hql.Expressions.BasicRange', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import BasicRange
+    def BasicRange(self, expr:Logic.BasicRange, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('range_compare')
 
         acc, _ = self.compile(expr.start)
         desc.merge(acc)
         start = acc.get_expr()
+        assert isinstance(start, Literals.Literal)
         
         acc, _ = self.compile(expr.end)
         desc.merge(acc)
         end = acc.get_expr()
+        assert isinstance(end, Literals.Literal)
 
-        desc.expr = BasicRange(start, end)
+        desc.expr = Logic.BasicRange(start, end)
         return desc, None
 
-    def Regex(self, expr:'Hql.Expressions.Regex', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import Regex
+    def Regex(self, expr:Hql.Expressions.Regex, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('regex_matching')
         desc.set_attr('regex_insensitive', expr.i)
@@ -971,34 +1029,31 @@ class HqlCompiler(Compiler):
         acc, _ = self.compile(expr.lh)
         desc.merge(acc)
         lh = acc.get_expr()
+        assert isinstance(lh, References.Reference)
         
         acc, _ = self.compile(expr.rh)
         desc.merge(acc)
         rh = acc.get_expr()
+        assert isinstance(rh, Literals.StringLiteral)
 
-        desc.expr = Regex(lh, rh, expr.i, expr.m, expr.s, expr.g)
+        desc.expr = Logic.Regex(lh, rh, expr.i, expr.m, expr.s, expr.g)
         return desc, None
     
-    def TypeExpression(self, expr:'Hql.Expressions.TypeExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Types.Hql import HqlTypes as hqlt
-        
+    def TypeExpression(self, expr:Literals.TypeExpression, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('types', expr.eval(self.ctx))
         desc.expr = expr
         
         return desc, None
 
-    def StringLiteral(self, expr:'Hql.Expressions.StringLiteral', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Types.Hql import HqlTypes as hqlt
-
+    def StringLiteral(self, expr:Literals.StringLiteral, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('types', hqlt.string())
         desc.expr = expr
 
         return desc, None
     
-    def MultiString(self, expr:'Hql.Expressions.MultiString', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import StringLiteral
+    def MultiString(self, expr:Literals.MultiString, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
 
         val = ''
@@ -1006,63 +1061,52 @@ class HqlCompiler(Compiler):
             val += i.quote('')
 
         desc.set_attr('types', hqlt.string())
-        desc.expr = StringLiteral(val)
+        desc.expr = Literals.StringLiteral(val)
         return desc, None
 
-    def Integer(self, expr:'Hql.Expressions.Integer', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Types.Hql import HqlTypes as hqlt
-        
+    def Integer(self, expr:Literals.Integer, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('types', hqlt.int())
         desc.expr = expr
 
         return desc, None
 
-    def IP4(self, expr:'Hql.Expressions.IP4', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Types.Hql import HqlTypes as hqlt
-        
+    def IP4(self, expr:Literals.IP4, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('types', hqlt.ip4())
         desc.expr = expr
 
         return desc, None
 
-    def Float(self, expr:'Hql.Expressions.Float', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Types.Hql import HqlTypes as hqlt
-        
+    def Float(self, expr:Literals.Float, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('types', hqlt.float())
         desc.expr = expr
 
         return desc, None
 
-    def Bool(self, expr:'Hql.Expressions.Bool', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Types.Hql import HqlTypes as hqlt
-        
+    def Bool(self, expr:Literals.Bool, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('types', hqlt.bool())
         desc.expr = expr
 
         return desc, None
 
-    def Datetime(self, expr: 'Hql.Expressions.Datetime', preprocess: bool = True) -> tuple[object, object]:
-        from Hql.Types.Hql import HqlTypes as hqlt
-
+    def Datetime(self, expr: Literals.Datetime, prep:bool=True) -> tuple[BranchDescriptor, object]:
         desc = BranchDescriptor()
         desc.set_attr('types', hqlt.datetime())
         desc.expr = expr
 
         return desc, None
     
-    def NamedReference(self, expr:'Hql.Expressions.NamedReference', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import PipeExpression
-        from Hql.Operators.Database import Database
+    def NamedReference(self, expr:References.NamedReference, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Database import Database
 
         desc = BranchDescriptor()
 
         if expr in self.ctx.symbol_table and expr != self.ctx.symbol_table[expr]:
             res = self.ctx.symbol_table[expr]
-
+            # not needed?
             if not isinstance(res, (PipeExpression, Database, InstructionSet)):
                 acc, _ = self.compile(res)
                 desc.expr = acc.get_expr()
@@ -1073,54 +1117,43 @@ class HqlCompiler(Compiler):
         desc.references = [expr]
         return desc, None
 
-    def EscapedNamedReference(self, expr:'Hql.Expressions.EscapedNamedReference', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+    def EscapedNamedReference(self, expr:References.EscapedNamedReference, prep:bool=True) -> tuple[BranchDescriptor, None]:
         acc, _ = self.NamedReference(expr)
         acc.set_attr('complex_names')
         return acc, None
 
-    def Keyword(self, expr:'Hql.Expressions.Keyword', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        return self.NamedReference(expr)
-
-    def Identifier(self, expr:'Hql.Expressions.Identifier', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        return self.NamedReference(expr)
-
-    def Wildcard(self, expr:'Hql.Expressions.Wildcard', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
+    def Wildcard(self, expr:References.Wildcard, prep:bool=True) -> tuple[BranchDescriptor, None]:
         acc, _ = self.NamedReference(expr)
         acc.set_attr('wildcards')
         return acc, None
 
-    def Path(self, expr:'Hql.Expressions.Path', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import Path, EscapedNamedReference, Wildcard
-        from Hql.Expressions import PipeExpression
-        from Hql.Operators.Database import Database
-        
+    def Path(self, expr:References.Path, prep:bool=True) -> tuple[BranchDescriptor, None]:
+        from Hql.Database import Database
+
         desc = BranchDescriptor()
-        desc.set_attr('nested_objects')
 
         if expr in self.ctx.symbol_table:
             res = self.ctx.symbol_table[expr]
+
             if not isinstance(res, (PipeExpression, Database, InstructionSet)):
                 acc, _ = self.compile(res)
                 desc.expr = acc.get_expr()
                 desc.merge(desc)
                 return desc, None
         
+        desc.set_attr('nested_objects')
+        
         path = []
         for i in expr.path:
-            if isinstance(i, EscapedNamedReference):
-                desc.set_attr('complex_names')
-            
-            if isinstance(i, Wildcard):
-                desc.set_attr('wildcards')
-
+            acc, _ = self.compile(i)
+            desc.merge(acc)
             path.append(i)
 
-        desc.expr = Path(path)
+        desc.expr = References.Path(path)
         desc.references = [desc.expr]
         return desc, None
 
-    def NamedExpression(self, expr:'Hql.Expressions.NamedExpression', preprocess:bool=True) -> tuple[BranchDescriptor, None]:
-        from Hql.Expressions import NamedExpression, NamedReference, Path
+    def NamedExpression(self, expr:Hql.Expressions.NamedExpression, prep:bool=True) -> tuple[BranchDescriptor, None]:
         desc = BranchDescriptor()
         desc.set_attr('assignment')
 
@@ -1129,19 +1162,18 @@ class HqlCompiler(Compiler):
         value = acc.get_expr()
 
         paths = []
-        assignments = []
         for i in expr.paths:
             acc, _ = self.compile(i)
             desc.merge(acc)
             dest = acc.get_expr()
+            assert isinstance(dest, References.Reference)
 
-            if isinstance(value, (NamedReference, Path)):
-                assert isinstance(dest, (NamedReference, Path))
+            if isinstance(value, References.Reference):
                 desc.add_mapping(dest, value)
                 desc.references.append(value)
 
             desc.provides.append(dest)
             paths.append(dest)
 
-        desc.expr = NamedExpression(paths, value)
+        desc.expr = References.NamedExpression(paths, value)
         return desc, None

@@ -1,35 +1,55 @@
+from __future__ import annotations
 from . import Function
-from Hql.Exceptions import HqlExceptions as hqle
+
 from Hql import Config
-from Hql.Context import register_func, Context
-from Hql.Expressions import StringLiteral
-from typing import Optional
+from Hql.Context import register_func
+from Hql.Exceptions import HqlExceptions as hqle
+from typing import Optional, Sequence, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 # This is a meta function resolved while parsing
 @register_func('http')
 class http(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.References import Reference
+        from Hql.Expressions.Literals import StringLiteral
+
         Function.__init__(self, args, 1, -1)
-        self.preprocess = True
 
-        for i in args:
-            if not isinstance(i, StringLiteral):
-                raise hqle.QueryException(f'Invalid argument type passed to macro function: {type(i)}')
+        self.names:Sequence[Union[Reference, StringLiteral]] = []
         
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Operators.Database import Database
+        for i in self.args:
+            if not isinstance(i, (StringLiteral, Reference)):
+                raise hqle.ArgumentException(f'Bad database file argument datatype {args[0].type}')
+            self.names.append(i)
 
-        db = kwargs.get('receiver', None)
-        urls = [x.eval(ctx, as_str=True) for x in self.args]
+    def preprocess(self, ctx: Context, receiver=None) -> object:
+        from Hql.Expressions.Literals import StringLiteral
+        
+        new = []
+        for i in self.names:
+            i = i.preprocess(ctx)
+            if not isinstance(i, StringLiteral):
+                raise hqle.QueryException(f'File function give argument that doesn\'t resolve to string literal: {type(i)}')
+
+        self.names = new
+
+        return self
+        
+    def eval(self, ctx: Context, receiver=None) -> object:
+        from Hql.Database import Database
+
+        db = receiver
+        urls = [x.str() for x in self.names]
         
         if not db:
-            dbconf = ctx.config.get_default_db()
-            db = ctx.get_db(dbconf['type'])(dbconf, name='default')
+            db = ctx.get_func('database')([]).eval(ctx)
         
         if db and issubclass(type(db), Database) and db.has_method(self.name):
-            db.urls += urls
+            db.urls = urls
         else:
             raise hqle.CompilerException(f'Function {self.name} cannot be called on {type(db)}')
-
         
         return db

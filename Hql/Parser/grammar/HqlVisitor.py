@@ -64,6 +64,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#letLogicDeclaration.
+    def visitLetLogicDeclaration(self, ctx:HqlParser.LetLogicDeclarationContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#letFunctionParameterList.
     def visitLetFunctionParameterList(self, ctx:HqlParser.LetFunctionParameterListContext):
         return self.visitChildren(ctx)
@@ -489,6 +494,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#joinOperatorTable.
+    def visitJoinOperatorTable(self, ctx:HqlParser.JoinOperatorTableContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#joinOperatorOnClause.
     def visitJoinOperatorOnClause(self, ctx:HqlParser.JoinOperatorOnClauseContext):
         return self.visitChildren(ctx)
@@ -854,11 +864,6 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#sortOrdering.
-    def visitSortOrdering(self, ctx:HqlParser.SortOrderingContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by HqlParser#summarizeOperator.
     def visitSummarizeOperator(self, ctx:HqlParser.SummarizeOperatorContext):
         return self.visitChildren(ctx)
@@ -1109,6 +1114,11 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by HqlParser#functionCallOrPathCallOperation.
+    def visitFunctionCallOrPathCallOperation(self, ctx:HqlParser.FunctionCallOrPathCallOperationContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by HqlParser#functionalCallOrPathPathOperation.
     def visitFunctionalCallOrPathPathOperation(self, ctx:HqlParser.FunctionalCallOrPathPathOperationContext):
         return self.visitChildren(ctx)
@@ -1154,18 +1164,13 @@ class HqlVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by HqlParser#namedFunctionCallExpression.
-    def visitNamedFunctionCallExpression(self, ctx:HqlParser.NamedFunctionCallExpressionContext):
+    # Visit a parse tree produced by HqlParser#functionCallName.
+    def visitFunctionCallName(self, ctx:HqlParser.FunctionCallNameContext):
         return self.visitChildren(ctx)
 
 
     # Visit a parse tree produced by HqlParser#argumentExpression.
     def visitArgumentExpression(self, ctx:HqlParser.ArgumentExpressionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#countExpression.
-    def visitCountExpression(self, ctx:HqlParser.CountExpressionContext):
         return self.visitChildren(ctx)
 
 
@@ -1176,16 +1181,6 @@ class HqlVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by HqlParser#primaryExpression.
     def visitPrimaryExpression(self, ctx:HqlParser.PrimaryExpressionContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#nameReferenceWithDataScope.
-    def visitNameReferenceWithDataScope(self, ctx:HqlParser.NameReferenceWithDataScopeContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by HqlParser#dataScopeClause.
-    def visitDataScopeClause(self, ctx:HqlParser.DataScopeClauseContext):
         return self.visitChildren(ctx)
 
 

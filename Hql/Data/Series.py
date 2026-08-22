@@ -1,14 +1,15 @@
-import polars as pl
+from __future__ import annotations
 from typing import TYPE_CHECKING, Union, Optional
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
+    import polars as pl
 
 '''
 Series for individual values, mimics a pl.Series
 '''
 class Series():
-    def __init__(self, series:pl.Series, stype:Union['hqlt.HqlType', None]=None):
+    def __init__(self, series:pl.Series, stype:Union[hqlt.HqlType, None]=None):
         from Hql.Types.Polars import PolarsTypes as plt
 
         if stype == None:
@@ -24,7 +25,7 @@ class Series():
             return False
         return True
 
-    def cast(self, target:Optional["hqlt.HqlType"]=None):
+    def cast(self, target:Optional[hqlt.HqlType]=None):
         if not target:
             target = self.type
         self.series = target.cast(self.series)

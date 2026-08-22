@@ -1,128 +1,105 @@
-from Hql.Functions import Function
-from Hql.Context import register_func, Context
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Expressions import StringLiteral, Multivalue
-from Hql.Data import Series
-import polars as pl
+from __future__ import annotations
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Union
+
+from Hql.Context import register_func
+from Hql.Exceptions import HqlExceptions as hqle
+from Hql.Functions import Function
 
 if TYPE_CHECKING:
-    from Hql.Data import Data
+    from Hql.Expressions.Literals import StringLiteral
     from Hql.Expressions import Expression
+    from Hql.Context import Context
+    from Hql.Expressions.Literals import Multivalue
 
 @register_func('base64')
 @register_func('b64')
 class base64enc(Function):
     def __init__(self, args: list, conf:Optional[dict]=None):
-        from Hql.Expressions import StringLiteral, NamedReference, Path
-        Function.__init__(self, args, 1, 2)
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import Reference
+        Function.__init__(self, args, 1, 2, conf=conf)
 
-        if isinstance(args[0], StringLiteral):
-            self.static = True
-        elif isinstance(args[0], (NamedReference, Path)):
-            self.static = False
-        else:
-            raise hqle.ArgumentException(f'Invalid argument type {type(args[0])} passed to {self.name}')
+        for i in args:
+            if not isinstance(i, (StringLiteral, Reference)):
+                raise hqle.ArgumentException(f'Invalid argument type {type(i)} passed to {self.name}')
             
-        self.val = args[0]
+        self.val:Union[StringLiteral, Reference] = args[0]
+        self.enc = args[1] if len(args) == 2 else StringLiteral('ascii')
 
-        if len(args) > 1:
-            if not isinstance(args[1], StringLiteral):
-                raise hqle.ArgumentException(f'Invalid encoding argument type {type(args[0])} passed to {self.name}')
-            self.encoding = args[1]
-        else:
-            self.encoding = StringLiteral('ascii')
+    def preprocess(self, ctx: Context, receiver=None) -> object:
+        from Hql.Expressions.Literals import StringLiteral
 
-    def static_eval(self, ctx:Context) -> StringLiteral:
-        from base64 import b64encode
+        def static(val:str, enc:str) -> StringLiteral:
+            from base64 import b64encode
+            val = b64encode(bytes(val, enc)).decode()
+            return StringLiteral(val)
 
-        val = self.val.eval(ctx, as_str=True)
-        if not isinstance(val, str):
-            raise hqle.CompilerException(f'Static evaluation of argument {type(self.val)} to {self.name} returned {type(val)} not str')
+        val = self.val.preprocess(ctx)
+        enc = self.enc.preprocess(ctx)
 
-        encoding = self.encoding.eval(ctx)
-        if not isinstance(encoding, str):
-            raise hqle.CompilerException(f'Static evaluation of encoding argument {type(self.encoding)} to {self.name} returned {type(encoding)} not str')
+        if not isinstance(enc, StringLiteral):
+            raise hqle.ArgumentException(f'base64 function encoding value did not resolve to a StringLiteral: {enc}')
 
-        val = b64encode(bytes(val, encoding)).decode()
-        return StringLiteral(val)
-       
-    def eval(self, ctx: 'Context', **kwargs) -> Union['Data', 'Expression']:
-        if self.static:
-            return self.static_eval(ctx)
+        if not isinstance(val, StringLiteral):
+            return self
 
-        return StringLiteral('')
+        return static(val.str(), enc.str())
+
+    def eval(self, ctx: Context, receiver=None) -> object:
+        from Hql.Data import Series
+        raise hqle.CompilerException('unimplemented dynamic eval')
+
+        # return Series()
 
 @register_func('base64dec')
 @register_func('b64dec')
 class base64dec(Function):
-    def __init__(self, args: list):
-        from Hql.Expressions import StringLiteral, NamedReference, Path
+    def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import Reference
         Function.__init__(self, args, 1, 2)
 
-        if isinstance(args[0], StringLiteral):
-            self.static = True
-        elif isinstance(args[0], (NamedReference, Path)):
-            self.static = False
-        else:
-            raise hqle.ArgumentException(f'Invalid argument type {type(args[0])} passed to {self.name}')
+        for i in args:
+            if not isinstance(i, (StringLiteral, Reference)):
+                raise hqle.ArgumentException(f'Invalid argument type {type(i)} passed to {self.name}')
             
-        self.val = args[0]
-
-        if len(args) > 1:
-            if not isinstance(args[1], StringLiteral):
-                raise hqle.ArgumentException(f'Invalid encoding argument type {type(args[0])} passed to {self.name}')
-            self.encoding = args[1]
-        else:
-            self.encoding = StringLiteral('ascii')
+        self.val:Union[StringLiteral, Reference] = args[0]
+        self.enc = args[1] if len(args) == 2 else StringLiteral('ascii')
 
     def static_eval(self, ctx:Context) -> StringLiteral:
         from base64 import b64decode
 
-        val = self.val.eval(ctx, as_str=True)
-        if not isinstance(val, str):
-            raise hqle.CompilerException(f'Static evaluation of argument {type(self.val)} to {self.name} returned {type(val)} not str')
+        val = self.val.str()
+        enc = self.enc.str()
 
-        encoding = self.encoding.eval(ctx)
-        if not isinstance(encoding, str):
-            raise hqle.CompilerException(f'Static evaluation of encoding argument {type(self.encoding)} to {self.name} returned {type(encoding)} not str')
-
-        val = b64decode(bytes(val, 'ascii')).decode(encoding)
+        val = b64decode(bytes(val, 'ascii')).decode(enc)
         return StringLiteral(val)
        
-    def eval(self, ctx: 'Context', **kwargs) -> Union['Data', 'Expression']:
-        if self.static:
-            return self.static_eval(ctx)
+    def eval(self, ctx: Context, receiver=None) -> object:
+        from Hql.Data import Series
+        raise hqle.CompilerException('unimplemented dynamic eval')
 
-        return StringLiteral('')
+        # return Series()
 
 @register_func('base64off')
 @register_func('b64off')
 class base64off(Function):
     def __init__(self, args: list):
-        from Hql.Expressions import StringLiteral, NamedReference, Path
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import Reference
         Function.__init__(self, args, 1, 2)
 
-        if isinstance(args[0], StringLiteral):
-            self.static = True
-        elif isinstance(args[0], (NamedReference, Path)):
-            self.static = False
-        else:
-            raise hqle.ArgumentException(f'Invalid argument type {type(args[0])} passed to {self.name}')
+        for i in args:
+            if not isinstance(i, (StringLiteral, Reference)):
+                raise hqle.ArgumentException(f'Invalid argument type {type(i)} passed to {self.name}')
             
-        self.val = args[0]
-
-        if len(args) > 1:
-            if not isinstance(args[1], StringLiteral):
-                raise hqle.ArgumentException(f'Invalid encoding argument type {type(args[0])} passed to {self.name}')
-            self.encoding = args[1]
-        else:
-            self.encoding = StringLiteral('ascii')
+        self.val:Union[StringLiteral, Reference] = args[0]
+        self.enc = args[1] if len(args) == 2 else StringLiteral('ascii')
 
     def calc_offset(self, val:str, encoding:str) -> list[StringLiteral]:
         from base64 import b64encode
-        from Hql.Expressions import StringLiteral
+        from Hql.Expressions.Literals import StringLiteral
         
         start_offsets = (0, 2, 3)
         end_offsets = (None, -3, -2)
@@ -136,23 +113,16 @@ class base64off(Function):
 
         return parts
 
-    def static_eval(self, ctx:Context) -> Multivalue:
-        from Hql.Types.Hql import HqlTypes as hqlt
+    def preprocess(self, ctx: Context, receiver=None) -> Multivalue:
+        val = self.val.str()
+        enc = self.enc.str()
 
-        val = self.val.eval(ctx, as_str=True)
-        if not isinstance(val, str):
-            raise hqle.CompilerException(f'Static evaluation of argument {type(self.val)} to {self.name} returned {type(val)} not str')
-
-        encoding = self.encoding.eval(ctx)
-        if not isinstance(encoding, str):
-            raise hqle.CompilerException(f'Static evaluation of encoding argument {type(self.encoding)} to {self.name} returned {type(encoding)} not str')
-
-        offsets = self.calc_offset(val, encoding)
+        offsets = self.calc_offset(val, enc)
         mv = Multivalue(offsets)
         return mv
        
-    def eval(self, ctx: 'Context', **kwargs) -> Union['Data', Series, 'Expression']:
-        if self.static:
-            return self.static_eval(ctx)
+    def eval(self, ctx: Context, receiver=None) -> object:
+        from Hql.Data import Series
+        raise hqle.CompilerException('unimplemented dynamic eval')
 
-        return StringLiteral('')
+        # return Series()

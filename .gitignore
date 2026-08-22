@@ -14,12 +14,13 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# lib/
+# lib64/
 parts/
 sdist/
 var/
 wheels/
+wheelhouse/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -130,6 +131,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv_container
 env/
 venv/
 ENV/
@@ -196,4 +198,5 @@ examples/interface/*.yml
 
 conf.tar.gz
 
-.DS_Store
+.devcontainer
+uv.lock

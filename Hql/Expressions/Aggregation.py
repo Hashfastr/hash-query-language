@@ -1,33 +1,36 @@
-from .__proto__ import Expression
-from Hql.PolarsTools import pltools
-from Hql.Exceptions import HqlExceptions as hqle
+from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from .__proto__ import Expression
+
+from typing import TYPE_CHECKING, Optional, Sequence
 
 if TYPE_CHECKING:
     from Hql.Context import Context
     from Hql.Data import Table
-    from Hql.Expressions import NamedReference, Path
+    from Hql.Expressions.References import Reference
 
 class OrderedExpression(Expression):
-    def __init__(self, expr:Union[Expression, None]=None, order:str='desc', nulls:str=''):
+    def __init__(self, expr:Expression, order:str='desc', nulls:str=''):
         Expression.__init__(self)
         self.expr = expr
         self.order = order
         self.nulls = nulls
+        self.implicit_nulls = True
         
         if nulls == '':
             if order == 'asc':
                 self.nulls = 'first'
             if order == 'desc':
                 self.nulls = 'last'
+        else:
+            self.implicit_nulls = False
 
-    def decompile(self, ctx: 'Context') -> str:
-        if not self.expr:
-            raise hqle.CompilerException('Decompile of ordered expression with NoneType self.expr')
-
-        expr = self.expr.decompile(ctx)
-        return f'{expr} {self.order} nulls {self.nulls}'
+    def deparse(self) -> str:
+        expr = self.expr.deparse()
+        out = f'{expr} {self.order}'
+        if not self.implicit_nulls:
+            out += f' nulls {self.nulls}'
+        return out
         
     def to_dict(self):
         if self.expr == None:
@@ -42,33 +45,26 @@ class OrderedExpression(Expression):
         }
 
 class ByExpression(Expression):
-    def __init__(self, exprs:list[Union['NamedReference', 'Path']]):
+    def __init__(self, exprs:Sequence[Reference]):
         Expression.__init__(self)
         self.exprs = exprs
         
-    def build_table_agg(self, ctx:'Context', table:'Table') -> Optional['Table']:
+    def build_table_agg(self, table:Table) -> Optional[Table]:
         from Hql.Data import Schema
-
-        if table.schema == None:
-           raise hqle.CompilerException(f'Table passed to by expression is not fully initialized, schema == None')
+        from Hql.PolarsTools import pltools
 
         paths = []
         schema = []
         for expr in self.exprs:
-            path = expr.eval(ctx, as_list=True)
-            
-            if not isinstance(path, list):
-                raise hqle.CompilerException(f'By path expression returned non-list[str] {type(path)}')
-
-            ptype = table.get_type(path)
+            ptype = table.get_type(expr)
 
             # failed get_type returns a empty schema
             # Might reference a field that exists in another table but not this one.
             if not ptype:
                 continue
 
-            paths.append(path)
-            schema.append(table.schema.select(path))
+            paths.append(expr)
+            schema.append(table.schema.select(expr))
         
         pl_exprs = []
         for path in paths:
@@ -80,28 +76,30 @@ class ByExpression(Expression):
         
         # Groups and coelesces the schemas together for each field
         # Probably need to rework and change maintain_order here in the future
-        # Without it, it fucks up the aggregation functions but is much faster
+        # Without it, it ####s up the aggregation functions but is much faster
         table.agg = table.df.group_by(pl_exprs, maintain_order=True)
         table.agg_paths = paths
         table.agg_schema = Schema.merge(schema)
         
         return table
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         exprs = []
         for i in self.exprs:
-            exprs.append(i.decompile(ctx))
+            exprs.append(i.deparse())
         out = 'by '
         out += ', '.join(exprs)
         return out
     
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:Context):
         from Hql.Data import Data
+        ctx = ctx.copy()
 
         new = []
         for table in ctx.data:
-            agg = self.build_table_agg(ctx, table)
+            agg = self.build_table_agg(table)
             if agg:
                 new.append(agg)
-            
-        return Data(tables=new)
+
+        ctx.data = Data(tables=new)
+        return ctx

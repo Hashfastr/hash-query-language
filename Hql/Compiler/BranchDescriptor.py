@@ -1,12 +1,15 @@
-from typing import Union, TYPE_CHECKING
+from __future__ import annotations
+from typing import Union, TYPE_CHECKING, Optional
 from Hql.Exceptions import HqlExceptions as hqle
 import logging
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, NamedReference, Path
-    from Hql.Operators import Operator, Database
+    from Hql.Expressions import Expression
+    from Hql.Operators.Operator import Operator
+    from Hql.Database import Database
     from Hql.Query import Query, Statement
-    from Hql.Functions import Function
+    from Hql.Functions import Function, DotCompositeFunction
+    from Hql.Expressions.References import Reference
 
 '''
 Wraps an Expression or Operator with some tagged metadata
@@ -14,16 +17,14 @@ Helpful for finding out if we can compile something
 '''
 class BranchDescriptor():
     def __init__(self):
-        from Hql.Data import Schema
-
         # contains a timeseries element
         self.attrs:dict = dict()
 
-        self.expr:Union[None, 'Expression', 'Function'] = None
-        self.op:Union[None, 'Operator'] = None
-        self.statement:Union[None, 'Statement'] = None
-        self.query:Union[None, 'Query'] = None
-        self.db:Union[None, 'Database'] = None
+        self.expr:Union[None, Expression, Function, DotCompositeFunction] = None
+        self.op:Optional[Operator] = None
+        self.statement:Optional[Statement] = None
+        self.query:Optional[Query] = None
+        self.db:Optional[Database] = None
         self.str:str = ''
         self.join_attrs:dict = dict()
         self.list_attrs:list[str] = [
@@ -35,13 +36,15 @@ class BranchDescriptor():
         self.references:list = []
         self.removes:list = []
         self.full_schema = False
-        self.mapping:dict[Union['NamedReference', 'Path'], Union['NamedReference', 'Path']] = dict()
+        self.mapping:dict[Reference, Reference] = dict()
         self.symmetric:list = []
 
     def set_attr(self, name:str, value:object=True):
+        if name in self.list_attrs and not isinstance(value, list):
+            value = [value]
         self.attrs[name] = value
 
-    def add_mapping(self, dest:Union['NamedReference', 'Path'], src:Union['NamedReference', 'Path']):
+    def add_mapping(self, dest:Reference, src:Reference):
         self.mapping[dest] = src
 
     def get_attr(self, name:str):
@@ -76,7 +79,7 @@ class BranchDescriptor():
             else:
                 self.attrs[i] = attrs[i]
 
-    def merge(self, desc:'BranchDescriptor'):
+    def merge(self, desc:BranchDescriptor):
         self.merge_attrs(desc.attrs)
         self.provides += desc.provides
         self.references += desc.references
@@ -92,17 +95,17 @@ class BranchDescriptor():
                 return False
         return True
 
-    def get_expr(self) -> 'Expression':
+    def get_expr(self) -> Union[Expression, Function]:
         if isinstance(self.expr, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Expr')
         return self.expr
 
-    def get_op(self) -> 'Operator':
+    def get_op(self) -> Operator:
         if isinstance(self.op, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Op')
         return self.op
 
-    def get_statement(self) -> 'Statement':
+    def get_statement(self) -> Statement:
         if isinstance(self.statement, type(None)):
             raise hqle.CompilerException('Attempting to access NoneType BranchDescriptor Statement')
         return self.statement

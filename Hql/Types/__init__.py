@@ -1,4 +1,4 @@
-import polars as pl
+from __future__ import annotations
 from . import Hql
 from . import Elasticsearch
 from . import Polars

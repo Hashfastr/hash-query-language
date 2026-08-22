@@ -1,47 +1,71 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Expressions.Functions import FuncExpr
 
 if TYPE_CHECKING:
-    import Hql.Expressions as Expr
+    from Hql.Expressions.References import NamedReference
 
 class Selection():
     def __init__(self, selection:Union[list, dict], name:str=''):
         from Hql.Context import Context
         from Hql.Data import Data
 
-        self.faux_ctx = Context(Data())
+        self.ctx = Context(Data())
 
         self.name = name
         self.selection = selection
         self.fields = []
+    
+    def gen_let(self):
+        from Hql.Query import LetLogicStatement
+        from Hql.Expressions.References import NamedReference
+
+        return LetLogicStatement(
+            NamedReference(self.name),
+            self.build_selection()
+        )
+
+    def __hash__(self) -> int:
+        return self.build_selection().__hash__()
+
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, Selection):
+            return False
+
+        return self.build_selection() == value.build_selection()
+
+    def deparse(self) -> str:
+        return self.build_selection().deparse()
 
     def build_selection(self):
-        from Hql.Expressions import BinaryLogic
-        exprs = []
+        from Hql.Expressions.Logic import BinaryLogic
+        
+        def build_dict(sel:dict):
+            exprs = []
+            for i in sel:
+                expr = self.process_field(i, sel[i])
+                exprs.append(expr)
+            return BinaryLogic(exprs)
 
         if isinstance(self.selection, list):
-            op = 'or'
-            for i in self.selection:
-                expr = Selection(i).build_selection()
-                exprs.append(expr)
+            sel = self.selection
         else:
-            op = 'and'
-            for i in self.selection:
-                expr = self.process_field(i, self.selection[i])
-                exprs.append(expr)
+            sel = [self.selection]
 
-        if len(exprs) == 1:
-            return exprs[0]
-
-        return BinaryLogic(exprs[0], exprs[1:], op)
+        exprs = []
+        for i in sel:
+            expr = build_dict(i)
+            exprs.append(expr)
+        return BinaryLogic(exprs, logic_and=False)
 
     def to_literal_object(self, value, modifiers:list[str]):
         from Hql.Expressions.Literals import StringLiteral, Integer, Float
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference as NR
         
         if isinstance(value, str):
-            expr = StringLiteral(value)
+            expr = StringLiteral(value, verbatim=True)
 
         elif isinstance(value, int):
             expr = Integer(value)
@@ -53,20 +77,17 @@ class Selection():
             raise hqle.CompilerException(f'Unhandled literal object type {type(value)} in Sigma parse')
 
         if 'base64' in modifiers:
-            expr = FuncExpr('base64', [expr])
+            expr = FuncExpr(NR('base64'), [expr])
 
         elif 'base64offset' in modifiers:
-            expr = FuncExpr('base64offset', [expr])
+            expr = FuncExpr(NR('base64offset'), [expr])
 
         return expr
 
-    def substring(self, lh:'Expr.NamedReference', modifiers:list, rh):
+    def substring(self, lh:NamedReference, modifiers:list, rh:list):
         from Hql.Expressions.Logic import Substring
-        rh_list = True
         if not isinstance(rh, list):
             rh = [rh]
-        if len(rh) == 1:
-            rh_list = False
 
         exprs = []
         for i in rh:
@@ -74,24 +95,17 @@ class Selection():
                 continue
             exprs.append(self.to_literal_object(i, modifiers))
 
-        if 'contains' in modifiers:
-            op = 'contains'
-        elif 'endswith' in modifiers:
-            op = 'endswith'
-        else:
-            op = 'startswith'
+        logic_and = 'all' in modifiers
+        startswith = 'startswith' in modifiers
+        endswith = 'endswith' in modifiers
+        cs = 'cased' in modifiers
 
-        if rh_list:
-            if 'all' in modifiers:
-                op += '_all'
-            else:
-                op += '_any'
+        return Substring(lh, exprs, logic_and=logic_and, startswith=startswith, endswith=endswith, cs=cs)
 
-        op += '_cs' if 'cased' in modifiers else ''
-        return Substring(lh, op, exprs)
-
-    def cidr(self, name:'Expr.NamedReference', field:list):
-        from Hql.Expressions import Equality
+    def cidr(self, name:NamedReference, field:list):
+        from Hql.Expressions.Logic import Equality
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference as NR
 
         exprs = []
         for i in field:
@@ -100,54 +114,47 @@ class Selection():
 
             expr = self.to_literal_object(i, [])
             if ':' in field:
-                expr = FuncExpr('ip6subnet', [expr]).eval(self.faux_ctx)
+                expr = FuncExpr(NR('ip6subnet'), [expr]).eval(self.ctx)
             else:
-                expr = FuncExpr('ip4subnet', [expr]).eval(self.faux_ctx)
+                expr = FuncExpr(NR('ip4subnet'), [expr]).eval(self.ctx)
 
             exprs.append(expr)
 
-        if len(exprs) == 1:
-            return Equality(name, '==', exprs)
-        else:
-            return Equality(name, 'in', exprs)
+        return Equality(name, exprs)
 
-    def relational(self, name:'Expr.NamedReference', modifiers:list[str], field:list):
-        from Hql.Expressions import Relational
+    def relational(self, name:NamedReference, modifiers:list[str], field:list):
+        from Hql.Expressions.Logic import Relational, BinaryLogic
+
+        gt = False
+        eq = False
+        for i in modifiers:
+            if i.startswith('gt') or i.startswith('lt'):
+                gt = 'gt' in i
+                eq = 'e' in i
+                break
 
         exprs = []
         for i in field:
             if i == None:
                 continue
-            exprs.append(self.to_literal_object(i, modifiers))
+            lit = self.to_literal_object(i, modifiers)
+            exprs.append(Relational(name, lit, gt=gt, eq=eq))
 
-        if 'lt' in modifiers:
-            op = '<'
-        elif 'lte' in modifiers:
-            op = '<='
-        elif 'gt' in modifiers:
-            op = '>'
-        elif 'gte' in modifiers:
-            op = '>='
-        else:
-            raise hqle.CompilerException(f'What? invalid relational expression {modifiers}')
+        return BinaryLogic(exprs)
 
-        return Relational(name, op, exprs)
-
-    def fieldref(self, name:'Expr.NamedReference', field:list):
-        from Hql.Expressions import NamedReference, Equality
+    def fieldref(self, name:NamedReference, field:list):
+        from Hql.Expressions.References import NamedReference
+        from Hql.Expressions.Logic import Equality
 
         exprs = []
         for i in field:
             exprs.append(NamedReference(i))
 
-        if len(exprs) == 1:
-            return Equality(name, '==', exprs)
-        else:
-            return Equality(name, 'in', exprs)
+        return Equality(name, exprs)
 
-    def regex(self, name:'Expr.NamedReference', modifiers:list[str], field:list):
-        from Hql.Expressions import Regex
-        from Hql.Expressions import BinaryLogic
+    def regex(self, name:NamedReference, modifiers:list[str], field:list):
+        from Hql.Expressions.Logic import Regex
+        from Hql.Expressions.Logic import BinaryLogic
 
         patterns = []
         for i in field:
@@ -165,48 +172,44 @@ class Selection():
 
             exprs.append(expr)
 
-        return BinaryLogic(name, exprs, 'or')
+        return BinaryLogic(exprs, logic_and=False)
 
-    def equality(self, name:'Expr.NamedReference', field:list):
-        from Hql.Expressions import Equality, BinaryLogic, Expression
+    def equality(self, name:NamedReference, field:list):
+        from Hql.Expressions.Logic import Equality, BinaryLogic
+        from Hql.Expressions.References import NamedReference as NR
+        from Hql.Expressions.Functions import FuncExpr
 
         rhs = []
         other = []
         for i in field:
             if i == None:
-                other.append(FuncExpr('isnull', [name]))
+                other.append(FuncExpr(NR('isnull'), [name]))
             else:
                 rhs.append(self.to_literal_object(i, []))
 
         if len(rhs) == 0:
             exprs = other
-        elif len(rhs) == 1:
-            exprs:list[Expression] = [Equality(name, '==', rhs)] + other
         else:
-            exprs:list[Expression] = [Equality(name, 'in', rhs)] + other
+            exprs = [Equality(name, rhs)] + other
 
-        if len(exprs) > 1:
-            expr = BinaryLogic(exprs[0], exprs[1:], 'or')
-        else:
-            expr = exprs[0]
-
-        return expr
+        return BinaryLogic(exprs, logic_and=False)
 
     def process_field(self, field_name:str, field):
-        import Hql.Expressions as Expr
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference as NR
 
         if not isinstance(field, list):
             field = [field]
 
         name = field_name.split('|')
 
-        lh = Expr.NamedReference(name[0])
+        lh = NR(name[0])
         modifiers = name[1:]
 
         if 'exists' in modifiers:
-            expr = Expr.FuncExpr('exists', [lh]).eval(self.faux_ctx)
+            expr = FuncExpr(NR('exists'), [lh]).preprocess(self.ctx)
             if not field:
-                expr = Expr.FuncExpr('not', [expr]).eval(self.faux_ctx)
+                expr = FuncExpr(NR('not'), [expr]).preprocess(self.ctx)
             return expr
 
         for i in ['contains', 'endswith', 'startswith']:

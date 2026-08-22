@@ -1,33 +1,35 @@
-from typing import TYPE_CHECKING, Union
-from Hql.Context import Context
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Union, Sequence
 import logging
 import time
 import json
 import datetime
 from Hql.Exceptions import HqlExceptions as hqle
 import polars.exceptions as ple
+    
+from Hql.Context import Context
 
 if TYPE_CHECKING:
-    from Hql.Operators import Database, Operator
+    from Hql.Operators.Operator import Operator
+    from Hql.Database import Database
     from Hql.Compiler import BranchDescriptor
     from Hql.Config import Config
 
 class InstructionSet():
-    def __init__(self, upstream:Union['Database', list['Database'], 'InstructionSet', list['InstructionSet']], operators:Union[None, list['Operator']]=None) -> None:
+    def __init__(self, upstream:Union[Database, InstructionSet, Sequence[Union[Database, InstructionSet]]], operators:Optional[list[Operator]]=None) -> None:
         import random
-        from Hql.Operators import Database
         from Hql.Compiler import InstructionSet
         
-        assert isinstance(upstream, (Database, list, InstructionSet))
-        if isinstance(upstream, list):
-            for i in upstream:
-                if not isinstance(i, (Database, InstructionSet)):
-                    raise hqle.CompilerException(f'Invalid upstream type {type(i)}')
-            self.upstream = upstream
-        else:
-            self.upstream = [upstream]
+        if not isinstance(upstream, Sequence):
+            upstream = [upstream]
 
-        self.ops:list['Operator'] = operators if operators else []
+        if not upstream:
+            raise hqle.CompilerException('InstructionSet given empty upstream')
+
+        self.upstream = upstream
+
+        self.ops:list[Operator] = operators if operators else []
         self.id = '%08x' % random.getrandbits(32)
         self.attrs = dict()
 
@@ -35,13 +37,17 @@ class InstructionSet():
             self.ops = self.upstream[0].ops + self.ops
             self.upstream = self.upstream[0].upstream
 
+    def preprocess(self, ctx:Context) -> Union[Database, InstructionSet]:
+        new = self.recompile(ctx.config)
+        if len(new.upstream) == 1 and not new.ops:
+            return new.upstream[0]
+        return new
+
     def is_empty(self) -> bool:
         return not (self.upstream or self.ops)
 
     def to_dict(self):
-        from Hql.Context import Context
-        from Hql.Data import Data
-        from Hql.Operators import Join
+        from Hql.Operators.Join import Join
 
         ops = []
         for i in self.ops:
@@ -49,7 +55,7 @@ class InstructionSet():
                 op = {
                     'id': i.id,
                     'type': i.type,
-                    'decomp': i.decompile(Context(Data())),
+                    'deparse': i.deparse(),
                     'rh': i.rh.to_dict()
                 }
                 ops.append(op)
@@ -59,7 +65,7 @@ class InstructionSet():
             op = {
                 'id': op.get('id', '????'),
                 'type': op.get('type'),
-                'decomp': i.decompile(Context(Data()))
+                'deparse': i.deparse()
             }
             ops.append(op)
 
@@ -70,42 +76,26 @@ class InstructionSet():
             'ops': ops,
         }
 
-    def add_op(self, op:Union['BranchDescriptor', 'Operator']) -> tuple[Union['Operator', None], Union['Operator', None]]:
-        from Hql.Compiler import BranchDescriptor, HqlCompiler
-        from Hql.Config import Config
+    def add_op(self, op:Union[BranchDescriptor, Operator]) -> tuple[Union[Operator, None], Union[Operator, None]]:
+        from Hql.Compiler import BranchDescriptor
 
         if isinstance(op, BranchDescriptor):
             op = op.get_op()
         self.ops.append(op)
 
-        # comp = HqlCompiler(Config())
-        # ops = []
-        # for i in self.ops:
-        #     acc, _ = comp.compile(i)
-        #     ops.append(acc)
-        # ops = comp.optimize(ops)
-        #
-        # self.ops = [x.get_op() for x in ops]
-
         return None, None
 
-    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple['InstructionSet', None]:
+    def add_timebound(self, start:datetime.datetime, end:datetime.datetime) -> tuple[InstructionSet, None]:
         bounded = []
         for i in self.upstream:
             acc, rej = i.add_timebound(start, end)
-            bounded.append(
-                InstructionSet(
-                    acc,
-                    operators=[rej] if rej else []
-                )
-            )
+            if rej:
+                acc = InstructionSet(acc, operators=[rej])
+            bounded.append(acc)
 
-        new = InstructionSet(
-            bounded,
-            operators=self.ops
-        )
+        print(self.ops)
 
-        return new, None
+        return InstructionSet(bounded, operators=self.ops), None
 
     # def flatten(self) -> InstructionSet:
     #     new = []
@@ -135,19 +125,19 @@ class InstructionSet():
     #
     #     return self
 
-    def recompile(self, config:'Config') -> 'InstructionSet':
+    def recompile(self, config:Config) -> InstructionSet:
         from Hql.Compiler import HqlCompiler
         return HqlCompiler(config).InstructionSet(self)
 
-    def exec(self, inst:Union['Database', 'Operator'], ctx:Context) -> Context:
-        from Hql.Data import Data
+    def exec(self, inst:Union[Database, Operator], ctx:Context) -> Context:
         logging.debug(f'Executing {inst.type} - {inst.id}')
         start = time.perf_counter()
 
         try:
-            ctx.data = inst.eval(ctx)
+            ctx = inst.eval(ctx)
         except ple.ColumnNotFoundError:
             # disappointment, that filter wasn't for it
+            # clear each table
             for i in ctx.data:
                 i.truncate(0)
 
@@ -159,24 +149,15 @@ class InstructionSet():
     def render(self) -> str:
         return json.dumps(self.to_dict(), indent=2)
 
-    def run_upstream(self, up:Union['Database', 'InstructionSet']) -> 'Context':
-        from Hql.Data import Data
-        out = up.eval(Context(Data()))
-        if isinstance(out, Data):
-            out = Context(out)
-        return out
-
-    def eval(self, ctx:Context, **kwargs) -> Context:
-        from Hql.Data import Data
+    def eval(self, ctx:Context) -> Context:
         from Hql.Threading import InstructionPool
-        hac = kwargs['hac'] if 'hac' in kwargs else ctx.hac
 
         logging.debug(f'Starting InstructionSet {self.id}')
         start = time.perf_counter()
 
         pool = InstructionPool(auto_run=False)
         for i in self.upstream:
-            pool.add_instruction(i, Context(Data(), hac=hac))
+            pool.add_instruction(i, ctx.copy())
 
         pool.start()
 

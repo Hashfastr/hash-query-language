@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 from antlr4 import CommonTokenStream, InputStream
 from .grammar.SigmaLexer import SigmaLexer
@@ -6,19 +7,20 @@ from .grammar.SigmaVisitor import SigmaVisitor
 from fnmatch import fnmatch
 
 if TYPE_CHECKING:
-    from . import Selection
+    from Hql.Parser.Sigma.Selection import Selection
 
 class Condition():
-    def __init__(self, text:str, selections:list['Selection']):
+    def __init__(self, text:str, selections:list[Selection]):
         self.text = text
-        self.selections = selections
+        self.selections:list[Selection] = selections
         self.tree = self.parse()
 
-    def get_sel(self, name:str) -> list['Selection']:
+    def get_sel(self, name:str) -> list[Selection]:
         matches = []
         for i in self.selections:
             if fnmatch(i.name, name):
                 matches.append(i)
+
         return matches
 
     def parse(self):
@@ -41,60 +43,46 @@ class Visitor(SigmaVisitor):
         return self.visit(ctx.Statement)
 
     def visitOrStatement(self, ctx: SigmaParser.OrStatementContext):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
-        lh = self.visit(ctx.Left)
-
-        rh = []
+        exprs = [self.visit(ctx.Left)]
         for i in ctx.Right:
-            rh.append(self.visit(i))
+            exprs.append(self.visit(i))
 
-        if not rh:
-            return lh
-
-        return BinaryLogic(lh, rh, 'or')
+        return BinaryLogic(exprs, logic_and=False)
 
     def visitAndStatement(self, ctx: SigmaParser.AndStatementContext):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
-        lh = self.visit(ctx.Left)
-
-        rh = []
+        exprs = [self.visit(ctx.Left)]
         for i in ctx.Right:
-            rh.append(self.visit(i))
+            exprs.append(self.visit(i))
 
-        if not rh:
-            return lh
-
-        return BinaryLogic(lh, rh, 'and')
+        return BinaryLogic(exprs, logic_and=True)
 
     def visitNotStatement(self, ctx: SigmaParser.NotStatementContext):
-        from Hql.Expressions import FuncExpr
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.References import NamedReference
         inner = self.visit(ctx.Statement)
-        return FuncExpr('not', [inner])
+        return FuncExpr(NamedReference('not'), [inner])
 
     def visitBracketStatement(self, ctx: SigmaParser.BracketStatementContext):
         return self.visit(ctx.Statement)
 
     def visitOfStatement(self, ctx: SigmaParser.OfStatementContext):
-        from Hql.Expressions import BinaryLogic
+        from Hql.Expressions.Logic import BinaryLogic
 
         specifier = self.visit(ctx.Specifier)
 
         if specifier == '1':
-            op = 'or'
+            logic_and = False
         elif specifier == 'all':
-            op = 'and'
+            logic_and = True
         else:
             raise Exception(f'Invalid of specifier {specifier}')
 
-        target = self.visit(ctx.Target)
-
-        if len(target) == 1:
-            return target[0].build_selection()
-        else:
-            target = [x.build_selection() for x in target]
-            return BinaryLogic(target[0], target[1:], op)
+        target = [x.build_selection() for x in self.visit(ctx.Target)]
+        return BinaryLogic(target, logic_and)
 
     def visitOfSpecifier(self, ctx: SigmaParser.OfSpecifierContext):
         if ctx.Int:
@@ -103,7 +91,7 @@ class Visitor(SigmaVisitor):
         if ctx.All:
             return ctx.All.text
 
-    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list['Selection']:
+    def visitOfTarget(self, ctx: SigmaParser.OfTargetContext) -> list[Selection]:
         # pattern or 'them'
         # 'them' means all selections
         if ctx.Pattern:
@@ -122,7 +110,6 @@ class Visitor(SigmaVisitor):
         if ctx.Basic:
             identifier = self.visit(ctx.Basic)
             return self.condition.get_sel(identifier)[0].build_selection()
-
         else:
             return None
 

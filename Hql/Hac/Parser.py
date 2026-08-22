@@ -1,4 +1,4 @@
-import logging
+from __future__ import annotations
 import re
 from typing import Optional, TYPE_CHECKING, Union
 from Hql.Exceptions import HacExceptions as hace
@@ -32,12 +32,12 @@ class Tag():
 
 class Parser():
     @staticmethod
-    def parse_file(filename:str) -> Optional['Hac']:
+    def parse_file(filename:str) -> Optional[Hac]:
         with open(filename, mode='r') as f:
             return Parser.parse_text(f.read(), src=filename)
 
     @staticmethod   
-    def parse_text(text:str, src:str='') -> Optional['Hac']:
+    def parse_text(text:str, src:str='') -> Optional[Hac]:
         from Hql.Hac import Hac
         tags:list[Tag] = []
         comment = Parser.get_comment(text).split('\n')

@@ -1,57 +1,55 @@
-from . import Operator
-from Hql.Data import Data, Table
-from Hql.Expressions import Expression
-from Hql.Exceptions import HqlExceptions as hqle
-import polars as pl
-from Hql.Context import register_op, Context
+from __future__ import annotations
+from Hql.Operators.Operator import Operator
 
-from typing import Union
+from typing import TYPE_CHECKING, Optional
 
-from Hql.Exceptions import HqlExceptions as hqle
+if TYPE_CHECKING:
+    from Hql.Expressions.References import NamedReference
+    from Hql.Context import Context
 
 # Count simply returns the number of rows given by a record set.
 #
 # https://learn.microsoft.com/en-us/kusto/query/count-operator
-# @register_op('Count')
 class Count(Operator):
-    def __init__(self, name:Union[Expression, None]=None):
+    def __init__(self, name:Optional[NamedReference]=None):
         Operator.__init__(self)
-        self.name = name
+        self.name:Optional[NamedReference] = name
 
-    def decompile(self, ctx: 'Context') -> str:
-        name = self.name.decompile(ctx) if self.name else ''
-        return f'count as {name}' if name else 'count'
-    
-    '''
-    Counts each table and replaces the contents of that table with the count.
-    Adds an additional meta * table for the total count of all tables.
-    '''
-    def eval(self, ctx:'Context', **kwargs):
-        name = self.name.eval(ctx, as_str=True) if self.name else None
+    def deparse(self) -> str:
+        return f'count as {self.name.deparse()}' if self.name else 'count'
 
-        if not isinstance(name, (str, type(None))):
-            raise hqle.CompilerException(f'Name given to count operator is not of [str, None], is {type(name)}')
-        
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        if self.name:
+            d['name'] = self.name.str()
+        return d
+
+    def eval(self, ctx:Context) -> Context:
+        from Hql.Data import Data, Table
+
         counts = dict()
         for table in ctx.data:
             counts[table.name] = len(table)
             
-        # cast count to a field
-        if name:
+        # if sending to a table name, make a new table with counts
+        if self.name:
             new_data = []
             for count in counts:
                 new_data.append({'Table': count, 'Count': counts[count]})
             
-            new_table = Table(init_data=new_data, name=name)
+            new_table = Table(init_data=new_data, name=self.name.str())
             ctx.data.add_table(new_table)
             
-            return ctx.data
+            return ctx
                                 
         # Replace tables with counts
         else:
+            ctx = ctx.copy()
+
             new_tables = []
-            for count in counts:
-                new = [{'Count': counts[count]}]
-                new_tables.append(Table(name=count, init_data=new))
-                
-            return Data(tables=new_tables)
+            for name in counts:
+                new = [{'Count': counts[name]}]
+                new_tables.append(Table(name=name, init_data=new))
+            ctx.data = Data(tables=new_tables)
+
+            return ctx

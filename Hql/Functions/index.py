@@ -1,25 +1,42 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql import Config
-from Hql.Context import register_func, Context
-from Hql.Expressions import StringLiteral
-from typing import Optional
+from Hql.Context import register_func
+from typing import TYPE_CHECKING, Optional, Union
+
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 # This is a meta function resolved while parsing
 @register_func('index')
 class index(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import Reference
+
         Function.__init__(self, args, 1, 1)
-        self.preprocess = True
 
-        if not isinstance(self.args[0], StringLiteral):
+        name = self.args[0]
+        if not isinstance(name, (StringLiteral, Reference)):
             raise hqle.ArgumentException(f'Bad database index argument datatype {args[0].type}')
+        self.name:Union[StringLiteral, Reference] = name
+    
+    def preprocess(self, ctx: Context, receiver=None) -> object:
+        from Hql.Expressions.Literals import StringLiteral
         
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Operators.Database import Database
+        name = self.name.preprocess(ctx)
+        if not isinstance(name, StringLiteral):
+            raise hqle.QueryException(f'File function give argument that doesn\'t resolve to string literal: {type(name)}')
 
-        db = kwargs.get('receiver', None)
-        index_name = self.args[0].eval(ctx, as_str=True)
+        self.name = name
+
+        return self
+        
+    def eval(self, ctx: Context, receiver=None) -> object:
+        from Hql.Database import Database
+
+        db = receiver
+        index_name = self.name.str()
         
         if not db:
             db = ctx.get_func('database')([]).eval(ctx)

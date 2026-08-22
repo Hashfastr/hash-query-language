@@ -1,27 +1,31 @@
+from __future__ import annotations
+
 from . import Function
 
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Data import Data, Table
-from typing import Union, Optional
+from Hql.Context import register_func
+from typing import TYPE_CHECKING, Union, Optional
 
-import polars as pl
-from Hql.PolarsTools import pltools
+if TYPE_CHECKING:
+    import polars as pl
+    from Hql.Context import Context
 
 # This is a meta function resolved while parsing
 @register_func('series_stats')
 class series_stats(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.Literals import Bool
         Function.__init__(self, args, 1, 3)
-        self.ignore_nonfinite = False
+        self.ignore_nonfinite:Bool = Bool(False)
         self.src = args[0]
 
         if len(self.args) > 1:
-            if self.args[1].type != "Bool":
+            if not isinstance(self.args[1], Bool):
                 raise hqle.ArgumentException(f'{self.name} expected argument type Bool, got {self.args[1].type} for nonfinite')
-            self.ignore_nonfinite = self.args[1].eval()
+            self.ignore_nonfinite = self.args[1]
             
     def cal_min(self, s:Union[pl.Series, list]):
+        import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
             # return like this as it's a union pattern
@@ -39,6 +43,7 @@ class series_stats(Function):
         return (min, min_idx)
 
     def cal_max(self, s:Union[pl.Series, list]):
+        import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
             # return like this as it's a union pattern
@@ -56,24 +61,30 @@ class series_stats(Function):
         return (max, max_idx)
     
     def cal_avg(self, s:Union[pl.Series, list]):
+        import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
 
         return s.mean()
     
     def cal_stdev(self, s:Union[pl.Series, list]):
+        import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
 
         return s.std()
     
     def cal_vari(self, s:Union[pl.Series, list]):
+        import polars as pl
         if isinstance(s, list):
             s = pl.concat(s)
     
         return s.var()
     
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: Context, receiver=None) -> object:
+        import polars as pl
+        from Hql.Data import Data, Table
+        
         # Returns tables of series
         data = self.src.eval(ctx)
         name = self.src.eval(ctx, as_list=True)

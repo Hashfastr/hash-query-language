@@ -32,6 +32,7 @@ letStatement:
     | Materialized=letMaterializeDeclaration
     | EntityGroup=letEntityGroupDeclaration
     | Macro=letMacroDeclaration
+    | Logic=letLogicDeclaration
     ;
 
 letVariableDeclaration:
@@ -55,6 +56,8 @@ letEntityGroupDeclaration:
 letMacroDeclaration:
     LET Name=simpleNameReference '=' Pipes=emptyPipedExpression;
 
+letLogicDeclaration:
+    LET Name=simpleNameReference '=' Logic=unnamedExpression;
 
 letFunctionParameterList:
     TabularParameters+=tabularParameter (',' TabularParameters+=tabularParameter) (',' ScalarParameters+=scalarParameter)
@@ -308,7 +311,7 @@ facetByOperatorWithExpressionClause:
 
 findOperator:
     FIND 
-        (DataScopeClause=dataScopeClause)? 
+        // (DataScopeClause=dataScopeClause)? 
         (ParameterWhereClause=findOperatorParametersWhereClause)? 
         Expression=unnamedExpression 
         (ProjectClause=findOperatorProjectClause | ProjectSmartClause=findOperatorProjectSmartClause)?
@@ -439,8 +442,12 @@ invokeOperator:
     INVOKE FunctionCall=dotCompositeFunctionCallExpression;
 
 joinOperator:
-    JOIN (Parameters+=relaxedQueryOperatorParameter)* Table=unnamedExpression 
+    JOIN (Parameters+=relaxedQueryOperatorParameter)* Table=joinOperatorTable
     (OnClause=joinOperatorOnClause | WhereClause=joinOperatorWhereClause)?;
+
+joinOperatorTable:
+    parenthesizedExpression
+    | unnamedExpression;
 
 joinOperatorOnClause:
     ON Expressions+=unnamedExpression (',' Expressions+=unnamedExpression)*;
@@ -731,7 +738,7 @@ scanOperatorAssignment:
 searchOperator:
     SEARCH 
       (Parameters+=relaxedQueryOperatorParameter)*
-      (DataScope=dataScopeClause)? 
+      // (DataScope=dataScopeClause)? 
       (InClause=searchOperatorInClause)? 
       (Expression=unnamedExpression | Star=starExpression | StarAndExpression=searchOperatorStarAndExpression);
     
@@ -750,11 +757,7 @@ sortOperator:
     Keyword=(SORT | ORDER) (Parameters+=relaxedQueryOperatorParameter)* BY Expressions+=orderedExpression (',' Expressions+=orderedExpression)*;
 
 orderedExpression:
-    Expression=namedExpression Ordering=sortOrdering;
-
-sortOrdering:
-    OrderKind=(ASC | DESC)? (NULLS NullsKind=(FIRST | LAST))?;
-
+    Expression=namedExpression OrderKind=(ASC | DESC)? (NULLS NullsKind=(FIRST | LAST))?;
 
 summarizeOperator:
     SUMMARIZE (Parameters+=strictQueryOperatorParameter)* (Expressions+=namedExpression (',' Expressions+=namedExpression)*)? (ByClause=summarizeOperatorByClause)?;
@@ -1041,10 +1044,14 @@ functionCallOrPathPathExpression:
     Expression=functionCallOrPathRoot (Operations+=functionCallOrPathOperation)+;
 
 functionCallOrPathOperation:
-    functionalCallOrPathPathOperation 
+    functionCallOrPathCallOperation
+    | functionalCallOrPathPathOperation
     | functionCallOrPathElementOperation 
     | legacyFunctionCallOrPathElementOperation
     ;
+
+functionCallOrPathCallOperation:
+    '.' Call=functionCallExpression;
 
 functionalCallOrPathPathOperation:
     '.' Name=simpleNameReference;
@@ -1071,28 +1078,24 @@ dotCompositeFunctionCallOperation:
     '.' Call=functionCallExpression;
 
 functionCallExpression:
-      namedFunctionCallExpression
-    | countExpression
-    ;
+      Name=functionCallName '(' (Arguments+=argumentExpression (',' Arguments+=argumentExpression)*)? ')';
 
-namedFunctionCallExpression:
-    Name=simpleNameReference '(' (Arguments+=argumentExpression (',' Arguments+=argumentExpression)*)? ')';
+functionCallName:
+      simpleNameReference
+    | extendedKeywordName
+    ;
 
 argumentExpression:
       namedExpression
     | starExpression
     ;
 
-countExpression:
-    COUNT '(' (Expression=namedExpression)? ')';
-
-
 starExpression:
     '*';
 
 primaryExpression:
       unsignedLiteralExpression
-    | nameReferenceWithDataScope
+    | simpleNameReference
     | dataTableExpression
     | externalDataExpression
     | contextualDataTableExpression
@@ -1100,11 +1103,11 @@ primaryExpression:
     | parenthesizedExpression
     ;
 
-nameReferenceWithDataScope:
-	Name=simpleNameReference (Scope=dataScopeClause)?;
-
-dataScopeClause:
-    DATASCOPE '=' KindToken=(HOTCACHE | ALL);
+// nameReferenceWithDataScope:
+// 	Name=simpleNameReference (Scope=dataScopeClause)?;
+//
+// dataScopeClause:
+//     DATASCOPE '=' KindToken=(HOTCACHE | ALL);
 
 parenthesizedExpression:
     '(' Expression=expression ')';
@@ -1628,4 +1631,3 @@ jsonLong:
 
 jsonReal:
     (SignToken='-')? LiteralToken=REALLITERAL;
-

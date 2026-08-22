@@ -1,10 +1,9 @@
+from __future__ import annotations
 from Hql.Exceptions import HacExceptions as hace
-from Hql.Hac.Sources import Source, Product
-from Hql.Hac.Parser import Tag, Parser
-from Hql.Hac.Engine import HacEngine, Detection, Schedule
-import json
-from typing import Optional, Union
-from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Optional, Union
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 class Hac():
     '''
@@ -94,6 +93,7 @@ class Hac():
         self.start = query_now - self.get_delta()
 
     def get_delta(self):
+        from Hql.Hac.Engine import Schedule
         return Schedule(self.schedule).delta()
 
     def get_timerange(self) -> tuple[datetime, datetime]:

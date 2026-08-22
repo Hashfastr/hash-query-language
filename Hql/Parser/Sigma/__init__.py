@@ -1,20 +1,20 @@
-from typing import TYPE_CHECKING, Union
+from __future__ import annotations
+from typing import TYPE_CHECKING, Union, Optional
 
-from .Selection import Selection
-from .Condition import Condition
 from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Config import Config
+    from Hql.Parser.Sigma.Condition import Condition
 
-import logging, json
+import logging
 
 if TYPE_CHECKING:
-    from Hql.Expressions import DotCompositeFunction
+    from Hql.Functions import DotCompositeFunction, Function
     from Hql.Hac import Hac
 
 class SigmaParser():
-    def __init__(self, txt:str, config:'Config'):
+    def __init__(self, txt:str, config:Config):
         from Hql.Query import Query
         import yaml
 
@@ -23,12 +23,12 @@ class SigmaParser():
         if isinstance(self.loaded, str):
             raise hqle.QueryException('Invalid sigma supplied to parser')
 
-        self.assembly:Union[None, Query] = None
+        self.assembly:Optional[Query] = None
 
         if self.loaded.get('status', '') == 'deprecated':
             raise hqle.QueryException(f'Sigma rule is deprecated')
 
-    def gen_hac(self) -> 'Hac':
+    def gen_hac(self) -> Hac:
         from copy import deepcopy
         from Hql.Hac import Hac
         doc:dict = deepcopy(self.loaded)
@@ -47,14 +47,15 @@ class SigmaParser():
         from Hql.Expressions import PipeExpression
         from Hql.Query import Query, QueryStatement
         from Hql.Parser import Parser as HqlParser
+        from Hql.Operators.Where import Where
 
-        hac = self.gen_hac()
+        # hac = self.gen_hac()
         dac = self.loaded['detection']
         src = self.loaded['logsource']
 
         prepipe = self.gen_src(src)
-        pipe = self.parse_dac(dac)
-        expr = PipeExpression([pipe], prepipe=prepipe)
+        condition:Condition = self.parse_dac(dac)
+        expr = PipeExpression([Where(condition.assemble())], prepipe=prepipe)
 
         posthql_src = ''
         if 'posthql' not in self.loaded['detection'] and 'default' in self.config.conf['sigma']['posthql']:
@@ -72,12 +73,18 @@ class SigmaParser():
                 raise hqle.ConfigException(f'Posthql definition does not compile to an empty piped operator')
             expr.pipes += asm.pipes
 
-        statement = QueryStatement(expr)
-        self.assembly = Query([statement])
+        stmts = []
+        # for i in condition.selections:
+        #     stmts.append(i.gen_let())
 
-    def gen_src(self, src:dict) -> 'DotCompositeFunction':
-        from Hql.Expressions import DotCompositeFunction
-        from Hql.Expressions import FuncExpr, StringLiteral
+        stmts += [QueryStatement(expr)]
+        self.assembly = Query(stmts)
+
+    def gen_src(self, src:dict) -> Union[DotCompositeFunction, Function]:
+        from Hql.Expressions.Functions import FuncExpr
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import NamedReference
+        from Hql.Functions import DotCompositeFunction
 
         '''
         Category can contain a set of product/service combos
@@ -89,29 +96,22 @@ class SigmaParser():
 
         for i in order:
             if i in src:
-                funcs.append(FuncExpr(i, [StringLiteral(src[i])]))
+                funcs.append(FuncExpr(NamedReference(i), [StringLiteral(src[i])]))
 
         if len(funcs) == 0:
             raise hqle.QueryException(f'Sigma provided no log sources!')
 
         return DotCompositeFunction(funcs)
 
-    def parse_dac(self, dac:dict):
-        from Hql.Operators import Where
+    def parse_dac(self, dac:dict) -> Condition:
+        from Hql.Parser.Sigma.Condition import Condition
+        from Hql.Parser.Sigma.Selection import Selection
 
         selections = []
         for i in dac:
-            if i == 'condition':
+            if i in ('condition', 'posthql'):
                 continue
 
             selections.append(Selection(dac[i], name=i))
 
-        condition = Condition(dac['condition'], selections)
-        expr = Where(condition.assemble())
-
-        return expr
-
-    def gen_hql(self, src:dict, dac:dict):
-        selections = []
-        for i in dac:
-            ...
+        return Condition(dac['condition'], selections)

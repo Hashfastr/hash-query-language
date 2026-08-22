@@ -1,18 +1,18 @@
-from typing import TYPE_CHECKING
-from Hql.Expressions import Expression
-from Hql.Operators import Operator
-from Hql.Context import register_op, Context
+from __future__ import annotations
+from typing import TYPE_CHECKING, Sequence, Union
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
+    from Hql.Expressions import Expression
     from Hql.Context import Context
+    from Hql.Expressions import References
 
-# @register_op('Unnest')
 class Unnest(Operator):
-    def __init__(self, field:Expression, tables:list[Expression]):
+    def __init__(self, field:References.Reference, tables:Sequence[Union[References.NamedReference, References.Wildcard]]):
         Operator.__init__(self)
         self.field = field
         self.tables = tables
-        
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -21,40 +21,37 @@ class Unnest(Operator):
             'tables': [x.to_dict() for x in self.tables]
         }
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         out = 'unnest '
-        out += self.field.decompile(ctx)
+        out += self.field.deparse()
 
         if self.tables:
             out += ' on '
             exprs = []
             for i in self.tables:
-                exprs.append(i.decompile(ctx))
+                exprs.append(i.deparse())
             out += ', '.join(exprs)
 
         return out
 
     def gets_all(self, ctx:Context) -> bool:
         for i in self.tables:
-            if i.decompile(ctx) == '*':
+            if i.str() == '*':
                 return True
         return False
-            
-    def eval(self, ctx:'Context', **kwargs):
-        self.ctx = ctx
 
-        field = self.field.eval(ctx, as_list=True)
-        
+    def eval(self, ctx: Context) -> Context:
+        from Hql.Data.Tables import Table
+
         # loop through tables defined by 'on'
         for i in self.tables:
-            table = i.eval(ctx, as_list=True)
-            
             # match tables matching the pattern
-            tables = ctx.data.get_tables(table[0])
-            
+            tables = ctx.data.get_tables(i.str())
+
             # loop through matching tables
             for j in tables:
-                new_table = j.unnest(field)
+                new_table = j.unnest(self.field)
+                assert isinstance(new_table, Table)
                 ctx.data.replace_table(new_table)
-        
-        return ctx.data
+
+        return ctx

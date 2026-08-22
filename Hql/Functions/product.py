@@ -1,22 +1,35 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.Context import register_func, Context
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, Sequence, Union
+
+if TYPE_CHECKING:
+    from Hql.Hac.Sources import Source
 
 @register_func('product')
 class product(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.References import Reference
+        from Hql.Expressions.Literals import StringLiteral
         Function.__init__(self, args, 1, -1)
-        self.preprocess = True
-        
-    def eval(self, ctx:'Context', **kwargs):
-        from Hql.Hac import Source
 
-        src = Source(ctx)
-        for i in self.args:
-            arg = i.eval(ctx, as_str=True)
-            if not isinstance(arg, str):
+        self.names:Sequence[Union[Reference, StringLiteral]] = []
+        for i in args:
+            assert isinstance(i, (Reference, StringLiteral))
+            self.names.append(i)
+
+    def eval(self, ctx: Context, receiver=None) -> Source:
+        from Hql.Hac.Sources import Source
+        from Hql.Expressions.Literals import StringLiteral
+
+        src = receiver if isinstance(receiver, Source) else Source(ctx)
+
+        for i in self.names:
+            arg = i.preprocess(ctx)
+
+            if not isinstance(arg, StringLiteral):
                 raise hqle.QueryException(f"Invalid argument type passed to function product {type(i)} eval'd to {type(arg)}")
-            src.product(arg)
+            src.product(arg.str())
 
         return src

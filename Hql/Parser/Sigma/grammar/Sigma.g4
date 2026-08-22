@@ -48,5 +48,5 @@ basicIdentifier:
 wildcardIdentifier:
     Identifier=WILDCARD;
     
-regexIdentifier:
-    Identifier=REGEXIDENTIFIER;
+// regexIdentifier:
+//     Identifier=REGEXIDENTIFIER;

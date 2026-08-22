@@ -1,5 +1,6 @@
 # Generated from Sigma.g4 by ANTLR 4.13.2
 # encoding: utf-8
+from __future__ import annotations
 from antlr4 import *
 from io import StringIO
 import sys
@@ -10,29 +11,28 @@ else:
 
 def serializedATN():
     return [
-        4,1,14,82,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,
-        6,2,7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,
-        1,0,1,0,1,1,1,1,1,1,5,1,34,8,1,10,1,12,1,37,9,1,1,2,1,2,1,2,5,2,
-        42,8,2,10,2,12,2,45,9,2,1,3,1,3,1,3,1,3,3,3,51,8,3,1,4,1,4,1,4,1,
-        5,1,5,1,5,1,5,1,6,1,6,1,6,1,6,1,7,1,7,3,7,66,8,7,1,8,1,8,3,8,70,
-        8,8,1,9,1,9,1,10,1,10,1,11,1,11,1,12,1,12,1,13,1,13,1,13,0,0,14,
-        0,2,4,6,8,10,12,14,16,18,20,22,24,26,0,0,74,0,28,1,0,0,0,2,30,1,
-        0,0,0,4,38,1,0,0,0,6,50,1,0,0,0,8,52,1,0,0,0,10,55,1,0,0,0,12,59,
-        1,0,0,0,14,65,1,0,0,0,16,69,1,0,0,0,18,71,1,0,0,0,20,73,1,0,0,0,
-        22,75,1,0,0,0,24,77,1,0,0,0,26,79,1,0,0,0,28,29,3,2,1,0,29,1,1,0,
-        0,0,30,35,3,4,2,0,31,32,5,2,0,0,32,34,3,4,2,0,33,31,1,0,0,0,34,37,
-        1,0,0,0,35,33,1,0,0,0,35,36,1,0,0,0,36,3,1,0,0,0,37,35,1,0,0,0,38,
-        43,3,6,3,0,39,40,5,1,0,0,40,42,3,6,3,0,41,39,1,0,0,0,42,45,1,0,0,
-        0,43,41,1,0,0,0,43,44,1,0,0,0,44,5,1,0,0,0,45,43,1,0,0,0,46,51,3,
-        12,6,0,47,51,3,8,4,0,48,51,3,10,5,0,49,51,3,18,9,0,50,46,1,0,0,0,
-        50,47,1,0,0,0,50,48,1,0,0,0,50,49,1,0,0,0,51,7,1,0,0,0,52,53,5,3,
-        0,0,53,54,3,6,3,0,54,9,1,0,0,0,55,56,5,7,0,0,56,57,3,0,0,0,57,58,
-        5,8,0,0,58,11,1,0,0,0,59,60,3,14,7,0,60,61,5,4,0,0,61,62,3,16,8,
-        0,62,13,1,0,0,0,63,66,5,10,0,0,64,66,5,5,0,0,65,63,1,0,0,0,65,64,
-        1,0,0,0,66,15,1,0,0,0,67,70,5,6,0,0,68,70,3,20,10,0,69,67,1,0,0,
-        0,69,68,1,0,0,0,70,17,1,0,0,0,71,72,3,22,11,0,72,19,1,0,0,0,73,74,
-        3,24,12,0,74,21,1,0,0,0,75,76,5,11,0,0,76,23,1,0,0,0,77,78,5,12,
-        0,0,78,25,1,0,0,0,79,80,5,13,0,0,80,27,1,0,0,0,5,35,43,50,65,69
+        4,1,13,78,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,
+        6,2,7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,1,0,1,0,
+        1,1,1,1,1,1,5,1,32,8,1,10,1,12,1,35,9,1,1,2,1,2,1,2,5,2,40,8,2,10,
+        2,12,2,43,9,2,1,3,1,3,1,3,1,3,3,3,49,8,3,1,4,1,4,1,4,1,5,1,5,1,5,
+        1,5,1,6,1,6,1,6,1,6,1,7,1,7,3,7,64,8,7,1,8,1,8,3,8,68,8,8,1,9,1,
+        9,1,10,1,10,1,11,1,11,1,12,1,12,1,12,0,0,13,0,2,4,6,8,10,12,14,16,
+        18,20,22,24,0,0,71,0,26,1,0,0,0,2,28,1,0,0,0,4,36,1,0,0,0,6,48,1,
+        0,0,0,8,50,1,0,0,0,10,53,1,0,0,0,12,57,1,0,0,0,14,63,1,0,0,0,16,
+        67,1,0,0,0,18,69,1,0,0,0,20,71,1,0,0,0,22,73,1,0,0,0,24,75,1,0,0,
+        0,26,27,3,2,1,0,27,1,1,0,0,0,28,33,3,4,2,0,29,30,5,2,0,0,30,32,3,
+        4,2,0,31,29,1,0,0,0,32,35,1,0,0,0,33,31,1,0,0,0,33,34,1,0,0,0,34,
+        3,1,0,0,0,35,33,1,0,0,0,36,41,3,6,3,0,37,38,5,1,0,0,38,40,3,6,3,
+        0,39,37,1,0,0,0,40,43,1,0,0,0,41,39,1,0,0,0,41,42,1,0,0,0,42,5,1,
+        0,0,0,43,41,1,0,0,0,44,49,3,12,6,0,45,49,3,8,4,0,46,49,3,10,5,0,
+        47,49,3,18,9,0,48,44,1,0,0,0,48,45,1,0,0,0,48,46,1,0,0,0,48,47,1,
+        0,0,0,49,7,1,0,0,0,50,51,5,3,0,0,51,52,3,6,3,0,52,9,1,0,0,0,53,54,
+        5,7,0,0,54,55,3,0,0,0,55,56,5,8,0,0,56,11,1,0,0,0,57,58,3,14,7,0,
+        58,59,5,4,0,0,59,60,3,16,8,0,60,13,1,0,0,0,61,64,5,10,0,0,62,64,
+        5,5,0,0,63,61,1,0,0,0,63,62,1,0,0,0,64,15,1,0,0,0,65,68,5,6,0,0,
+        66,68,3,20,10,0,67,65,1,0,0,0,67,66,1,0,0,0,68,17,1,0,0,0,69,70,
+        3,22,11,0,70,19,1,0,0,0,71,72,3,24,12,0,72,21,1,0,0,0,73,74,5,11,
+        0,0,74,23,1,0,0,0,75,76,5,12,0,0,76,25,1,0,0,0,5,33,41,48,63,67
     ]
 
 class SigmaParser ( Parser ):
@@ -50,7 +50,7 @@ class SigmaParser ( Parser ):
 
     symbolicNames = [ "<INVALID>", "AND", "OR", "NOT", "OF", "ALL", "THEM", 
                       "LP", "RP", "ASTERISK", "INT", "IDENTIFIER", "WILDCARD", 
-                      "REGEXIDENTIFIER", "WHITESPACE" ]
+                      "WHITESPACE" ]
 
     RULE_condition = 0
     RULE_orStatement = 1
@@ -65,12 +65,11 @@ class SigmaParser ( Parser ):
     RULE_patternIdentifier = 10
     RULE_basicIdentifier = 11
     RULE_wildcardIdentifier = 12
-    RULE_regexIdentifier = 13
 
     ruleNames =  [ "condition", "orStatement", "andStatement", "statement", 
                    "notStatement", "bracketStatement", "ofStatement", "ofSpecifier", 
                    "ofTarget", "selectionIdentifier", "patternIdentifier", 
-                   "basicIdentifier", "wildcardIdentifier", "regexIdentifier" ]
+                   "basicIdentifier", "wildcardIdentifier" ]
 
     EOF = Token.EOF
     AND=1
@@ -85,8 +84,7 @@ class SigmaParser ( Parser ):
     INT=10
     IDENTIFIER=11
     WILDCARD=12
-    REGEXIDENTIFIER=13
-    WHITESPACE=14
+    WHITESPACE=13
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -135,7 +133,7 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 0, self.RULE_condition)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 28
+            self.state = 26
             localctx.Statement = self.orStatement()
         except RecognitionException as re:
             localctx.exception = re
@@ -196,18 +194,18 @@ class SigmaParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 30
+            self.state = 28
             localctx.Left = self.andStatement()
-            self.state = 35
+            self.state = 33
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while _la==2:
-                self.state = 31
+                self.state = 29
                 self.match(SigmaParser.OR)
-                self.state = 32
+                self.state = 30
                 localctx._andStatement = self.andStatement()
                 localctx.Right.append(localctx._andStatement)
-                self.state = 37
+                self.state = 35
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
@@ -270,18 +268,18 @@ class SigmaParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 38
+            self.state = 36
             localctx.Left = self.statement()
-            self.state = 43
+            self.state = 41
             self._errHandler.sync(self)
             _la = self._input.LA(1)
             while _la==1:
-                self.state = 39
+                self.state = 37
                 self.match(SigmaParser.AND)
-                self.state = 40
+                self.state = 38
                 localctx._statement = self.statement()
                 localctx.Right.append(localctx._statement)
-                self.state = 45
+                self.state = 43
                 self._errHandler.sync(self)
                 _la = self._input.LA(1)
 
@@ -342,27 +340,27 @@ class SigmaParser ( Parser ):
         localctx = SigmaParser.StatementContext(self, self._ctx, self.state)
         self.enterRule(localctx, 6, self.RULE_statement)
         try:
-            self.state = 50
+            self.state = 48
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [5, 10]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 46
+                self.state = 44
                 self.ofStatement()
                 pass
             elif token in [3]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 47
+                self.state = 45
                 self.notStatement()
                 pass
             elif token in [7]:
                 self.enterOuterAlt(localctx, 3)
-                self.state = 48
+                self.state = 46
                 self.bracketStatement()
                 pass
             elif token in [11]:
                 self.enterOuterAlt(localctx, 4)
-                self.state = 49
+                self.state = 47
                 self.selectionIdentifier()
                 pass
             else:
@@ -418,9 +416,9 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 8, self.RULE_notStatement)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 52
+            self.state = 50
             self.match(SigmaParser.NOT)
-            self.state = 53
+            self.state = 51
             localctx.Statement = self.statement()
         except RecognitionException as re:
             localctx.exception = re
@@ -475,11 +473,11 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 10, self.RULE_bracketStatement)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 55
+            self.state = 53
             self.match(SigmaParser.LP)
-            self.state = 56
+            self.state = 54
             localctx.Statement = self.condition()
-            self.state = 57
+            self.state = 55
             self.match(SigmaParser.RP)
         except RecognitionException as re:
             localctx.exception = re
@@ -536,11 +534,11 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 12, self.RULE_ofStatement)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 59
+            self.state = 57
             localctx.Specifier = self.ofSpecifier()
-            self.state = 60
+            self.state = 58
             self.match(SigmaParser.OF)
-            self.state = 61
+            self.state = 59
             localctx.Target = self.ofTarget()
         except RecognitionException as re:
             localctx.exception = re
@@ -591,17 +589,17 @@ class SigmaParser ( Parser ):
         localctx = SigmaParser.OfSpecifierContext(self, self._ctx, self.state)
         self.enterRule(localctx, 14, self.RULE_ofSpecifier)
         try:
-            self.state = 65
+            self.state = 63
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [10]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 63
+                self.state = 61
                 localctx.Int = self.match(SigmaParser.INT)
                 pass
             elif token in [5]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 64
+                self.state = 62
                 localctx.All = self.match(SigmaParser.ALL)
                 pass
             else:
@@ -657,17 +655,17 @@ class SigmaParser ( Parser ):
         localctx = SigmaParser.OfTargetContext(self, self._ctx, self.state)
         self.enterRule(localctx, 16, self.RULE_ofTarget)
         try:
-            self.state = 69
+            self.state = 67
             self._errHandler.sync(self)
             token = self._input.LA(1)
             if token in [6]:
                 self.enterOuterAlt(localctx, 1)
-                self.state = 67
+                self.state = 65
                 localctx.Them = self.match(SigmaParser.THEM)
                 pass
             elif token in [12]:
                 self.enterOuterAlt(localctx, 2)
-                self.state = 68
+                self.state = 66
                 localctx.Pattern = self.patternIdentifier()
                 pass
             else:
@@ -720,7 +718,7 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 18, self.RULE_selectionIdentifier)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 71
+            self.state = 69
             localctx.Basic = self.basicIdentifier()
         except RecognitionException as re:
             localctx.exception = re
@@ -769,7 +767,7 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 20, self.RULE_patternIdentifier)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 73
+            self.state = 71
             localctx.Wildcard = self.wildcardIdentifier()
         except RecognitionException as re:
             localctx.exception = re
@@ -817,7 +815,7 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 22, self.RULE_basicIdentifier)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 75
+            self.state = 73
             localctx.Identifier = self.match(SigmaParser.IDENTIFIER)
         except RecognitionException as re:
             localctx.exception = re
@@ -865,56 +863,8 @@ class SigmaParser ( Parser ):
         self.enterRule(localctx, 24, self.RULE_wildcardIdentifier)
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 77
+            self.state = 75
             localctx.Identifier = self.match(SigmaParser.WILDCARD)
-        except RecognitionException as re:
-            localctx.exception = re
-            self._errHandler.reportError(self, re)
-            self._errHandler.recover(self, re)
-        finally:
-            self.exitRule()
-        return localctx
-
-
-    class RegexIdentifierContext(ParserRuleContext):
-        __slots__ = 'parser'
-
-        def __init__(self, parser, parent:ParserRuleContext=None, invokingState:int=-1):
-            super().__init__(parent, invokingState)
-            self.parser = parser
-            self.Identifier = None # Token
-
-        def REGEXIDENTIFIER(self):
-            return self.getToken(SigmaParser.REGEXIDENTIFIER, 0)
-
-        def getRuleIndex(self):
-            return SigmaParser.RULE_regexIdentifier
-
-        def enterRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "enterRegexIdentifier" ):
-                listener.enterRegexIdentifier(self)
-
-        def exitRule(self, listener:ParseTreeListener):
-            if hasattr( listener, "exitRegexIdentifier" ):
-                listener.exitRegexIdentifier(self)
-
-        def accept(self, visitor:ParseTreeVisitor):
-            if hasattr( visitor, "visitRegexIdentifier" ):
-                return visitor.visitRegexIdentifier(self)
-            else:
-                return visitor.visitChildren(self)
-
-
-
-
-    def regexIdentifier(self):
-
-        localctx = SigmaParser.RegexIdentifierContext(self, self._ctx, self.state)
-        self.enterRule(localctx, 26, self.RULE_regexIdentifier)
-        try:
-            self.enterOuterAlt(localctx, 1)
-            self.state = 79
-            localctx.Identifier = self.match(SigmaParser.REGEXIDENTIFIER)
         except RecognitionException as re:
             localctx.exception = re
             self._errHandler.reportError(self, re)

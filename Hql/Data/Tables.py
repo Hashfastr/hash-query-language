@@ -1,19 +1,23 @@
-from typing import TYPE_CHECKING, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 import polars as pl
 from polars.dataframe.group_by import GroupBy
 
-from .Schema import Schema
 from .Series import Series
 from Hql.Exceptions import HqlExceptions as hqle
 from Hql.PolarsTools import pltools
 from Hql.Types.Hql import HqlTypes as hqlt
 
+from Hql.Expressions.References import NamedReference, Path
+
 import logging
 import json
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, Path, NamedReference
+    from Hql.Expressions.References import Reference
+    from .Schema import Schema
 
 '''
 Table for a structure of data, includes schema definition.
@@ -28,12 +32,10 @@ class Table():
             schema:Union[Schema, dict, None]=None,
             name:Union[str, None]=None
         ):
+        from Hql.Data import Schema
         
-        if isinstance(df, pl.DataFrame):
-            self.df = df
-        else:
-            self.df = pl.DataFrame()
-            
+        self.df:pl.DataFrame = df if isinstance(df, pl.DataFrame) else pl.DataFrame()
+        
         if isinstance(schema, dict):
             schema = Schema(schema=schema)
         
@@ -42,15 +44,15 @@ class Table():
         self.schema = Schema() # safe default
        
         # rely on self.agg being None for the existence of an aggregation
-        self.agg:Union[None, GroupBy] = None
-        self.agg_paths:list[list[str]] = []
+        self.agg:Optional[GroupBy] = None
+        self.agg_paths:list[Reference] = []
         self.agg_schema:Schema = Schema()
 
         if series:
             self.series = series
 
         elif init_data and not schema:
-            self.schema = Schema(init_data, sample_size=100)
+            self.schema = Schema(data=init_data, sample_size=-1)
             init_data = self.schema.adjust_mv(init_data)
             pl_schema = self.schema.gen_pl_schema()
 
@@ -66,7 +68,8 @@ class Table():
         
         elif init_data and schema:
             self.schema = schema
-            self.df = pl.from_dicts(init_data, schema=schema.convert_schema(target='polars'), strict=False)
+            pl_schema = schema.gen_pl_schema()
+            self.df = pl.from_dicts(init_data, schema=pl_schema)
         
         elif not self.df.is_empty() and schema:
             self.schema = schema
@@ -98,12 +101,12 @@ class Table():
         self.df = schema.apply(self.df)
         self.schema = schema
 
-    def get_type(self, path:list[str]):
+    def get_type(self, path:Reference):
         if self.schema:
             return self.schema.get_type(path)
         return None
 
-    def drop(self, path:list[str], df:Union[pl.DataFrame, None]=None, idx:int=0) -> Union[pl.DataFrame, "Table"]:
+    def drop(self, path:Reference, df:Union[pl.DataFrame, None]=None, idx:int=0) -> Union[pl.DataFrame, Table]:
         if isinstance(df, type(None)) and idx != 0:
             raise hqle.CompilerException('Logic error? Would reinit df with a non-zero index.')
 
@@ -140,7 +143,7 @@ class Table():
             
         return pl.DataFrame(new)
     
-    def drop_many(self, paths:list[list[str]]):
+    def drop_many(self, paths:Sequence[Reference]):
         for path in paths:
             self.drop(path)
         return self
@@ -160,11 +163,13 @@ class Table():
         except pl.exceptions.ColumnNotFoundError as e:
             raise hqle.UnreferencedFieldException(e.args[0])
         
-    def get_value(self, path:list[str]):
-        return pltools.get_element_value(self.df, path)
+    def get_value(self, path:Reference):
+        return pltools.get_element_value(self.df, path.list())
 
     @staticmethod
-    def merge_rows(tables:list['Table']):
+    def merge_rows(tables:list[Table]):
+        from Hql.Data import Schema
+
         if not tables:
             return Table()
         
@@ -227,8 +232,9 @@ class Table():
         return Table(df=df, schema=schema, name=name)
 
     @staticmethod
-    def merge(tables:list["Table"], merge_rows=True):
+    def merge(tables:list[Table], merge_rows=True):
         from Hql.Types.Compiler import CompilerType
+        from Hql.Data import Schema
 
         if merge_rows:
             return Table.merge_rows(tables)
@@ -275,31 +281,33 @@ class Table():
         return Table(df=df, schema=schema, name=name)
 
     '''
-    Takes in a list of path parts
+    Takes in a reference path
     client.ip.src
-    ['client', 'ip', 'src']
     Returns a Table with just the data of that path
     If not found then it returns an empty table with the parent name.
     '''
-    def select(self, field:list[str]):
+    def select(self, field:Reference):
         if not self.assert_field(field):
             return Table(name=self.name)
         
-        assert isinstance(self.df, pl.DataFrame)
-        df = pltools.get_element(self.df, field)
+        df = pltools.get_element(self.df, field.list())
         schema = self.schema.select(field)
 
         return Table(df=df, schema=schema, name=self.name)
 
-    def unnest(self, field:list[str]) -> Union[Series, 'Table']:
+    def unnest(self, field:Reference) -> Union[Series, Table]:
+        from Hql.Data import Schema
+
         if not isinstance(self.schema, Schema):
             raise hqle.CompilerException('Attempting to unnest an uninitalized table object with a None Schema')
 
         if not self.assert_field(field):
-            raise hqle.QueryException(f"Could not unnest field {'.'.join(field)} from table {self.name}")
+            raise hqle.QueryException(f"Could not unnest field {field.deparse()} from table {self.name}")
         
         df = self.get_value(field)
-        dtype = self.schema.unnest(field).schema
+        dtype = self.schema.unnest(field)
+        if isinstance(dtype, hqlt.object):
+            dtype = dtype.schema
         
         if isinstance(df, pl.Series):
             if not isinstance(dtype, hqlt.HqlType):
@@ -333,15 +341,22 @@ class Table():
     The idea here is if you want to extract the value of a function, this does it.
     '''
     def strip(self):
+        from Hql.Data import Schema
+        
         cur = self.df
         path = []
         while isinstance(cur, pl.DataFrame) and len(cur.columns) == 1:
             key = cur.columns[0]
             cur = pltools.get_element_value(cur, [key])
-            path.append(key)
+            path.append(NamedReference(key))
         
         # Using this instead of strip to ensure we're in sync
-        schema = self.schema.unnest(path).schema
+        if path:
+            schema = self.schema.unnest(Path(path))
+            if isinstance(schema, hqlt.object):
+                schema = schema.schema
+        else:
+            schema = self.schema.schema
 
         if isinstance(cur, pl.Series):
             if isinstance(schema, dict):
@@ -350,12 +365,12 @@ class Table():
             series = Series(cur, stype=schema)
             return Table(series=series, name=self.name)
             
-        if not isinstance(schema, dict):
+        if not isinstance(schema, hqlt.object):
             raise hqle.CompilerException('Schema generated for a dataframe is a non-dict!')
 
-        return Table(df=cur, schema=schema, name=self.name)
+        return Table(df=cur, schema=Schema(schema), name=self.name)
 
-    def rename(self, src:list[str], dest:list[str]):
+    def rename(self, src:Reference, dest:Reference):
         if not self.assert_field(src):
             raise hqle.QueryException('Attempting to rename a non-existing field')
         
@@ -379,7 +394,7 @@ class Table():
     # Inserts a piece of data at a given name
     def insert(
             self,
-            name:list[str],
+            name:Reference,
             value:Union[pl.DataFrame, pl.Series],
             vtype:Union[hqlt.HqlType, dict],
             cur_df:Union[None, pl.DataFrame]=None,
@@ -411,7 +426,7 @@ class Table():
         # Recurse up a nested object
         elif cur_df[split].dtype == pl.Struct:        
             recurse = self.insert(name, value, vtype, cur_df=cur_df.select(split).unnest(split), idx=idx + 1)
-            cur_df = cur_df.remove(split)
+            cur_df = cur_df.drop(split)
             new = pl.DataFrame({split: recurse})
         
         # Conflict, a base type is where we're trying to put a struct
@@ -439,7 +454,7 @@ class Table():
         
         return new
 
-    def remove(self, name:list[str], cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
+    def remove(self, name:Reference, cur_df:Union[None, pl.DataFrame]=None, idx:int=0):
         if isinstance(cur_df, type(None)):
             cur_df = self.df
             
@@ -447,7 +462,7 @@ class Table():
             return cur_df
             
         split = name[idx]
-        mask = cur_df.remove(split)
+        mask = cur_df.drop(split)
         
         if idx == len(name) - 1:
             return mask
@@ -465,7 +480,7 @@ class Table():
 
         return merged
             
-    def pop(self, name:list[str]):
+    def pop(self, name:Reference):
         if not self.assert_field(name):
             raise hqle.QueryException('Attempting to pop a non-existing field')
         
@@ -478,10 +493,10 @@ class Table():
     
     # Asserts by checking against schema
     # Schema should always be sync'd with the table data
-    def assert_field(self, field:list[str]):
+    def assert_field(self, field:Reference):
         return self.schema.assert_field(field)
     
-    def cast_in_place(self, path:list[str], cast_type:hqlt.HqlType):
+    def cast_in_place(self, path:Reference, cast_type:hqlt.HqlType):
         if not self.assert_field(path):
             return None
         
@@ -490,7 +505,7 @@ class Table():
 
         return self
     
-    def join(self, right:"Table", on:Union[list[Union['Path', 'NamedReference']], Union['Path', 'NamedReference']], kind:str):
+    def join(self, right:Table, on:Sequence[Reference], kind:str):
         from Hql.Context import Context
         from Hql.Data import Data
 
@@ -508,9 +523,7 @@ class Table():
 
         pl_on = []
         for i in on:
-            expr = i.eval(ctx, as_pl=True)
-            assert isinstance(expr, pl.Expr)
-            pl_on.append(expr)
+            pl_on.append(i.polars())
 
         if kind == 'inner':
             df = self.df.join(right.df, on=pl_on, how='inner')

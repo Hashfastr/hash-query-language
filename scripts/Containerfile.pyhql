@@ -1,0 +1,11 @@
+FROM python:3.14-slim
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+ENV UV_LINK_MODE=copy
+
+WORKDIR /build
+
+COPY pyproject.toml README.md LICENSE ./
+COPY Hql ./Hql
+
+RUN uv build --wheel --sdist --out-dir /out

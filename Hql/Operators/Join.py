@@ -1,32 +1,30 @@
-from Hql.Operators import Operator
+from __future__ import annotations
+from typing import Sequence, Union, Optional, TYPE_CHECKING
+from Hql.Operators.Operator import Operator
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_op, Context
-from typing import Union, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from Hql.Expressions import Expression, NamedReference, Path
+    from Hql.Expressions import Expression, OpParameter
+    from Hql.Expressions.References import Reference
+    from Hql.Expressions.Logic import Logic
     from Hql.Data import Data
-    from Hql.Expressions import OpParameter
     from Hql.Compiler import InstructionSet
+    from Hql.Context import Context
 
-# @register_op('Join')
 class Join(Operator):
-    def __init__(self, rh:Union['Expression', 'InstructionSet'], params:Optional[list['OpParameter']]=None, on:Optional[list[Union['NamedReference', 'Path']]]=None, where:Optional['Expression']=None):
-        from Hql.Data import Data
-        ctx = Context(Data())
-
+    def __init__(self, rh:Union[Expression, InstructionSet], on:Sequence[Reference], params:Optional[list[OpParameter]]=None, where:Optional[Logic]=None):
         Operator.__init__(self)
         self.rh = rh
-        self.params:list = params if params else []
-        self.on = on if on else []
+        self.params:list[OpParameter] = params if params else []
+        self.on:Sequence[Reference] = on if on else []
         self.where = where
 
         # default join type
         self.kind = 'inner'
-        self.process_params(ctx)
+        self.process_params()
 
         if not self.on:
-            raise hqle.QueryException(f'Missing on clause in join: {self.decompile(ctx)}')
+            raise hqle.QueryException(f'Missing on clause in join: {self.deparse()}')
 
     def to_dict(self):
         return {
@@ -38,34 +36,36 @@ class Join(Operator):
             'where': self.where.to_dict() if self.where else None
         }
 
-    def process_params(self, ctx:'Context'):
+    def process_params(self):
         for i in self.params:
             if i.name == 'kind':
-                self.kind = i.value.eval(ctx, as_str=True)
-            else:
-                raise hqle.QueryException(f'Invalid join parameter {i.name}')
+                self.kind = i.value.str()
 
-    def get_right(self, ctx:'Context', where:Optional['Expression']) -> 'Data':
-        from Hql.Operators import Where
+    # Gets the data resulting from a compiled right side
+    def get_right(self, ctx:Context, where:Logic) -> Data:
+        from Hql.Operators.Where import Where
         from Hql.Compiler import InstructionSet
 
         if not isinstance(self.rh, InstructionSet):
             raise hqle.CompilerException('Join attempting to get right without compilation, error?')
-        
-        # There's a where, add a right side filter
-        if where:
-            self.rh.add_op(Where(where))
+
+        # Add a right side filter
+        if self.where:
+            self.rh.add_op(Where(self.where))
             self.rh.recompile(ctx.config)
-        
+
         return self.rh.eval(ctx).data
 
-    def gen_optimization(self, data:'Data') -> 'Expression':
-        from Hql.Operators import Summarize, Union
-        from Hql.Expressions import Wildcard, ByExpression
-        from Hql.Operators.Database import Static
+    def gen_optimization(self, data:Data) -> Logic:
+        from Hql.Operators.Summarize import Summarize
+        from Hql.Operators.Union import Union
+        from Hql.Expressions.References import Wildcard
+        from Hql.Expressions.Aggregation import ByExpression
+        from Hql.Database import Static
         from Hql.Compiler import InstructionSet
+        from Hql.Context import Context
         from Hql.Data import Data
-        from Hql.Expressions import Equality, BinaryLogic
+        from Hql.Expressions.Logic import Equality, BinaryLogic
 
         ops = [
             Summarize([], ByExpression(self.on)),
@@ -74,10 +74,7 @@ class Join(Operator):
             Summarize([], ByExpression(self.on))
         ]
 
-        ctx = InstructionSet(Static(data), ops).eval(Context(Data()))
-        # get the only table following the union
-        if not ctx.data:
-            return None
+        ctx = InstructionSet(Static(data), operators=ops).eval(Context(Data()))
         table = [x for x in ctx.data][0].to_dicts()
 
         exprs = []
@@ -86,12 +83,13 @@ class Join(Operator):
             for j in self.explode_dict(i):
                 lh = self.name_from_dict(j)
                 rh = self.value_from_dict(j)
-                ands.append(Equality(lh, '==', [rh]))
-            exprs.append(BinaryLogic(ands[0], ands[1:], 'and'))
-        return BinaryLogic(exprs[0], exprs[1:], 'or')
+                ands.append(Equality(lh, rh))
+            exprs.append(BinaryLogic(ands, logic_and=True))
+        return BinaryLogic(exprs, logic_and=False)
 
-    def name_from_dict(self, data:dict) -> Union['NamedReference', 'Path']:
-        from Hql.Expressions import Path, NamedReference
+    def name_from_dict(self, data:dict) -> Reference:
+        from Hql.Expressions.References import Path, NamedReference
+
         path = []
         while True:
             key = list(data.keys())[0]
@@ -103,6 +101,7 @@ class Join(Operator):
 
     def value_from_dict(self, data:dict):
         from Hql.Expressions.Literals import Integer, StringLiteral, Float
+
         while True:
             key = list(data.keys())[0]
             if not isinstance(data[key], dict):
@@ -128,52 +127,41 @@ class Join(Operator):
             for j in up:
                 out.append({i: j})
         return out
-    
+
     def resolve_on_clause(self):
         ...
 
-    def decompile(self, ctx: 'Context') -> str:
+    def deparse(self) -> str:
         from Hql.Compiler import InstructionSet
         from Hql.Expressions import PipeExpression
+
         out = 'join '
 
         if isinstance(self.rh, InstructionSet):
             out += 'INSTRUCTION_RH'
         else:
-            rh = self.rh.decompile(ctx)
             if isinstance(self.rh, PipeExpression):
-                assert isinstance(rh, str)
-                rh = rh.replace('\n', ' ')
-                out += '(' + rh + ')'
+                out += '(' + self.rh.deparse() + ')'
             else:
-                out += rh
+                out += self.rh.deparse()
 
         if self.params:
-            out += ' '
-            params = []
-            for i in self.params:
-                params.append(i.decompile(ctx))
-            out += ' '.join(params)
+            out += ' ' + ' '.join([x.deparse() for x in self.params])
 
         if self.on:
-            out += ' '
-            out += 'on '
-            out += ', '.join([x.decompile(ctx) for x in self.on])
+            out += ' on ' + ', '.join([x.deparse() for x in self.on])
 
         if self.where:
-            out += ' '
-            out += 'where '
-            out += self.where.decompile(ctx)
+            out += ' where ' + self.where.deparse()
 
         return out
 
-    def eval(self, ctx:'Context', **kwargs):
-        self.process_params(ctx)
+    def eval(self, ctx:Context):
+        self.process_params()
 
         left = ctx.data
         expr = self.gen_optimization(left)
         right = self.get_right(ctx, expr)
-        
-        data = left.join(right, self.on, kind=self.kind)
-        
-        return data
+
+        ctx.data = left.join(right, self.on, kind=self.kind)
+        return ctx

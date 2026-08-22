@@ -1,26 +1,24 @@
+from __future__ import annotations
 from antlr4 import CommonTokenStream, InputStream
 from antlr4.error.ErrorListener import ErrorListener
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Expressions import PipeExpression 
-from .grammar.HqlLexer import HqlLexer
-from .grammar.HqlParser import HqlParser
-from .grammar.HqlVisitor import HqlVisitor
 
-from Hql.Query import Query, QueryStatement, LetStatement
+from Hql.Exceptions import HqlExceptions as hqle
+
+from Hql.Parser.grammar.HqlLexer import HqlLexer
+from Hql.Parser.grammar.HqlParser import HqlParser
+from Hql.Parser.grammar.HqlVisitor import HqlVisitor
 
 from Hql.Parser.BaseExpressions import BaseExpressions as ParseBaseExpressions
 from Hql.Parser.Functions import Functions as ParseFunctions
 from Hql.Parser.Operators import Operators as ParseOperators
 from Hql.Parser.Logic import Logic as ParseLogic
 
-from Hql.Parser.Sigma import SigmaParser
-
 import logging
 from typing import Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
-    from Hql.Operators import Operator
+    from Hql.Operators.Operator import Operator
     from Hql.Query import Query, Statement
 
 class HqlErrorListener(ErrorListener):
@@ -38,7 +36,7 @@ class Parser():
         self.filename = filename
         self.text = text
         self.tree = None
-        self.assembly:Union[None, 'Query', 'Statement', 'Operator', 'Expression'] = None
+        self.assembly:Union[None, Query, Statement, Operator, Expression] = None
     
     def parse_text(self) -> HqlParser:
         if not self.text:
@@ -108,6 +106,8 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         self.filename = filename
     
     def visitQuery(self, ctx: HqlParser.QueryContext):
+        from Hql.Query import Query
+
         statements = []
         for i in ctx.Statements:
             statements.append(self.visit(i))
@@ -115,6 +115,8 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         return Query(statements)
     
     def visitQueryStatement(self, ctx: HqlParser.QueryStatementContext):
+        from Hql.Query import QueryStatement
+
         expr = self.visit(ctx.Expression)
         
         if not expr:
@@ -140,6 +142,8 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         return PipeExpression(pipes, prepipe=prepipe)
 
     def visitEmptyPipedExpression(self, ctx: HqlParser.EmptyPipedExpressionContext):
+        from Hql.Expressions import PipeExpression 
+        
         pipes = []
         for i in ctx.Operators:
             try:
@@ -150,11 +154,19 @@ class Visitor(ParseOperators, ParseFunctions, ParseLogic, ParseBaseExpressions, 
         return PipeExpression(pipes)
 
     def visitLetVariableDeclaration(self, ctx: HqlParser.LetVariableDeclarationContext):
+        from Hql.Query import LetStatement
         name = self.visit(ctx.Name)
         value = self.visit(ctx.Expression)
-        return LetStatement(name, value, 'variable')
+        return LetStatement(name, value)
 
     def visitLetMacroDeclaration(self, ctx: HqlParser.LetMacroDeclarationContext):
+        from Hql.Query import LetStatement
         name = self.visit(ctx.Name)
         pipes = self.visit(ctx.Pipes)
-        return LetStatement(name, pipes, 'macro')
+        return LetStatement(name, pipes, macro=True)
+
+    def visitLetLogicDeclaration(self, ctx: HqlParser.LetLogicDeclarationContext):
+        from Hql.Query import LetLogicStatement
+        name = self.visit(ctx.Name)
+        logic = self.visit(ctx.Logic)
+        return LetLogicStatement(name, logic)

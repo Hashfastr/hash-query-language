@@ -1,0 +1,49 @@
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
+FROM ${BASE_IMAGE}
+
+ARG POLARS_RUNTIME_VERSION
+ARG PYTHON_VERSION=3.14t
+
+# manylinux_2_28 is AlmaLinux-based. Install extra system deps.
+RUN dnf install -y --allowerasing \
+        openssl-devel \
+        pkgconfig \
+        patchelf \
+        cmake \
+        ca-certificates \
+        curl \
+        gcc \
+        gcc-c++ \
+        make \
+    && dnf clean all
+
+# Rust toolchain (not preinstalled in pypa manylinux images).
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --default-toolchain stable --profile minimal
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+ENV UV_LINK_MODE=copy
+
+RUN uv python install ${PYTHON_VERSION}
+RUN uv venv --python ${PYTHON_VERSION} /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
+RUN uv pip install --python /opt/venv/bin/python pip maturin
+
+WORKDIR /src
+# uv has no `pip download` subcommand; fall back to real pip inside the venv.
+RUN /opt/venv/bin/python -m pip download \
+        --no-binary=:all: --no-deps \
+        "polars-runtime-32==${POLARS_RUNTIME_VERSION}" \
+        -d /src \
+    && tar -xzf /src/polars_runtime_32-${POLARS_RUNTIME_VERSION}.tar.gz -C /src \
+    && rm /src/polars_runtime_32-${POLARS_RUNTIME_VERSION}.tar.gz
+
+WORKDIR /src/polars_runtime_32-${POLARS_RUNTIME_VERSION}
+
+ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=0
+ENV CARGO_PROFILE_RELEASE_STRIP=debuginfo
+RUN maturin build --release \
+        --interpreter /opt/venv/bin/python \
+        --compatibility manylinux_2_28 \
+        --out /out

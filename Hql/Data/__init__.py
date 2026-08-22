@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Union, Iterator
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, Sequence, Union, Iterator
 from fnmatch import fnmatch
 
 from .Tables import Table
@@ -10,10 +11,10 @@ import logging
 
 if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
-    from Hql.Expressions import Path, NamedReference
+    from Hql.Expressions.References import Reference
 
 class Data():
-    def __init__(self, tables:Union[list[Table], None]=None, merge_rows=True):
+    def __init__(self, tables:Optional[list[Table]]=None, merge_rows=True):
         self.tables = dict()
 
         # empty base case
@@ -111,17 +112,17 @@ class Data():
         return schemata
 
     # Given a path, select just the data at that path
-    def select(self, path:list[str]):
+    def select(self, ref:Reference):
         tables = []
         for table in self:
-            tables.append(table.select(path))
+            tables.append(table.select(ref))
 
         return Data(tables=tables)
     
-    def unnest(self, field:list[str]):
+    def unnest(self, ref:Reference):
         tables = []
         for table in self:
-            new = table.unnest(field)
+            new = table.unnest(ref)
             
             if isinstance(new, Series):
                 new = Table(series=new, name=table.name)
@@ -142,7 +143,7 @@ class Data():
         return dataset
    
     @staticmethod
-    def merge(data:list["Data"], merge_rows=True):
+    def merge(data:list[Data], merge_rows=True):
         if len(data) == 1:
             return data[0]
         
@@ -155,7 +156,7 @@ class Data():
 
     # Ensures that the field exists in at least one table
     # Returns the tables where it does exists
-    def assert_field(self, field:list[str]):
+    def assert_field(self, field:Reference):
         exists = []
         
         if not self.tables:
@@ -166,12 +167,12 @@ class Data():
                 exists.append(table)
 
         if not len(exists):
-            logging.warning(f"Could not find {'.'.join(field)} in any tables in the dataset")
+            logging.warning(f"Could not find {field.deparse()} in any tables in the dataset")
             logging.warning(', '.join([x.name for x in self]))
         
         return exists
     
-    def cast_in_place(self, field:list[str], cast_type:'hqlt.HqlType'):
+    def cast_in_place(self, field:Reference, cast_type:hqlt.HqlType):
         tables = self.assert_field(field)
         if not tables:
             return False
@@ -181,10 +182,7 @@ class Data():
 
         return self
 
-    def join(self, right:"Data", on:Union[list[Union['Path', 'NamedReference']], Union['Path', 'NamedReference']], kind:str='innerunique'):
-        if not isinstance(on, list):
-            on = [on]
-
+    def join(self, right:Data, on:Sequence[Reference], kind:str='innerunique'):
         tables = []
         for lt in self:
             new = []
@@ -201,13 +199,13 @@ class Data():
             new.append(table.strip())
         return Data(tables=new)
 
-    def drop_many(self, paths:list[list[str]]):
+    def drop_many(self, paths:Sequence[Reference]):
         cur = self
         for path in paths:
             cur = cur.drop(path)
         return cur
 
-    def drop(self, path:list[str]):
+    def drop(self, path:Reference):
         new = []
         for table in self:
             new.append(table.drop(path))

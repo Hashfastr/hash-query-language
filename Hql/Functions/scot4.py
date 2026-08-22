@@ -1,20 +1,25 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Data import Data, Series, Table, Schema
-from Hql.Operators import Union
-from Hql.Expressions import Wildcard, NamedReference, NamedExpression, StringLiteral
-from Hql.Hac import Hac
+from Hql.Context import register_func
 import requests
 import json
 import urllib.parse
 
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from Hql.Data import Data, Table
+    from Hql.Hac import Hac
+    from Hql.Context import Context
 
 @register_func('scot4')
 class scot4(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.Literals import StringLiteral
+        from Hql.Expressions.References import NamedExpression
+
         Function.__init__(self, args, 0, -1, conf)
         self.params = {
             'server': self.conf.get('default', None),
@@ -60,8 +65,10 @@ class scot4(Function):
         self.timeout = 5
         self.owner = 'HaC-Engine'
 
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx: Context, receiver=None) -> object:
+        from Hql.Data import Data, Table
         import time
+        
         if not ctx.hac or not ctx.data:
             return Data()
 
@@ -122,9 +129,13 @@ class scot4(Function):
         return res
 
     def post_alertgroup(self, data:Data, hac:Hac):
+        from Hql.Expressions.References import Wildcard, NamedReference
+        from Hql.Operators.Union import Union as HqlUnion
+        from Hql.Context import Context
+
         union = self.conf.get('always_union', False)
         if union:
-           data = Union([Wildcard('*')], NamedReference('scot4_unioned')).eval(Context(data))
+           data = HqlUnion([Wildcard('*')], NamedReference('scot4_unioned')).eval(Context(data))
 
         srcs = hac.get('references')
         assert isinstance(srcs, list)

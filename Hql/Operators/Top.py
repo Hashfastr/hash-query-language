@@ -1,13 +1,12 @@
-from typing import TYPE_CHECKING
-from Hql.Operators import Operator
-from Hql.Data import Data
-from Hql.Expressions import Expression
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_op, Context
-import polars as pl
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
-    from Hql.Expressions import ByExpression
+    from Hql.Expressions import Expression
+    from Hql.Expressions.Literals import Integer
+    from Hql.Expressions.Aggregation import ByExpression
+    from Hql.Context import Context
 
 '''
 Give the top, or bottom, x values for a given field in a dataframe
@@ -25,13 +24,27 @@ Preserves the other fields as well
 
 https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
-# @register_op('Top')
 class Top(Operator):
-    def __init__(self, expr:Expression, by:'ByExpression'):
+    def __init__(self, expr:Integer, by:ByExpression):
         Operator.__init__(self)
-        self.expr = expr
+        self._expr:Integer = expr
         self.by = by
-        
+
+    @property
+    def expr(self) -> Integer:
+        expr = self._expr
+        assert expr
+        return expr
+
+    @expr.setter
+    def expr(self, value:Optional[Expression]) -> None:
+        from Hql.Expressions.Literals import Integer
+        from Hql.Exceptions import HqlExceptions as hqle
+
+        if value is None or not isinstance(value, Integer):
+            raise hqle.CompilerException('Setting Top expression to non-Integer')
+        self._expr = value
+
     def to_dict(self):
         return {
             'type': self.type,
@@ -39,21 +52,13 @@ class Top(Operator):
             'by': self.by.to_dict()
         }
 
-    def decompile(self, ctx: 'Context') -> str:
-        out = 'top '
-        out += self.expr.decompile(ctx)
-        out += ' by '
-        out += self.by.decompile(ctx)
+    def deparse(self) -> str:
+        return f'top {self.expr.deparse()} by {self.by.deparse()}'
 
-        return out
-        
-    def eval(self, ctx:'Context', **kwargs):
-        name = self.by.name.eval(ctx, as_str=True, as_list=True)
-        if isinstance(name, str):
-            name = [name]
-            
-        quota = self.expr.eval(ctx)
-        order = self.by.order
-        nulls = self.by.nulls
-        
-        return pl.DataFrame({name: series})
+    def eval(self, ctx:Context):
+        limit = self.expr.value
+
+        ctx = self.by.eval(ctx)
+        for table in ctx.data:
+            table.truncate(limit)
+        return ctx

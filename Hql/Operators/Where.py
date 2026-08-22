@@ -1,76 +1,72 @@
-from Hql.Operators import Operator
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_op, Context
+from __future__ import annotations
 import logging
-
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
+from Hql.Operators.Operator import Operator
+from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
     from Hql.Expressions import Expression
+    from Hql.Expressions.Logic import Logic
     from Hql.Expressions import OpParameter
+    from Hql.Context import Context
 
 # Where operator
 # Essentially just a field filter, can hold a number of expressions, even nested ones.
 # Can also take a number of parameters, although I'm not sure what they are
 # but they can exist.
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
-# @register_op('Where')
 class Where(Operator):
     # Pass in the parser context here for helpful debugging
-    def __init__(self, expr:'Expression', params:Union[None, list['OpParameter']]=None):
+    def __init__(self, expr:Logic, params:Union[None, list[OpParameter]]=None):
         Operator.__init__(self)
         self.parameters = params if params else []
-        self.expr = expr
+        self._expr:Logic = expr
 
-    def decompile(self, ctx: 'Context') -> Union[str, list[str]]:
-        from Hql.Expressions import BinaryLogic
+    @property
+    def expr(self) -> Logic:
+        expr = self._expr
+        assert expr
+        return expr
 
+    @expr.setter
+    def expr(self, value:Optional[Expression]) -> None:
+        from Hql.Expressions.Logic import Logic
+
+        if value is None or not isinstance(value, Logic):
+            raise hqle.CompilerException('Setting Where expression to non-Logic')
+        self._expr = value
+
+    def deparse(self) -> str:
         out = 'where '
 
         if self.parameters:
             exprs = []
             for i in self.parameters:
-                exprs.append(i.decompile(ctx))
+                exprs.append(i.deparse())
             out += ' '.join(exprs)
             out += ' '
 
-        # Attempt to split up ands
-        if isinstance(self.expr, BinaryLogic) and self.expr.bitype == 'and':
-            splits = []
-            exprs = [] 
-            for i in [self.expr.lh] + self.expr.rh:
-                exprs.append(i.decompile(ctx))
-
-            splits = []
-            for i in exprs:
-                if not splits or len(splits[0]) + len(i) > 60:
-                    splits.append(i)
-
-                else:
-                    splits[0] += f' and {i}'
-
-            outs = []
-            for i in splits:
-                outs.append(out + i)
-
-            return outs
-
-        else:
-            out += self.expr.decompile(ctx)
-
+        out += self.expr.deparse()
         return out
 
-    def integrate(self, op: 'Operator'):
-        from Hql.Expressions import BinaryLogic
+    def split_by_length(self, max_length:int=80) -> list[Where]:
+        from Hql.Expressions.Logic import BinaryLogic
+
+        expr = self.expr
+        if max_length < 0 or not isinstance(expr, BinaryLogic):
+            return [self]
+
+        splits = expr.split_by_length(max_length=max_length)
+
+        return [Where(x, self.parameters) for x in splits]
+
+    def integrate(self, op: Operator):
+        from Hql.Expressions.Logic import BinaryLogic
 
         if not isinstance(op, Where):
             return op
 
-        if isinstance(self.expr, BinaryLogic):
-            self.expr = BinaryLogic(self.expr.lh, self.expr.rh + [op.expr], 'and')
-        else:
-            self.expr = BinaryLogic(self.expr, [op.expr], 'and')
-
+        self.expr = BinaryLogic([self.expr, op.expr], logic_and=True)
         return None
 
     '''
@@ -78,9 +74,10 @@ class Where(Operator):
     If there is a field reference error, the filter does not apply to that table
     so drop it
     '''
-    def eval(self, ctx:'Context', **kwargs):
+    def eval(self, ctx:Context) -> Context:
         from Hql.Data import Data
-        pl_filter = self.expr.eval(ctx, as_pl=True)
+
+        pl_filter = self.expr.polars()
 
         new = []
         for table in ctx.data:
@@ -90,4 +87,5 @@ class Where(Operator):
             except hqle.UnreferencedFieldException as e:
                 logging.warning(e)
 
-        return Data(new)
+        ctx.data = Data(new)
+        return ctx

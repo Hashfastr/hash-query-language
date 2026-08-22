@@ -1,20 +1,23 @@
-from typing import Optional
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 from . import Function
-from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Data import Data, Series, Table, Schema
+from Hql.Context import register_func
 
-import logging
+if TYPE_CHECKING:
+    from Hql.Context import Context
 
 '''
 Static function, can be precomputed
 Generates a time delta
 '''
 @register_func('ago')
-class template(Function):
+class ago(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.Literals import StringLiteral
         Function.__init__(self, args, 1, 1)
-        
-    def eval(self, ctx:'Context', **kwargs):
-        from datetime import timedelta
-        return timedelta()
+        val = args[0]
+        assert isinstance(val, StringLiteral)
+        self.delta = val
+
+    def preprocess(self, ctx: Context, receiver=None) -> object:
+        return self.delta

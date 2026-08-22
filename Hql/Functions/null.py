@@ -1,19 +1,24 @@
+from __future__ import annotations
 from . import Function
 from Hql.Exceptions import HqlExceptions as hqle
-from Hql.Context import register_func, Context
-from Hql.Expressions import Expression
+from Hql.Context import register_func
 
-import logging
 import polars as pl
 from typing import Optional
 
 @register_func('isnull')
 class isnull(Function):
     def __init__(self, args:list, conf:Optional[dict]=None):
+        from Hql.Expressions.References import Reference
         Function.__init__(self, args, 1, 1)
-        self.expr:Expression = args[0]
-        
-    def eval(self, ctx:'Context', **kwargs):
-        expr = self.expr.eval(ctx, as_pl=True)
-        assert isinstance(expr, pl.Expr)
+
+        expr = args[0]
+        if not isinstance(expr, Reference):
+            hqle.ArgumentException(f'Invalid argument type to isnull: {type(expr)}')
+        self.expr:Reference = expr
+
+        self.logic = True
+
+    def polars(self) -> pl.Expr:
+        expr = self.expr.polars()
         return expr.is_null()

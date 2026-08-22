@@ -1,36 +1,48 @@
-from Hql.Operators import Operator
-from Hql.Context import register_op, Context
-from typing import TYPE_CHECKING
+from __future__ import annotations
+from typing import Sequence, TYPE_CHECKING
+from Hql.Operators.Operator import Operator
 
 if TYPE_CHECKING:
-    from Hql.Expressions import OrderedExpression
+    from Hql.Expressions import Expression
+    from Hql.Expressions.Aggregation import OrderedExpression
+    from Hql.Context import Context
 
 class Sort(Operator):
-    def __init__(self, exprs:list['OrderedExpression']):
+    _exprs: Sequence[OrderedExpression]
+
+    def __init__(self, exprs:Sequence[OrderedExpression]):
         Operator.__init__(self)
         self.exprs = exprs
 
-    def decompile(self, ctx: 'Context') -> str:
-        out = 'sort by '
+    @property
+    def exprs(self) -> Sequence[OrderedExpression]:
+        return self._exprs
 
-        exprs = []
-        for i in self.exprs:
-            exprs.append(i.decompile(ctx))
-        out += ', '.join(exprs)
-        
-        return out
+    @exprs.setter
+    def exprs(self, value:Sequence[Expression]) -> None:
+        from Hql.Expressions.Aggregation import OrderedExpression
+        from Hql.Exceptions import HqlExceptions as hqle
 
-    def eval(self, ctx:'Context', **kwargs):
+        new:list[OrderedExpression] = []
+        for v in value:
+            if not isinstance(v, OrderedExpression):
+                raise hqle.CompilerException('Setting Sort exprs to non-OrderedExpression')
+            new.append(v)
+        self._exprs = new
+
+    def deparse(self) -> str:
+        return 'sort by ' + ', '.join(x.deparse() for x in self.exprs)
+
+    def eval(self, ctx:Context) -> Context:
         exprs = []
         orders = []
         nulls = []
-        for expr in self.exprs:
-            assert expr.expr
-            exprs.append(expr.expr.eval(ctx, as_pl=True))
-            orders.append(expr.order == 'desc')
-            nulls.append(expr.nulls == 'last')
+        for ordering in self.exprs:
+            exprs.append(ordering.expr.eval(ctx, as_pl=True))
+            orders.append(ordering.order == 'desc')
+            nulls.append(ordering.nulls == 'last')
 
         for table in ctx.data:
             table.sort(exprs, orders, nulls)
-        
-        return ctx.data
+
+        return ctx

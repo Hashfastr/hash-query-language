@@ -1,13 +1,16 @@
-from Hql.Operators import Operator
-from Hql.Context import register_op, Context
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from Hql.Operators.Operator import Operator
 
-# @register_op('Template')
+if TYPE_CHECKING:
+    from Hql.Context import Context
+
 class Template(Operator):
     def __init__(self):
         Operator.__init__(self)
 
-    def decompile(self, ctx: 'Context', split: bool = False) -> str:
+    def deparse(self) -> str:
         return ''
 
-    def eval(self, ctx:'Context', **kwargs):
-        return ctx.data
+    def eval(self, ctx:Context):
+        return ctx

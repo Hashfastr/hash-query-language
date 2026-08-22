@@ -1,5 +1,5 @@
 # Plain errors
-Errors I've found in the kusto grammar that either exist as a fuck you or a open source we don't care.
+Errors I've found in the kusto grammar that either exist as a #### you or a open source we don't care.
 
 These could also be Canary Trap, a way to figure out who's using Microsoft developed code.
 In this case grammar, which isn't code.

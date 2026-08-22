@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +16,7 @@ import logging
 from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
-    from Hql.Hac import HacEngine
+    from Hql.Hac.Engine import HacEngine
 
 class HqlRequest(BaseModel):
     hql: str
@@ -27,7 +28,7 @@ class HqlRequest(BaseModel):
     retro: bool = False
 
 class Apiserver():
-    def __init__(self, hacengine:'HacEngine', host='0.0.0.0', port=8080):
+    def __init__(self, hacengine:HacEngine, host='0.0.0.0', port=8080):
         if not can_thread():
             raise hqle.CompilerException('Cannot start the api server as free threading is not supported, use the container?')
 
@@ -106,7 +107,7 @@ class Apiserver():
 
         @self.app.post('/api/detections/retro')
         def retro_hunt(hql:HqlRequest):
-            from Hql.Hac import Detection
+            from Hql.Hac.Engine import Detection
 
             det = Detection(hql.hql, 'api', self.hacengine.config, no_hac=True)
             if not det.hac or not det.schedule:
@@ -154,7 +155,7 @@ class Apiserver():
 
         @self.app.post('/api/hql/runs')
         def submit_hql_query(hql:HqlRequest):
-            from Hql.Hac import Detection
+            from Hql.Hac.Engine import Detection
             if not hql.run:
                 return {'id': ''}
 
@@ -164,7 +165,7 @@ class Apiserver():
 
         @self.app.post('/api/hql/deparse')
         def reparse_hql(hql:HqlRequest):
-            from Hql.Hac import Detection
+            from Hql.Hac.Engine import Detection
 
             det = Detection(hql.hql, 'api', self.hacengine.config)
             deparsed = det.deparse()
@@ -179,7 +180,8 @@ class Apiserver():
 
         @self.app.post('/api/hql/init_hac')
         def add_hac(hql:HqlRequest):
-            from Hql.Hac import Detection, Hac
+            from Hql.Hac.Engine import Detection
+            from Hql.Hac import Hac
 
             det = Detection(hql.hql, 'api', self.hacengine.config)
             if not det.hac:

@@ -1,6 +1,6 @@
 [project]
 name = "pyhql"
-version = "0.0.9"
+version = "0.0.11"
 authors = [
     { name="Sylvain Jones", email="sylvainjones+hql@hashfastr.com" },
 ]
@@ -9,7 +9,7 @@ maintainers = [
 ]
 description = "Hash query language, a universal Query Language"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.14"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -20,7 +20,9 @@ license = "MIT"
 license-files = ["LICENSE"]
 
 dependencies = [
-    "polars",
+    "polars==1.43.2",
+    "polars_runtime_32 @ https://github.com/Hashfastr/Hql/releases/download/polars-bin/polars_runtime_32-1.43.2-cp314-cp314t-manylinux_2_28_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "polars_runtime_32 @ https://github.com/Hashfastr/Hql/releases/download/polars-bin/polars_runtime_32-1.43.2-cp314-cp314t-macosx_11_0_arm64.whl ; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "antlr4-python3-runtime==4.13.2",
     "elasticsearch",
     "splunk-sdk",
@@ -28,23 +30,35 @@ dependencies = [
     "requests",
     "ndjson",
     "oyaml",
-    "opensearch-py",
+    # "opensearch-py",
     "aiohttp",
     "boto3",
     "fastapi",
     "uvicorn",
-    "dfir_iris_client",
-    "azure-kusto-data",
-    "azure-kusto-ingest"
+    # "dfir_iris_client"
 ]
 
 [project.urls]
 Homepage = "https://github.com/Hashfastr/Hql"
 Issues = "https://github.com/Hashfastr/Hql/issues"
 
+[dependency-groups]
+notebooks = ["marimo"]
+dev = ["pytest"]
+
 [build-system]
 requires = ["hatchling >= 1.26"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["Hql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.marimo.runtime]
+auto_reload = "modules"
+watcher_on_save = "autorun" 

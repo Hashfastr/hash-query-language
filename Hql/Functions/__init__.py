@@ -1,30 +1,29 @@
+from __future__ import annotations
 import importlib, pkgutil
 
 import json
-import polars as pl
-from typing import TYPE_CHECKING, Union, Optional
+import logging
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from Hql.Exceptions import HqlExceptions as hqle
 
 if TYPE_CHECKING:
-    from Hql.Data import Data, Series
     from Hql.Context import Context
-    from Hql.Expressions import Expression as Expression
-    from Hql.Compiler import InstructionSet
-    from Hql.Hac import Source
-    from Hql.Operators.Database import Database
+    from Hql.Expressions import Expression
+    from polars import Expr as plExpr
 
 class Function():
-    def __init__(self, args:list, min:int, max:int, conf:Optional[dict]=None):
+    def __init__(self, args:Sequence[Expression], min:int, max:int, conf:Optional[dict]=None):
         self.name = self.__class__.__name__
-        self.args = args
+        self.type = 'Function'
+        self.args:Sequence[Expression] = args
         self.min = min
         # Can disable by passing -1
+        self.can_preprocess = False
         self.max = max
-        self.preprocess = False
-        self.type = 'Function'
-        self.static = False
+        # self.static = False
         self.conf = conf if conf else dict()
+        self.logic = False
         
         if len(args) < min:
             raise hqle.ArgumentException(f'Function {self.name} got {len(args)} args, expected at least {self.min}')
@@ -34,15 +33,15 @@ class Function():
     def __hash__(self):
         return hash((self.name))
 
-    def decompile(self, ctx:'Context'):
-        args = ', '.join([x.decompile(ctx) for x in self.args])
+    def deparse(self):
+        args = ', '.join([x.deparse() for x in self.args])
         return f'{self.name}({args})'
         
     def to_dict(self):
         return {
             'type': 'function',
             'name': self.name,
-            'args': self.args
+            'args': [x.to_dict() for x in self.args]
         }
     
     def __str__(self) -> str:
@@ -50,10 +49,93 @@ class Function():
     
     def __repr__(self) -> str:
         return self.__str__()
+
+    def str(self) -> str:
+        return self.__str__()
+
+    def preprocess(self, ctx:Context, receiver=None) -> object:
+        args = []
+        for i in self.args:
+            args.append(i.preprocess(ctx))
+        self.args = args
+
+        return self
         
-    def eval(self, ctx:'Context', **kwargs) -> Union['Data', 'Series', 'Expression', 'InstructionSet', 'Source', 'Database', pl.Expr]:
-        from Hql.Data import Data
-        return Data()
+    def eval(self, ctx:Context, receiver=None) -> object:
+        return NotImplemented
+
+    def polars(self) -> plExpr:
+        return NotImplemented
+
+class DotCompositeFunction():
+    def __init__(self, funcs:Sequence[Union[Function, DotCompositeFunction]]):
+        self.type = self.__class__.__name__
+        self.funcs:list[Function] = []
+        for i in funcs:
+            if isinstance(i, DotCompositeFunction):
+                self.funcs += i.funcs
+            else:
+                self.funcs.append(i)
+
+    def __new__(cls, funcs:Sequence[Union[Function, DotCompositeFunction]]):
+        if len(funcs) == 1:
+            return funcs[0]
+        return super().__new__(cls)
+
+    def __reduce__(self):
+        return (self.__class__, (self.funcs,))
+
+    def __bool__(self):
+        return bool(self.funcs)
+    
+    def to_dict(self):
+        return {
+            'type': self.type,
+            'funcs': [x.to_dict() for x in self.funcs]
+        }
+
+    def deparse(self) -> str:
+        funcs = []
+        for i in self.funcs:
+            funcs.append(i.deparse())
+        return '.'.join(funcs)
+
+    def preprocess(self, ctx:Context) -> object:
+        from Hql.Expressions.Functions import FuncExpr
+        ctx = ctx.copy()
+            
+        rec = None
+        for i in self.funcs:
+            if isinstance(i, FuncExpr):
+                i = i.preprocess(ctx)
+                assert isinstance(i, Function)
+
+            try:
+                rec = i.preprocess(ctx, receiver=rec)
+            except hqle.FunctionException as e:
+                # catching for handling for if a function can't preprocess within the chain
+                e.add_note(f'Occured in {self.deparse()}')
+                raise
+
+        return rec
+
+    def eval(self, ctx:Context) -> object:
+        ctx = ctx.copy()
+
+        rec = None
+        for func in self.funcs:
+            rec = func.eval(ctx, receiver=rec)
+
+            if rec == NotImplemented:
+                logging.error(type(func))
+                logging.error(func.to_dict())
+                raise hqle.CompilerException(f'Function {func.name} provided "NotImplemented" when eval\'d')
+        
+        return rec
 
 for loader, name, is_pkg in pkgutil.iter_modules(__path__):
+    skip = ['template', 'typecasting']
+    for i in skip:
+        if i in name:
+            continue
     importlib.import_module(f"{__name__}.{name}")

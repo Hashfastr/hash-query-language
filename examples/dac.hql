@@ -54,7 +54,7 @@ let CronFiles = make_mv(
     '/etc/cron.deny',
     '/etc/crontab'
 );
-let ParentHash = LFE.field('parent_hash');
+let ParentHash = ParentHash;
 LFE
 | where Filename startswith CronPaths or Filename contains CronFiles
 | extend VirusTotalReport = lookup_vt(ParentHash)

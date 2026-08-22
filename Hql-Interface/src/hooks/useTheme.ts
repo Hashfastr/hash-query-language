@@ -1,29 +1,16 @@
-import { useState, useEffect } from 'react';
-import type { Theme } from '../types';
+import { useEffect } from 'react'
+import { useAppDispatch, useAppState } from '../state/store'
 
-const THEME_KEY = 'hql-theme';
-
-export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem(THEME_KEY);
-    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
-  });
+export function useTheme(): { theme: 'dark' | 'light'; toggle: () => void } {
+  const { theme } = useAppState()
+  const dispatch = useAppDispatch()
 
   useEffect(() => {
-    const root = document.documentElement;
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme])
 
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-
-    localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
-
-  return { theme, toggleTheme };
+  return {
+    theme,
+    toggle: () => dispatch({ type: 'setTheme', theme: theme === 'dark' ? 'light' : 'dark' }),
+  }
 }

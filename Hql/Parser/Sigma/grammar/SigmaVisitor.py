@@ -1,4 +1,5 @@
 # Generated from Sigma.g4 by ANTLR 4.13.2
+from __future__ import annotations
 from antlr4 import *
 if "." in __name__:
     from .SigmaParser import SigmaParser
@@ -71,11 +72,6 @@ class SigmaVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SigmaParser#wildcardIdentifier.
     def visitWildcardIdentifier(self, ctx:SigmaParser.WildcardIdentifierContext):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by SigmaParser#regexIdentifier.
-    def visitRegexIdentifier(self, ctx:SigmaParser.RegexIdentifierContext):
         return self.visitChildren(ctx)
 
 
