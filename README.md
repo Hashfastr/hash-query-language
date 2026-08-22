@@ -2,7 +2,6 @@
 <p align="center">
   <img src="https://hql.dev/hql-dark-no-text.png" width="300" />
   <h3>Current Phase: Cambrian - Ultra Alpha</h3>
-  <h3>Development paused in this repo for now</h3>
   <s>Current Phase: Primordial Ooze</s>
 </p>
 
