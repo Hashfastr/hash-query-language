@@ -37,6 +37,11 @@ COPY ./.python-version $HOME
 COPY ./LICENSE $HOME
 COPY ./README.md $HOME
 WORKDIR $HOME
+
+# reduces file size greatly
+ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=0
+ENV CARGO_PROFILE_RELEASE_STRIP=debuginfo
+
 # --no-editable so pyhql lands as real files in site-packages and the runtime
 # stage doesn't need /opt/Hql/Hql copied in just to satisfy a .pth pointer.
 RUN uv sync --no-dev --no-editable
