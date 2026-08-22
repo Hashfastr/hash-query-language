@@ -42,6 +42,7 @@ RUN /opt/venv/bin/python -m pip download \
 WORKDIR /src/polars_runtime_32-${POLARS_RUNTIME_VERSION}
 
 ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=0
+ENV CARGO_PROFILE_RELEASE_STRIP=debuginfo
 RUN maturin build --release \
         --interpreter /opt/venv/bin/python \
         --compatibility manylinux_2_28 \
