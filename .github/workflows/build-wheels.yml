@@ -1,4 +1,4 @@
-name: Build macOS wheels
+name: Build Polars runtime wheels
 
 on:
   workflow_dispatch:
@@ -7,15 +7,27 @@ on:
         description: "polars-runtime-32 version to build (leave empty to read from uv.lock)"
         required: false
         type: string
+      publish_release:
+        description: "Upload built wheels to the polars-bin release"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
 
 jobs:
-  polars-runtime-macos:
+  polars-runtime:
     strategy:
       fail-fast: false
       matrix:
         include:
           - runner: macos-14
             arch: arm64
+            artifact: macos-arm64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            artifact: manylinux-aarch64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +73,7 @@ jobs:
               -C "$RUNNER_TEMP/src"
 
       - name: Build wheel
+        if: runner.os == 'macOS'
         env:
           POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
           PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "0"
@@ -70,9 +83,50 @@ jobs:
               --interpreter "$RUNNER_TEMP/venv/bin/python" \
               --out "$GITHUB_WORKSPACE/dist"
 
+      - name: Build manylinux wheel
+        if: runner.os == 'Linux'
+        env:
+          POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "0"
+        working-directory: ${{ runner.temp }}/src/polars_runtime_32-${{ steps.version.outputs.value }}
+        run: |
+          "$RUNNER_TEMP/venv/bin/maturin" build --release \
+              --compatibility manylinux_2_28 \
+              --interpreter "$RUNNER_TEMP/venv/bin/python" \
+              --out "$GITHUB_WORKSPACE/dist"
+
+      - name: Verify wheel
+        env:
+          POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            pattern='*cp314-cp314t-manylinux_2_28_aarch64.whl'
+          else
+            pattern='*cp314-cp314t-macosx_11_0_arm64.whl'
+          fi
+          wheel=$(find "$GITHUB_WORKSPACE/dist" -maxdepth 1 -name "$pattern" -print -quit)
+          if [ -z "$wheel" ]; then
+            echo "ERROR: expected wheel matching $pattern" >&2
+            find "$GITHUB_WORKSPACE/dist" -maxdepth 1 -type f -print >&2
+            exit 1
+          fi
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" --no-deps \
+              "polars==${POLARS_RUNTIME_VERSION}" "$wheel"
+          "$RUNNER_TEMP/venv/bin/python" -c \
+              "import polars as pl; assert pl.DataFrame({'value': [1]}).height == 1"
+
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: polars-runtime-32-macos-${{ matrix.arch }}-py314t
+          name: polars-runtime-32-${{ matrix.artifact }}-py314t
           path: dist/*.whl
           if-no-files-found: error
+
+      - name: Publish wheel to release
+        if: inputs.publish_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view polars-bin >/dev/null 2>&1 || \
+              gh release create polars-bin --title "Prebuilt Polars wheels"
+          gh release upload polars-bin dist/*.whl --clobber
