@@ -25,9 +25,15 @@ jobs:
           - runner: macos-14
             arch: arm64
             artifact: macos-arm64
+            wheel_pattern: "*cp314-cp314t-macosx_11_0_arm64.whl"
           - runner: ubuntu-24.04-arm
             arch: aarch64
             artifact: manylinux-aarch64
+            wheel_pattern: "*cp314-cp314t-manylinux_2_28_aarch64.whl"
+          - runner: ubuntu-24.04
+            arch: x86_64
+            artifact: manylinux-x86_64
+            wheel_pattern: "*cp314-cp314t-manylinux_2_28_x86_64.whl"
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -43,9 +49,11 @@ jobs:
 
       - name: Resolve polars-runtime-32 version
         id: version
+        env:
+          REQUESTED_VERSION: ${{ inputs.polars_runtime_version }}
         run: |
-          if [ -n "${{ inputs.polars_runtime_version }}" ]; then
-            echo "value=${{ inputs.polars_runtime_version }}" >> "$GITHUB_OUTPUT"
+          if [ -n "$REQUESTED_VERSION" ]; then
+            echo "value=$REQUESTED_VERSION" >> "$GITHUB_OUTPUT"
           else
             v=$(sed -n 's/.*"polars==\([0-9][0-9.]*\)".*/\1/p' pyproject.toml | head -1)
             if [ -z "$v" ]; then
@@ -99,11 +107,7 @@ jobs:
         env:
           POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
         run: |
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            pattern='*cp314-cp314t-manylinux_2_28_aarch64.whl'
-          else
-            pattern='*cp314-cp314t-macosx_11_0_arm64.whl'
-          fi
+          pattern='${{ matrix.wheel_pattern }}'
           wheel=$(find "$GITHUB_WORKSPACE/dist" -maxdepth 1 -name "$pattern" -print -quit)
           if [ -z "$wheel" ]; then
             echo "ERROR: expected wheel matching $pattern" >&2
@@ -129,4 +133,100 @@ jobs:
         run: |
           gh release view polars-bin >/dev/null 2>&1 || \
               gh release create polars-bin --title "Prebuilt Polars wheels"
+          gh release upload polars-bin dist/*.whl --clobber
+
+  polars-runtime-windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python 3.14t
+        run: uv python install 3.14t
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve polars-runtime-32 version
+        id: version
+        shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.polars_runtime_version }}
+        run: |
+          if ($env:REQUESTED_VERSION) {
+            "value=$env:REQUESTED_VERSION" >> $env:GITHUB_OUTPUT
+          } else {
+            $match = Select-String -Path pyproject.toml -Pattern '"polars==([0-9.]+)"'
+            if (-not $match.Matches) {
+              Write-Error "No polars version pin found in pyproject.toml"
+              exit 1
+            }
+            "value=$($match.Matches[0].Groups[1].Value)" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Create build venv
+        shell: pwsh
+        run: |
+          uv venv --python 3.14t "$env:RUNNER_TEMP/venv"
+          uv pip install --python "$env:RUNNER_TEMP/venv/Scripts/python.exe" pip maturin
+
+      - name: Download polars-runtime-32 sdist
+        shell: pwsh
+        env:
+          POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/src" | Out-Null
+          & "$env:RUNNER_TEMP/venv/Scripts/python.exe" -m pip download `
+              --no-binary=:all: --no-deps `
+              "polars-runtime-32==$env:POLARS_RUNTIME_VERSION" `
+              -d "$env:RUNNER_TEMP/src"
+          tar -xzf "$env:RUNNER_TEMP/src/polars_runtime_32-$env:POLARS_RUNTIME_VERSION.tar.gz" `
+              -C "$env:RUNNER_TEMP/src"
+
+      - name: Build wheel
+        shell: pwsh
+        env:
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "0"
+        working-directory: ${{ runner.temp }}/src/polars_runtime_32-${{ steps.version.outputs.value }}
+        run: |
+          & "$env:RUNNER_TEMP/venv/Scripts/maturin.exe" build --release `
+              --interpreter "$env:RUNNER_TEMP/venv/Scripts/python.exe" `
+              --out "$env:GITHUB_WORKSPACE/dist"
+
+      - name: Verify wheel
+        shell: pwsh
+        env:
+          POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          $wheel = Get-ChildItem "$env:GITHUB_WORKSPACE/dist/*cp314-cp314t-win_amd64.whl" |
+              Select-Object -First 1
+          if (-not $wheel) {
+            Write-Error "Expected a CPython 3.14t Windows x86_64 wheel"
+            Get-ChildItem "$env:GITHUB_WORKSPACE/dist"
+            exit 1
+          }
+          uv pip install --python "$env:RUNNER_TEMP/venv/Scripts/python.exe" --no-deps `
+              "polars==$env:POLARS_RUNTIME_VERSION" $wheel.FullName
+          & "$env:RUNNER_TEMP/venv/Scripts/python.exe" -c `
+              "import polars as pl; assert pl.DataFrame({'value': [1]}).height == 1"
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: polars-runtime-32-windows-x86_64-py314t
+          path: dist/*.whl
+          if-no-files-found: error
+
+      - name: Publish wheel to release
+        if: inputs.publish_release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view polars-bin *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create polars-bin --title "Prebuilt Polars wheels"
+          }
           gh release upload polars-bin dist/*.whl --clobber
