@@ -192,6 +192,7 @@ index_debug.json
 local-data
 
 .claude
+.codex
 
 examples/interface/*.hql
 examples/interface/*.yml
