@@ -29,10 +29,12 @@ jobs:
           - runner: ubuntu-24.04-arm
             arch: aarch64
             artifact: manylinux-aarch64
+            base_image: quay.io/pypa/manylinux_2_28_aarch64
             wheel_pattern: "*cp314-cp314t-manylinux_2_28_aarch64.whl"
           - runner: ubuntu-24.04
             arch: x86_64
             artifact: manylinux-x86_64
+            base_image: quay.io/pypa/manylinux_2_28_x86_64
             wheel_pattern: "*cp314-cp314t-manylinux_2_28_x86_64.whl"
     runs-on: ${{ matrix.runner }}
     steps:
@@ -45,6 +47,7 @@ jobs:
         run: uv python install 3.14t
 
       - name: Set up Rust
+        if: runner.os == 'macOS'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Resolve polars-runtime-32 version
@@ -66,9 +69,12 @@ jobs:
       - name: Create build venv
         run: |
           uv venv --python 3.14t "$RUNNER_TEMP/venv"
-          uv pip install --python "$RUNNER_TEMP/venv/bin/python" pip maturin
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            uv pip install --python "$RUNNER_TEMP/venv/bin/python" pip maturin
+          fi
 
       - name: Download polars-runtime-32 sdist
+        if: runner.os == 'macOS'
         env:
           POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
         run: |
@@ -95,13 +101,19 @@ jobs:
         if: runner.os == 'Linux'
         env:
           POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
-          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "0"
-        working-directory: ${{ runner.temp }}/src/polars_runtime_32-${{ steps.version.outputs.value }}
         run: |
-          "$RUNNER_TEMP/venv/bin/maturin" build --release \
-              --compatibility manylinux_2_28 \
-              --interpreter "$RUNNER_TEMP/venv/bin/python" \
-              --out "$GITHUB_WORKSPACE/dist"
+          image="polars-runtime-builder:${{ matrix.arch }}"
+          docker build \
+              --build-arg "BASE_IMAGE=${{ matrix.base_image }}" \
+              --build-arg "POLARS_RUNTIME_VERSION=${POLARS_RUNTIME_VERSION}" \
+              --file scripts/Containerfile.polars \
+              --tag "$image" \
+              .
+
+          mkdir -p dist
+          container_id=$(docker create "$image")
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          docker cp "$container_id:/out/." dist/
 
       - name: Verify wheel
         env:
