@@ -9,6 +9,8 @@ from typing import Optional
 
 # @register_func('template')
 class template(Function):
+    """Provide a minimal example implementation for HQL functions."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         # allows 1 to infinity args
         Function.__init__(self, args, 1, -1, conf)

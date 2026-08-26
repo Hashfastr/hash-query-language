@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from Hql.Expressions import References
 
 class Unnest(Operator):
+    """Expand a nested field in each selected table."""
+
     def __init__(self, field:References.Reference, tables:Sequence[Union[References.NamedReference, References.Wildcard]]):
         Operator.__init__(self)
         self.field = field

@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from polars import Expr as plExpr
 
 class Function():
+    """Base class for callable HQL functions."""
+
     def __init__(self, args:Sequence[Expression], min:int, max:int, conf:Optional[dict]=None):
         self.name = self.__class__.__name__
         self.type = 'Function'
@@ -68,6 +70,8 @@ class Function():
         return NotImplemented
 
 class DotCompositeFunction():
+    """Apply a sequence of functions as a receiver-based call chain."""
+
     def __init__(self, funcs:Sequence[Union[Function, DotCompositeFunction]]):
         self.type = self.__class__.__name__
         self.funcs:list[Function] = []

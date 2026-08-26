@@ -6,6 +6,8 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Template(Operator):
+    """Provide a no-op template for implementing pipeline operators."""
+
     def __init__(self):
         Operator.__init__(self)
 

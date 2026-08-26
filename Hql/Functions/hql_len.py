@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 @register_func('len')
 @register_func('array_length')
 class hql_len(Function):
+    """Calculate the length of each value in a multivalue field."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         super().__init__(args, 1, 1)
         self.args = args

@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from Hql.Types.Hql import HqlTypes as hqlt
 
 class CompilerType():
+    """Base adapter between an external type and an HQL type."""
+
     def __init__(self, inner:Optional[CompilerType]=None):
         bases = type(self).__bases__
 

@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import Reference
 
 class OrderedExpression(Expression):
+    """Wrap an expression with sort direction and null placement."""
+
     def __init__(self, expr:Expression, order:str='desc', nulls:str=''):
         Expression.__init__(self)
         self.expr = expr
@@ -45,6 +47,8 @@ class OrderedExpression(Expression):
         }
 
 class ByExpression(Expression):
+    """Group tables by a sequence of reference expressions."""
+
     def __init__(self, exprs:Sequence[Reference]):
         Expression.__init__(self)
         self.exprs = exprs

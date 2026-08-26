@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 @register_func('base64')
 @register_func('b64')
 class base64enc(Function):
+    """Encode a string as Base64 using the requested character encoding."""
+
     def __init__(self, args: list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference
@@ -55,6 +57,8 @@ class base64enc(Function):
 @register_func('base64dec')
 @register_func('b64dec')
 class base64dec(Function):
+    """Decode a Base64 string using the requested character encoding."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference
@@ -85,6 +89,8 @@ class base64dec(Function):
 @register_func('base64off')
 @register_func('b64off')
 class base64off(Function):
+    """Generate Base64 fragments for each possible byte alignment."""
+
     def __init__(self, args: list):
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference

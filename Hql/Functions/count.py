@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 @register_func('count')
 class count(Function):
+    """Count rows within each active aggregation group."""
+
     def __init__(self, args:list, name:str='count_', conf:Optional[dict]=None):
         super().__init__(args, 0, 0)
         self.count_name = name

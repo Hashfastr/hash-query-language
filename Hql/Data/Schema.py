@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import Reference
 
 class Schema():
+    """Track and transform the nested HQL types of tabular fields."""
+
     def __init__(
             self,
             schema:Union[SchemaDT, hqlt.object, None]=None,

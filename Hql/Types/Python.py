@@ -4,9 +4,13 @@ from Hql.Context import register_type, get_type
 from Hql.Types.Compiler import CompilerType
 
 class PythonTypes():
+    """Namespace for Python-to-HQL type adapters."""
+
     from Hql.Types.Hql import HqlTypes as hqlt
 
     class PythonType(CompilerType):
+        """Base adapter for a Python runtime type."""
+
         def __init__(self, inner:Optional[PythonTypes.PythonType]=None):
             CompilerType.__init__(self, inner=inner)
 
@@ -76,6 +80,8 @@ class PythonTypes():
             
     @register_type('python_int')
     class int(PythonType):
+        """Map Python integers to the HQL integer type."""
+
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
             self.HqlType = PythonTypes.hqlt.int()
@@ -85,6 +91,8 @@ class PythonTypes():
 
     @register_type('python_float')
     class float(PythonType):
+        """Map Python floating-point values to the HQL float type."""
+
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
             self.HqlType = PythonTypes.hqlt.float()
@@ -94,6 +102,8 @@ class PythonTypes():
         
     @register_type('python_str')
     class str(PythonType):
+        """Map Python strings to the HQL string type."""
+
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
             self.HqlType = PythonTypes.hqlt.string()
@@ -103,16 +113,22 @@ class PythonTypes():
 
     @register_type('python_complex') 
     class complex(str):
+        """Map Python complex values to their HQL string representation."""
+
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
             self.HqlType = PythonTypes.hqlt.string()
 
     @register_type('python_bytes')
     class bytes(PythonType, hqlt.binary):
+        """Map Python byte strings to the HQL binary type."""
+
         ...
     
     @register_type('python_bool') 
     class bool(PythonType):
+        """Map Python Boolean values to the HQL Boolean type."""
+
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
             self.HqlType = PythonTypes.hqlt.bool()
@@ -122,6 +138,8 @@ class PythonTypes():
         
     @register_type('python_NoneType')
     class NoneType(PythonType):
+        """Map Python's singleton null type to the HQL null type."""
+
         def __init__(self):
             PythonTypes.PythonType.__init__(self)
             self.HqlType = PythonTypes.hqlt.null()
@@ -131,6 +149,8 @@ class PythonTypes():
 
     @register_type('python_list')
     class list(PythonType):
+        """Map Python lists to an HQL multivalue type."""
+
         def __init__(self, inner:PythonTypes.PythonType):
             PythonTypes.PythonType.__init__(self, inner=inner)
             self.inner = inner
@@ -141,6 +161,8 @@ class PythonTypes():
 
     @register_type('python_dict')
     class dict(PythonType):
+        """Map Python dictionaries to a structured HQL object type."""
+
         def __init__(self, schema:dict):
             PythonTypes.PythonType.__init__(self)
             self.schema = schema

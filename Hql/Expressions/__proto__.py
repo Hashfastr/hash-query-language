@@ -7,6 +7,8 @@ from Hql.Parser.Object import ParseObject
 # Such as a subsearch, which is an expression, and contains operators
 # All other expressions are children of this one
 class Expression(ParseObject):
+    """Base class for values and clauses in the HQL expression tree."""
+
     def __init__(self)-> None:
         ParseObject.__init__(self)
         self.escaped     = False

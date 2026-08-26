@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 @register_func('scot4')
 class scot4(Function):
+    """Publish HQL detection results to a SCOT 4 server."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import NamedExpression
@@ -176,6 +178,7 @@ class scot4(Function):
 
         return out
 
+
     def update_hac(self, hac:Hac):
         guide = self.get_guide(hac)
         if guide['resultCount']:
@@ -326,4 +329,3 @@ class scot4(Function):
             out.append(i)
 
         return out
-

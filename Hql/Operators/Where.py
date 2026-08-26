@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 # but they can exist.
 # https://learn.microsoft.com/en-us/kusto/query/where-operator
 class Where(Operator):
+    """Filter table rows using a logical expression."""
+
     # Pass in the parser context here for helpful debugging
     def __init__(self, expr:Logic, params:Union[None, list[OpParameter]]=None):
         Operator.__init__(self)

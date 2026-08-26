@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from Hql.Hac.Engine import Detection
 
 class QueryPool():
+    """Manage a collection of asynchronously executed HQL queries."""
+
     def __init__(self, auto_run:bool=True) -> None:
         from threading import Semaphore
         self.auto_run = auto_run
@@ -47,6 +49,8 @@ class QueryPool():
         return completed
 
 class QueryThread():
+    """Execute one HQL query synchronously or in a worker thread."""
+
     def __init__(self, text:str, config:Config, name:str='', **kwargs) -> None:
         from copy import deepcopy
         from Hql.Data import Data
@@ -116,6 +120,8 @@ class QueryThread():
         return self.output
 
 class InstructionPool():
+    """Manage concurrent execution of compiled instructions."""
+
     def __init__(self, auto_run:bool=True) -> None:
         from threading import Semaphore
         self.auto_run = auto_run
@@ -154,6 +160,8 @@ class InstructionPool():
         return completed
 
 class InstructionThread():
+    """Execute one instruction set or database operation."""
+
     def __init__(self, inst:Union[InstructionSet, Database], ctx:Context) -> None:
         from Hql.Helpers import can_thread
 
@@ -202,6 +210,8 @@ class InstructionThread():
         return self.output
 
 class HacPool():
+    """Queue and run HQL analytic detections with bounded concurrency."""
+
     def __init__(self, auto_run:bool=True, max_threads:int=16) -> None:
         from threading import Semaphore
         self.auto_run = auto_run
@@ -296,6 +306,8 @@ class HacPool():
         return completed
 
 class HacThread():
+    """Execute one HQL analytic detection and retain its run metadata."""
+
     def __init__(self, detection:Detection, query_now:Optional[datetime.datetime]=None) -> None:
         from Hql.Helpers import can_thread
         from Hql.Data import Data

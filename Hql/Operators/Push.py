@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from Hql.Operators import Database
 
 class Push(Operator):
+    """Push the current data to configured database targets."""
+
     def __init__(self, exprs:Sequence[Expression]):
         Operator.__init__(self)
         self.exprs = exprs

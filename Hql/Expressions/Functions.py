@@ -10,9 +10,13 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import NamedReference, Reference
 
 class FuncProto(Expression):
+    """Base class for parsed function-call expressions."""
+
     ...
 
 class FuncExpr(FuncProto):
+    """Represent a named function call and its arguments."""
+
     # I know I'm getting rid of allowing protos for this stuff but 
     def __init__(self, name:NamedReference, args:Optional[Sequence[Expression]]=None):
         FuncProto.__init__(self)
@@ -49,6 +53,8 @@ class FuncExpr(FuncProto):
         return func(self.args, conf=ctx.config.get_function(name))
 
 class ReceiverFuncExpr(FuncProto):
+    """Represent a function call invoked on a receiver expression."""
+
     def __init__(self, receiver:Reference, call:FuncExpr):
         FuncProto.__init__(self)
         self.receiver = receiver
@@ -74,6 +80,8 @@ class ReceiverFuncExpr(FuncProto):
         return func.eval(ctx, receiver=receiver)
 
 class DotFuncExpr(FuncProto):
+    """Represent a chain of dot-separated function calls."""
+
     def __init__(self, funcs:list[FuncExpr]):
         FuncProto.__init__(self)
         self.funcs = funcs

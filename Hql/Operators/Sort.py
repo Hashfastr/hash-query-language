@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Sort(Operator):
+    """Sort table rows by one or more ordered expressions."""
+
     _exprs: Sequence[OrderedExpression]
 
     def __init__(self, exprs:Sequence[OrderedExpression]):

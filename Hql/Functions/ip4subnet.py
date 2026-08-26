@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 @register_func('ip4subnet')
 class ip4subnet(Function):
+    """Convert an IPv4 CIDR subnet into its numeric address range."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 1)
         self.subnet:StringLiteral = args[0]

@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Summarize(Operator):
+    """Aggregate input data, optionally grouped by reference expressions."""
+
     def __init__(self, aggregate_exprs:Sequence[Expression], by_expr:Optional[ByExpression]):
         Operator.__init__(self)
         self.aggregate_exprs = aggregate_exprs

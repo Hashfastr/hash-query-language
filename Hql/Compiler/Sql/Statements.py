@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import NamedReference, Path
 
 class SqlStatement():
+    """Base class for composable SQL statement nodes."""
+
     def __init__(self) -> None:
         self.indent_spaces = 2
 
@@ -35,6 +37,8 @@ class SqlStatement():
 Assumes all ops have been precompiled by the SQL compiler
 '''
 class SELECT(SqlStatement):
+    """Build a SQL SELECT statement from compiled HQL operators."""
+
     def __init__(self, src:Union[SqlStatement, NamedReference], project:Optional[Project]=None, where:Optional[Where]=None, take:Optional[Take]=None, join:Optional[list[Join]]=None, distinct:Optional[list[Union[Path, NamedReference]]]=None):
         SqlStatement.__init__(self)
         self.project:Optional[Project] = project
@@ -159,6 +163,8 @@ class SELECT(SqlStatement):
         return out
 
 class JOIN(SqlStatement):
+    """Build and flatten the JOIN clauses for a SQL statement."""
+
     def __init__(self, joins:list[Join]) -> None:
         from Hql.Expressions.References import NamedReference
         SqlStatement.__init__(self)

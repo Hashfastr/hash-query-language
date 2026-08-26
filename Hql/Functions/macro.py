@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 @register_func('macro')
 class macro(Function):
+    """Resolve configured database macros into executable instructions."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference

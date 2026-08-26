@@ -38,6 +38,8 @@ Hql preprocessor
 Works out preprocessor functions
 '''
 class HqlCompiler(Compiler):
+    """Preprocess HQL into executable instruction sets."""
+
     def __init__(self, config:Config, query:Optional[Query]=None, hac:Optional[Hac]=None):
         Compiler.__init__(self)
         self.ctx.config = config

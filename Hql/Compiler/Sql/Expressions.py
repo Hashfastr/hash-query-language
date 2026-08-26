@@ -6,9 +6,13 @@ if TYPE_CHECKING:
     from Hql.Compiler import SqlCompiler
 
 class SqlExpression():
+    """Base class for SQL-specific expression nodes."""
+
     ...
 
 class Like(SqlExpression):
+    """Represent a SQL pattern comparison between two expressions."""
+
     def __init__(self, lh:NamedReference, rh:StringLiteral) -> None:
         self.lh = lh
         self.rh = rh

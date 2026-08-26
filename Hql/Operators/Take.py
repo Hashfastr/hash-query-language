@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 #
 # https://learn.microsoft.com/en-us/kusto/query/take-operator
 class Take(Operator):
+    """Limit the number of rows retained from selected tables."""
+
     def __init__(self, limit:Integer, tables:list[NamedReference]):
         Operator.__init__(self)
         self._expr:Integer = limit

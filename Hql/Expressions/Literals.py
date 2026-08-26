@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     import polars as pl
 
 class Literal(Expression):
+    """Base expression for a typed, concrete HQL value."""
+
     def __init__(self, hql_type:hqlt.HqlType, value:object) -> None:
         Expression.__init__(self)
         self.literal = True
@@ -49,6 +51,8 @@ class Literal(Expression):
         }
 
 class TypeExpression(Literal):
+    """Represent an HQL type name as an expression."""
+
     def __init__(self, hql_type:Union[str, hqlt.HqlType]):
         self.hql_type:hqlt.HqlType = hqlt.from_name(hql_type) if isinstance(hql_type, str) else hql_type
         Literal.__init__(self, self.hql_type, None)
@@ -72,6 +76,8 @@ class TypeExpression(Literal):
         return self.hql_type
 
 class StringLiteral(Literal):
+    """Store a string literal with its quoting and obfuscation flags."""
+
     def __init__(self, value:Union[str, bytes], verbatim:bool=False, obfuscated:bool=False):
         if isinstance(value, str):
             value = value.encode('utf-8')
@@ -158,6 +164,8 @@ class StringLiteral(Literal):
         }
 
 class MultiString(StringLiteral):
+    """Combine adjacent string literals into one logical string value."""
+
     def __init__(self, strlits:Optional[list[StringLiteral]]=None):
         self.strlits:list[StringLiteral] = strlits if strlits else []
         Literal.__init__(self, hqlt.string(), None)
@@ -181,6 +189,8 @@ class MultiString(StringLiteral):
         return StringLiteral(self.str())
 
 class Integer(Literal):
+    """Represent an integer literal."""
+
     def __init__(self, value:Union[str, int]):
         self.value = int(value)
         Literal.__init__(self, hqlt.int(), self.value)
@@ -194,6 +204,8 @@ class Integer(Literal):
         return hash(self.value)
 
 class IP4(Literal):
+    """Represent an IPv4 address literal."""
+
     def __init__(self, value:Union[Integer, StringLiteral]):
         if isinstance(value, StringLiteral):
             self.value = hqlt.ip4().cast_single(value)
@@ -223,6 +235,8 @@ class IP4(Literal):
         }
 
 class Float(Literal):
+    """Represent a floating-point literal."""
+
     def __init__(self, value:Union[str, float]):
         self.value = float(value)
         Literal.__init__(self, hqlt.float(), self.value)
@@ -236,6 +250,8 @@ class Float(Literal):
         return hash(self.value)
 
 class Bool(Logic, Literal):
+    """Represent a Boolean literal that can also serve as a predicate."""
+
     def __init__(self, value:bool):
         self.value = value
         Literal.__init__(self, hqlt.bool(), self.value)
@@ -249,6 +265,8 @@ class Bool(Logic, Literal):
         return hash(self.value)
 
 class Multivalue(Literal):
+    """Represent a typed sequence of literal values."""
+
     def __init__(self, value:Sequence[Literal]) -> None:
         import polars as pl
         super_type = hqlt.resolve_conflict([x.hql_type for x in value])
@@ -291,6 +309,8 @@ class Multivalue(Literal):
         # return 'make_mv(' + ', '.join(dec) + ')'
 
 class Datetime(Literal):
+    """Represent a date and time literal."""
+
     def __init__(self, value:Union[StringLiteral, datetime.datetime]) -> None:
         from dateutil import parser
         if isinstance(value, StringLiteral):
@@ -315,5 +335,7 @@ class Datetime(Literal):
         }
 
 class Null(Literal):
+    """Represent the HQL null literal."""
+
     def __init__(self) -> None:
         Literal.__init__(self, hqlt.null(), None)

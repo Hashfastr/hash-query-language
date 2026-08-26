@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 # This is a meta function resolved while parsing
 @register_func('database')
 class database(Function):
+    """Resolve a configured database by name."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference

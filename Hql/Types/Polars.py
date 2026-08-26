@@ -7,10 +7,14 @@ from Hql.Types.Compiler import CompilerType
 
 
 class PolarsTypes():
+    """Namespace for Polars-to-HQL type adapters."""
+
     from Hql.Types.Hql import HqlTypes as hqlt
     import polars as pl
     
     class PolarsType(CompilerType):
+        """Base adapter for a Polars data type."""
+
         def __init__(self, inner:Optional[PolarsTypes.PolarsType]=None):
             CompilerType.__init__(self, inner=inner)
             self.inner:Optional[PolarsTypes.PolarsType] = inner
@@ -42,6 +46,8 @@ class PolarsTypes():
             
     @register_type('polars_Decimal')
     class Decimal(PolarsType):
+        """Map Polars decimals to HQL decimals."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.decimal()
@@ -49,6 +55,8 @@ class PolarsTypes():
 
     @register_type('polars_Float32')
     class Float32(PolarsType):
+        """Map 32-bit Polars floats to HQL floats."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.float()
@@ -56,6 +64,8 @@ class PolarsTypes():
     
     @register_type('polars_Float64') 
     class Float64(PolarsType):
+        """Map 64-bit Polars floats to HQL doubles."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.double()
@@ -63,6 +73,8 @@ class PolarsTypes():
         
     @register_type('polars_Int8')
     class Int8(PolarsType):
+        """Map 8-bit Polars integers to HQL bytes."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.byte()
@@ -70,6 +82,8 @@ class PolarsTypes():
     
     @register_type('polars_Int16') 
     class Int16(PolarsType):
+        """Map 16-bit Polars integers to HQL shorts."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.short()
@@ -77,6 +91,8 @@ class PolarsTypes():
     
     @register_type('polars_Int32') 
     class Int32(PolarsType):
+        """Map 32-bit Polars integers to HQL integers."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.int()
@@ -84,6 +100,8 @@ class PolarsTypes():
     
     @register_type('polars_Int64') 
     class Int64(PolarsType):
+        """Map 64-bit Polars integers to HQL longs."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.long()
@@ -91,6 +109,8 @@ class PolarsTypes():
     
     @register_type('polars_Int128') 
     class Int128(PolarsType):
+        """Map 128-bit Polars integers to HQL extended longs."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.xlong()
@@ -98,6 +118,8 @@ class PolarsTypes():
     
     @register_type('polars_UInt8') 
     class UInt8(PolarsType):
+        """Map unsigned 8-bit Polars integers to HQL unsigned bytes."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.ubyte()
@@ -105,6 +127,8 @@ class PolarsTypes():
     
     @register_type('polars_UInt16') 
     class UInt16(PolarsType):
+        """Map unsigned 16-bit Polars integers to HQL unsigned shorts."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.ushort()
@@ -112,6 +136,8 @@ class PolarsTypes():
         
     @register_type('polars_UInt32')
     class UInt32(PolarsType):
+        """Map unsigned 32-bit Polars integers to HQL unsigned integers."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.uint()
@@ -119,6 +145,8 @@ class PolarsTypes():
     
     @register_type('polars_UInt64') 
     class UInt64(PolarsType):
+        """Map unsigned 64-bit Polars integers to HQL unsigned longs."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.ulong()
@@ -126,6 +154,8 @@ class PolarsTypes():
     
     @register_type('polars_Date') 
     class Date(PolarsType):
+        """Map Polars dates to HQL datetimes."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.datetime()
@@ -133,6 +163,8 @@ class PolarsTypes():
     
     @register_type('polars_Duration') 
     class Duration(PolarsType):
+        """Map Polars durations to HQL durations."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.duration()
@@ -140,6 +172,8 @@ class PolarsTypes():
     
     @register_type('polars_Time') 
     class Time(PolarsType):
+        """Map Polars times to HQL times."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.time()
@@ -147,6 +181,8 @@ class PolarsTypes():
     
     @register_type('polars_Array') 
     class Array(PolarsType):
+        """Map fixed-size Polars arrays to HQL matrices."""
+
         def __init__(self, inner:PolarsTypes.PolarsType):
             PolarsTypes.PolarsType.__init__(self, inner=inner)
             self.HqlType = PolarsTypes.hqlt.matrix(inner.hql_schema())
@@ -154,6 +190,8 @@ class PolarsTypes():
     
     @register_type('polars_List') 
     class List(PolarsType):
+        """Map Polars lists to HQL multivalue types."""
+
         def __init__(self, inner:PolarsTypes.PolarsType):
             PolarsTypes.PolarsType.__init__(self, inner=inner)
             self.HqlType = PolarsTypes.hqlt.multivalue(inner.hql_schema())
@@ -161,6 +199,8 @@ class PolarsTypes():
     
     @register_type('polars_String') 
     class String(PolarsType):
+        """Map Polars strings to HQL strings."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.string()
@@ -168,6 +208,8 @@ class PolarsTypes():
         
     @register_type('polars_Enum')
     class Enum(PolarsType):
+        """Map a Polars enumeration and its values to HQL."""
+
         def __init__(self, values:list[str]):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.enum(values)
@@ -175,6 +217,8 @@ class PolarsTypes():
     
     @register_type('polars_Utf8') 
     class Utf8(PolarsType):
+        """Map legacy Polars UTF-8 values to HQL strings."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.string()
@@ -182,6 +226,8 @@ class PolarsTypes():
         
     @register_type('polars_Binary')
     class Binary(PolarsType):
+        """Map Polars binary values to HQL binary values."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.binary()
@@ -189,6 +235,8 @@ class PolarsTypes():
         
     @register_type('polars_Boolean')
     class Boolean(PolarsType):
+        """Map Polars Boolean values to HQL Booleans."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.bool()
@@ -196,6 +244,8 @@ class PolarsTypes():
         
     @register_type('polars_Null') 
     class Null(PolarsType):
+        """Map Polars null values to HQL null values."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.null()
@@ -203,6 +253,8 @@ class PolarsTypes():
         
     @register_type('polars_Object')   
     class Object(PolarsType):
+        """Map a Polars object schema to an HQL object."""
+
         def __init__(self, schema:dict):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.object(schema)
@@ -215,6 +267,8 @@ class PolarsTypes():
 
     @register_type('polars_Struct')   
     class Struct(PolarsType):
+        """Map a Polars struct schema to an HQL object."""
+
         def __init__(self, schema:dict):
             PolarsTypes.PolarsType.__init__(self)
             self.schema = schema
@@ -223,6 +277,8 @@ class PolarsTypes():
         
     @register_type('polars_Unknown')
     class Unknown(PolarsType):
+        """Map an unknown Polars type to the HQL unknown type."""
+
         def __init__(self):
             PolarsTypes.PolarsType.__init__(self)
             self.HqlType = PolarsTypes.hqlt.unknown()

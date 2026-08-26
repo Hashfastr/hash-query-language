@@ -11,6 +11,8 @@ if TYPE_CHECKING:
 #
 # https://learn.microsoft.com/en-us/kusto/query/count-operator
 class Count(Operator):
+    """Count the rows in each input table."""
+
     def __init__(self, name:Optional[NamedReference]=None):
         Operator.__init__(self)
         self.name:Optional[NamedReference] = name

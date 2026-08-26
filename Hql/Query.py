@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 # Each statement is denoted by a ; with the exception of the root statement.
 # The root statement is denoted by EOF, but can have a ; regardless
 class Query():
+    """Represent and preprocess a complete sequence of HQL statements."""
+
     def __init__(self, statements:list[Statement]):
         from Hql.Context import Context
         from Hql.Data import Data
@@ -162,6 +164,8 @@ class Query():
 
 # Generic for a statement, see children as this can be very diverse
 class Statement():
+    """Base class for top-level statements in an HQL query."""
+
     def __init__(self):
         self.type = self.__class__.__name__
     
@@ -177,6 +181,8 @@ class Statement():
         return json.dumps(self.to_dict(), indent=2)
 
 class QueryStatement(Statement):
+    """Wrap the root pipeline that produces a query result."""
+
     def __init__(self, root:PipeExpression):
         Statement.__init__(self)
         self.root:PipeExpression = root
@@ -195,6 +201,8 @@ class QueryStatement(Statement):
         return self.root.deparse()
 
 class LetStatement(Statement):
+    """Bind a pipeline or macro expression to a name."""
+
     def __init__(self, name:Reference, value:PipeExpression, macro:bool=False):
         Statement.__init__(self)
         self.root = value
@@ -225,6 +233,8 @@ class LetStatement(Statement):
         return ctx
 
 class LetLogicStatement(LetStatement):
+    """Bind a logical expression to a name in the query context."""
+
     def __init__(self, name:Reference, value:Union[Logic, Bool]):
         Statement.__init__(self)
         self.root = value

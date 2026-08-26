@@ -79,6 +79,8 @@ def get_type(name):
 
 # Essentially a scoped context
 class Context():
+    """Carry data, symbols, registries, and configuration through execution."""
+
     def __init__(self, data:Data, hac:Optional[Hac]=None, symbol_table:Optional[dict]=None, macros:Optional[dict]=None, config:Optional[Config]=None) -> None:
         import copy
 

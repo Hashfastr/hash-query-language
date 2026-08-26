@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 # {"test1":"val","test3":"val","test5":"val"}
 # https://learn.microsoft.com/en-us/kusto/query/project-operator
 class Project(Operator):
+    """Select or compute fields for the output data."""
+
     _exprs: Sequence[Expression]
 
     def __init__(self, exprs:Sequence[Expression]):
@@ -68,11 +70,15 @@ class Project(Operator):
 
 # Identical to Project, keeping now for compat
 class ProjectKeep(Project):
+    """Retain fields using the project-keep syntax."""
+
     def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-keep'
 
 class ProjectAway(Project):
+    """Remove the selected fields from the output data."""
+
     def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-away'
@@ -85,6 +91,8 @@ class ProjectAway(Project):
         return ctx
 
 class ProjectReorder(Project):
+    """Move selected fields to the front of the output data."""
+
     def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-reorder'
@@ -115,6 +123,8 @@ class ProjectReorder(Project):
         return ctx
 
 class ProjectRename(Project):
+    """Rename selected fields while preserving their values and types."""
+
     def __init__(self, exprs: Sequence[Union[Reference, NamedExpression]]):
         super().__init__(exprs)
         self.optok = 'project-rename'

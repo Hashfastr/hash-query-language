@@ -7,6 +7,8 @@ import oyaml as yaml
 from Hql.Exceptions import HqlExceptions as hqle
 
 class Config():
+    """Load and expose HQL configuration from YAML files."""
+
     def __init__(self, path:Union[Path, None]=None):
         # skeleton
         self.conf = {

@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     import Hql
 
 class Compiler():
+    """Base dispatcher for compiling HQL nodes into a target form."""
+
     def __init__(self):
         from Hql.Data import Data
         self.type = self.__class__.__name__

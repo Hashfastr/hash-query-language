@@ -24,6 +24,8 @@ Table for a structure of data, includes schema definition.
 Mimics a pl.DataFrame
 '''
 class Table():
+    """Store a named Polars table together with its HQL schema."""
+
     def __init__(
             self,
             df:Union[pl.DataFrame, None]=None,

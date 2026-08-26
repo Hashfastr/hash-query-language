@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from Hql.Expressions import ToClause
 
 class Rename(Operator):
+    """Rename input tables according to a list of clauses."""
+
     def __init__(self, exprs:list[ToClause]):
         Operator.__init__(self)
         self.exprs = exprs

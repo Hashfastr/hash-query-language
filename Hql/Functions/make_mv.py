@@ -29,6 +29,8 @@ OR
 @register_func('make_list')
 @register_func('make_mv')
 class make_mv(Function):
+    """Combine fields or aggregation values into a multivalue field."""
+
     def __init__(self, args:list[Expression], conf:Optional[dict]=None):
         Function.__init__(self, args, 1, -1)
         self.args = args

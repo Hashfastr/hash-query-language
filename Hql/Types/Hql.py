@@ -15,7 +15,11 @@ if TYPE_CHECKING:
 SchemaDT = Mapping[str, Union['HqlTypes.HqlType', dict]]
 
 class HqlTypes():
+    """Namespace for HQL's canonical type system."""
+
     class HqlType(CompilerType):
+        """Base class for canonical HQL data types."""
+
         def __init__(self, inner:Optional[HqlTypes.HqlType]=None):
             CompilerType.__init__(self, inner=inner)
             self.proto:Optional[pl.DataType] = None
@@ -135,18 +139,24 @@ class HqlTypes():
 
     @register_type('hql_type')
     class type(HqlType):
+        """Represent the generic HQL type metatype."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.DataType()
 
     @register_type('hql_decimal')
     class decimal(HqlType):
+        """Represent decimal numeric values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Decimal()
     
     @register_type('hql_float') 
     class float(HqlType):
+        """Represent single-precision floating-point values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Float32()
@@ -155,24 +165,32 @@ class HqlTypes():
 
     @register_type('hql_double')
     class double(HqlType):
+        """Represent double-precision floating-point values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Float64()
     
     @register_type('hql_byte') 
     class byte(HqlType):
+        """Represent signed 8-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Int8()
 
     @register_type('hql_short')
     class short(HqlType):
+        """Represent signed 16-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Int16()
 
     @register_type('hql_int')
     class int(HqlType):
+        """Represent signed 32-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Int32()
@@ -182,53 +200,71 @@ class HqlTypes():
     
     @register_type('hql_long') 
     class long(HqlType):
+        """Represent signed long integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
 
     @register_type('hql_xlong')
     class xlong(HqlType):
+        """Represent signed 128-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Int128()
 
     @register_type('hql_guid')
     class guid(HqlType):
+        """Represent globally unique identifier values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Int128()
     
     @register_type('hql_ubyte') 
     class ubyte(HqlType):
+        """Represent unsigned 8-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.UInt8()
         
     @register_type('hql_ushort')
     class ushort(HqlType):
+        """Represent unsigned 16-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.UInt16()
     
     @register_type('hql_uint') 
     class uint(HqlType):
+        """Represent unsigned 32-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.UInt32()
     
     @register_type('hql_ulong') 
     class ulong(HqlType):
+        """Represent unsigned 64-bit integer values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.UInt64()
 
     @register_type('hql_ip')
     class ip(HqlType):
+        """Represent generic IP address values as strings."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.String()
 
     @register_type('hql_ip4')
     class ip4(HqlType):
+        """Represent IPv4 addresses as unsigned 32-bit integers."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.UInt32()
@@ -290,12 +326,16 @@ class HqlTypes():
 
     @register_type('hql_ip6')
     class ip6(HqlType):
+        """Represent IPv6 addresses as signed 128-bit integers."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Int128()
     
     @register_type('hql_datetime')     
     class datetime(HqlType):
+        """Represent date and time values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Datetime()
@@ -313,12 +353,16 @@ class HqlTypes():
         
     @register_type('hql_duration')
     class duration(HqlType):
+        """Represent elapsed time values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Duration()
         
     @register_type('hql_time')  
     class time(HqlType):
+        """Represent time-of-day values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Time()
@@ -326,6 +370,8 @@ class HqlTypes():
     # Need to figure this out properly
     @register_type('hql_range')
     class range(HqlType, pl.Struct):
+        """Represent typed start and end values as a range."""
+
         def __init__(self, inner:HqlTypes.HqlType):
             HqlTypes.HqlType.__init__(self, inner=inner)
             self.proto = self.pl_schema()
@@ -337,6 +383,8 @@ class HqlTypes():
 
     @register_type('hql_matrix')
     class matrix(HqlType):
+        """Represent a fixed-size collection of one element type."""
+
         def __init__(self, inner:HqlTypes.HqlType):
             HqlTypes.HqlType.__init__(self, inner=inner)
             raise hqle.CompilerException('Unimplemented hql type matrix')
@@ -347,6 +395,8 @@ class HqlTypes():
     
     @register_type('hql_string') 
     class string(HqlType):
+        """Represent UTF-8 string values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.String()
@@ -356,18 +406,24 @@ class HqlTypes():
         
     @register_type('hql_enum') 
     class enum(HqlType):
+        """Represent values restricted to a string enumeration."""
+
         def __init__(self, values:list[str]):
             raise hqle.CompilerException('Unimplemented type enum')
             HqlTypes.HqlType.__init__(self, pl.Null())
         
     @register_type('hql_binary') 
     class binary(HqlType):
+        """Represent arbitrary binary values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Binary()
     
     @register_type('hql_bool') 
     class bool(HqlType):
+        """Represent Boolean values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Boolean()
@@ -380,6 +436,8 @@ class HqlTypes():
     '''
     @register_type('hql_object')
     class object(HqlType):
+        """Represent structured values described by a field schema."""
+
         def __init__(self, schema:SchemaDT):
             HqlTypes.HqlType.__init__(self)
             self.schema:SchemaDT = schema
@@ -485,6 +543,8 @@ class HqlTypes():
             
     @register_type('hql_null')
     class null(HqlType):
+        """Represent missing or null values."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Null()
@@ -494,6 +554,8 @@ class HqlTypes():
         
     @register_type('hql_unknown')
     class unknown(HqlType, pl.Unknown):
+        """Represent values whose HQL type is not yet known."""
+
         def __init__(self):
             HqlTypes.HqlType.__init__(self)
             self.proto = pl.Unknown()
@@ -501,6 +563,8 @@ class HqlTypes():
         
     @register_type('hql_multivalue')
     class multivalue(HqlType):
+        """Represent a variable-length collection of one element type."""
+
         def __init__(self, inner:HqlTypes.HqlType):
             self.inner = inner
             assert inner.proto

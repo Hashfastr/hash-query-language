@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 # This is a meta function resolved while parsing
 @register_func('file')
 class file(Function):
+    """Select files from a database that supports file access."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.References import Reference
         from Hql.Expressions.Literals import StringLiteral

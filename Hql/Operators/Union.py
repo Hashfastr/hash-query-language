@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Union(Operator):
+    """Merge tables selected by one or more name expressions."""
+
     def __init__(self, exprs:list[Expression], name:Optional[Expression]=None):
         Operator.__init__(self)
         self.exprs = exprs

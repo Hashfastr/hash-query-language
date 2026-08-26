@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 @register_func('tolower')
 class tolower(Function):
+    """Convert string literals or field values to lowercase."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         import polars as pl
         Function.__init__(self, args, 1, 1, conf)

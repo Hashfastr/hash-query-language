@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 PrepipeType = Union['Function', 'DotCompositeFunction', 'Database', 'HqlUnion', Expression]
 
 class PipeExpression(Expression):
+    """Represent a query source followed by a sequence of pipe operators."""
+
     def __init__(self, pipes:list[Operator], prepipe:Optional[PrepipeType]=None):
         Expression.__init__(self)
         self.prepipe              = prepipe
@@ -116,6 +118,8 @@ class PipeExpression(Expression):
         return out
 
 class OpParameter(Expression):
+    """Represent a named parameter passed to a pipe operator."""
+
     def __init__(self, name:Reference, value:Expression):
         Expression.__init__(self)
         self.name = name
@@ -133,6 +137,8 @@ class OpParameter(Expression):
         }
 
 class ToClause(Expression):
+    """Associate a reference with its target HQL type for casting."""
+
     def __init__(self, expr:Reference, to:Union[TypeExpression, hqlt.HqlType]):
         from Hql.Expressions.Literals import TypeExpression 
 

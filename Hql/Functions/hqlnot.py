@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 @register_func('not')
 class hqlnot(Function):
+    """Convert a function argument into a negated logical expression."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions import Expression
         Function.__init__(self, args, 1, 1)

@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from Hql.Config import Config
 
 class InstructionSet():
+    """Execute upstream data sources followed by local pipeline operators."""
+
     def __init__(self, upstream:Union[Database, InstructionSet, Sequence[Union[Database, InstructionSet]]], operators:Optional[list[Operator]]=None) -> None:
         import random
         from Hql.Compiler import InstructionSet

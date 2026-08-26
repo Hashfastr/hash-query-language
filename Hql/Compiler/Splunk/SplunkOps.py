@@ -8,6 +8,8 @@ if TYPE_CHECKING:
 from typing import Optional, Union
 
 class SplunkOp():
+    """Base class for intermediate Splunk pipeline operations."""
+
     def __init__(self):
         self.type = self.__class__.__name__
         self.pipes = []
@@ -18,6 +20,8 @@ class SplunkOp():
         ...
 
 class Spath(SplunkOp):
+    """Represent a Splunk field extraction between two expressions."""
+
     def __init__(self, lh:Expression, rh:Expression):
         SplunkOp.__init__(self)
         self.lh = lh

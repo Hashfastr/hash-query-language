@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from polars import Expr as plExpr
 
 class Reference(Expression):
+    """Base expression for selecting a named or nested value."""
+
     def __init__(self):
         Expression.__init__(self)
         self.name = ''
@@ -71,6 +73,8 @@ class Reference(Expression):
 # A named reference, can be scoped
 # Scopes are not implemented yet.
 class NamedReference(Reference):
+    """Reference a value by its unescaped name."""
+
     def __init__(self, name:str):
         Reference.__init__(self)
         self.name = name
@@ -107,10 +111,14 @@ class NamedReference(Reference):
         return col(self.name)
 
 class Wildcard(NamedReference):
+    """Represent a wildcard field reference."""
+
     def __hash__(self):
         return hash((self.name))
         
 class EscapedNamedReference(NamedReference):
+    """Reference a name that must be emitted with bracket escaping."""
+
     def __hash__(self):
         return hash((self.name))
 
@@ -123,6 +131,8 @@ class EscapedNamedReference(NamedReference):
 #     ...
 
 class Path(Reference):
+    """Reference a value through a sequence of nested field names."""
+
     def __init__(self, path:Sequence[Union[NamedReference, Path]]):
         Reference.__init__(self)
         self.path:list[NamedReference] = self.condense(path)
@@ -224,6 +234,8 @@ Sets a name a value
 ip_addr, ip2 = ip4(destination.ip)
 '''
 class NamedExpression(Expression):
+    """Assign an expression's value to one or more reference paths."""
+
     def __init__(self, paths:list[Reference], value:Union[Expression, Function]):
         Expression.__init__(self)
         self.paths = paths

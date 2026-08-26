@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from Hql.Functions import Function
 
 class LuceneCompiler(Compiler):
+    """Compile supported HQL predicates into Lucene query syntax."""
+
     def __init__(self) -> None:
         Compiler.__init__(self)
         self.attrs = {

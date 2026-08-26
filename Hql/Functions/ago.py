@@ -12,6 +12,8 @@ Generates a time delta
 '''
 @register_func('ago')
 class ago(Function):
+    """Return a duration used to address a time in the past."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import StringLiteral
         Function.__init__(self, args, 1, 1)

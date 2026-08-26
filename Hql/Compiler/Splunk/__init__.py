@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     import Hql
 
 class SPLCompiler(Compiler):
+    """Compile supported HQL pipelines into Splunk Processing Language."""
+
     def __init__(self, time_format:str="%Y-%m-%dT%H:%M:%S.%f%z"):
         from Hql.Data import Data
         from Hql.Compiler import HqlCompiler

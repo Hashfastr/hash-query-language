@@ -16,6 +16,8 @@ Wraps an Expression or Operator with some tagged metadata
 Helpful for finding out if we can compile something
 '''
 class BranchDescriptor():
+    """Describe a syntax-tree branch and the features it requires."""
+
     def __init__(self):
         # contains a timeseries element
         self.attrs:dict = dict()

@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from Hql.Functions import Function
 
 class QueryDSLCompiler(Compiler):
+    """Compile supported HQL predicates into Elasticsearch Query DSL."""
+
     def __init__(self) -> None:
         Compiler.__init__(self)
         self.attrs = {

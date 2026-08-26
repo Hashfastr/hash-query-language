@@ -25,6 +25,8 @@ Preserves the other fields as well
 https://learn.microsoft.com/en-us/kusto/query/top-operator
 '''
 class Top(Operator):
+    """Retain a fixed number of rows after grouping by an expression."""
+
     def __init__(self, expr:Integer, by:ByExpression):
         Operator.__init__(self)
         self._expr:Integer = expr

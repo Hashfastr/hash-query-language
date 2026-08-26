@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 Generic SQL compiler
 '''
 class SqlCompiler(Compiler):
+    """Compile supported HQL pipelines into generic SQL."""
+
     def __init__(self, parent:Optional[Database]=None):
         from Hql.Data import Data
         from Hql.Compiler import HqlCompiler

@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from Hql.Expressions.References import Reference
 
 class Data():
+    """Manage a collection of named HQL tables as one dataset."""
+
     def __init__(self, tables:Optional[list[Table]]=None, merge_rows=True):
         self.tables = dict()
 

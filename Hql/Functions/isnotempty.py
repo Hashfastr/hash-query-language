@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 @register_func('isnotempty')
 class isnotempty(Function):
+    """Build a predicate requiring every argument to be non-null."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         # allows 1 to infinity args
         Function.__init__(self, args, 1, -1)

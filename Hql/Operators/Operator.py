@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 # value of another statement.
 # @register_op('Operator')
 class Operator(ParseObject):
+    """Base class for operations applied in an HQL pipeline."""
+
     def __init__(self):
         import random
         ParseObject.__init__(self)

@@ -15,6 +15,8 @@ range x from 1 to 5 step 1
 https://learn.microsoft.com/en-us/kusto/query/range-operator
 '''
 class Range(Operator):
+    """Generate a single-column table over a numeric range."""
+
     def __init__(self, name:NamedReference, start:Expression, end:Expression, step:Expression):
         Operator.__init__(self)
         self.name:NamedReference = name

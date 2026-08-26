@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from Hql.Context import Context
 
 class Join(Operator):
+    """Join the current data with a compiled right-hand expression."""
+
     def __init__(self, rh:Union[Expression, InstructionSet], on:Sequence[Reference], params:Optional[list[OpParameter]]=None, where:Optional[Logic]=None):
         Operator.__init__(self)
         self.rh = rh

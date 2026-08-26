@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 Series for individual values, mimics a pl.Series
 '''
 class Series():
+    """Pair a Polars series with its corresponding HQL type."""
+
     def __init__(self, series:pl.Series, stype:Union[hqlt.HqlType, None]=None):
         from Hql.Types.Polars import PolarsTypes as plt
 

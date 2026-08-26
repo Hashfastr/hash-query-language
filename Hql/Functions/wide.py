@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 @register_func('wide')
 class wide(Function):
+    """Encode a string value as little-endian UTF-16 bytes."""
+
     def __init__(self, args: list, conf:Optional[dict]=None):
         from Hql.Expressions.References import Reference
         Function.__init__(self, args, 1, 1)

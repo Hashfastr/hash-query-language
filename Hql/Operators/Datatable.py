@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 Creates a simple datatable, essentially an inline dataframe/table
 '''
 class Datatable(Operator):
+    """Create an inline table from a schema and literal values."""
+
     def __init__(self, schema:list[tuple[NamedReference, HqlTypes.HqlType]], values:list[Literal], name:Optional[NamedReference]=None):
         Operator.__init__(self)
         self.values:list[Literal] = values

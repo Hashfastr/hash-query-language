@@ -8,6 +8,8 @@ if TYPE_CHECKING:
 
 @register_func('bincount')
 class bincount(Function):
+    """Represent the HQL bincount aggregation function."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         # allows 1 to infinity args
         super().__init__(args, 1, 1)

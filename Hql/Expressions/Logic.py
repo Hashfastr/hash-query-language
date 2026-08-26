@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
 # descriptive class
 class Logic(Expression):
+    """Base class for expressions that evaluate as predicates."""
+
     def __init__(self):
         Expression.__init__(self)
 
@@ -28,6 +30,8 @@ class Logic(Expression):
         return self
 
 class Comparator(Logic):
+    """Base predicate comparing a reference with one or more expressions."""
+
     def __init__(self, lh:Reference, rh:Union[Sequence[Expression], Expression], cs:bool=True, neq:bool=False, term:bool=False, logic_and:bool=False) -> None:
         Logic.__init__(self)
 
@@ -149,6 +153,8 @@ Handles the following direct comparators:
 Not substring comparators
 '''
 class Equality(Comparator):
+    """Compare a reference for equality or membership, optionally negated."""
+
     def __init__(self, lh:Reference, rh:Union[Sequence[Expression], Expression], cs:bool=True, neq:bool=False):
         Comparator.__init__(self, lh, rh, cs=cs, neq=neq)
         self.cs = cs
@@ -283,6 +289,8 @@ Non-term operators:
     - non-term suffix/endswith
 '''
 class Substring(Comparator):
+    """Match strings by substring, term, prefix, or suffix semantics."""
+
     def __init__(self, lh:Reference, rh:list[StringLiteral], term:bool=False, logic_and:bool=False, neq:bool=False, cs:bool=False, startswith:bool=False, endswith:bool=False):
         Comparator.__init__(self, lh, rh)
         # narrow type defs
@@ -467,6 +475,8 @@ class Substring(Comparator):
 # As per the grammar
 # Takes after the equality expression
 class Relational(Comparator):
+    """Compare a reference with an expression using an ordering operator."""
+
     def __init__(self, lh:Reference, rh:Expression, gt:bool, eq:bool) -> None:
         Comparator.__init__(self, lh, rh, logic_and=True)
         self.gt = gt
@@ -562,6 +572,8 @@ class Relational(Comparator):
 # Here lh is the '@timestamp' escaped string literal, and the right hand has
 # the start and end values for the time range.
 class BetweenEquality(Comparator):
+    """Compare a reference with two literal range bounds."""
+
     def __init__(self, lh:Reference, start:Literal, end:Literal, neq:bool=False):
         Logic.__init__(self)
 
@@ -635,6 +647,8 @@ class BetweenEquality(Comparator):
 Handles binary logic, simple ands and ors
 '''
 class BinaryLogic(Logic):
+    """Combine predicates with Boolean AND or OR semantics."""
+
     def __init__(self, exprs:Sequence[Logic], logic_and:bool=True):
         from Hql.Expressions.Literals import Bool
         Logic.__init__(self)
@@ -791,6 +805,8 @@ class BinaryLogic(Logic):
         return (filt)
 
 class BasicRange(Logic):
+    """Store the endpoints of a range expression."""
+
     def __init__(self, start:Literal, end:Literal):
         Logic.__init__(self)
         self.start = start
@@ -809,6 +825,8 @@ class BasicRange(Logic):
         return f'({start} .. {end})'
 
 class Regex(Logic):
+    """Match a referenced string against a regular expression."""
+
     def __init__(self, lh:Reference, rh:StringLiteral, i:bool=False, m:bool=False, s:bool=False, g:bool=False) -> None:
         Logic.__init__(self)
         self.lh = lh
@@ -885,6 +903,8 @@ class Regex(Logic):
         raise hqle.QueryException(f'Invalid preprocessed expression')
 
 class Not(Logic):
+    """Negate a logical, reference, or function expression."""
+
     def __init__(self, expr:Union[Logic, Reference, Function]) -> None:
         Logic.__init__(self)
         self.expr = expr

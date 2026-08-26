@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 @register_func('service')
 class service(Function):
+    """Select configured source services for an analytic query."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import StringLiteral
         from Hql.Expressions.References import Reference

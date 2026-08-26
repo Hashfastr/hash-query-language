@@ -19,6 +19,8 @@ https://learn.microsoft.com/en-us/kusto/query/as-operator
 '''
 # Disabled until implementation is decided
 class As(Operator):
+    """Bind the input tabular expression to a name."""
+
     def __init__(self, expr:Expression):
         Operator.__init__(self)
         self._expr:Expression = expr

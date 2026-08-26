@@ -6,9 +6,15 @@ from Hql.Context import register_func
 from Hql.Data import Data, Table
 
 # from dfir_iris_client.session import ClientSession
-class ClientSession: ...
+class ClientSession:
+    """Stand in for the optional DFIR-IRIS client session type."""
+
+    ...
 # from dfir_iris_client.alert import Alert
-class Alert: ...
+class Alert:
+    """Stand in for the optional DFIR-IRIS alert type."""
+
+    ...
 
 from typing import TYPE_CHECKING, Optional
 
@@ -18,6 +24,8 @@ if TYPE_CHECKING:
 # skip over for now
 # @register_func('dfir_iris')
 class dfir_iris(Function):
+    """Publish HQL detection results as DFIR-IRIS alerts."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 0, 1, conf=conf)
         self.params = dict()

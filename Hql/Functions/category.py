@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 @register_func('category')
 class category(Function):
+    """Select configured source categories for an analytic query."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.References import Reference
         from Hql.Expressions.Literals import StringLiteral

@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 # This is a meta function resolved while parsing
 @register_func('series_stats')
 class series_stats(Function):
+    """Calculate summary statistics for a series across input tables."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         from Hql.Expressions.Literals import Bool
         Function.__init__(self, args, 1, 3)

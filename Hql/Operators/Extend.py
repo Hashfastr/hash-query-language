@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 #
 # https://learn.microsoft.com/en-us/kusto/query/extend-operator
 class Extend(Operator):
+    """Add or replace fields using named expressions."""
+
     _exprs: Sequence[Union[Reference, NamedExpression]]
 
     def __init__(self, exprs:Sequence[Union[Reference, NamedExpression]]):

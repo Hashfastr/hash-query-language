@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 @register_target('kusto')
 class KustoCompiler(Compiler):
+    """Compile supported HQL nodes into Kusto Query Language."""
+
     def __init__(self):
         from Hql.Context import Context
         from Hql.Data import Data

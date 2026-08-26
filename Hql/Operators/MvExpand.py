@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from Hql.Data import Table
 
 class MvExpand(Operator):
+    """Expand multivalue fields into individual rows."""
+
     def __init__(self, exprs:list[ToClause], limit:Optional[Integer]=None):
         Operator.__init__(self)
         self.exprs = exprs

@@ -9,6 +9,8 @@ from Hql.Expressions import Literals
 from typing import Optional
 
 class Typecast(Function):
+    """Base function for casting literals and fields to an HQL type."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Function.__init__(self, args, 1, 1)
         self.src = args[0]
@@ -44,6 +46,8 @@ class Typecast(Function):
     
 @register_func('toint')
 class toint(Typecast):
+    """Cast a value to an HQL integer."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.int()
@@ -51,6 +55,8 @@ class toint(Typecast):
 
 @register_func('tofloat')
 class tofloat(Typecast):
+    """Cast a value to an HQL float."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.float()
@@ -58,6 +64,8 @@ class tofloat(Typecast):
         
 @register_func('todouble')
 class todouble(Typecast):
+    """Cast a value to an HQL double."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.double()
@@ -65,6 +73,8 @@ class todouble(Typecast):
         
 @register_func('tostring')
 class tostring(Typecast):
+    """Cast a value to an HQL string."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.string()
@@ -72,6 +82,8 @@ class tostring(Typecast):
 
 @register_func('toip4')
 class toip4(Typecast):
+    """Cast a value to an HQL IPv4 address."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.ip4()
@@ -79,6 +91,8 @@ class toip4(Typecast):
 
 @register_func('todatetime')
 class todatetime(Typecast):
+    """Cast a value to an HQL datetime."""
+
     def __init__(self, args:list, conf:Optional[dict]=None):
         Typecast.__init__(self, args)
         self.cast_type = hqlt.datetime()
