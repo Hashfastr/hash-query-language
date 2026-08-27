@@ -34,6 +34,7 @@ WORKDIR /src
 # uv has no `pip download` subcommand; fall back to real pip inside the venv.
 RUN /opt/venv/bin/python -m pip download \
         --no-binary=:all: --no-deps \
+        --no-build-isolation \
         "polars-runtime-32==${POLARS_RUNTIME_VERSION}" \
         -d /src \
     && tar -xzf /src/polars_runtime_32-${POLARS_RUNTIME_VERSION}.tar.gz -C /src \
@@ -42,8 +43,22 @@ RUN /opt/venv/bin/python -m pip download \
 WORKDIR /src/polars_runtime_32-${POLARS_RUNTIME_VERSION}
 
 ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=0
-ENV CARGO_PROFILE_RELEASE_STRIP=debuginfo
-RUN maturin build --release \
-        --interpreter /opt/venv/bin/python \
-        --compatibility manylinux_2_28 \
-        --out /out
+# Polars is a very large Rust build. Keep peak memory below the hosted runner's
+# limit and avoid spending time generating debug information or running thin
+# LTO for a wheel that is stripped before distribution. CARGO_TARGET_DIR is
+# mounted by the caller so Docker never has to snapshot/export the multi-GB
+# build tree as an image layer.
+ENV CARGO_BUILD_JOBS=2 \
+    CARGO_INCREMENTAL=0 \
+    CARGO_PROFILE_RELEASE_DEBUG=false \
+    CARGO_PROFILE_RELEASE_LTO=false \
+    CARGO_PROFILE_RELEASE_STRIP=debuginfo \
+    CARGO_TARGET_DIR=/cargo-target
+
+# Resolve network dependencies while constructing the reusable builder image.
+# The expensive compilation happens when the image is run, not in this layer.
+RUN cargo fetch --locked \
+        --manifest-path py-polars/runtime/polars-runtime-32/Cargo.toml
+ENV CARGO_NET_OFFLINE=true
+
+CMD ["maturin", "build", "--release", "--locked", "--interpreter", "/opt/venv/bin/python", "--compatibility", "manylinux_2_28", "--out", "/out"]

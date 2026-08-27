@@ -48,9 +48,11 @@ podman build "${PLATFORM_ARG[@]}" \
     -f scripts/Containerfile.polars \
     -t "$IMAGE" .
 
-echo ">>> Extracting artifacts to dist/"
-podman create --name "$CONTAINER" "$IMAGE" >/dev/null
+echo ">>> Running resource-bounded Rust build"
 trap 'podman rm -f "$CONTAINER" >/dev/null 2>&1 || true' EXIT
+podman run --name "$CONTAINER" "$IMAGE"
+
+echo ">>> Extracting artifacts to dist/"
 podman cp "$CONTAINER:/out/." dist/
 
 echo ">>> Done. Artifacts:"

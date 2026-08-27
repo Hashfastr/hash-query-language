@@ -18,6 +18,7 @@ permissions:
 
 jobs:
   polars-runtime:
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -97,7 +98,7 @@ jobs:
               --interpreter "$RUNNER_TEMP/venv/bin/python" \
               --out "$GITHUB_WORKSPACE/dist"
 
-      - name: Build manylinux wheel
+      - name: Prepare manylinux builder
         if: runner.os == 'Linux'
         env:
           POLARS_RUNTIME_VERSION: ${{ steps.version.outputs.value }}
@@ -110,10 +111,61 @@ jobs:
               --tag "$image" \
               .
 
+      - name: Build manylinux wheel
+        if: runner.os == 'Linux'
+        timeout-minutes: 150
+        run: |
+          image="polars-runtime-builder:${{ matrix.arch }}"
+          container="polars-runtime-${{ matrix.arch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          target_dir="$RUNNER_TEMP/polars-target-${{ matrix.arch }}"
           mkdir -p dist
-          container_id=$(docker create "$image")
-          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
-          docker cp "$container_id:/out/." dist/
+          mkdir -p "$target_dir"
+
+          cleanup() {
+            docker rm -f "$container" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          echo "Starting resource-bounded Cargo build with two parallel jobs"
+          docker run \
+              --init \
+              --network none \
+              --name "$container" \
+              --env CARGO_BUILD_JOBS=2 \
+              --mount "type=bind,src=$target_dir,dst=/cargo-target" \
+              --mount "type=bind,src=$GITHUB_WORKSPACE/dist,dst=/out" \
+              "$image" &
+          docker_pid=$!
+
+          (
+            while kill -0 "$docker_pid" 2>/dev/null; do
+              sleep 60
+              kill -0 "$docker_pid" 2>/dev/null || exit 0
+              echo "::notice::Polars manylinux build is still running"
+              docker stats --no-stream \
+                  --format 'container={{.Name}} cpu={{.CPUPerc}} memory={{.MemUsage}}' \
+                  "$container" || true
+              free -h || true
+              df -h "$RUNNER_TEMP" "$GITHUB_WORKSPACE" || true
+            done
+          ) &
+          heartbeat_pid=$!
+
+          status=0
+          wait "$docker_pid" || status=$?
+          kill "$heartbeat_pid" >/dev/null 2>&1 || true
+          wait "$heartbeat_pid" 2>/dev/null || true
+
+          if ! state=$(docker inspect \
+              --format 'exit={{.State.ExitCode}} oom_killed={{.State.OOMKilled}} error={{.State.Error}}' \
+              "$container" 2>&1); then
+            state="unavailable; Docker inspect failed: $state"
+          fi
+          echo "Container result: $state"
+          if [ "$status" -ne 0 ]; then
+            echo "ERROR: manylinux build container failed: $state" >&2
+            exit "$status"
+          fi
 
       - name: Verify wheel
         env:
