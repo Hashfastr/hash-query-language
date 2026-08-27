@@ -55,10 +55,15 @@ ENV CARGO_BUILD_JOBS=2 \
     CARGO_PROFILE_RELEASE_STRIP=debuginfo \
     CARGO_TARGET_DIR=/cargo-target
 
-# Resolve network dependencies while constructing the reusable builder image.
-# The expensive compilation happens when the image is run, not in this layer.
-RUN cargo fetch --locked \
-        --manifest-path py-polars/runtime/polars-runtime-32/Cargo.toml
+# The published sdist can contain a lockfile that needs normalization against
+# its packaged manifests. Allow that one update while network access exists,
+# then verify the resulting lockfile is usable offline and immutable for the
+# runtime compile.
+RUN cargo fetch \
+        --manifest-path py-polars/runtime/polars-runtime-32/Cargo.toml \
+    && cargo metadata --locked --offline --no-deps --format-version 1 \
+        --manifest-path py-polars/runtime/polars-runtime-32/Cargo.toml \
+        >/dev/null
 ENV CARGO_NET_OFFLINE=true
 
 CMD ["maturin", "build", "--release", "--locked", "--interpreter", "/opt/venv/bin/python", "--compatibility", "manylinux_2_28", "--out", "/out"]
